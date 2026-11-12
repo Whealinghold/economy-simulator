@@ -268,6 +268,13 @@ func (f *screenFlowTally) report(t *testing.T, seed uint64, n economysim.Names) 
 	if f.overflow {
 		t.Logf("seed %d flows: a sum overflowed int64, the money rows are incomplete", seed)
 	}
+	f.reportMoney(t, seed, n)
+	f.reportShort(t, seed, n)
+	f.reportRefused(t, seed, n)
+}
+
+func (f *screenFlowTally) reportMoney(t *testing.T, seed uint64, n economysim.Names) {
+	t.Helper()
 	mk := make([]screenFlowKey, 0, len(f.money))
 	for k := range f.money {
 		mk = append(mk, k)
@@ -279,6 +286,10 @@ func (f *screenFlowTally) report(t *testing.T, seed uint64, n economysim.Names) 
 		v := f.money[k]
 		t.Logf("seed %d window %d flow %s -> %s on %s: money %d (%d a tick)", seed, k.Window, screenRoleName(n.Roles, k.Buyer), screenRoleName(n.Roles, k.Seller), n.Commodities[k.Commodity], v, v/incomeWindow)
 	}
+}
+
+func (f *screenFlowTally) reportShort(t *testing.T, seed uint64, n economysim.Names) {
+	t.Helper()
 	sk := make([]screenShortKey, 0, len(f.short))
 	for k := range f.short {
 		sk = append(sk, k)
@@ -289,6 +300,10 @@ func (f *screenFlowTally) report(t *testing.T, seed uint64, n economysim.Names) 
 	for _, k := range sk {
 		t.Logf("seed %d window %d short role %s on %s: %d units", seed, k.Window, n.Roles[k.Role], n.Commodities[k.Commodity], f.short[k])
 	}
+}
+
+func (f *screenFlowTally) reportRefused(t *testing.T, seed uint64, n economysim.Names) {
+	t.Helper()
 	rk := make([][2]int64, 0, len(f.refused))
 	for k := range f.refused {
 		rk = append(rk, k)
