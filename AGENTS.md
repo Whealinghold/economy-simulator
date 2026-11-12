@@ -230,7 +230,7 @@ go vet ./...
 staticcheck ./...
 go test -short -race ./...     # unit tests only, fails fast
 go test -race -timeout 60m ./...   # gate R: reduced seeds under -race (dev host; PR CI runs only the -short -race line above; the opt-in `full` job runs it on `FULL_RUNNER`)
-go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout 120m ./...   # gate F (the root package needs about 60 min under coverage)
+go test -covermode=set -coverpkg=./... -coverprofile=coverage.out -timeout 120m ./...   # gate F (set mode: about 45 min on a 32-core dev host)
 go mod tidy                    # must produce no diff
 ```
 

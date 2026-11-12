@@ -218,7 +218,7 @@ part of EST for the same reason. Plans 1 and 8 are rows of the table.
 them). CI: yes, with an arm64 job; the workflow (`.github/workflows/ci.yml`, three
 jobs: check, full, arm64) is not written by plan 2-1 and has its own row below.
 The gate is two runs (`rules/testing.md` 9.1): R, `go test -race -timeout 60m ./...`
-with reduced seeds (a dev-host gate; PR CI runs `-short -race`, and the opt-in `full` job runs R on `FULL_RUNNER`, see testing.md 9.1), and F, the non-race atomic-coverage run with all seeds.
+with reduced seeds (a dev-host gate; PR CI runs `-short -race`, and the opt-in `full` job runs R on `FULL_RUNNER`, see testing.md 9.1), and F, the non-race set-mode coverage run with all seeds.
 Answers to the questions asked at the start of Stage 2: (5) plan 8 E0: yes, the
 seasonal-crop feature C04 may move from the pack to an overlay; (6) plan 24 R2(a):
 the realm pack is `five` renamed, and R3: the reference machine for the SCL time is
@@ -301,10 +301,14 @@ paragraph below stays the criterion. Each criterion, as it stands today:
   is set, the Codacy upload of `full` fails where `full` is run), branch protection
   on `main` requiring `check` and `arm64` (the branch is not protected today), and
   the fork-pull-request approval setting.
-- (c) N-353: a runner or a sharding that lets gate F run in CI, or an amendment of
-  `testing.md` 9.1 (it says CI must run F); and the gate F timeout, which is 120m in
-  the rule while the root package needs 2h20m to 2h34m on the dev host (the dev-host
-  runs use 200m).
+- (c) N-353: decided as D-O2, with no sharding and no runner: hosted CI proves
+  `check` and `arm64`, and gates R and F stay dev-host gates (`testing.md` 9.1 now
+  states that hosted CI does not run them). The gate F timeout is resolved: gate F
+  uses `-covermode=set`, which took 44.6 min on the 32-core dev host (9098 s with
+  `atomic`), so the rule's 120m holds with 2.7x headroom. Still open: the `[project]`
+  MUST sentence of `testing.md` 9.1 ("CI MUST run two commands") is not yet reworded to
+  match D-O2, and the repository variables `FULL_RUNNER` and `FULL_TIMEOUT_MIN` are
+  unset, because `full` stays opt-in.
 - (d) The cost figure on a quiet host (criterion 6).
 - (e) The CI hardening backlog is kept in the supervisor's notes, not here.
 
