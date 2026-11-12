@@ -158,15 +158,21 @@ func (e *employment) collect(w *World) {
 // collectAgent adds the agent of slot i to the payers or the workers of its region.
 func (e *employment) collectAgent(w *World, i int) {
 	a := &w.agents[i]
+	bp := e.payrollBP[a.role]
+	k, ownUse, _ := w.welfare.workRead(i)
+	works := e.hireable[a.role] && k >= 1 && !ownUse
+	if bp == 0 && !works {
+		return
+	}
 	v, err := w.ledger.Account(a.account)
 	if err != nil {
 		invariant("the account of an agent is unreadable: " + err.Error())
 	}
-	if bp := e.payrollBP[a.role]; bp > 0 {
+	if bp > 0 {
 		e.payers[v.Region] = append(e.payers[v.Region], payroll.Payer{
 			Ref: i, Receipts: w.welfare.receiptsOf(i), BP: bp, Balance: v.Balance - v.Reserved})
 	}
-	if k, ownUse, _ := w.welfare.workRead(i); e.hireable[a.role] && k >= 1 && !ownUse {
+	if works {
 		e.workers[v.Region] = append(e.workers[v.Region], payroll.Worker{Ref: i, K: k})
 	}
 }
