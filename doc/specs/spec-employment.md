@@ -1888,10 +1888,10 @@ take the ids after these when they are built); `PayrollBP` is id 1 of `Employer`
 P4.1b, in ascending (`RegionID`, role), after the `FiscalFlowApplied` events of P4.1a, when `Due`
 or `Paid` is non-zero; never otherwise, and never with the module off. Fields: `Tick`, `Region`,
 `Role` (the payers' role), `Payers` (the payers with a non-zero budget), `Workers` (the households
-paid: the sum of `k` of the workers of the region that were paid), `Due`, `Paid` and `Cut` (`Due`
-less `Paid`, the part cut at the balance), in money; no map and no typed ID appended to an existing
-event. Its rows in `spec-observability.md` 4.1 and `rules/observability-and-logging.md` 4.3 are
-added in the change that declares the type (N-126).
+paid by the payers of the role: the sum of `k` of the workers of the region that at least one payer
+of the role paid), `Due`, `Paid` and `Cut` (`Due` less `Paid`: the part cut at a balance, or all of
+`Due` when the region has no worker to pay), in money; no map and no typed ID appended to an existing
+event. Its rows are in `spec-observability.md` 4.1 and `rules/observability-and-logging.md` 4.3.
 
 24.6.2. **Metric** `economysim.payroll.paid`, a counter of unit `{minor_unit}` with the attributes
 `economysim.role` and `economysim.region`, fed by `PayrollPaid` (`Paid`): bounded by the roles and

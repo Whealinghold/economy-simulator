@@ -509,7 +509,7 @@ parameter. The starting registry:
 | `escrow_out` | money | internal | escrow to agent: the deliverer, for the units that reached the destination | `spec-merchants.md` 9.6 |
 | `escrow_refund` | money | internal | escrow to agent, or escrow to the estate of the destination region when the payer no longer exists | `spec-merchants.md` 9.6 |
 | `wage_escrow` | money | internal | agent (the employer) to escrow: the bill of a hire at its formation | `spec-employment.md` 7.1 |
-| `wage_pay` | money | internal | escrow to agent: the worker, one tick's wage | `spec-employment.md` 7.1 |
+| `wage_pay` | money | internal | agent to agent: an employer pays a worker one tick's wage (the payroll form, `spec-employment.md` 24.1.6); the hire form adds escrow to agent, `spec-employment.md` 7.1 | `spec-employment.md` 7.1, 24.1.6 |
 | `wage_refund` | money | internal | escrow to agent (the employer; a removed employer is paid to its own account first, `spec-employment.md` 6.4.1) | `spec-employment.md` 7.1 |
 | `loan_out` | money | internal | agent (the lender) to agent (the borrower) | `spec-credit.md` 3.3 |
 | `loan_repay`, `loan_interest` | money | internal | agent to agent, or agent to estate: the principal and the interest paid | `spec-credit.md` 3.3 |

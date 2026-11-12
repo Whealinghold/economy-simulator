@@ -54,6 +54,7 @@ var positionList = [...]position{
 	{"P3.5", "EXT", line},
 	{"P3.6", "INF", line},
 	{"P4.1", "CLR", line},
+	{"P4.1b", "EMP", line},
 	{"P4.2", "EXT", line},
 	{"P5.1", "CLR", line},
 	{"P5.2", "INF", line},
@@ -82,7 +83,7 @@ var notBuiltPositions = [...]string{
 	"P1.3a", "P1.7a", "P1.7b", "P1.9a",
 	"P2.2", "P2.5a", "P2.8b",
 	"P3.1a", "P3.3b", "P3.3c", "P3.4a", "P3.6a", "P3.6b", "P3.6c",
-	"P4.1a", "P4.1b",
+	"P4.1a",
 	"P7.2a", "P7.2b",
 	"P8.1a", "P8.1b", "P8.3a", "P8.3b", "P8.3c",
 }
@@ -180,6 +181,19 @@ func (w *World) positionsTrade() error {
 	w.p36Aggregates()
 	if err := w.p41Clear(); err != nil {
 		return err
+	}
+	return w.positionsSettle()
+}
+
+// positionsSettle is the part of the straight line after the clearing, from P4.1b
+// to the outside sweep, split from positionsTrade to stay within the Lizard
+// complexity limit (N-243). The position test reads it as part of the straight
+// line, between positionsTrade and positionsTail.
+func (w *World) positionsSettle() error {
+	if w.employment != nil {
+		if err := w.p41bPayroll(); err != nil {
+			return err
+		}
 	}
 	if w.external != nil {
 		if err := w.p42Sweep(); err != nil {

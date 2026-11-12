@@ -1228,6 +1228,9 @@
 //     proportion to their executions; no hire, no escrow, no state.
 //   - Worker: an agent of a Hireable role with a job of the tick; it is paid by the
 //     payroll in proportion to its executions.
+//   - PayrollPaid: the event emitted once per region and payer role per tick at P4.1b in
+//     which the payroll had a due or paid anything, with the payers, the households paid, and
+//     the money due, paid and cut at a balance (spec-employment.md 24.6.1).
 //   - Outside: everything that is not a region with agents: the party the external
 //     module trades with, whose money and goods the realm never holds (spec-external-sector.md).
 //   - Outside node: a region of the configuration marked as the outside; it has no

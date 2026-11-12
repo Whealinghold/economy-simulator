@@ -1,0 +1,28 @@
+# The employment module in its payroll form on the pack one-demand (spec-employment.md 24, ADR 0011,
+# plan 2-28). Layer it after the pack: base.toml, demand.toml, one-demand.toml, warm-one-demand.toml, this file.
+# A test double, not a design: every number is a placeholder (N-015, N-027). The cooks keep nearly all the
+# money they receive (N-352), so they are the payers; every other role that works at a recipe is Hireable and is
+# paid from the cooks' receipts in proportion to its executions. The share is the value of the spike of ADR
+# 0011 (5 000 bp), which is also the default. The visitor role is closed and filled only by external agents, so
+# it is neither. The census and the warm start are those of the pack: this overlay moves the flow of money,
+# not the recipes (the pack redesign is phase 4 of the plan).
+
+[modules.employment]
+
+[role.cook.employer]
+payroll_bp = 5000
+
+[role.grower]
+hireable = true
+[role.forester]
+hireable = true
+[role.digger]
+hireable = true
+[role.refiner]
+hireable = true
+[role.maker]
+hireable = true
+[role.treat_maker]
+hireable = true
+[role.comfort_maker]
+hireable = true

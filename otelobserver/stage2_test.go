@@ -61,6 +61,22 @@ func TestMoneyFlow_Unapplied(t *testing.T) {
 	check(t, got, "money.flow.unapplied", 5, "reason", "levy")
 }
 
+// TestPayroll_PaidByRoleAndRegion verifies that the money paid under the payroll
+// form of the employment module is counted by the payers' role and the region,
+// from the Paid field only (a Cut is not money moved).
+//
+// Requirement: FR-EMP-077
+func TestPayroll_PaidByRoleAndRegion(t *testing.T) {
+	h := newHarness(t)
+	h.send(created())
+	tick(h, 0, economysim.PayrollPaid{Region: 1, Role: 1, Due: 80, Paid: 60, Cut: 20},
+		economysim.PayrollPaid{Region: 1, Role: 1, Due: 10, Paid: 10},
+		economysim.PayrollPaid{Region: 0, Role: 1, Due: 5, Paid: 0, Cut: 5})
+	got := h.collect()
+	check(t, got, "payroll.paid", 70, "role", "k1", "region", "r1")
+	absent(t, got, "payroll.paid", "role", "k1", "region", "r0")
+}
+
 // TestEndowment_FlowsAndStockHeld verifies the units drawn, regenerated and
 // short, the stock after the tick, the stock after an adjustment, and that a tick
 // with no event records the stock again.

@@ -442,6 +442,10 @@ func externalAgentOn(w *World) bool { return w.integ.visit }
 // module off has no pass, and the replay leaves the row out.
 func reliefOn(w *World) bool { return w.relief != nil }
 
+// employmentOn is the guard of the row of the payroll: a world with the employment
+// module off has no pass, and the replay leaves the row out.
+func employmentOn(w *World) bool { return w.employment != nil }
+
 // noErr adapts a position method with no error result.
 func noErr(f func(*World)) func(*World) error {
 	return func(w *World) error { f(w); return nil }
@@ -479,6 +483,7 @@ var replayRows = []replayRow{
 	{id: "P3.5", run: (*World).p35Orders, on: externalOn},
 	{id: "P3.6", run: noErr((*World).p36Aggregates), on: wantsOrInformationOn},
 	{id: "P4.1", run: (*World).p41Clear},
+	{id: "P4.1b", run: (*World).p41bPayroll, on: employmentOn},
 	{id: "P4.2", run: (*World).p42Sweep, on: externalOn},
 	{id: "P5.1", run: noErr((*World).p51Window)},
 	{id: "P5.2", run: noErr((*World).p52Record), on: informationOn},

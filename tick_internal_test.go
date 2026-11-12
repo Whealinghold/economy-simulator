@@ -65,7 +65,7 @@ func readSpecPositions(t *testing.T) []specPosition {
 	return rows
 }
 
-// straightLineCalls reads the functions positions, positionsProduce, positionsTrade and positionsTail of tick.go with go/parser and
+// straightLineCalls reads the functions positions, positionsProduce, positionsTrade, positionsSettle and positionsTail of tick.go with go/parser and
 // returns the position IDs of the calls made on the receiver, in source order,
 // and the names of any other call it makes. The ID of p21Complete is "P2.1".
 func straightLineCalls(t *testing.T, src string) (ids, others []string) {
@@ -76,7 +76,7 @@ func straightLineCalls(t *testing.T, src string) (ids, others []string) {
 	}
 	for _, d := range f.Decls {
 		fd, ok := d.(*ast.FuncDecl)
-		if !ok || fd.Recv == nil || (fd.Name.Name != "positions" && fd.Name.Name != "positionsProduce" && fd.Name.Name != "positionsTrade" && fd.Name.Name != "positionsTail") {
+		if !ok || fd.Recv == nil || (fd.Name.Name != "positions" && fd.Name.Name != "positionsProduce" && fd.Name.Name != "positionsTrade" && fd.Name.Name != "positionsSettle" && fd.Name.Name != "positionsTail") {
 			continue
 		}
 		ast.Inspect(fd.Body, func(n ast.Node) bool {
@@ -89,7 +89,7 @@ func straightLineCalls(t *testing.T, src string) (ids, others []string) {
 				others = append(others, "a call that is not a method of the receiver")
 				return true
 			}
-			if sel.Sel.Name == "positionsProduce" || sel.Sel.Name == "positionsTrade" || sel.Sel.Name == "positionsTail" {
+			if sel.Sel.Name == "positionsProduce" || sel.Sel.Name == "positionsTrade" || sel.Sel.Name == "positionsSettle" || sel.Sel.Name == "positionsTail" {
 				return true // the hand-over from one part of the straight line to the next
 			}
 			if m := positionCallRe.FindStringSubmatch(sel.Sel.Name); m != nil {

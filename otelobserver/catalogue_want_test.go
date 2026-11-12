@@ -87,6 +87,7 @@ var want = []wantRow{
 	{"economysim.hire.wage", "Counter", "{minor_unit}", []string{"economysim.region"}},
 	{"economysim.labour.unmatched", "Counter", "{household}", []string{"economysim.role"}},
 	{"economysim.vacancy.unfilled", "Counter", "{position}", []string{"economysim.role", "economysim.reason"}},
+	{"economysim.payroll.paid", "Counter", "{minor_unit}", []string{"economysim.role", "economysim.region"}},
 	{"economysim.hire.escrow", "UpDownCounter", "{minor_unit}", []string{}},
 	{"economysim.settlement.class", "Gauge", "{class}", []string{"economysim.region"}},
 	{"economysim.settlement.changes", "Counter", "{change}", []string{"economysim.region"}},

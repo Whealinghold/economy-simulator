@@ -40,6 +40,11 @@ var (
 	// plan 2-5): the demand overlay is layered over base, not over one.
 	packOneDemand     = []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml"}
 	packOneDemandCold = []string{"base.toml", "demand.toml", "one-demand.toml"}
+	// packOneDemandEmployment is one-demand with the employment module alone added, in its
+	// payroll form (overlay/employment.toml): the module's pack and its census are those of
+	// one-demand (testing.md 7.1.1).
+	packOneDemandEmployment     = []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml", "overlay/employment.toml"}
+	packOneDemandEmploymentCold = []string{"base.toml", "demand.toml", "one-demand.toml", "overlay/employment.toml"}
 )
 
 const chainsDir = "testdata/chains"

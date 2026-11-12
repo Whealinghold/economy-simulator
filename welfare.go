@@ -73,6 +73,8 @@ type flows struct {
 	relief     int64 // F_t
 	unearned   int64 // G_t
 	ownReceipt int64 // K^own_t
+	earned     int64 // Y_t, the wage a worker received (spec-employment.md 24.2.1)
+	wagePaid   int64 // V_t, the wage a payer paid (spec-employment.md 24.2.1)
 	// wear is merged by (commodity, wearPerUse); an agent starts one job in a
 	// tick, so there are at most MaxRequires tools.
 	wear  [MaxRequires]wearRow
@@ -153,6 +155,25 @@ func (s *welfareScratch) addUnearned(slot int, amount int64) {
 	f := s.at(slot)
 	f.unearned = satAdd(f.unearned, amount)
 }
+
+// addEarned adds the wage a worker received (Y_t): earned income, in the income
+// of the tick and not in the relief, the unearned or the own-use terms
+// (spec-employment.md 24.2.1).
+func (s *welfareScratch) addEarned(slot int, amount int64) {
+	f := s.at(slot)
+	f.earned = satAdd(f.earned, amount)
+}
+
+// addWagePaid adds the wage a payer paid (V_t): netted from its income of the
+// tick (spec-employment.md 24.2.1).
+func (s *welfareScratch) addWagePaid(slot int, amount int64) {
+	f := s.at(slot)
+	f.wagePaid = satAdd(f.wagePaid, amount)
+}
+
+// receiptsOf returns the money the slot received from the settled trades of the
+// tick (R_t).
+func (s *welfareScratch) receiptsOf(slot int) int64 { return s.at(slot).receipts }
 
 // addInputSpend adds the money spent on a bid with the purpose Input (S_t).
 func (s *welfareScratch) addInputSpend(slot int, amount int64) {
@@ -240,15 +261,15 @@ func workingTick(hasRecipes bool, k int64, ownUse, traded, inTransit bool, weigh
 // the Warn report an overflow (D63). It does not clear the scratch.
 func (s *welfareScratch) record(slot int, weight int64, working bool, workHH, ownHH int64, prices []int64, upkeep []itemRow) welfare.Record {
 	f := s.at(slot)
-	credits := [5]int64{f.receipts, f.inKind, f.ownReceipt, f.relief, f.unearned}
-	var debits [1 + MaxRequires]int64
-	debits[0] = f.inputSpend
+	credits := [6]int64{f.receipts, f.inKind, f.ownReceipt, f.relief, f.unearned, f.earned}
+	var debits [2 + MaxRequires]int64
+	debits[0], debits[1] = f.inputSpend, f.wagePaid
 	for i := range f.nWear {
 		w := &f.wear[i]
-		debits[1+i] = welfare.WearCost(w.wearPerUse, prices[w.commodity], s.durability[w.commodity], w.executions)
+		debits[2+i] = welfare.WearCost(w.wearPerUse, prices[w.commodity], s.durability[w.commodity], w.executions)
 	}
 	return welfare.Record{
-		Income:     welfare.TickIncome(credits[:], debits[:1+f.nWear]),
+		Income:     welfare.TickIncome(credits[:], debits[:2+f.nWear]),
 		Cost:       s.cost.tick(upkeep, prices, weight),
 		Relief:     f.relief,
 		Unearned:   f.unearned,

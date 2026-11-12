@@ -118,6 +118,7 @@ const (
 	iTransportOverdue
 	iTransportAway
 	iMigrationPipeline
+	iPayrollPaid
 	nInstruments
 )
 
@@ -218,6 +219,7 @@ var catalogue = [nInstruments]spec{
 	iTransportOverdue:           {name: "economysim.transport.overdue", kind: kGauge, unit: "{shipment}", desc: "Shipments in flight at or past their arrival tick, by mode.", attrs: []string{keyMode}},
 	iTransportAway:              {name: "economysim.transport.away", kind: kGauge, unit: "{agent}", desc: "Agents away on a self-carried trip.", attrs: []string{}},
 	iMigrationPipeline:          {name: "economysim.migration.pipeline", kind: kGauge, unit: "{household}", desc: "Households on a journey out of and into a region.", attrs: []string{keyRegion, keyDirection}},
+	iPayrollPaid:                {name: "economysim.payroll.paid", kind: kCounter, unit: "{minor_unit}", desc: "Wages employers paid to workers under the payroll form of the employment module.", attrs: []string{keyRole, keyRegion}},
 }
 
 // The attribute keys of the catalogue (rules 5.4.1). A key outside the
