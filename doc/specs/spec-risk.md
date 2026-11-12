@@ -617,7 +617,7 @@ draws nothing. Its cost class is 1: a lookup in the cached table of 8.1.3.
 
 ### 8.3 The lanes of the viability solver
 
-8.3.1. `transport.Lanes` (`spec-transport.md` 9.4) derives for each hired mode and ordered
+8.3.1. `Config.TransportLanes` (`spec-transport.md` 9.4) derives for each hired mode and ordered
 pair a lane "with no loss (RSK adds loss)". With the module present the lane's **loss**
 is the expected loss of 8.1.1 computed from the configured rows at the scales of 10 000
 (`Lanes` is a pure function of the configuration, so a scale slot is not read) over the
@@ -963,7 +963,7 @@ choices**: a pack states how dangerous its world is, and no search range exists 
 (a danger is a fact of a setting, not a quantity to be tuned to a fact of the economy).
 None is a knob or a damper strength, and no field moves the steady state of the
 viability programme (`spec-viability.md` 11): the programme reads a lane's loss only
-through `transport.Lanes` (8.3), a derived input and not a path of the table. The two
+through `Config.TransportLanes` (8.3), a derived input and not a path of the table. The two
 slots are not configuration and are not rows (`spec-calibration.md` 3.5 item 1: a slot is
 set between steps by a script that is data, never by a calibration rule).
 
@@ -1481,7 +1481,7 @@ register's "hazard" is a kind of entry. Setting words (`road`, `bandit`, `flood`
 | FR-RSK-023 | For every commodity and run the boundary balance of `loss` MUST equal minus the sum of the lost amounts of the events, and per tick and region `BoundaryFlow` MUST agree with them by 7.2.1 (7.3). |
 | FR-RSK-024 | The expected loss of a route MUST be computed as in 8.1.1 from the rows, the scales and the graph at the call, MUST be 0 with the module off or no row on the path, and MUST be shown as `Routes[].LossBP` and by the read `RouteLoss` (8.1, 8.2). |
 | FR-RSK-025 | The table of expected losses MUST be rebuilt at the call that changes an edge status or a scale, MUST be derived and not saved, and a lookup in the tick MUST NOT allocate (8.1.3). |
-| FR-RSK-026 | `transport.Lanes` MUST take a lane's loss from the configured rows at the scales of 10 000 over the path of the configured graph with every edge open (8.3). |
+| FR-RSK-026 | `Config.TransportLanes` MUST take a lane's loss from the configured rows at the scales of 10 000 over the path of the configured graph with every edge open (8.3). |
 | FR-RSK-027 | The merchant's cautious revenue MUST be net of the route's `LossBP`, `Rnet * (10 000 - LossBP) / 10 000` truncated, before every use of it (`G`, `BreakEven`, `HaulCeiling`); `AskLimit` MUST NOT read it (8.4). |
 | FR-RSK-028 | `SetRouteRiskScales` and `SetStoreRiskScales` MUST be between-ticks calls, atomic, validated in the order of 9.2, a scale of 10 000 MUST clear the key, and each changed key MUST emit its event in key order at the call. |
 | FR-RSK-029 | A scale MUST multiply the strike probability only, MUST NOT create a risk (a key with no row is `ErrUnknownRiskRow`), and MUST hold until another call sets it (9.1.2, 9.2). |

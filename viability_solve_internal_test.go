@@ -330,13 +330,14 @@ func TestSolveFiles_NoTimeRandomOrLogging(t *testing.T) {
 	}
 }
 
-// TestSolveOptions_ExactlyFive verifies that the exported With* functions of
-// viability.go are the five of D127 and that no Lane type is published.
+// TestSolveOptions_ExactlySix verifies that the exported With* functions of
+// viability.go are the six of spec-viability.md 7.1 (the five of Stage 1 and
+// WithLanes) and that Lane is published beside them.
 //
-// Guard: WithLanes, Lane and MaxLanes come with the transport module (D127,
-// N-279). A lane cannot be expressed in Stage 1, so no rejection code exists; a
-// sixth option added here would be one the solver cannot honour.
-func TestSolveOptions_ExactlyFive(t *testing.T) {
+// Guard: a seventh option added here would be one the solver does not document
+// or bound (spec-viability.md 11); this test replaces the Stage 1 test that said
+// no Lane is published, now that the transport row has built the lanes.
+func TestSolveOptions_ExactlySix(t *testing.T) {
 	t.Parallel()
 	f, err := parser.ParseFile(token.NewFileSet(), "viability.go", nil, 0)
 	if err != nil {
@@ -358,12 +359,12 @@ func TestSolveOptions_ExactlyFive(t *testing.T) {
 		}
 	}
 	slices.Sort(withs)
-	want := []string{"WithFreeTrade", "WithMaxPivots", "WithMoneyBufferTicks", "WithResidualWarnBP", "WithStockCoverTicks"}
+	want := []string{"WithFreeTrade", "WithLanes", "WithMaxPivots", "WithMoneyBufferTicks", "WithResidualWarnBP", "WithStockCoverTicks"}
 	if !slices.Equal(withs, want) {
 		t.Errorf("exported With* functions of viability.go = %v, want %v", withs, want)
 	}
-	if slices.Contains(types, "Lane") {
-		t.Errorf("viability.go publishes the type Lane, want none in Stage 1")
+	if !slices.Contains(types, "Lane") {
+		t.Errorf("exported types of viability.go = %v, want Lane among them", types)
 	}
 }
 

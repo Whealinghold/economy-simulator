@@ -878,7 +878,7 @@ labour = ceil( 10_000 * f * s * Duration / Output )       Duration and Output of
 computed with exact integer arithmetic (the rational compared by cross-multiplication,
 128-bit intermediates). The recipe is the cheapest that makes the haul commodity: the lowest `Duration / Output` at E = 10 000, ties by recipe ID; a commodity with `Mass` and `Bulk` both 0 gives `f` = 0 and a lane of labour 0. It is a pure function of the configuration, `Config.TransportLanes() ([]Lane, error)` (the Go name of `transport.Lanes`),
 that a consumer passes to the solver as an option (`WithLanes([]Lane) SolveOption`, `MaxLanes` = `MaxRegions * MaxRegions * MaxCommodities`; `Lane` is declared once, in `viability.go`); the solver does not call it, so the
-viability check stays independent of this module. The lane charges labour only: the
+viability check stays independent of this module. The result is sorted by (`From`, `To`, `Commodity`, `Labour`) in the order of the realm, and at most `MaxLanes` long (`ErrOutOfBounds` otherwise). It returns an error and no partial list when a hired mode's haul commodity has no recipe that makes it, or when the arithmetic overflows. The loss comes from one seam, which is 0 until the risk module exists. The lane charges labour only: the
 feed and the vehicle wear of the carriers' recipe are not in the programme, which is a
 stated limitation of the check (open question 8). Self-carried modes give no lanes in
 version 1.
@@ -1401,7 +1401,7 @@ bounds are placeholders (N-015, N-027).
 | FR-TRN-038 | Validation MUST emit the warnings of 12.2 without failing the configuration, and MUST reject the errors of 12.1 each with its sentinel. |
 | FR-TRN-039 | The transit factor slot MUST default to 10 000 for every (from, to, mode), MUST affect new dispatches only, a value above `MaxTransitFactorBP` MUST be refused, a key whose `from` equals `to` MUST be refused with `ErrSameRegion`, and a changed key MUST emit `TransitFactorChanged` (10.3). |
 | FR-TRN-040 | A shipment's Transit account and its cargo MUST be attributed, for spoilage, to the origin region. |
-| FR-TRN-041 | `transport.Lanes` MUST derive, for each hired mode, ordered pair of regions with a route and commodity, a lane with the loss of `spec-risk.md` 8.3 (0 with the risk module off) and labour `ceil(10 000 * f * s * Duration / Output)`, `f` the binding fill of one unit of the commodity, from the cheapest recipe making the haul commodity, with exact integer arithmetic. |
+| FR-TRN-041 | `Config.TransportLanes` MUST derive, for each hired mode, ordered pair of regions with a route and commodity, a lane with the loss of `spec-risk.md` 8.3 (0 with the risk module off) and labour `ceil(10 000 * f * s * Duration / Output)`, `f` the binding fill of one unit of the commodity, from the cheapest recipe making the haul commodity, with exact integer arithmetic. |
 | FR-TRN-042 | The module MUST log nothing above `Debug` per shipment, MUST have no `Info` line in the tick, and the keys `shipment`, `mode`, `dest` and `modes` MUST be used as in 13.3. |
 | FR-TRN-043 | Hired capacity MUST be an ordinary commodity made by ordinary recipes and traded by ordinary orders: no market, admission or settlement rule of `spec-clearing.md` MUST depend on a mode, and a world with the module on MUST pass the clearing invariants unchanged. |
 | FR-TRN-044 | Two requests with the same arguments from the same state MUST give the same result, shipment ID, Transit account and events: no iteration order of a map MUST influence a result. |
@@ -1446,7 +1446,7 @@ bounds are placeholders (N-015, N-027).
    `DefaultStrategy`'s `Target` of `spec-agents.md` 7.3 includes units arriving within
    `StartsIn` is AGT's; the default never ships but a consignee may be sent goods by
    others.
-8. **The lanes ignore the carriers' inputs.** `transport.Lanes` charges labour only
+8. **The lanes ignore the carriers' inputs.** `Config.TransportLanes` charges labour only
    (9.4), so the steady-state check does not count the feed and vehicle wear of the
    carriers' recipe, and a pack could pass the check yet be short of fodder. VIA could
    take a lane with inputs.

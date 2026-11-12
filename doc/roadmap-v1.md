@@ -244,7 +244,7 @@ all-on from it).
 | `resources.go` and `internal/endowment`, `internal/curve` | RES | merged (PRs A, B, C) |
 | `subsistence.go` and `internal/ownuse` | SUB | merged |
 | `population.go` and `internal/population` | POP | in progress |
-| `transport.go` and `internal/transit` | TRN, CAR | built except the lanes in the solver (Phase 8, N-279, N-281: split out and open, waits for VIA, N-326) |
+| `transport.go` and `internal/transit` | TRN, CAR | built (the lanes in the solver are plan 2-12b: `Lane`, `WithLanes`, `Config.TransportLanes`; `RelocateForTest` and `SetEdgeStatusesForTest` are dropped, never needed) |
 | `information.go` and `internal/rumour` | INF | built (stage-2-13; audited 2026-11-11) |
 | `migration.go` and `internal/migration` | MIG | built (Phases 1 to 8; audited 2026-11-11) |
 | `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | done on branch stage-2-done-merchants (commit recorded at merge; plan 2-26: the merchant reruns S30 to S32 and S46, X1 and X2 dynamic report-only, `TestDeterminism_Merchants`, the `two+merchants` invariants row, the FR-WEL-009 window term; audited 2026-11-11) |

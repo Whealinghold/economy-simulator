@@ -114,7 +114,7 @@ economy-sim/
   strategy_default.go  strategy_work.go  strategy_view.go          (AGT)
   spawner_report.go                                                (SPN)
   production_report.go                                             (PRO)
-  viability_check.go  viability_table.go  viability_report.go           (VIA)
+  viability_check.go  viability_table.go  viability_report.go  viability_lanes.go  (VIA)
   construct.go  construct_warm.go  fanin.go  phase_start.go
   phase_production.go  phase_trade.go  phase_outcomes.go
   phase_exit.go                                                    (WLD)
@@ -1074,4 +1074,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 7f6bf295cf4542a8cc3a2691
+RULE-TAG: c4fe78572c8c450e187ee13c

@@ -647,10 +647,12 @@
 //   - Virtual start offset: a tick before tick 0 at which a job in progress at
 //     construction is taken to have started, so the jobs of a group are
 //     staggered.
-//   - Lane: in the solver, a route between regions: the zero-cost lanes of the
-//     free-trade set merge their goods rows, and a lane of the transport module
-//     carries a labour charge and a loss (spec-transport.md 9.4); not a lane of a
-//     credit round or of a merchant.
+//   - Lane: in the solver, a directed route between two regions for one
+//     commodity: the zero-cost lanes of the free-trade set merge their goods
+//     rows, and a lane given to WithLanes carries a labour charge and a loss
+//     (spec-viability.md 9.4, spec-transport.md 9.4); the lanes of a solve make
+//     one programme for each connected set of regions (a component); not a lane
+//     of a credit round or of a merchant.
 //   - Step: one call of Step: the entry of a tick and its eight phases, run in
 //     the order of spec-world.md 6, which on success advances the tick counter by
 //     one. In phase 7 the world carries out the spawner's plan itself, decision by

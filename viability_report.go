@@ -693,6 +693,8 @@ func (s *viaSolve) autarkyRange(a, b int) (low, high steady.Frac, found bool) {
 }
 
 // ratioOf returns price(a) / price(b) of an outcome when both are positive.
+// It reads the per-commodity Price, so it is for free-trade programmes only: a lane
+// programme indexes Price by region (viaProgramme.price).
 func ratioOf(o steady.Outcome, a, b int) (steady.Frac, bool) {
 	if o.Price[a].Sign() == 0 || o.Price[b].Sign() == 0 {
 		return steady.Frac{}, false

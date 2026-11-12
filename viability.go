@@ -58,6 +58,7 @@ type viaActivity struct {
 // is built once per check and holds no state between calls.
 type viaModel struct {
 	c       *Config
+	lanes   []viaLane  // the lanes of WithLanes, resolved and in canonical order; nil without them
 	sup     *resSupply // the endowments of the resources module, nil while it is off
 	rt      recipeTable
 	roles   roleTable
@@ -284,6 +285,7 @@ type SolveOption func(*solveOptions) error
 type solveOptions struct {
 	stockCover, moneyBuffer, residualWarn, maxPivots int64
 	freeTrade                                        bool
+	lanes                                            []Lane
 }
 
 // newSolveOptions applies the options in order over the defaults: a nil option
@@ -301,6 +303,9 @@ func newSolveOptions(opts []SolveOption) (solveOptions, error) {
 		if err := f(&o); err != nil {
 			return solveOptions{}, err
 		}
+	}
+	if o.freeTrade && len(o.lanes) > 0 { // the free-trade set is itself a lane set (9.4)
+		return solveOptions{}, &ValidationError{Path: []string{"solve_options", "lanes"}, Rule: ErrOptionContext}
 	}
 	return o, nil
 }
@@ -347,10 +352,40 @@ func WithMaxPivots(n int64) SolveOption {
 
 // WithFreeTrade solves all the regions with a group as one pooled programme with
 // one price scale, the complete set of zero-cost lanes, instead of each region
-// alone in autarky (spec-viability.md 7.1, 9.4). Stage 1 realises only this lane
-// set: Lane, Lanes and MaxLanes come with the transport module.
+// alone in autarky (spec-viability.md 7.1, 9.4). It cannot be combined with
+// WithLanes.
 func WithFreeTrade() SolveOption {
 	return func(o *solveOptions) error { o.freeTrade = true; return nil }
+}
+
+// Lane is a directed route for one commodity between two regions, as the solver
+// takes it (spec-viability.md 9.4, spec-transport.md 9.4): From and To are region
+// IDs, Commodity a commodity ID.
+type Lane struct {
+	From, To  string
+	Commodity string
+	// Labour is the household-ticks of carrier labour per 10 000 units, charged in
+	// From.
+	Labour int64
+	// LossBP is the share lost in transit, in basis points, 0 to 9 999.
+	LossBP int64
+}
+
+// WithLanes solves the regions with a group and a lane as one programme for each
+// connected set of regions, and the others in autarky (spec-viability.md 9.4,
+// FR-VIA-061). The list is copied. It is refused, before any work, when it holds a
+// self-lane, a duplicate, a negative labour, a loss outside 0 to 9 999 or more than
+// MaxLanes lanes, and it cannot be combined with WithFreeTrade (ErrOptionContext);
+// a lane that names an unknown region or commodity is refused by SolveSteadyState.
+func WithLanes(lanes []Lane) SolveOption {
+	list := copyLanes(lanes, MaxLanes)
+	return func(o *solveOptions) error {
+		if err := checkLaneList(list, MaxLanes); err != nil {
+			return err
+		}
+		o.lanes = list
+		return nil
+	}
 }
 
 // SteadyState is the result of SolveSteadyState: the programmes solved, the
@@ -434,6 +469,9 @@ func SolveSteadyState(ctx context.Context, cfg Config, opts ...SolveOption) (Ste
 	cc := cold.canonical()
 	s := &viaSolve{m: newViaModel(&cc), o: o}
 	s.m.maxPivots = o.maxPivots
+	if s.m.lanes, err = resolveLanes(&cc, o.lanes); err != nil {
+		return SteadyState{}, err
+	}
 	if err := s.solve(ctx); err != nil {
 		return SteadyState{}, err
 	}
@@ -443,13 +481,16 @@ func SolveSteadyState(ctx context.Context, cfg Config, opts ...SolveOption) (Ste
 	return s.finish()
 }
 
-// sets returns the region sets to solve, one region each in autarky and the
-// whole realm when pooled, and lists the regions that have no programme: an
-// empty basket, or one of unsourced Raw markers (D130, JC5).
+// sets returns the region sets to solve, one region each in autarky, the
+// components of the lanes with WithLanes and the whole realm when pooled, and
+// lists the regions that have no programme: an empty basket, or one of unsourced
+// Raw markers (D130, JC5).
 func (s *viaSolve) sets() [][]RegionID {
 	var sets [][]RegionID
 	groups := [][]RegionID{s.m.withHouseholds}
-	if !s.o.freeTrade {
+	if len(s.m.lanes) > 0 {
+		groups = laneGroups(s.m.withHouseholds, s.m.lanes)
+	} else if !s.o.freeTrade {
 		groups = groups[:0]
 		for _, r := range s.m.withHouseholds {
 			groups = append(groups, []RegionID{r})
@@ -589,7 +630,11 @@ func (s *viaSolve) solveAt(ctx context.Context, regions []RegionID, phi steady.R
 // wantsModel is the programme of the regions with the fixed term of the wants.
 func (m *viaModel) wantsModel(regions []RegionID, phi steady.Ratio) (steady.Model, error) {
 	md := m.model(regions, phi)
-	fixed, err := wantsTerm(m.c, regions)
+	wants := wantsTerm
+	if len(md.Lanes) > 0 {
+		wants = laneWantsTerm // one fixed term for each region's goods rows
+	}
+	fixed, err := wants(m.c, regions)
 	if errors.Is(err, steady.ErrOverflow) {
 		return md, fmt.Errorf("%w: the wants term is out of int64 range", ErrOverflow)
 	}
