@@ -285,7 +285,7 @@ paragraph below stays the criterion. Each criterion, as it stands today:
 
 | # | Criterion | State | How verified |
 | --- | --- | --- | --- |
-| 1 | The reference chain runs to a stable state from a warm start and passes the STY bands | **not met** | N-352: every reference pack goes extinct (`one`, `one-demand`, `five` warm and `all` reach 0 households by tick 1 100). Four default-off engine levers and a nine-trial data ladder did not give a healthy economy: the best setting keeps the household count but 85% to 90% of non-cook household-ticks are unfed. No band is set (`testdata/chains/bands/five.toml` has no value for `x4.*` or `x3.ms_per_tick`), no pack, warm start or golden moved. |
+| 1 | The reference chain runs to a stable state from a warm start and passes the STY bands | **not met** | N-352: every reference pack goes extinct (`one`, `one-demand`, `five` warm and `all` reach 0 households by tick 1 100). Four routes did not give a healthy economy: four default-off engine levers, a nine-trial data ladder, a pack-data ladder with a solved census (T1 to T3) and a payroll (wage) module with its claim ladder (E1 to E5). The best settings keep the household count but the discretionary roles stay 50% to 70% unfed (bar 1%). No band is set (`testdata/chains/bands/five.toml` has no value for `x4.*` or `x3.ms_per_tick`), no pack, warm start or golden moved. The levers and the payroll module are parked unmerged (`origin/stage-2-done-stability`, `origin/stage-2-done-employment`, `origin/stage-2-done-employment-claim`). The next step is a design decision on the reference chain. |
 | 2 | Invariant, determinism, golden and configuration-only chain tests pass on amd64 and arm64 | **met** (quick pattern on arm64; see below) | amd64: the `check` job (`go test -short -race`, every module) is green on PR #54 (run 43141053976), and gates R and F pass on the dev host (the lanes head `9c52695`: gate R exit 0, gate F exit 0, 33 of 33 coverage scopes at their minimums; gates R and F are not run by hosted CI, N-353). arm64: the `arm64` job (native `ubuntu-24.04-arm`, `scripts/ci/arm64.sh`) is green on the push to `main` of PR #53 (run 43103409906, 16m57s) and on PR #54 (run 43141053976). In the root module it runs `QUICK_PATTERN` of `scripts/ci/common.sh` (`TestScenario\|TestDeterminism\|TestGolden\|TestInvariants\|TestCheckpoint\|TestFork\|TestConfigOnly\|TestFixture\|TestPacks\|TestCensus\|TestExpected\|TestStylised\|TestCost\|TestStable`, all seeds, no race), and `go test -short` in every other module. It is the quick run of `testing.md` 9.1, not gates R or F, and the arm64 build is native. N-343 is closed. |
 | 3 | A new commodity or chain needs only a configuration file; a second, unrelated setting shows it | **met** | `examples/colony` is a second setting that is a pack of configuration files and `colony.go` (`TestColony_ExtraLayerNeedsOnlyConfiguration`); `TestConfigOnly_SecondRunsToTheStablePredicate` (`config_chain_test.go`) and `TestConfigOnly_AllPackHasNoGoSpecific` (`all_pack_test.go`) run the `second` and `all` packs with no Go change. That a chain runs is shown; that it is stable is criterion 1. |
 | 4 | A checkpoint taken mid-run and resumed gives the same result as an uninterrupted run | **met** | `TestFork_OneAtN` (`checkpoint_fork_test.go`, FR-CHK-050, 052, 053, 026) forks at several ticks on seeds 1 to 4 and compares with the uninterrupted run; the other `TestFork_*` tests cover observers, split runs, restore of a restore, directives and removed agents. The tests are in the quick pattern, so they also ran on arm64. |
@@ -294,10 +294,13 @@ paragraph below stays the criterion. Each criterion, as it stands today:
 
 **Remains for Stage 2:**
 
-- (a) Criterion 1. The owner decides between a money-circulation redesign of the
-  reference chain (cooks capture the surplus; demand is cash limited) and a
-  rewording of the criterion (N-352). PR D, the bands and the stable-five test
-  wait on it.
+- (a) Criterion 1 is not met after four routes (the engine levers, pack data, the
+  wage route). The next step is a design decision on the reference chain itself,
+  the owner's (N-352 lists the candidates: a payroll-aware `SolveSteadyState` and a
+  discretionary sub-chain sized by final demand, the full hire form of
+  `spec-employment.md`, or a data-only redesign of the sub-chain), or a rewording
+  of the criterion. The payroll module and the claim harness are parked unmerged.
+  PR D, the bands and the stable-five test wait on it.
 - (b) The owner's repository actions: the secret `CODACY_PROJECT_TOKEN` (until it
   is set, the Codacy upload of `full` fails where `full` is run), branch protection
   on `main` requiring `check` and `arm64` (the branch is not protected today), and
