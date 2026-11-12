@@ -11,6 +11,7 @@ set -uo pipefail
 
 : "${F_TIMEOUT:=120m}"
 : "${F_COVERMODE:=set}"
+case $F_COVERMODE in set | count | atomic) ;; *) echo "full: F_COVERMODE must be set, count or atomic" >&2; exit 1 ;; esac
 # shellcheck disable=SC2086 # FULL_MODULES is a space-separated list
 mods=${FULL_MODULES:-$(modules)} || exit 1
 

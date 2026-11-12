@@ -94,6 +94,7 @@ if [ -x "$here/full.sh" ]; then
 	expect full-covermode-default 0 "go test -covermode=set -coverpkg" env PATH="$fakego:$PATH" FULL_MODULES=examples/colony "$here/full.sh"
 	expect full-covermode-override 0 "go test -covermode=atomic -coverpkg" env PATH="$fakego:$PATH" FULL_MODULES=examples/colony F_COVERMODE=atomic "$here/full.sh"
 	expect full-timeout-default 0 "-timeout 120m" env PATH="$fakego:$PATH" FULL_MODULES=examples/colony "$here/full.sh"
+	expect full-covermode-bogus 1 "F_COVERMODE must be set, count or atomic" env PATH="$fakego:$PATH" FULL_MODULES=examples/colony F_COVERMODE=bogus "$here/full.sh"
 	rm -rf "$fakego"
 fi
 

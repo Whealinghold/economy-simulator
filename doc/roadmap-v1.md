@@ -218,7 +218,7 @@ part of EST for the same reason. Plans 1 and 8 are rows of the table.
 them). CI: yes, with an arm64 job; the workflow (`.github/workflows/ci.yml`, three
 jobs: check, full, arm64) is not written by plan 2-1 and has its own row below.
 The gate is two runs (`rules/testing.md` 9.1): R, `go test -race -timeout 60m ./...`
-with reduced seeds (a dev-host gate; PR CI runs `-short -race`, and the opt-in `full` job runs R on `FULL_RUNNER`, see testing.md 9.1), and F, the non-race atomic-coverage run with all seeds.
+with reduced seeds (a dev-host gate; PR CI runs `-short -race`, and the opt-in `full` job runs R on `FULL_RUNNER`, see testing.md 9.1), and F, the non-race set-mode coverage run with all seeds.
 Answers to the questions asked at the start of Stage 2: (5) plan 8 E0: yes, the
 seasonal-crop feature C04 may move from the pack to an overlay; (6) plan 24 R2(a):
 the realm pack is `five` renamed, and R3: the reference machine for the SCL time is
