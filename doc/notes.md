@@ -908,6 +908,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The world holds no per-agent field; the ring, the job and the residues are the agent row's hosted fields.
 - **Update (2026-10-23, plan 2-2 Phase 1):** applied in its lesson: the hosted fields are written once, in the agent record, always (plan 2-2 D247), and the row adds none. A standing rule; left open.
 - **Update (2026-11-11, plan 2-11):** POP keeps the death carry in the module's slice by `AgentID`; the checkpoint writes it in the agent record (plan 2-11 D423); R10 of CHK needs O1. Left open.
+- **Update (2026-11-12, plan 2-28 review):** read: the payroll form hosts no per-agent field and has no checkpoint section (`spec-employment.md` 24.1.7). Left open.
 
 ### N-129 A stateful extension is one instance per world
 
@@ -1156,6 +1157,7 @@ PR description.
 - **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: the word "treasury" is not used here. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The row says "pool" for the estate account and never "treasury".
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: the checkpoint row does not use the word "treasury" except as the account kind of the format (4.2.4). Left open.
+- **Update (2026-11-12, plan 2-28 review):** read: the payroll form says "pool" only for the sum of the payers' budgets, never for an estate account, and does not use "treasury". Left open.
 
 ### N-164 Credit requests and offers are plan fields
 
@@ -1562,6 +1564,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Applied: the row appends no configuration, event or snapshot field to anything that exists; the snapshot is new and declares slice fields only; the pinned hash and `testdata/golden/off/` do not move (the rename of D140 changes no hash input: the field id of `Config.World` is 1 and the ids of its fields are unchanged). Standing; left open.
 - **Update (2026-10-21, anchor fix):** applied to a core field: `World.AnchorHold` defaults to 0 and is written to the hash only when not zero (field 46), so a configuration that never sets it hashes as before; `TestHashConfig_AnchorHoldOffLeavesNoTrace` keeps the old pin. The reference chain (`base.toml`) sets `anchor_hold = 5000`, which is a pack edit: the pins of pack `one` (`TestHashConfig_ReferencePinned`, `TestPacks_LoadValidateAndHash`, `expected/one.toml`) and `testdata/golden/off/` moved once, explained in the change under testing.md 7.2. Pack `second` is unchanged. Standing; left open.
 - **Update (2026-10-23, plan 2-2 Phase 1):** applied: the checkpoint row appends no configuration field and no field to an event or a snapshot row (`WorldRestored` is a new event); the pinned hash does not move, `events-one.txt` and `one.positions.txt` do not move, and `testdata/golden/off/one.txt` gains the one digest line of N-294 (plan 2-2 D257), which is not a module's append. A standing rule; left open.
+- **Update (2026-11-12, plan 2-28 review):** read: the payroll form leaves no trace while off (`PayrollBP`, `Hireable` and the module hashed only when on; `PayrollPaid` is a count-and-money event never emitted off; the all-off hash and `golden/off` are unchanged, FR-EMP-079). Left open.
 
 ### N-218 The Stage 0 field set and the hash rule that goes with it
 
@@ -2226,4 +2229,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 3c155dda68dc2367152213fd
+NOTES-TAG: f4717ea7b521fb5576899a3a

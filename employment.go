@@ -29,7 +29,7 @@ type employment struct {
 	hireable []bool
 
 	// The rest is scratch of one pass of P4.1b, held so that the position
-	// allocates nothing once it has grown: it is rebuilt every tick and saved
+	// allocates nothing once the scratch and the welfare slots have grown: it is rebuilt every tick and saved
 	// nowhere. payers and workers are by RegionID, in ascending agent ID.
 	payers  [][]payroll.Payer
 	workers [][]payroll.Worker
@@ -214,6 +214,9 @@ func (w *World) payRow(g RegionID, r payroll.Transfer) error {
 	}
 	w.welfare.addWagePaid(r.Payer, r.Amount)
 	w.welfare.addEarned(r.Worker, r.Amount)
+	if !w.obs.supplied {
+		return nil
+	}
 	t := &w.employment.byRole[from.role]
 	t.ev.Paid += Money(r.Amount)
 	if t.last != r.Worker+1 {
