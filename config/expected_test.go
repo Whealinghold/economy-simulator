@@ -192,7 +192,7 @@ func wantsLine(e expectedPack) string {
 	return fmt.Sprintf("surplus_wants_bp = %d\n", e.SurplusWantsBP)
 }
 
-// TestExpected_Packs verifies, for the packs one, second, one-demand, five and all, the hash of the
+// TestExpected_Packs verifies, for the packs one, second, one-demand, payroll, five and all, the hash of the
 // effective configuration, the solver's report (surplus, labour share, pivots,
 // unpriced) and the warnings against testdata/chains/expected/<pack>.toml, for
 // the cold layer set and the warm one. The file is recorded with -update from the
@@ -220,6 +220,11 @@ func TestExpected_Packs(t *testing.T) {
 		{"one", []string{"base.toml", "one.toml"}, []string{"base.toml", "one.toml", "warm-one.toml"}, 25_119, 10, nil},
 		{"second", []string{"second/second.toml"}, []string{"second/second.toml", "second/warm-second.toml"}, 19_663, 10, nil},
 		{"one-demand", []string{"base.toml", "demand.toml", "one-demand.toml"}, []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml"}, 22_803, 15, nil},
+		// payroll: the pack of plan 2-29 (one-demand, the employment module in its payroll form, the
+		// data layer sized by the payroll-aware solver): lambda* 2.9618, 15 pivots (the payroll moves
+		// the duals, not the programme, so the pivots are those of one-demand).
+		{"payroll", []string{"base.toml", "demand.toml", "one-demand.toml", "overlay/employment.toml", "overlay/chain-payroll.toml"},
+			[]string{"base.toml", "demand.toml", "one-demand.toml", "overlay/employment.toml", "overlay/chain-payroll.toml", "warm-payroll.toml"}, 29_618, 15, nil},
 		// five: REF 7.3, centre, east, north, south, west (1.904, 1.704, 1.915, 1.642, 1.805).
 		{"five", []string{"base.toml", "lines.toml", "five.toml"}, []string{"base.toml", "lines.toml", "five.toml", "warm-five.toml"}, 0, 0,
 			[]int64{19_038, 17_038, 19_145, 16_415, 18_054}},

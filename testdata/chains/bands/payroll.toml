@@ -1,0 +1,13 @@
+# The bands of the pack `payroll` (plan 2-29, spec-reference-chain.md 4.4.8). Every key is unset: a key with
+# no `value` line makes a test report its measure and assert nothing on it. PR B sets no band (acceptance
+# criterion 3 of plan 2-29): a value is set by a reviewed run (STY 8.4) with a
+# `set_by = "commit=<id>;config=<hash>;seeds=<a>-<b>"` line (FR-REF-024), and that is the owner's decision.
+# The household-count claim of FR-REF-045 is TestScenarioChain_Claim and is not a band.
+# The two keys declare the file's grammar (a band file holds a table) and nothing more.
+
+# W01: the least mean welfare ratio of the households (STY-W01).
+[w01.mean_low_bp]
+unit = "bp"
+# W01: the most mean welfare ratio of the households (STY-W01).
+[w01.mean_high_bp]
+unit = "bp"
