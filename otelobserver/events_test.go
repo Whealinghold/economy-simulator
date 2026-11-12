@@ -39,6 +39,7 @@ var allEvents = []economysim.Event{
 	economysim.AgentRelocated{},
 	economysim.EdgeStatusChanged{},
 	economysim.ReliefPaid{},
+	economysim.PayrollPaid{},
 	economysim.MoneyFlowLimited{},
 	economysim.MoneyFlowEnded{},
 	economysim.MoneyFlowScaled{},

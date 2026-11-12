@@ -38,7 +38,7 @@ type registryInput struct {
 var notBuilt = []string{
 	// The pointers of Modules: a module's change adds its field and deletes its
 	// entry here.
-	"Modules.Credit", "Modules.Employment", "Modules.Fiscal",
+	"Modules.Credit", "Modules.Fiscal",
 	"Modules.Infrastructure", "Modules.Institutions", "Modules.Insurance",
 	"Modules.Policy", "Modules.Polity",
 	"Modules.Risk", "Modules.Saving",
@@ -48,12 +48,16 @@ var notBuilt = []string{
 	"FlowTarget.Store", "FlowTarget.Jurisdiction",
 	// Fields that a module appends to the core types Recipe, Region and Role.
 	"Recipe.Builds", "Recipe.Needs", "Recipe.Repairs",
-	"Role.Ceiling", "Role.Cover", "Role.Credit", "Role.Employer",
-	"Role.Hireable", "Role.Needs",
+	"Role.Ceiling", "Role.Cover", "Role.Credit",
+	"Role.Needs",
 	"Role.Saver",
+	// The fields of the hire form of the employment module, which the payroll form
+	// does not have (spec-employment.md 24.3).
+	"Employment.MaxOpen", "Employer.Recipes", "Employer.MaxHires",
+	"Employer.WorkerShareBP", "Employer.HireYieldBP",
 	// Scopes (Go type names) of the modules that are not built.
 	"Body", "Borrow", "Capacity", "ClassLimit", "Control", "CoverTerms", "Credit",
-	"CreditTerms", "Duty", "Employer", "Employment",
+	"CreditTerms", "Duty",
 	"FacilityBuild", "FacilityClass", "FacilityRepair", "Fiscal", "Holding",
 	"Infrastructure", "InitialFacility", "Institutions", "Insurance", "Insure",
 	"Jurisdiction", "Lend", "Lever", "Member",
@@ -77,7 +81,7 @@ var exemptFields = map[string]bool{
 	"Config.Groups": true, "Config.Modules": true,
 	// The demand module: its pointer is the switch (spec-config.md 6.2.1), and the
 	// two taste lists are containers whose fields are the rows (spec-demand.md 9).
-	"Modules.Demand": true, "Modules.External": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Modules.Migration": true, "Modules.Merchants": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
+	"Modules.Demand": true, "Modules.External": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Modules.Migration": true, "Modules.Merchants": true, "Modules.Employment": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
 	"YieldProfile.HasAll": true,
 	// The Has flags of an Endowment row only spell in Go what the file says by writing the key.
 	"Endowment.HasCapacity": true, "Endowment.HasInitial": true, "Endowment.HasRegenScale": true,

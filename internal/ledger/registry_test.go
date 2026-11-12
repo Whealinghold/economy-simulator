@@ -26,6 +26,7 @@ var byName = map[string]ledger.Reason{
 	"transit_out": ledger.TransitOut, "transit_in": ledger.TransitIn, "haul_use": ledger.HaulUse, "transit_use": ledger.TransitUse,
 	"outside_budget": ledger.OutsideBudget, "outside_unspent": ledger.OutsideUnspent, "outside_receipts": ledger.OutsideReceipts,
 	"outside_offer": ledger.OutsideOffer, "outside_unsold": ledger.OutsideUnsold, "outside_purchases": ledger.OutsidePurchases,
+	"wage_pay": ledger.WagePay,
 }
 
 // notBuilt lists the reasons of the starting registry that a module owns and
@@ -33,7 +34,7 @@ var byName = map[string]ledger.Reason{
 // 9.7. A module's change deletes its entries.
 var notBuilt = []string{
 	"want_consumption",
-	"escrow_in", "escrow_out", "escrow_refund", "wage_escrow", "wage_pay",
+	"escrow_in", "escrow_out", "escrow_refund", "wage_escrow",
 	"wage_refund", "rent",
 	"title_sale", "premium", "payout", "loss",
 }
@@ -422,5 +423,32 @@ func TestEscrowReasons_Pairings(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestWagePay_AgentToAgentMoneyOnly verifies the registry row of wage_pay in the
+// payroll form of the employment module (spec-employment.md 24.1.6): an internal
+// transfer of money between two Agent accounts, no faucet, no sink, no goods, no
+// boundary account and no other pairing.
+//
+// Requirement: FR-EMP-072
+func TestWagePay_AgentToAgentMoneyOnly(t *testing.T) {
+	t.Parallel()
+	if class, ok := ledger.ClassOf(ledger.WagePay, false); !ok || class != ledger.Internal {
+		t.Errorf("ClassOf(wage_pay, money) = %v, %v, want an internal row", class, ok)
+	}
+	if _, ok := ledger.ClassOf(ledger.WagePay, true); ok {
+		t.Errorf("ClassOf(wage_pay, goods) has a row, want money only")
+	}
+	for a := ledger.KindAgent; a <= ledger.KindBoundary; a++ {
+		for b := ledger.KindAgent; b <= ledger.KindBoundary; b++ {
+			want := a == ledger.KindAgent && b == ledger.KindAgent
+			if got := ledger.Allowed(ledger.WagePay, false, a, b); got != want {
+				t.Errorf("Allowed(wage_pay, money, %d, %d) = %v, want %v", a, b, got, want)
+			}
+			if ledger.Allowed(ledger.WagePay, true, a, b) {
+				t.Errorf("Allowed(wage_pay, goods, %d, %d) = true, want a refusal", a, b)
+			}
+		}
 	}
 }

@@ -285,3 +285,7 @@ func DefaultOutsideLine(commodity string, base Price) OutsideLine {
 func DefaultOutsideGate(region string) OutsideGate {
 	return OutsideGate{Region: region, ScaleBP: DefaultGateScaleBP}
 }
+
+// DefaultEmployer returns the employer block with the placeholder share of
+// spec-employment.md 24.3.2: 5 000 basis points of the receipts (N-015, N-027).
+func DefaultEmployer() Employer { return Employer{PayrollBP: 5_000} }

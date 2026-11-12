@@ -273,7 +273,7 @@ var (
 		"AgentRelocated", "MoneyFlowLimited", "EndowmentChanged", "EndowmentAdjusted", "OwnUseChanged",
 		"PopulationChanged", "ShipmentDispatched", "ShipmentArrived", "RumoursServed", "MigrationStarted",
 		"MigrationReviewed", "MerchantsPlanned", "ContractFormed", "ContractSettled", "OutsideTraded", "ShipmentRejected",
-		"ContractRound"}
+		"ContractRound", "PayrollPaid"}
 	ignoredEvents = []string{"EstateOpened", "EdgeStatusChanged", "ReliefPaid", "MoneyFlowEnded", "MoneyFlowScaled",
 		"PopulationScaled", "TransitFactorChanged", "OutsideEnded", "OutsideShocked", "YieldShocked"}
 )

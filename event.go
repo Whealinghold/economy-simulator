@@ -282,6 +282,10 @@ const (
 	ReasonEscrowIn     Reason = "escrow_in"
 	ReasonEscrowOut    Reason = "escrow_out"
 	ReasonEscrowRefund Reason = "escrow_refund"
+	// ReasonWagePay is the money an employer pays a worker as the wage of a tick:
+	// an internal transfer of money, agent to agent in the payroll form of the
+	// employment module (spec-employment.md 24.1.6), no faucet and no sink.
+	ReasonWagePay Reason = "wage_pay"
 )
 
 // The declared ledger reasons of the external module, six rows declared while
@@ -1748,3 +1752,28 @@ type YieldShocked struct {
 }
 
 func (YieldShocked) isEvent() {}
+
+// PayrollPaid is the aggregate of the payroll form of the employment module for
+// one region and employer role: emitted once per region and role per tick at
+// P4.1b, in ascending (RegionID, role) order, after the FiscalFlowApplied events
+// of P4.1a, when Due or Paid is non-zero, and never otherwise and never with the
+// module off (spec-employment.md 24.6.1, FR-EMP-076). It carries no per-agent
+// rows. Money is in minor units.
+type PayrollPaid struct {
+	Tick int64
+	// Region is the region of the payers and the workers, and Role the payers' role.
+	Region RegionID
+	Role   RoleID
+	// Payers is the payers of the role with a budget of at least 1.
+	Payers int64
+	// Workers is the households paid by the payers of the role, counted once per
+	// execution (spec-employment.md 24.6.1): the sum of the executions of the
+	// workers that at least one payer of the role paid, not a head count.
+	Workers int64
+	// Due is the share of the payers' receipts the rule asked for, Paid what was
+	// paid by the reason wage_pay, and Cut Due less Paid: the part cut at a
+	// payer's balance, or all of Due when the region had no worker to pay.
+	Due, Paid, Cut Money
+}
+
+func (PayrollPaid) isEvent() {}

@@ -24,6 +24,7 @@ OutsideEnded
 OutsideShocked
 OutsideTraded
 OwnUseChanged
+PayrollPaid
 PopulationChanged
 PopulationScaled
 ProductionHalted

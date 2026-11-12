@@ -315,6 +315,12 @@ var stepSites = []site{
 	}},
 	{"P3.6", noError((*World).p36Aggregates)},
 	{"P4.1", (*World).p41Clear},
+	{"P4.1b", func(w *World) error {
+		if w.employment != nil {
+			return w.p41bPayroll()
+		}
+		return nil
+	}},
 	{"P4.2", func(w *World) error {
 		if w.external != nil {
 			return w.p42Sweep()

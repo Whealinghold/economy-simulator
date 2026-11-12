@@ -116,6 +116,38 @@ type Modules struct {
 	// when empty. It needs Config.Edges. Its hash id is 7, whatever its place in
 	// this struct.
 	External *External
+	// Employment is the employment module in its payroll form: after clearing,
+	// an employer role pays a share of its receipts to the Hireable households
+	// that worked (spec-employment.md 24). Nil is off; non-nil is on, even
+	// though it has no field in this form. It needs a role with an Employer
+	// block and a Hireable role. Its hash id is 13, whatever its place in this
+	// struct.
+	Employment *Employment
+}
+
+// Employment is the employment module in its payroll form (spec-employment.md
+// 24.3.1). It has no field: its presence is the switch. MaxOpen of the hire form
+// is appended with that form.
+type Employment struct{}
+
+// Employer is the employer block of a role, a pointer of Role: nil means the
+// role does not pay wages (spec-employment.md 24.3.2). Start from
+// DefaultEmployer. It needs Modules.Employment.
+type Employer struct {
+	// PayrollBP is the share of the payer's receipts of the tick that is paid as
+	// wages, in basis points, 1 to 10 000 (spec-employment.md 24.1.3). The
+	// default is a placeholder (N-015, N-027). Its hash id is 1.
+	PayrollBP int64
+}
+
+// canonical returns a copy of the block, nil for nil, so that the canonical
+// configuration shares no pointer with the caller's.
+func (e *Employer) canonical() *Employer {
+	if e == nil {
+		return nil
+	}
+	out := *e
+	return &out
 }
 
 // Merchants is the configuration of the delivery contract (spec-merchants.md
@@ -946,6 +978,14 @@ type Role struct {
 	// (spec-merchants.md 3.2). It is hashed when non-nil, even when all its fields
 	// are zero. Its hash id is 22.
 	Merchant *Merchant
+	// Hireable says the households of the role are paid by the employers that
+	// have a payroll when they worked in the tick (spec-employment.md 24.1.2). It
+	// needs Modules.Employment (true with the module nil is ErrModuleDependency)
+	// and a role is not both Hireable and an Employer. Its hash id is 23.
+	Hireable bool
+	// Employer is the employer block: non-nil makes the role a payer
+	// (spec-employment.md 24.3.2). It is hashed when non-nil. Its hash id is 24.
+	Employer *Employer
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string
@@ -1123,6 +1163,7 @@ func (c Config) canonical() Config {
 		r.Trades = sortedBy(r.Trades, cmp.Compare[string])
 		r.StartStock = sortedBy(r.StartStock, byCommodity)
 		r.Merchant = r.Merchant.canonical()
+		r.Employer = r.Employer.canonical()
 	}
 	out.Regions = sortedBy(c.Regions, func(a, b Region) int { return cmp.Compare(a.ID, b.ID) })
 	for i := range out.Regions {

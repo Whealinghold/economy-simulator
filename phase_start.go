@@ -113,7 +113,7 @@ func (w *World) p12Anchors() {
 		t.rings[g] = t.rings[g][:0]
 	}
 	for i := w.firstHousehold; i < len(w.agents); i++ {
-		if a := &w.agents[i]; a.weight >= 1 {
+		if a := &w.agents[i]; a.weight >= 1 && !w.employment.isPayer(a.role) {
 			g := w.regionOf(a)
 			t.rings[g] = append(t.rings[g], &a.history)
 		}
