@@ -252,6 +252,7 @@ This is the catalogue of the fourteen modules of wave 5 (3.1), in the order of t
 | `Employer` | `MaxHires` | 4 | 1 to `MaxEstablishment` | `spec-employment.md` 3.2, 13 |
 | `Employer` | `WorkerShareBP` | 5 000 | 1 to 10 000 | `spec-employment.md` 3.2, 5.4, 13 |
 | `Employer` | `HireYieldBP` | 10 000 | 1 to `MaxYieldBP` | `spec-employment.md` 3.2, 6.1, 13 |
+| `Employer` | `PayrollBP` | 5 000 | 1 to 10 000 (the payroll form: the share of the payer's receipts paid as wages) | `spec-employment.md` 24.3 |
 | `Modules` | `Tenure` | nil (off); needs `Modules.Resources` | | `spec-land.md` 3.3, 10 |
 | `Tenure` | `Terms` | none (open access) | one row per (region, resource) | `spec-land.md` 3.3, 10 |
 | `Tenure` | `Holdings` | none | at most `MaxHoldings`; one row per (region, resource, holder) | `spec-land.md` 3.3, 10 |
@@ -1768,6 +1769,8 @@ is declared after `Information`, `Subsistence` having id 8 and `External` id 7 b
 only the hash id follows the row, 2.10.5 of the architecture rules).
 
 The merchants module (`Modules.Merchants`, id 10 in `Modules`; the type is `Merchants`) adds: `Merchants` has `MaxOpen` 1; `Merchant` (the block) has `Modes` 1, `LotUnits` 2, `FeeShareSpreadBP` 3, `MaxSourceAge` 4, `TimeCostBP` 5, `ConsigneeCutBP` 6, `Consigns` 7, `TakeMarginBP` 8, `TakeUnits` 9 (`Modes` is written in mode ID order); `Role.MerchantFeeShare` 21 and `Role.Merchant` 22 (plans 13 and 14 take 19 and 20), each a pair only while the role's `Merchant` pointer is non-nil, and a non-nil block is written even when all its fields are zero. The pointer of the module is written even when the struct is zero, so `Modules.Merchants: &Merchants{}` is `000A 0000`, and its pair goes after the pairs of the ids below 10 and before those of the ids above it, whatever the order of building (in Go the pointer is declared after `Migration`: only the hash id follows the row, 2.10.5 of the architecture rules).
+
+The employment module (`Modules.Employment`, id 13 in `Modules`; the type is `Employment`), in its payroll form (`spec-employment.md` 24), adds: `Employment` has no field in this form (`MaxOpen` is appended with the hire form), and the pointer is written even then, so `Modules.Employment: &Employment{}` is `000d 0000`, with its pair between those of ids 10 and 25; `Role.Hireable` 23 (a flag, written only when true) and `Role.Employer` 24 (written only when non-nil, as the merchants' block is: the id, the pairs of the block and the terminator), the next free ids of `Role`; `Employer` has `PayrollBP` 1 (the hire form's fields take the next free ids of `Employer`). The ids of `Needs` and `Ceiling` of the settlements module are the next free ids of `Role` when that module is built.
 
 The subsistence module (`Modules.Subsistence`, id 8 in `Modules`; the type is `SubsistenceConfig`
 and the registry scope `Subsistence` resolves to it, as `Tenure` resolves to `TenureConfig`)
