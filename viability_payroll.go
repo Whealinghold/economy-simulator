@@ -123,7 +123,7 @@ func (s *viaSolve) payrollInput(p *viaProgramme) payrollCtx {
 			}
 			for _, it := range row.upkeepIn(r) {
 				own, ok := checked.Mul(int64(it.quantity), g.Households)
-				pc.over = pc.over || !ok
+				pc.over = pc.over || (!ok && pg.BP > 0) // Own is read only for a payer
 				pg.Own[it.commodity] = own
 			}
 			pc.in.Groups = append(pc.in.Groups, pg)
@@ -199,6 +199,16 @@ func payrollPerExecution(p *viaProgramme, in steady.PayrollInput, res steady.Pay
 		}
 	}
 	return out
+}
+
+// withPay adds to the residual target of activity at the pay the net-wage equation
+// moves (spec-viability.md 5.6); a programme that kept its payroll-free duals
+// returns the target unchanged. The arithmetic lives here, not in the report (ADR 0010).
+func (rc *regionCtx) withPay(target steady.Frac, at int) steady.Frac {
+	if rc.p.pay == nil {
+		return target
+	}
+	return target.Add(rc.p.pay.perExec[at].Times(rc.scale))
 }
 
 // payrollBP returns the pay a household of group gi of the region pays and

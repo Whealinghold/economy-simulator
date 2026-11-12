@@ -337,9 +337,7 @@ func (rc *regionCtx) residual() {
 			continue
 		}
 		target := steady.Rat(wd, 1).Add(rc.p.pr.Rent[at].Times(rc.scale))
-		if rc.p.pay != nil {
-			target = target.Add(rc.p.pay.perExec[at].Times(rc.scale)) // the pay the net-wage equation moves (5.6)
-		}
+		target = rc.withPay(target, at)
 		dev, ok := a.act.ValueAdded(rc.price).Add(target.Mul(-1, 1)).Abs().Quo(target)
 		if !ok {
 			continue
