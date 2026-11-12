@@ -57,7 +57,8 @@ func Budget(p Payer) (due, budget int64, ok bool) {
 // paid when either is 0. Otherwise worker j receives
 // floor(T * C_j / K) - floor(T * C_{j-1} / K), C_j the running sum of the
 // executions, so the amounts sum to T exactly; they are funded by the payers in
-// order, each used up before the next. It reports false, with dst unchanged, on
+// order, each used up before the next. The rows are in worker order, each
+// worker's rows together, which the caller's per-worker tally relies on. It reports false, with dst unchanged, on
 // a negative input or an overflow.
 func Split(dst []Transfer, payers []Payer, workers []Worker) ([]Transfer, bool) {
 	pool, execs, ok := totals(payers, workers)
@@ -114,6 +115,8 @@ func totals(payers []Payer, workers []Worker) (pool, execs int64, ok bool) {
 type funder struct {
 	payers []Payer
 	next   int   // the payer being drawn on
+	budget int64 // its budget, valid while loaded
+	loaded bool
 	used   int64 // what it has already paid
 }
 
@@ -123,17 +126,19 @@ type funder struct {
 func (f *funder) pay(dst []Transfer, worker int, amount int64) ([]Transfer, bool) {
 	for amount > 0 {
 		for f.next < len(f.payers) {
-			_, b, _ := Budget(f.payers[f.next]) // validated by Split
-			if f.used < b {
+			if !f.loaded {
+				_, f.budget, _ = Budget(f.payers[f.next]) // validated by Split
+				f.loaded = true
+			}
+			if f.used < f.budget {
 				break
 			}
-			f.next, f.used = f.next+1, 0
+			f.next, f.used, f.loaded = f.next+1, 0, false
 		}
 		if f.next == len(f.payers) {
 			return dst, false
 		}
-		_, b, _ := Budget(f.payers[f.next])
-		take := min(amount, b-f.used)
+		take := min(amount, f.budget-f.used)
 		dst = append(dst, Transfer{Payer: f.payers[f.next].Ref, Worker: worker, Amount: take})
 		f.used += take
 		amount -= take

@@ -25,6 +25,8 @@ type employment struct {
 	// payrollBP is the PayrollBP of each role with an employer block, 0 for a
 	// role with none.
 	payrollBP []int64
+	// payer says the role has an employer block.
+	payer []bool
 	// hireable says the role is Hireable.
 	hireable []bool
 
@@ -53,14 +55,14 @@ func newEmployment(c *Config) *employment {
 		return nil
 	}
 	e := &employment{
-		payrollBP: make([]int64, len(c.Roles)), hireable: make([]bool, len(c.Roles)),
+		payrollBP: make([]int64, len(c.Roles)), payer: make([]bool, len(c.Roles)), hireable: make([]bool, len(c.Roles)),
 		payers: make([][]payroll.Payer, len(c.Regions)), workers: make([][]payroll.Worker, len(c.Regions)),
 		byRole: make([]payrollTally, len(c.Roles)),
 	}
 	for i := range c.Roles {
 		e.hireable[i] = c.Roles[i].Hireable
 		if b := c.Roles[i].Employer; b != nil {
-			e.payrollBP[i] = b.PayrollBP
+			e.payrollBP[i], e.payer[i] = b.PayrollBP, true
 		}
 	}
 	return e
@@ -104,7 +106,7 @@ func (v *validator) employmentRole(rb []string, r *Role, on bool) {
 		if !on {
 			v.rep.add(ErrModuleDependency, eb, "employment", "")
 		}
-		v.inRange(path(eb, "payroll_bp"), r.Employer.PayrollBP, 1, wholeBP)
+		v.inRange(path(eb, "payroll_bp"), r.Employer.PayrollBP, 1, payroll.WholeBP)
 	}
 	if r.Hireable && !on {
 		v.rep.add(ErrModuleDependency, path(rb, "hireable"), "employment", "")
@@ -116,8 +118,8 @@ func (v *validator) employmentRole(rb []string, r *Role, on bool) {
 
 // isPayer says the role has an employer block. The pooled regional wage that the
 // cost anchor reads excludes the agents of these roles (spec-employment.md
-// 24.2.3, 8.4); p12Anchors calls it under the module's pointer.
-func (e *employment) isPayer(role RoleID) bool { return e.payrollBP[role] > 0 }
+// 24.2.3, 8.4). It is false when the module is off (e is nil).
+func (e *employment) isPayer(role RoleID) bool { return e != nil && e.payer[role] }
 
 // p41bPayroll is P4.1b (spec-employment.md 24.1): once the markets have settled,
 // the agents of the employer roles pay a share of the tick's receipts to the
