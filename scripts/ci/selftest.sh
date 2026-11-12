@@ -88,6 +88,15 @@ if [ -x "$here/check.sh" ]; then
 	rm -rf "$nogo"
 fi
 
+# full.sh passes -covermode set by default and honours F_COVERMODE (a fake go on PATH records the call).
+if [ -x "$here/full.sh" ]; then
+	fakego=$(mktemp -d) && printf '#!/bin/sh\necho "go $*"\n' >"$fakego/go" && chmod +x "$fakego/go"
+	expect full-covermode-default 0 "go test -covermode=set -coverpkg" env PATH="$fakego:$PATH" FULL_MODULES=examples/colony "$here/full.sh"
+	expect full-covermode-override 0 "go test -covermode=atomic -coverpkg" env PATH="$fakego:$PATH" FULL_MODULES=examples/colony F_COVERMODE=atomic "$here/full.sh"
+	expect full-timeout-default 0 "-timeout 120m" env PATH="$fakego:$PATH" FULL_MODULES=examples/colony "$here/full.sh"
+	rm -rf "$fakego"
+fi
+
 # A failing go list must not read as "no modules, all passed".
 expect modules-fail-closed 1 "go list -m failed" bash -c ". '$here/common.sh'; PATH=/nonexistent; modules"
 

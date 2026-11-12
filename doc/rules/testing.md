@@ -423,17 +423,20 @@ decision N-353 is open (see "What CI runs" below).
 - **R**, the race run: `go test -race -timeout 60m ./...`. Under `-race` the
   scenario and determinism tests run a reduced seed set (`raceSeeds`, one).
 - **F**, the full run with coverage, without `-race`:
-  `go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -timeout 120m ./...`.
+  `go test -covermode=set -coverpkg=./... -coverprofile=coverage.out -timeout 120m ./...`.
   All seeds and all cases run, and the thresholds below are read from its profile.
-  Its timeout is 120m, not 60m: the root package needs about 60 minutes under atomic
-  coverage, so 60m left no margin (owner ruling, stage 2-6).
+  It uses `set` mode, not `atomic`: `atomic` is needed only with `-race`, and F runs without it;
+  `set` keeps the per-package statement coverage the thresholds use and only drops hit counts
+  (measured 2026-11-12: 2678 s against 9098 s, and byte-identical `coverage-check.sh` output in
+  all 33 scopes). Its timeout is 120m, not 60m: the root package needs about 45 minutes under
+  coverage on the dev host, so 60m left no margin (owner ruling, stage 2-6).
   The stylised fact tests (`TestStylised`) are in this pattern and run seeds 1 to 10 without `-race`.
 
 **What CI runs.** Hosted CI proves two things: job `check` (`R_MODE=short` of `scripts/ci/check.sh`:
 gofmt, vet, staticcheck, tidy and `go test -short -race ./...` per module) and job `arm64`. It does
 **not** run gate R or gate F. On a hosted 4-vCPU runner the root package did not finish R in 60
 minutes (`panic: test timed out after 1h0m0s`, runs 43019781252 and 43038922592; `examples/realm`
-alone took 597 s), and F, which needs 2 to 3 hours on the dev host, is estimated (not measured) to
+alone took 597 s), and F, which needs about 45 minutes in set mode on the 32-core dev host, is estimated (not measured) to
 need a multiple of that there, beyond the 330-minute job cap. So gate R and gate F remain
 dev-host gates of the delivery workflow. The job `full` exists but is opt-in (manual dispatch, or
 a pull request labelled `full`): it runs gate R (`R_MODE=race`, `R_TIMEOUT`, default 60m) and then
@@ -597,4 +600,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 0a6346d6f7eb9c0d2b53d29a
+RULE-TAG: 8a9aad7ea9ba8435cea78042
