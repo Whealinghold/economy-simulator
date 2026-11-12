@@ -147,7 +147,7 @@ Reasons for the less obvious placements:
 2. The invariant, determinism, golden-file and configuration-only chain tests of
    `rules/testing.md` pass on two architectures (amd64 and arm64). The owner
    decided on 2026-10-23: CI yes, with an arm64 job (`roadmap-v1.md` Stage 2, plan
-   2-1 Phase 5). The workflow `.github/workflows/ci.yml` exists (`doc/plans/plan-2-ci.md`)
+   2-1 Phase 5). The workflow `.github/workflows/ci.yml` exists
    and runs the arm64 job on a native GitHub arm64 runner; the `arm64` job ran green
    on 2026-11-11 (run 43103409906), so the item is shown for the quick run of
    `testing.md` 9.1 (`roadmap-v1.md`, Stage 2 status).
@@ -166,7 +166,7 @@ Reasons for the less obvious placements:
 - The first consumer confirms the needs in section 2 and the world size for the
   cost budget. Confirmed so far: five regions of varying size, richness and
   climate, about 1 000 households each (5 000 in all) and 30 commodities. Still
-  missing: the number of recipes and how often the consumer ticks. Measured 2026-11-10 (plan 2-24 Phase 6f, a loaded host, `cost_five_test.go`): about 50 ms a tick for `five` with the modules off and 69 to 107 ms for the all-on `five` and `examples/realm`, against the 53 ms placeholder (no quiet-host run; `realm` is a different harness). Criterion 2 (two architectures) is not shown on any arm64 machine (N-343).
+  missing: the number of recipes and how often the consumer ticks. Measured 2026-11-10 (plan 2-24 Phase 6f, a loaded host, `cost_five_test.go`): about 50 ms a tick for `five` with the modules off and 69 to 107 ms for the all-on `five` and `examples/realm`, against the 53 ms placeholder (no quiet-host run; `realm` is a different harness). Criterion 2 (two architectures) is shown for the quick run of `testing.md` 9.1: the `arm64` job ran green on a native runner on 2026-11-11 (run 43103409906). The open part is criterion 6: a quiet-host figure.
 - bazaarBot is run, so that "stable" has a reference (overview, section 8). The Doran and Parberry paper was read on 2026-10-10 and gives stability
   criteria (`spec-beliefs.md` section 19); the run is still missing.
 - The slice has run, since it may move specs between stages.

@@ -482,8 +482,9 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
    module off 50 ms a tick, the all-on `five` (5 339 agents) 107 ms in the first run and
    70 ms in a later one, `examples/realm` 69 ms; `five` is at the 53 ms budget, the all-on
    world is 1.3 to 2.0 times it (the cause of the gap between the two runs was not isolated, and `examples/realm` is a
-   different harness, not the all-on world without the load). Not shown: a quiet-host run, and
-   criterion 2 of the exit (two architectures, N-343). Not a pass by redefinition: the owner reads it against the
+   different harness, not the all-on world without the load). Not shown: a quiet-host run. Criterion 2 of the exit
+   (two architectures) is shown: the `arm64` job ran green on 2026-11-11 (run 43103409906) and the quick run
+   of `testing.md` 9.1 passes on native arm64. Not a pass by redefinition: the owner reads it against the
    consumer's tick rate (R3 of plan 2-24).
 2. **The value of `K`.** 10 is a placeholder from an unrun example. It is set by
    the scale-consistency check (7.2) over a range of `K`.

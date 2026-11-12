@@ -348,8 +348,8 @@ the explanation testing.md 7.2 requires.
   consumer asks with a measurement.
 - The not-in-version-1 list of note N-131.
 - Timed fuzz runs in CI (no fuzz time is decided) and the coverage threshold of
-  the `examples/` modules (reported, not gated). The CI workflow is built
-  (`plan-2-ci.md`) but has not run on GitHub yet; until it has, and for the
+  the `examples/` modules (reported, not gated). The CI workflow is merged
+  (PR #49) and runs `check` and `arm64` on GitHub; for gates R and F (N-353) and for the
   timed fuzz runs, the commands of `AGENTS.md` are run by hand in each change.
 
 ## Updating this file
