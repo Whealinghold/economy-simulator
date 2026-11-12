@@ -186,24 +186,20 @@ func (e *employment) collectAgent(w *World, i int) {
 // test can inject either from the root.
 func (w *World) payRegion(g RegionID) error {
 	e := w.employment
-	if w.obs.supplied {
-		clear(e.byRole)
-	}
+	clear(e.byRole)
 	for _, p := range e.payers[g] {
 		due, budget, ok := payroll.Budget(p)
 		if !ok {
 			invariant("the budget of a payer does not fit in int64")
 		}
-		if w.obs.supplied {
-			t := &e.byRole[w.agents[p.Ref].role].ev
-			sum, ok := checked.Add(int64(t.Due), due)
-			if !ok {
-				return fmt.Errorf("payroll of region %d: %w", g, ErrOverflow)
-			}
-			t.Due = Money(sum)
-			if budget >= 1 {
-				t.Payers++
-			}
+		t := &e.byRole[w.agents[p.Ref].role].ev
+		sum, ok := checked.Add(int64(t.Due), due)
+		if !ok {
+			return fmt.Errorf("payroll of region %d: %w", g, ErrOverflow)
+		}
+		t.Due = Money(sum)
+		if budget >= 1 {
+			t.Payers++
 		}
 		if budget < due {
 			w.payrollCut(p.Ref, due, budget)
