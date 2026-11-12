@@ -124,11 +124,26 @@ func TestAllPack_EveryModuleIsOn(t *testing.T) {
 	t.Parallel()
 	mods := reflect.ValueOf(loadValidPack(t, allLayers...).Modules)
 	for i := 0; i < mods.NumField(); i++ {
-		if f := mods.Type().Field(i); f.Type.Kind() == reflect.Pointer && mods.Field(i).IsNil() {
+		f := mods.Type().Field(i)
+		if f.Type.Kind() != reflect.Pointer {
+			continue
+		}
+		off := mods.Field(i).IsNil()
+		switch listed := allPackNotYetOn[f.Name]; {
+		case off && !listed:
 			t.Errorf("Modules.%s is off in the all-on pack, want a layer in allLayers that turns it on", f.Name)
+		case !off && listed:
+			t.Errorf("Modules.%s is on in the all-on pack and listed in allPackNotYetOn: delete the entry", f.Name)
 		}
 	}
 }
+
+// allPackNotYetOn lists the built modules whose layer for the all-on pack is not
+// written yet, in the staged form of architecture.md 9.7: the change that writes
+// the layer deletes the entry, and the test fails on a stale one. The employment
+// module's layer comes with its overlay and its module-alone golden (plan 2-28
+// Phase 3), which move golden/all with their explanation (testing.md 7.1.1).
+var allPackNotYetOn = map[string]bool{"Employment": true}
 
 // TestAllPack_OffGoldenUnmoved verifies that the warm five alone, every module off,
 // still has the configuration hash its expected file recorded, and that the all-on

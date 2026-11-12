@@ -82,7 +82,7 @@ var notBuiltPositions = [...]string{
 	"P1.3a", "P1.7a", "P1.7b", "P1.9a",
 	"P2.2", "P2.5a", "P2.8b",
 	"P3.1a", "P3.3b", "P3.3c", "P3.4a", "P3.6a", "P3.6b", "P3.6c",
-	"P4.1a",
+	"P4.1a", "P4.1b",
 	"P7.2a", "P7.2b",
 	"P8.1a", "P8.1b", "P8.3a", "P8.3b", "P8.3c",
 }

@@ -294,11 +294,12 @@ func pairsSeasonYield(e *encoder, s SeasonYield) {
 	e.num(2, s.BP)
 }
 
-// pairsRole writes the pairs of a Role: ids 1 to 22. Label is presentation only
+// pairsRole writes the pairs of a Role: ids 1 to 24. Label is presentation only
 // and has no id. Informed 19 is the information module's and is a pair only
 // while it is on (informationOn) and the flag is true; Fixed 20 is the migration
 // module's, on the same terms (migrationOn); MerchantFeeShare 21 and Merchant 22
-// are the merchants', pairs only when the block is non-nil.
+// are the merchants', pairs only when the block is non-nil; Hireable 23 is a pair
+// only when true and Employer 24 only when non-nil (the employment module's).
 func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	e.text(1, r.ID)
 	e.texts(2, r.Recipes)
@@ -324,6 +325,12 @@ func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 		e.num(21, r.MerchantFeeShare)
 		e.id(22) // written even when every field is zero: a non-nil block is a merchant role
 		pairsMerchant(e, *r.Merchant)
+		e.end()
+	}
+	e.flag(23, r.Hireable)
+	if r.Employer != nil {
+		e.id(24) // written even when PayrollBP is zero: a non-nil block is an employer role
+		e.num(1, r.Employer.PayrollBP)
 		e.end()
 	}
 }
@@ -462,7 +469,7 @@ func pairsModules(e *encoder, m Modules) {
 	pairsLaterModules(e, m)
 }
 
-// pairsLaterModules writes the pairs of the modules of ids 9, 10 and 25 of
+// pairsLaterModules writes the pairs of the modules of ids 9, 10, 13 and 25 of
 // Modules, after those pairsModules writes (a continuation for the Lizard limit).
 func pairsLaterModules(e *encoder, m Modules) {
 	if m.Migration != nil {
@@ -473,6 +480,10 @@ func pairsLaterModules(e *encoder, m Modules) {
 	if m.Merchants != nil {
 		e.id(10)
 		e.num(1, m.Merchants.MaxOpen)
+		e.end()
+	}
+	if m.Employment != nil {
+		e.id(13)
 		e.end()
 	}
 	if m.Estates != nil {

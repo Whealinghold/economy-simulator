@@ -292,7 +292,7 @@ func (l *loader) modules(m *tbl, cfg *economysim.Config) {
 }
 
 // laterModules reads the tables of the modules of the later waves: migration,
-// merchants and estates (a continuation of modules for the Lizard limit).
+// merchants, estates and employment (a continuation of modules for the Lizard limit).
 func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 	if gs := m.sub("migration"); gs != nil {
 		cfg.Modules.Migration = l.migration(gs)
@@ -308,6 +308,10 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 	}
 	if es := m.sub("estates"); es != nil {
 		cfg.Modules.Estates = &economysim.Estates{}
+		es.finish()
+	}
+	if es := m.sub("employment"); es != nil {
+		cfg.Modules.Employment = &economysim.Employment{}
 		es.finish()
 	}
 }
@@ -476,6 +480,13 @@ func (l *loader) role(id string, t *tbl) economysim.Role {
 		m := l.merchant(ms)
 		ms.finish()
 		r.Merchant = &m
+	}
+	t.flag("hireable", &r.Hireable)
+	if es := t.sub("employer"); es != nil {
+		e := economysim.DefaultEmployer()
+		integer(es, "payroll_bp", &e.PayrollBP)
+		es.finish()
+		r.Employer = &e
 	}
 	t.text("label", &r.Label)
 	return r

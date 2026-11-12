@@ -517,3 +517,11 @@ var (
 	// ErrUnknownLine is an outside shock for a (node, commodity) that has no line.
 	ErrUnknownLine = errors.New("unknown outside line")
 )
+
+// The sentinels of the employment module (spec-employment.md 14.1, 24.4).
+var (
+	// ErrEmploymentShape is a role that is both Hireable and an employer, or the
+	// employment module on with no role that has an employer block or with no
+	// Hireable role.
+	ErrEmploymentShape = errors.New("employment has the wrong shape")
+)

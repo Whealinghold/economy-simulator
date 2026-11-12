@@ -886,6 +886,7 @@ The knob rows of the fourteen modules of wave 5 (`spec-config.md` 3.1), in the o
 | K-EMP02 | Employer.WorkerShareBP | K | EMP 13 | bp | U | lin1000 | - | - | - | L148 D104 D108 | - |
 | K-EMP03 | Employer.HireYieldBP | K | EMP 13 | bp | U | lin1000 | - | - | - | - | - |
 | K-EMP04 | Employment.MaxOpen | D | EMP 13 | count | U | geo | - | off=max | - | L149 D110=TooMany | - |
+| K-EMP05 | Employer.PayrollBP | K | EMP 24.3 | bp | U | lin1000 | - | - | - | - | - |
 | K-SET01 | Settlements.BandBP | D | SET 3.4.2 | bp | U | lin500 | - | off=0 | - | L151 L152 D111 | - |
 | K-SET02 | Settlements.Dwell | D | SET 3.4.3 | ticks | U | geo | - | off=0 | - | L151 L152 D112=SettlementHeld | - |
 | K-LND01 | Tenure.RentStepBP | D | LND 5.5 | bp | U | geo | - | z off=0 | - | L155 D116 | - |

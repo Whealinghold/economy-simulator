@@ -1218,6 +1218,16 @@
 //   - LaneDecision: the result of a merchant's decision about a candidate lane, a
 //     closed set of constants (DecisionNoRumour to DecisionLotCapped) that names
 //     the cases of PlanNotes.
+//   - Employment: the module, a pointer of Config.Modules with no field in its payroll
+//     form (spec-employment.md 24), that adds P4.1b; Employer is the block of a role,
+//     a pointer of Role (PayrollBP) that makes the role a payer, and Hireable is the
+//     flag of a role whose households are paid.
+//   - Payroll: after clearing, the share PayrollBP of the receipts of an agent of a role
+//     with an Employer block (its payer) of the tick
+//     that it pays, cut at its balance, to the Hireable households that worked, in
+//     proportion to their executions; no hire, no escrow, no state.
+//   - Worker: an agent of a Hireable role with a job of the tick; it is paid by the
+//     payroll in proportion to its executions.
 //   - Outside: everything that is not a region with agents: the party the external
 //     module trades with, whose money and goods the realm never holds (spec-external-sector.md).
 //   - Outside node: a region of the configuration marked as the outside; it has no

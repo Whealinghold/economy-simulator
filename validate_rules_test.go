@@ -668,6 +668,7 @@ func buildFieldCases() []fieldCase {
 	add(informationFieldCases()...)
 	add(migrationFieldCases()...)
 	add(merchantFieldCases()...)
+	add(employmentFieldCases()...)
 	add(externalFieldCases()...)
 
 	// A case is named by its field, its description and the path it breaks, so
