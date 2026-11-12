@@ -848,6 +848,7 @@ var reasonNames = map[Reason]string{
 	EscrowIn: "escrow_in", EscrowOut: "escrow_out", EscrowRefund: "escrow_refund",
 	OutsideBudget: "outside_budget", OutsideUnspent: "outside_unspent", OutsideReceipts: "outside_receipts",
 	OutsideOffer: "outside_offer", OutsideUnsold: "outside_unsold", OutsidePurchases: "outside_purchases",
+	WagePay: "wage_pay",
 }
 
 // TestReasonCode_Pinned verifies that the code of every reason is the position

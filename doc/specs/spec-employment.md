@@ -34,6 +34,14 @@ flagged as such; the core and its vocabulary are setting-agnostic, and a commodi
 a recipe, a role or a mode is data (architecture.md 9.1): nothing in this spec
 branches on one.
 
+**Two forms.** This spec describes the **hire** (sections 3 to 17, FR-EMP-001 to 063), which is the
+**later form** and is not built. The form that is built first is the **payroll** of section 24
+(FR-EMP-064 to 080), a subset with one rule the hire does not have, chosen by
+[ADR 0011](../adr/0011-payroll-before-hire-as-the-first-form-of-employment.md). The payroll form uses the
+names and seams of the hire (`Modules.Employment`, `Role.Hireable`, `Role.Employer`, the reason `wage_pay`,
+the welfare terms `Y_t` and `V_t`, 8.4) and none of its machinery; where section 24 and an earlier section
+differ, section 24 governs the payroll form and the earlier section the hire form.
+
 Terms in **bold** on first use are new domain terms. They must be added to the
 glossary in `doc.go` before any code uses them (architecture.md 3.2). "Consumer"
 means the library consumer (a game or server), never a household (N-001, N-017).
@@ -1623,6 +1631,23 @@ derived from text of sections 1 to 17.
 | FR-EMP-061 | With the module on, whether or not anything is admitted, the module MUST take no word, so the stream MUST equal the module off, and a run with a logger and observer MUST give results identical to a run without. |
 | FR-EMP-062 | In a closed economy whose employers spend only their upkeep and with the halt on, the mean hired households SHOULD settle at `E * u_e / ((1 - phi) * a)` within the burst of the halt. |
 | FR-EMP-063 | `MaxOpen` MUST bound the open hires of a region and not of the world, and a vacancy MUST NOT be closed by the open hires of another region. |
+| FR-EMP-064 | The payroll form MUST run if and only if `Config.Modules.Employment` is non-nil, and a world with it nil MUST have no call at P4.1b, move no money under `wage_pay`, emit no `PayrollPaid` and take no word of the world's stream. |
+| FR-EMP-065 | `Role.Hireable` MUST default to false and `Role.Employer` to nil, and `Employer.PayrollBP` MUST default to 5 000 and be 1 to 10 000, rejected outside it with `ErrOutOfBounds`. |
+| FR-EMP-066 | `Hireable` true or an employer block MUST be rejected with `ErrModuleDependency` while `Modules.Employment` is absent. |
+| FR-EMP-067 | A role that is both `Hireable` and an employer, and the module on with no employer role or with no `Hireable` role, MUST be rejected with `ErrEmploymentShape`. |
+| FR-EMP-068 | The budget of a payer MUST be `min(floor(R * PayrollBP / 10 000), free balance)` over the receipts `R` of the tick from trades, the product through the 128-bit helper, and the part cut at the balance MUST be counted as `Cut`. |
+| FR-EMP-069 | A worker MUST be an agent of a `Hireable` role with a job in progress of `k` at least 1 executions that is not an own-use job, and nothing MUST be paid when the pool or the sum of `k` of a region is 0. |
+| FR-EMP-070 | The amount of worker `j`, in ascending agent ID, MUST be `floor(T * C_j / K) - floor(T * C_{j-1} / K)` with `C_j` the running sum of `k`, so the amounts sum to the pool `T` exactly. |
+| FR-EMP-071 | The transfers MUST be funded by the payers in ascending agent ID, each used up before the next, and MUST be one row (payer, worker, amount) of at least 1 per overlap, in a fixed order. |
+| FR-EMP-072 | Each row MUST move money between two agent accounts of one region under the internal reason `wage_pay`, with no boundary flow, and the sum of the balances MUST be the same before and after P4.1b. |
+| FR-EMP-073 | A worker's wage MUST be earned income `Y_t` (the earned ratio and the observed wage) and a payer's payment `V_t` netted from its income, and the pooled regional wage MUST exclude the agents of the roles with an employer block. |
+| FR-EMP-074 | The form MUST keep no state and write no checkpoint section, and the checkpoint format version MUST NOT change because of it. |
+| FR-EMP-075 | The stream of a world with the module on MUST equal that of the module off, and a run with a logger and observer MUST give results identical to a run without. |
+| FR-EMP-076 | `PayrollPaid` MUST be emitted once per region and employer role at P4.1b in ascending (`RegionID`, role) when `Due` or `Paid` is non-zero, with the fields of 24.6.1 and no map, and never with the module off. |
+| FR-EMP-077 | The metrics `economysim.payroll.paid` and `economysim.payroll.cut` MUST be derivable from `PayrollPaid` and their attributes MUST be bounded by the configuration. |
+| FR-EMP-078 | A payer cut at its balance MUST be logged at `Debug` only, guarded by `Enabled`, with a constant message and the attributes of 24.6.3. |
+| FR-EMP-079 | The module off MUST leave the configuration hash of the all-off reference, and every file of `testdata/golden/off/`, byte-equal; the module on MUST hash `Modules.Employment`, `Role.Hireable` and `Role.Employer` with `PayrollBP` as 24.5.1 says. |
+| FR-EMP-080 | The file MUST read `[modules.employment]`, `hireable` and `[role.<id>.employer]` with `payroll_bp` over the default, and a key the loader does not know MUST be rejected. |
 
 ### Non-functional
 
@@ -1633,6 +1658,8 @@ derived from text of sections 1 to 17.
 | NFR-EMP-003 | The pure functions of `internal/employment` (the wage, the bill, the order, the positions) MUST have fuzz tests asserting that no input within the bounds panics or overflows and that the wage lies in `[Reserve, Bid]`. |
 | NFR-EMP-004 | The round SHOULD have a benchmark that calls `b.ReportAllocs()`. |
 | NFR-EMP-005 | The conservation, determinism and escrow identity tests of EMP-S5 MUST run over a range of seeds with `WithAudit`, reporting the failing seed. |
+| NFR-EMP-006 | The pure functions of `internal/employment` (the budget, the pool split and the funding sequence) MUST have table tests and a fuzz test asserting that no input within the bounds panics, wraps or breaks the conservation `sum out = sum in = T`. |
+| NFR-EMP-007 | With the default logger and observer, P4.1b MUST allocate nothing beyond scratch held by the world. |
 
 ## 22. Open questions
 
@@ -1702,6 +1729,10 @@ not import the root, `config/` or `strategy/` and takes no random source: the ti
 computed by the root (`internal/ordering`'s finaliser) and are passed in as `uint64`. No public package and no new extension point:
 `JobRequest` gains two value fields and `Strategy` keeps its three methods (architecture.md 4.3).
 
+The payroll form (24) uses the same two homes: `employment.go` holds the validator, the position `p41bPayroll`, the
+event and the welfare calls, and `internal/employment` holds the pure arithmetic over primitive slices: `Budget` (24.1.3)
+and `Split` (24.1.4, 24.1.5). It has no hire record, no sentinel but `ErrEmploymentShape` and no checkpoint tag.
+
 ### 23.2 New domain terms
 
 For the glossary of `specs/README.md` and `doc.go` (architecture.md 3.2): employment (the
@@ -1712,3 +1743,181 @@ labour round, lane (of the round; MER's lane is a pair of a region and a commodi
 hire), payroll, unmatched (household), unemployment (a measure), hired yield, `open_hire`.
 "Employer" and "worker" are roles of an agent in a hire, not entities; "wage" is measured and
 derived, not configured (`spec-currency.md` 2.6).
+
+## 24. The payroll form
+
+This section is the form of the module that is built first (Stage 2,
+[ADR 0011](../adr/0011-payroll-before-hire-as-the-first-form-of-employment.md)). It is a
+subset of this spec with one rule that the hire form does not have, and it is a deliberate
+departure from sections 3 to 11: **there is no hire**. Sections 3 to 11 and 14 to 17 describe the
+**later form** (the hire) and are unchanged; the payroll form uses their names and seams and
+none of their machinery. The requirements of this section are FR-EMP-064 to 080 and
+NFR-EMP-006 and 007; FR-EMP-001 to 063 and NFR-EMP-001 to 005 belong to the later form and are not
+built until it is.
+
+### 24.1 The rule
+
+24.1.1. **Where it runs.** P4.1b of `spec-world.md` 6, after P4.1a and before P4.2: the clearing
+of every market has settled, no reservation is open, and the receipts and the executions of the
+tick are in the welfare scratch (`spec-welfare-and-wages.md` 13). The position is owned by EMP
+and runs only with `Modules.Employment` non-nil.
+
+24.1.2. **Who pays and who is paid.** A **payer** is an agent of a role with an employer block
+(`Role.Employer` non-nil). A **worker** is an agent of a `Hireable` role that worked in the tick:
+it has a job in progress of `k` executions, `k` at least 1, and the job is not an own-use job. The
+regions are served in ascending `RegionID`, and the rule below is applied to the payers and
+workers of one region at a time: a wage never crosses a region.
+
+24.1.3. **The budget of a payer.** For a payer `a` with receipts `R_a` in the tick (the money
+received from the trades of the tick, `R_t` of the welfare record) and the block's `PayrollBP`:
+
+```
+due_a    = floor(R_a * PayrollBP / 10 000)         (the product through the 128-bit helper)
+budget_a = min(due_a, free balance of a)
+```
+
+The cut at the balance is counted (`Due` less `Paid` in `PayrollPaid`); it is not an error, and
+a payer with no money pays nothing. Receipts that are not from trades (relief, a grant, a wage
+received) are not in `R_a`.
+
+24.1.4. **The pool and the shares.** With `T` the sum of the budgets of the region and `K` the sum
+of the `k` of its workers, nothing is paid when `T` or `K` is 0. Otherwise the workers, in
+ascending agent ID, with `C_j` the running sum of `k` up to and including worker `j` (`C_0` = 0):
+
+```
+amount_j = floor(T * C_j / K) - floor(T * C_{j-1} / K)
+```
+
+(the products through the 128-bit helper). The amounts sum to `T` exactly (`C_n` = `K`), each is
+within 1 minor unit of `T * k_j / K`, and a worker with the same `k` as another can differ by
+that 1 minor unit by its place in the order: a stated rule, not a tie to break by a draw. The
+rounding rule is the cumulative floor, and the unit that rounding moves goes to the later workers.
+
+24.1.5. **Who funds which worker.** The amounts are paid from the budgets in a fixed sequence:
+the payers in ascending agent ID, each used up before the next, the workers in ascending agent
+ID. A transfer is a row (payer, worker, amount) with amount at least 1; a worker may be paid by
+several payers and a payer may pay several workers. The sum of the rows out of a payer is at most
+its budget, and the sum of all rows is `T`.
+
+24.1.6. **The ledger.** Each row is one transfer of money between the two agents' accounts under
+the internal reason `wage_pay` (`spec-ledger.md` 7.4.3 of this spec's 7.1): no boundary account,
+no faucet, no sink, no escrow. A refusal of a transfer that the budget guarantees cannot be
+refused is a violated invariant and fails the step, as the money flows treat it. The module
+creates and destroys no money.
+
+24.1.7. **What it has not.** No hire record and no `HireID`, no labour offer or vacancy, no
+`JobRequest` field, no change to any `Strategy`, no position P2.5a or P2.8b, no escrow account,
+no `open_hire` refusal and no removal step 2c, no per-agent field, no state at all: the rule is a
+function of the configuration and of the tick's receipts and executions. It therefore saves no
+checkpoint section and changes no checkpoint format version, and a restore needs nothing for it
+(`spec-checkpoint.md` 4.5). It takes no word of the world's stream (`spec-world.md` 7): the
+stream with the module on equals the stream with it off.
+
+### 24.2 Welfare, the wage and the spawner
+
+24.2.1. The money a worker receives is earned income `Y_t` of 8.1: it is in the earned ratio and in
+the observed wage, and it is not `F_t`, `G_t` or `K^own_t`. The money a payer pays is `V_t`: it is
+netted from its income, and the receipts it pays out are not a cost of inputs. Both are added to
+the welfare scratch at P4.1b, before the push at P6.3, through one accessor beside `addReceipt`
+and `addUnearned` that holds no rule of the module (ADR 0010 (a)).
+
+24.2.2. A worker's executions of the tick are its working household-ticks, as 8.3.1 says for a
+`Hireable` role, so the observed wage of the role is what its households were paid per working
+household-tick, and it is the occupation signal of the spawner with no change. A payer's observed
+wage includes its profit and its pay, as 8.3.2 says; the cooks of a pack lose a share of their
+attraction by it and the census moves, which is the lever, not a defect.
+
+24.2.3. The pooled regional wage that the cost anchor reads excludes the agents of the roles with
+an employer block (8.4), in this form too: it is the one change to an existing rule, and it is a
+guarded call from `welfare.go` into the module file with no logic of its own.
+
+### 24.3 The fields
+
+24.3.1. `Config.Modules.Employment` is a pointer, present means on, and in this form it has **no
+field**: its presence is its whole contribution, as `Estates`. `MaxOpen` of section 13 belongs
+to the hire form and is appended with it. `Role.Hireable` (a bool, default false) and
+`Role.Employer` (a pointer to the block below, default nil) are the fields of 3.1 and 3.2.
+
+24.3.2. The employer block of this form has one field:
+
+| Field | Meaning | Default | Bound |
+|-------|---------|---------|-------|
+| `PayrollBP` | the share of the payer's receipts of the tick that is paid as wages, in basis points (24.1.3) | 5 000 (placeholder: the value of the spike of ADR 0011) | 1 to 10 000 |
+
+The block of the hire form (`Recipes`, `MaxHires`, `WorkerShareBP`, `HireYieldBP`) is appended to
+it in that form, with the next free ids, and a role that has both kinds of field is a question for
+that form. Every default is a placeholder (N-015, N-027): no source on the size of a wage share
+was used, and the pack sets it.
+
+24.3.3. The rule constants (not parameters): the position, the cumulative floor of 24.1.4, the
+order of 24.1.5, the cut at the balance, the reason `wage_pay`.
+
+### 24.4 Validation
+
+24.4.1. Each rule has a failing-case test and names the path, for example
+`roles.<id>.employer.payroll_bp`:
+
+| Sentinel | Rejects |
+|----------|---------|
+| `ErrOutOfBounds` | `PayrollBP` outside 1 to 10 000 |
+| `ErrModuleDependency` | `Hireable` true or an employer block while `Modules.Employment` is absent |
+| `ErrEmploymentShape` (a root sentinel, 14.1) | a role that is both `Hireable` and an employer; the module on with no role that has an employer block, or with no `Hireable` role |
+
+24.4.2. A pack with the module on and one side missing would run as a no-op and look like a
+result, so it is an error here, where the hire form's `employment_no_employer` and
+`employment_no_worker` are warnings (14.2). The hire form may relax it; this form does not
+raise warnings of 14.2 and `ErrEmployerWeight` is not raised (a payer's weight does not enter
+the rule).
+
+### 24.5 The configuration hash and the file
+
+24.5.1. `Modules.Employment` is hash id 13 (the position of the module in the row of
+`spec-config.md` 3.2): the pair is the id and the terminator and nothing else, written even though
+it has no field. `Role.Hireable` is id 23 and `Role.Employer` id 24 of `Role` (the next free ids
+of the struct: 21 and 22 are the merchants', and the settlement module's `Needs` and `Ceiling`
+take the ids after these when they are built); `PayrollBP` is id 1 of `Employer`. A role with
+`Hireable` false and no block writes nothing, so the hash of the all-off reference is unchanged.
+
+24.5.2. The file: `[modules.employment]` (a table with no key switches the module on),
+`hireable = true` in `[role.<id>]` and `[role.<id>.employer]` with `payroll_bp`. An absent
+`payroll_bp` takes the default.
+
+### 24.6 Observability
+
+24.6.1. **Event `PayrollPaid`**, an aggregate: once per region and employer role per tick at
+P4.1b, in ascending (`RegionID`, role), after the `FiscalFlowApplied` events of P4.1a, when `Due`
+or `Paid` is non-zero; never otherwise, and never with the module off. Fields: `Tick`, `Region`,
+`Role` (the payers' role), `Payers` (the payers with a non-zero budget), `Workers` (the households
+paid by the payers of the role: the sum of `k` of the workers of the region that at least one payer
+of the role paid), `Due`, `Paid` and `Cut` (`Due` less `Paid`: the part cut at a balance, or all of
+`Due` when the region has no worker to pay), in money; no map and no typed ID appended to an existing
+event. Its rows are in `spec-observability.md` 4.1 and `rules/observability-and-logging.md` 4.3.
+
+24.6.2. **Metrics** `economysim.payroll.paid` and `economysim.payroll.cut`, counters of unit
+`{minor_unit}` with the attributes `economysim.role` and `economysim.region`, fed by `PayrollPaid`
+(`Paid` and `Cut`): bounded by the roles and regions of the configuration. `cut` over `paid` plus
+`cut` is the share of the due wage that did not reach a worker, the sign of payers short of money or
+of a region with no worker, which `paid` alone does not show.
+
+24.6.3. **Log.** A payer cut at its balance is a `Debug` line, guarded by `Enabled`, with a constant
+message and the attributes `agent`, `role`, `due` and `applied`; there is no `Warn` and no `Info`.
+With the default logger and observer the position allocates nothing beyond scratch held by the
+world.
+
+24.6.4. **Snapshot.** None in this form: there is nothing that is state.
+
+### 24.7 What it does not say
+
+24.7.1. The payroll form makes no claim on criterion 1 of `vision.md` 5. In the spike of ADR 0011
+a wage cured the decline of the household count in 7 seeds of 8 and left the unfed share of the
+non-payer households at 33% to 43%: the wage is necessary and not sufficient, and the real side
+(the census and the recipes) is the pack's work, not this module's (N-352).
+
+24.7.2. The share is a lever with a narrow working band: lower shares collapsed two seeds of four
+late, higher ones collapsed every seed early. No default is claimed to be stable (N-027).
+
+24.7.3. A deflation of the staple price and a hoard by a role that is not a payer are not touched.
+
+### 24.8 Requirements
+
+FR-EMP-064 to 080 and NFR-EMP-006 and 007 are in section 21, with the others.

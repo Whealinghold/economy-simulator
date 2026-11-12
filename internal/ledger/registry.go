@@ -110,6 +110,11 @@ const (
 	OutsideOffer
 	OutsideUnsold
 	OutsidePurchases
+	// WagePay is the money an employer pays a worker as the wage of a tick: in the
+	// payroll form of the employment module agent to agent (spec-employment.md
+	// 24.1.6), in the later hire form escrow to agent. It is a declared row and
+	// opens no boundary account; it is no faucet and no sink.
+	WagePay
 	// NumReasons is the number of reasons the ledger knows.
 	NumReasons
 )
@@ -224,6 +229,9 @@ var table = [NumReasons][2]row{
 	OutsideOffer:     {thingGoods: {true, Faucet, setBoundary, setOutside, false, true, 16}},
 	OutsideUnsold:    {thingGoods: {true, Sink, setOutside, setBoundary, false, true, 17}},
 	OutsidePurchases: {thingGoods: {true, Sink, setOutside, setBoundary, false, true, 18}},
+	// wage_pay runs from an agent to an agent in the payroll form (spec-ledger.md
+	// 7.2, spec-employment.md 24.1.6); the hire form adds the escrow to agent pairing.
+	WagePay: {thingMoney: {true, Internal, setAgent, setAgent, false, true, 23}},
 }
 
 // isDeclared reports whether reason r is a declared reason: one whose row a

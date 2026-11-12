@@ -57,7 +57,7 @@ PR description.
 | CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350 |
@@ -172,6 +172,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The row adds no configuration field. `spec-config.md` 3.7 and 9.2 now say that the section type of `Config.World` is `WorldParams` and that the scope cells of `specs/README.md` (read as Go type names) change with the rename in Phase 2, not before (a cell naming a type that does not exist fails the registry test).
 - **Update (2026-10-21, anchor fix):** applied for one field: `World.AnchorHold` has its row in the parameter-owner table, its place in `spec-config.md` 3.7 and 8.2.2 (id 46), a bound and a failing-case test, and the registry row K-PRO02 of `spec-calibration.md`; the registry test passes with no `notBuilt` change. Left open as a standing rule.
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: the checkpoint row adds no configuration field, default, bound or owner row. Left open.
+- **Update (2026-11-12, plan 2-28 Phase 1):** applied: the payroll form adds the row `PayrollBP | Employer` to the owner table of `specs/README.md` and `spec-config.md` 3.7.1; no unnamed parameter. Standing note, left open.
 
 ### N-017 Words and names
 
@@ -214,6 +215,7 @@ PR description.
 - **Update (2026-10-23, plan 2-2 Phase 1):** applied: the terms of the checkpoint row (checkpoint, restore, format version, frame, header, section, trailer, digest, canonical encoding, one spelling, sparse row, pending totals, construction flag, extension state, `Stateful`, entry of an extension, salt, branch, fixture) and the event name `WorldRestored` are in the `doc.go` glossary before the code uses them; `Reseed` and `Effective seed` were already there and are not repeated. A standing note; left open.
 - **Update (2026-11-09, plan 2-14 Phase 1):** the terms of the migration row (Migration, Journey, Migrant, Pushed, Settled, Margin (of a move), Width (of the margins), Horizon, Outflow cap, Pipeline cap, Provisioning (of a journey), Candidate (destination), Estimate (of a destination)) are in the `doc.go` glossary before the code uses them. A standing note; left open.
 - **Update (2026-11-09, plan 2-15 Phase 1):** the terms of the merchants row (Merchants, Merchant, Planned trip, Candidate lane, Lane (of a merchant), Merchant lot, Lot cap, Cargo set, Trade inputs, Trip input, Fee share, Bar, Cautious revenue, Break-even, Lane lock, Delivery offer, Delivery take, Payer, Deliverer, Round (of contracts), Delivery contract, Escrow (of a contract), Settlement (of a contract), PlanNotes, MerchantView) are in the `doc.go` glossary before the code uses them. A standing note; left open.
+- **Update (2026-11-12, plan 2-28 Phase 1):** the terms payroll form, payer and pool (`spec-employment.md` 24) are in the glossary of `specs/README.md`; `doc.go` gets them in the change that uses them (Phase 2). Standing note, left open.
 
 ### N-018 Unverified evidence
 
@@ -878,6 +880,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The row adds no event and no `Warn` row (all are rows already); the catalogue test is staged and Phase 10 moves the world-emitted events out of `notBuiltEvents` only if they were listed.
 - **Update (2026-10-20, observability review of the branch of plan 1-11):** applied: the review adds no event and no `Warn` and two snapshot-fed gauges that give existing `Warn`s a metric: `economysim.welfare.clamped` (`Roles[].ClampedHouseholds`, the counterpart of row 26 of `spec-observability.md` 7.3, whose `Warn` fires only on the first tick of a run and then every tenth) and `economysim.role.agents` (`Roles[].Agents` by role and region, the counterpart of "role extinct" and "group below floor", which the event-fed `economysim.agent.count` by role alone cannot show for one region). Rows in `rules/observability-and-logging.md` 5.3 and 5.3.1 (fresh tag) and `spec-observability.md` 6.2.2, FR-OBS-104 and the series bound of 6.5.2 (+200, about 7 700). Both read snapshot fields that exist; `otelobserver` (Stage 2) builds them. Left open for later rows.
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: the checkpoint row declares one event, `WorldRestored`, which has its row in `rules/observability-and-logging.md` 4.3 and in `spec-observability.md`; it leaves `deferredCore` and `notBuiltEvents` with its code, and adds no `Warn` row. Left open.
+- **Update (2026-11-12, plan 2-28 Phase 1):** `PayrollPaid` and the metric `economysim.payroll.paid` are specified in `spec-employment.md` 24.6 and their catalogue rows (`spec-observability.md` 4.1, `rules/observability-and-logging.md` 4.3, 5.3) are owed to the change that declares the type (plan 2-28 Phase 3), so the catalogue tests need no `notBuilt` entry before. Standing note, left open.
 
 ### N-127 Event classes at the observer
 
@@ -905,6 +908,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The world holds no per-agent field; the ring, the job and the residues are the agent row's hosted fields.
 - **Update (2026-10-23, plan 2-2 Phase 1):** applied in its lesson: the hosted fields are written once, in the agent record, always (plan 2-2 D247), and the row adds none. A standing rule; left open.
 - **Update (2026-11-11, plan 2-11):** POP keeps the death carry in the module's slice by `AgentID`; the checkpoint writes it in the agent record (plan 2-11 D423); R10 of CHK needs O1. Left open.
+- **Update (2026-11-12, plan 2-28 review):** read: the payroll form hosts no per-agent field and has no checkpoint section (`spec-employment.md` 24.1.7). Left open.
 
 ### N-129 A stateful extension is one instance per world
 
@@ -1024,6 +1028,7 @@ PR description.
 - **Note:** `Work` is called only for a free agent, so an employer with a job in progress cannot post a vacancy. Posting from `Trade`, or calling `Work` for its `Hire` only, would change WLD 6.4 and AGT 6.2.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: `JobRequest` has no `Offer` or `Hire` in the slice. Left open for EMP.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open (EMP, Stage 3). `Work` is called only for a free agent at P2.5, as written.
+- **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form (`spec-employment.md` 24) posts no vacancy and calls no `Work`, so it neither needs nor settles this. Left open for the hire form.
 
 ### N-145 Profit with no outlet limits hired employment
 
@@ -1044,6 +1049,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-employment.md` 22 item 1.
 - **Note:** `spec-welfare-and-wages.md` 6 defines `InKind` and a mechanism for the trainee's board only. The rule that would work for a wage is in `spec-employment.md` 22 item 1; the reason `wage_in_kind` is reserved.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: `InKind` is validated and unused; no mover and no position, so pay in kind is not built. Left open.
+- **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form pays money only (`wage_pay`); pay in kind stays unbuilt. Left open for the hire form.
 
 ### N-148 The employer role's observed wage includes its profit on hands
 
@@ -1151,6 +1157,7 @@ PR description.
 - **Update (2026-10-18, plan 1-10 Phase 1):** not this row's: the word "treasury" is not used here. Left open.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The row says "pool" for the estate account and never "treasury".
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: the checkpoint row does not use the word "treasury" except as the account kind of the format (4.2.4). Left open.
+- **Update (2026-11-12, plan 2-28 review):** read: the payroll form says "pool" only for the sum of the payers' budgets, never for an estate account, and does not use "treasury". Left open.
 
 ### N-164 Credit requests and offers are plan fields
 
@@ -1304,6 +1311,7 @@ PR description.
 - **Areas:** LND, EMP, CRD, FIS
 - **Raised:** 2026-10-13, `spec-fiscal.md` 24 item 3.
 - **Note:** In version 1 a tax on a reason is a tax on the holder role; a hook at the transfer would let a flow tax one ledger reason whoever pays it.
+- **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form's `wage_pay` is one more reason a hook at the transfer could tax. Not built; left open.
 
 ### N-188 Incidence is statutory; a duty is not in any limit price
 
@@ -1323,6 +1331,7 @@ PR description.
 - **Areas:** LND, EMP, FIS, PLC, MER
 - **Raised:** 2026-10-13, `spec-institutions.md` 6.3, 6.6 to 6.8.
 - **Note:** In the admission of a market (and of the contract and credit rounds) a bid is capped and an ask floored; any later spec that forms a price from two limits (a rent, a wage, a fee, a tariff) applies the same clamp at its own admission. Never a rejection and never a rule of the strategy.
+- **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form has no price formed from two limits, so no wage control applies to it. Left open for the hire form.
 
 ### N-191 A right is read at a start, an order and a place
 
@@ -1350,6 +1359,7 @@ PR description.
 - **Areas:** TRN, STO, CAP, EMP, PLC, INT
 - **Raised:** 2026-10-13, `spec-institutions.md` 5.8, 6.8, 7.1.3.
 - **Note:** A charter over carriage (`ship`), over a store or over a facility, a wage control, a holder that is a named household and a call that admits or expels a member are reserved with their shapes. The facility clause overlaps N-173, kept apart on purpose.
+- **Update (2026-11-12, plan 2-28 Phase 1):** a wage control is not offered by the payroll form either. Left open.
 
 ### N-195 Instalment claims for a credit-financed project
 
@@ -1554,6 +1564,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Applied: the row appends no configuration, event or snapshot field to anything that exists; the snapshot is new and declares slice fields only; the pinned hash and `testdata/golden/off/` do not move (the rename of D140 changes no hash input: the field id of `Config.World` is 1 and the ids of its fields are unchanged). Standing; left open.
 - **Update (2026-10-21, anchor fix):** applied to a core field: `World.AnchorHold` defaults to 0 and is written to the hash only when not zero (field 46), so a configuration that never sets it hashes as before; `TestHashConfig_AnchorHoldOffLeavesNoTrace` keeps the old pin. The reference chain (`base.toml`) sets `anchor_hold = 5000`, which is a pack edit: the pins of pack `one` (`TestHashConfig_ReferencePinned`, `TestPacks_LoadValidateAndHash`, `expected/one.toml`) and `testdata/golden/off/` moved once, explained in the change under testing.md 7.2. Pack `second` is unchanged. Standing; left open.
 - **Update (2026-10-23, plan 2-2 Phase 1):** applied: the checkpoint row appends no configuration field and no field to an event or a snapshot row (`WorldRestored` is a new event); the pinned hash does not move, `events-one.txt` and `one.positions.txt` do not move, and `testdata/golden/off/one.txt` gains the one digest line of N-294 (plan 2-2 D257), which is not a module's append. A standing rule; left open.
+- **Update (2026-11-12, plan 2-28 review):** read: the payroll form leaves no trace while off (`PayrollBP`, `Hireable` and the module hashed only when on; `PayrollPaid` is a count-and-money event never emitted off; the all-off hash and `golden/off` are unchanged, FR-EMP-079). Left open.
 
 ### N-218 The Stage 0 field set and the hash rule that goes with it
 
@@ -2030,6 +2041,7 @@ PR description.
 - **Areas:** IND, EMP, RSK, STO
 - **Raised:** 2026-11-09, plan 2-18 D560.
 - **Note:** `Unemployment`, `WageBill`, `Employment` and `Losses` (rows 22 to 25 of `spec-indicators.md` 9.1, FR-IND-056 to FR-IND-059) need events and a reason that do not exist before Stage 3 (`LabourRound`, `StoreLoss`, the `Lost` fields, the reason `loss`). The plan of EMP and the plan of RSK/STO each add, in the same change, their `Observe` case in `indicator/tally_observe.go`, the tally rows, the preset and its tests; the roadmap rows name them.
+- **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form emits `PayrollPaid`, not `LabourRound`, so presets 22 to 25 stay with the hire form and Stage 3. Left open.
 
 ### N-328 `internal/measure` imports `internal/checked`
 
@@ -2135,6 +2147,7 @@ PR description.
 - **Areas:** EST, CFG, ALL
 - **Raised:** 2026-11-11, plan 2-7.
 - **Note:** A module's field may default to a non-zero value because it is hashed only while the module is on; the zero-default rule of `architecture.md` 2.10.5 binds core fields. The first case is `Region.PoolRelease` (100) and `Region.ReliefBelow` (10 000).
+- **Update (2026-11-12, plan 2-28 Phase 1):** `Employer.PayrollBP` defaults to 5 000 (a placeholder) and is hashed only while the block exists: a module's field with a non-zero default, as this note says.
 
 ### N-346 Relief reads the total ratio
 
@@ -2196,8 +2209,9 @@ PR description.
   Hard stop after E5, no pass; seeds 1 to 10 were not run. What WORKS as a partial fix: a work-tied wage out of the cook receipts stops the decline (households 561 to 580 against 466 to 533 declining). It is necessary, not sufficient.
 - **Flows analysis (harness, E1, seeds 101 to 103, windows 6 to 10, per tick, aggregated by a scratch script).** The five discretionary roles (maker, refiner, digger, comfort maker, treat maker: 204 of 600 households) form a closed chain digger to refiner to maker and comfort maker, and earn about 35 000 a tick from outside it (cook `tool_b` 10 900 and want spending about 23 000) while spending about 85 000. Maker sells 11 300 (96% is `tool_b` to cooks); refiner sells 17 000 (only to makers and comfort makers); digger sells 6 500 (5 700 of mineral to refiners, a closed loop). At the 30% to 40% price level the basket of 204 households is about 70 000 a tick, so their final demand feeds about 100 households, not 204. Wages follow executions, not need: payroll also pays foresters and growers for surplus output.
 - **What the routes rule out.** Money redistribution without a labour link (grants, holding charge, relaxed entry made it worse; payroll, the labour link, helps the count only). Relaxed entry and role floors (`role_keep` holds a count, not an income). Credit is not indicated: the starved roles lack final demand, not working capital (E5 gave them cash and their unfed share did not move). Shrinking the discretionary roles (E4 kills the tool supply). A re-solve with the current `SolveSteadyState` under payroll (E2: the solver has no payroll, so its balanced census is the wrong one).
-- **Parked, unmerged.** The payroll module is on `origin/stage-2-done-employment` (reviewed once, default-off, no consumer, no claim); the claim harness and layers are on `origin/stage-2-done-employment-claim`. Merged with this record: the `-screen.flows` diagnostics (`scenario_screen_test.go` only, from `stage-2-done-redesign` a61a323 and c2810c2).
-- **Next owner decision (a design question about the reference chain, not another bounded experiment; not settled here).** Candidates, with the evidence for each: (a) a payroll-aware `SolveSteadyState` and a discretionary sub-chain sized by final demand (about 100 households, not 204) with a recipe change so `tool_b` demand does not collapse: cheapest, at most 6 trials, needs the parked payroll module (evidence: the flows analysis, E2, E4); (b) the full hire form of `spec-employment.md`, which pays by hiring and need rather than by executions, 3 to 4 times the cost of (a) (evidence: payroll pays surplus roles); (c) redesign the reference chain's discretionary sub-chain as data only, a design question for the owner about the setting the reference chain stands for (evidence: route 1 and E4, the closed chain cannot be fed by its own outside demand). Credit is not indicated. A rewording of criterion 1 stays the alternative. Until then PR D, any band on a collapsing run and any "stable" claim stay off (N-027). Not tried: `halt_idle_ticks` alone.
+- **Payroll merged, claim parked.** The payroll module is merged by the stage-2-chain PR A (default-off, no consumer, no claim); the claim harness and layers are on `origin/stage-2-done-employment-claim`. Merged with this record: the `-screen.flows` diagnostics (`scenario_screen_test.go` only, from `stage-2-done-redesign` a61a323 and c2810c2).
+- **Next owner decision (a design question about the reference chain, not another bounded experiment; not settled here).** Candidates, with the evidence for each: (a) a payroll-aware `SolveSteadyState` and a discretionary sub-chain sized by final demand (about 100 households, not 204) with a recipe change so `tool_b` demand does not collapse: cheapest, at most 6 trials, needs the payroll module, merged but unused (evidence: the flows analysis, E2, E4); (b) the full hire form of `spec-employment.md`, which pays by hiring and need rather than by executions, 3 to 4 times the cost of (a) (evidence: payroll pays surplus roles); (c) redesign the reference chain's discretionary sub-chain as data only, a design question for the owner about the setting the reference chain stands for (evidence: route 1 and E4, the closed chain cannot be fed by its own outside demand). Credit is not indicated. A rewording of criterion 1 stays the alternative. Until then PR D, any band on a collapsing run and any "stable" claim stay off (N-027). Not tried: `halt_idle_ticks` alone.
+- **Update (2026-11-12, plan 2-28 Phase 1, plan 2-28, owner decision D-O5):** a work-tied wage was spiked: a payer share of 50% of the cooks' receipts kept households within 3% of the start at tick 1 100 on 7 of 8 seeds (seeds 1 to 4 and 102 to 104 flat to 2 200; seed 101 collapsed), 25% and 37.5% collapsed two seeds in four late, 62.5% and above every seed early; cooks' share of the money fell from 43% to 58% to 9% to 25%; non-cook households unfed stayed at 33% to 43%. Necessary, not sufficient. The payroll form is specified (`spec-employment.md` 24, ADR 0011) as a default-off module that merges on its own proof and claims nothing on criterion 1; built only if the pack-data redesign exhausts its stop rule.
 
 ### N-353 Gate R and gate F do not fit a hosted runner: `full` is opt-in, the owner chooses how CI runs F
 
@@ -2213,6 +2227,12 @@ PR description.
 - **Raised:** 2026-11-11, plan 2-26.
 - **Note:** `AddAgent` has no cap: a consumer that adds external agents bounds its own calls. A future `Integration.MaxExternal` key (default off, hashed with the integration block) would be the seam if a cap becomes a requirement; nothing builds it now.
 
+### N-355 The hire form appends to the payroll form's seams
+
+- **Areas:** EMP
+- **Raised:** 2026-11-12, plan 2-28 Phase 1 (`spec-employment.md` 24); narrowed 2026-11-12, plan 2-28 Phase 3.
+- **Note:** The payroll form owed the position, the catalogue rows (`PayrollPaid`, `economysim.payroll.paid`), the reason `wage_pay` and the pooled-wage hook; Phase 3 built them (`p41bPayroll`, `internal/ledger.WagePay` with the row agent to agent, rank and code 23). What stays owed: the hire form appends `MaxOpen` to `Employment` and the hire block to `Employer` with the next free ids, adds the pairing escrow to agent to the `wage_pay` row of `internal/ledger` (the spec row already names both), and does not reuse `PayrollBP` for `WorkerShareBP`.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2225,4 +2245,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: f5fc7249054887b83ff9d192
+NOTES-TAG: 0fb25cec17dca3a7da85b49f

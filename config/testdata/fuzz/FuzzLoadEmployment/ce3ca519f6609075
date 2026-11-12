@@ -1,0 +1,4 @@
+go test fuzz v1
+[]byte("schema=1\n[modules.employment]\n[role.0.employer]\n[role.1]\n[role.2]")
+[]byte("[role.7]")
+[]byte("")

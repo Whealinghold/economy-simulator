@@ -138,6 +138,7 @@ func (w *World) allocate() {
 	w.info = newInformation(&w.cfg, &w.roles)
 	w.migration = newMigration(&w.cfg)
 	w.mer = newMerchants(&w.cfg, &w.roles, w.transport)
+	w.employment = newEmployment(&w.cfg)
 	if w.transport != nil {
 		w.bounds.add(openShipment, w.transport.holds)
 	}

@@ -105,6 +105,9 @@ type World struct {
 	// mer is the state of the merchant roles and of the merchants module, nil when
 	// no role has a merchant block and the module is off (contract.go).
 	mer *merchants
+	// employment is the state of the employment module (payroll form), nil when
+	// it is off (employment.go).
+	employment *employment
 	// external is the state of the external-sector module, nil when it is off
 	// (external.go).
 	external *external

@@ -121,6 +121,7 @@ func (v *validator) structural() {
 	v.validateInformation()
 	v.validateMigration()
 	v.validateMerchants()
+	v.validateEmployment()
 	v.validateExternal()
 	v.overflow()
 }

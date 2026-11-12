@@ -55,6 +55,7 @@ shaped that way and is where a later reader looks when they want to reverse it.
 | [0008](0008-random-draws-are-keyed-streams.md) | Random draws come from keyed streams, not from one positional stream | Accepted |
 | [0009](0009-the-toml-library-is-pelletier-go-toml-v2.md) | The TOML library is pelletier/go-toml/v2, behind a guard pass | Accepted |
 | [0010](0010-a-module-has-named-hooks-outside-its-file.md) | A module has named hooks outside its file (narrows 0007 decisions 1, 2, 3) | Accepted |
+| [0011](0011-payroll-before-hire-as-the-first-form-of-employment.md) | Payroll before hire: the first form of the employment module | Accepted (human review pending) |
 
 ## Updating this file
 

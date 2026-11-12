@@ -36,7 +36,7 @@ var obsEventOrder = []string{
 	"MigrationStarted", "MigrationReviewed", "EndowmentChanged", "EndowmentAdjusted",
 	"RumoursServed", "OutsideTraded", "OutsideEnded", "OutsideShocked", "YieldShocked",
 	"PopulationScaled", "RouteRiskScaled", "StoreRiskScaled", "HireFormed", "HireEnded",
-	"LabourRound", "LoanFormed", "LoanEnded", "LoanPassed", "CreditRound", "CreditSettled",
+	"LabourRound", "PayrollPaid", "LoanFormed", "LoanEnded", "LoanPassed", "CreditRound", "CreditSettled",
 	"CreditRateScaled", "TechnologyAdvanced", "TechnologyAdjusted",
 	"SettlementClassChanged", "SettlementHeld", "RentPaid", "TitleTransferred",
 	"RentScaled", "FacilityChanged", "FacilityLimited", "FiscalFlowApplied",
