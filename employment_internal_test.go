@@ -441,3 +441,116 @@ func TestPayroll_PayerOutOfRangeIsAnInvariant(t *testing.T) {
 	w.welfare.at(payer).receipts = -1
 	mustPanicInvariant(t, "the payroll inputs of a payer are out of range", func() { _ = w.p41bPayroll() })
 }
+
+// TestPayroll_TakesNoWord verifies that P4.1b leaves the world's random stream
+// where it was: the state of the PCG after a payroll that pays is the state it was
+// keyed to before it.
+//
+// Requirement: FR-EMP-064, FR-EMP-075
+//
+// Guard: the module is the only one switched on by the overlay; a draw in the
+// position would move every later site's words only in worlds with the module on,
+// which no off golden can see.
+func TestPayroll_TakesNoWord(t *testing.T) {
+	t.Parallel()
+	w := payrollWorld(t, 2, 2, 10_000, 5_000, 1, nil)
+	payers, workers := slotsOf(w, "payer"), slotsOf(w, "worker")
+	w.welfare.addReceipt(payers[0], 1_000)
+	w.welfare.addReceipt(payers[1], 400)
+	w.welfare.markWorking(workers[0], 2, false)
+	w.welfare.markWorking(workers[1], 1, false)
+	w.rnd.keyed(siteWork, 3, 4)
+	before, err := w.rnd.pcg.MarshalBinary()
+	if err != nil {
+		t.Fatalf("MarshalBinary() error = %v, want nil", err)
+	}
+	moneyBefore := balanceOf(t, w, workers[0]) + balanceOf(t, w, workers[1])
+	if err := w.p41bPayroll(); err != nil {
+		t.Fatalf("p41bPayroll() error = %v, want nil", err)
+	}
+	if got := balanceOf(t, w, workers[0]) + balanceOf(t, w, workers[1]); got <= moneyBefore {
+		t.Fatalf("workers hold %d, want more than %d: the payroll did not run, the test would prove nothing", got, moneyBefore)
+	}
+	after, err := w.rnd.pcg.MarshalBinary()
+	if err != nil {
+		t.Fatalf("MarshalBinary() error = %v, want nil", err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Errorf("PCG state after P4.1b = %x, want %x: the payroll took a word", after, before)
+	}
+}
+
+// TestPayroll_RolesComeInAscendingRoleOrder verifies the order of the events of one
+// region: by role, and that a role whose payers had nothing due emits none.
+//
+// Setup: three employer roles ("early", "idle", "zlate") and one Hireable role, the
+// groups listed with "zlate" first. Agents are numbered by role, so the test pins
+// the order of the events, not a tie-break.
+//
+// Arithmetic: receipts 1 000 and 600 at 5 000 bp are due 500 and 300; the one worker
+// is paid both pools, 500 + 300 = 800, and the role "idle", with no receipts, is not reported.
+//
+// Requirement: FR-EMP-076
+func TestPayroll_RolesComeInAscendingRoleOrder(t *testing.T) {
+	t.Parallel()
+	world := DefaultWorldParams()
+	world.Upkeep = []Item{{Commodity: "grain", Quantity: 2}}
+	world.OutputCoverTicks = 0
+	grain := DefaultCommodity()
+	grain.ID, grain.ReferencePrice, grain.Raw = "grain", 1_000, true
+	mk := func(id string, employer, hireable bool) Role {
+		r := DefaultRole()
+		r.ID, r.Recipes, r.StartMoney, r.Hireable = id, []string{"tend"}, 10_000, hireable
+		if employer {
+			r.Employer = &Employer{PayrollBP: 5_000}
+		}
+		return r
+	}
+	r := DefaultRegion()
+	r.ID, r.ReferenceBasket = "r0", 2_000
+	cfg := Config{
+		World: world, Calendar: DefaultCalendar(), Commodities: []Commodity{grain},
+		Roles:   []Role{mk("early", true, false), mk("worker", false, true), mk("zlate", true, false), mk("idle", true, false)},
+		Recipes: []Recipe{{ID: "tend", Duration: 1, TraineeYield: 5_000, Outputs: []Output{{Commodity: "grain", Quantity: 2, CostShare: 10_000}}}},
+		Regions: []Region{r},
+		Groups: []Group{{Region: "r0", Role: "zlate", Households: 1}, {Region: "r0", Role: "idle", Households: 1},
+			{Region: "r0", Role: "early", Households: 1}, {Region: "r0", Role: "worker", Households: 1}},
+	}
+	cfg.Modules.Employment = &Employment{}
+	var events []PayrollPaid
+	w, err := NewWorld(cfg, WithSeed(1), WithAudit(), WithObserver(ObserverFunc(func(e Event) {
+		if p, ok := e.(PayrollPaid); ok {
+			events = append(events, p)
+		}
+	})))
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil", err)
+	}
+	late, payer, worker := slotsOf(w, "zlate")[0], slotsOf(w, "early")[0], slotsOf(w, "worker")[0]
+	w.welfare.addReceipt(late, 600)
+	w.welfare.addReceipt(payer, 1_000)
+	w.welfare.markWorking(worker, 1, false)
+	if err := w.p41bPayroll(); err != nil {
+		t.Fatalf("p41bPayroll() error = %v, want nil", err)
+	}
+	want := []PayrollPaid{
+		{Role: RoleID(roleIndex(w, "early")), Payers: 1, Workers: 1, Due: 500, Paid: 500},
+		{Role: RoleID(roleIndex(w, "zlate")), Payers: 1, Workers: 1, Due: 300, Paid: 300},
+	}
+	if !slices.Equal(events, want) {
+		t.Errorf("PayrollPaid events = %+v, want %+v", events, want)
+	}
+	if got := balanceOf(t, w, worker); got != 10_800 {
+		t.Errorf("worker holds %d, want 10 800 (its 10 000 start + 500 + 300)", got)
+	}
+}
+
+// roleIndex returns the RoleID of the role named id in the world's configuration.
+func roleIndex(w *World, id string) int {
+	for i := range w.cfg.Roles {
+		if w.cfg.Roles[i].ID == id {
+			return i
+		}
+	}
+	panic("no role " + id)
+}

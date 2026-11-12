@@ -211,7 +211,7 @@ func TestDeterminism_Employment(t *testing.T) {
 			t.Parallel()
 			base := runPack(t, cfg, detStep(runSpec{Seed: seed, Ticks: detTicks}))
 			ref := runPack(t, cfg, detStep(runSpec{Seed: seed, Ticks: detTicks, Observe: true}))
-			refEvents := renderEvents(withoutRunBrackets(ref))
+			refEvents := withoutRunBrackets(ref).Events
 			if d := firstTickDiff(base.Samples, ref.Samples); d != "" {
 				t.Fatalf("seed %d: observed Step run differs from the bare one at %s (FR-OBS-023)", seed, d)
 			}
@@ -226,11 +226,80 @@ func TestDeterminism_Employment(t *testing.T) {
 					t.Errorf("seed %d, case %q: state hash of the world differs from the bare run", seed, tc.name)
 				}
 				if spec.Observe {
-					if d := firstLineDiff(refEvents, renderEvents(withoutRunBrackets(got))); d != "" {
+					// The events are compared as values, which is the assertion of the rendered
+					// lines without rendering about 1.25 million of them per case (a gate R run
+					// once took 66 minutes here). Only a mismatch renders, to name the line.
+					if gotEvents := withoutRunBrackets(got).Events; !reflect.DeepEqual(refEvents, gotEvents) {
+						d := firstLineDiff(renderEvents(result{Final: ref.Final, Events: refEvents}), renderEvents(result{Final: got.Final, Events: gotEvents}))
 						t.Errorf("seed %d, case %q: events differ from the reference at %s", seed, tc.name, d)
 					}
 				}
 			}
 		})
+	}
+}
+
+// TestEmployment_RunPaysWagesFromTrade verifies, on a whole run of one-demand with
+// the payroll on (seed 2, 120 ticks, WithAudit), what the form promises a consumer
+// of the events: every PayrollPaid reports Due = Paid + Cut, names a payer and a
+// paid worker whenever it paid, comes in ascending (tick, region, role) order, and
+// the run pays: wages do reach the Hireable households out of the receipts of
+// trade. The audit fails the run if the payroll created or destroyed money.
+//
+// Requirement: FR-EMP-068, FR-EMP-069, FR-EMP-072, FR-EMP-076
+func TestEmployment_RunPaysWagesFromTrade(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	res := runPack(t, loadValidPack(t, packOneDemandEmployment...), runSpec{Seed: 2, Ticks: 120, Drive: driveStep, Observe: true, Audit: true})
+	var prev *economysim.PayrollPaid
+	var rows int
+	var paid, cut economysim.Money
+	for _, e := range res.Events {
+		p, ok := e.(economysim.PayrollPaid)
+		if !ok {
+			continue
+		}
+		rows++
+		paid += p.Paid
+		cut += p.Cut
+		if p.Due != p.Paid+p.Cut {
+			t.Errorf("tick %d region %d role %d: Due = %d, want Paid + Cut = %d + %d", p.Tick, p.Region, p.Role, p.Due, p.Paid, p.Cut)
+		}
+		if p.Due == 0 && p.Paid == 0 {
+			t.Errorf("tick %d region %d role %d: reported with Due and Paid both 0, want it left out", p.Tick, p.Region, p.Role)
+		}
+		if p.Paid > 0 && (p.Payers < 1 || p.Workers < 1) {
+			t.Errorf("tick %d region %d role %d: Paid = %d with Payers = %d, Workers = %d, want both at least 1", p.Tick, p.Region, p.Role, p.Paid, p.Payers, p.Workers)
+		}
+		if prev != nil && !(p.Tick > prev.Tick || p.Tick == prev.Tick && (p.Region > prev.Region || p.Region == prev.Region && p.Role > prev.Role)) {
+			t.Errorf("PayrollPaid {%d,%d,%d} after {%d,%d,%d}, want ascending (tick, region, role)", p.Tick, p.Region, p.Role, prev.Tick, prev.Region, prev.Role)
+		}
+		prev = &p
+	}
+	if rows == 0 || paid <= 0 {
+		t.Errorf("run of 120 ticks: %d PayrollPaid rows, %d paid, want wages paid", rows, paid)
+	}
+}
+
+// TestCheckpoint_EmploymentKeepsFormat1 verifies that a world with the payroll on
+// checkpoints in format 1, with the configuration hash of its own configuration: the
+// module added no format version (the restore of its bytes is TestFork_Employment).
+//
+// Requirement: FR-EMP-074
+func TestCheckpoint_EmploymentKeepsFormat1(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	cfg := loadValidPack(t, packOneDemandEmployment...)
+	res := runPack(t, cfg, runSpec{Seed: 1, Ticks: 30, Drive: driveStep})
+	c, err := res.World.Checkpoint()
+	if err != nil {
+		t.Fatalf("Checkpoint() error = %v, want nil", err)
+	}
+	if got := c.Info(); got.Format != 1 || got.ConfigHash != res.World.ConfigHash() {
+		t.Errorf("Info() = %+v, want Format 1 and ConfigHash %x", got, res.World.ConfigHash())
 	}
 }

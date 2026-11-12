@@ -2,6 +2,7 @@ package employment_test
 
 import (
 	"math"
+	"math/big"
 	"slices"
 	"testing"
 
@@ -83,6 +84,13 @@ func TestSplit(t *testing.T) {
 			[]employment.Payer{payer(1, 20, 5000, 2), payer(2, 8, 5000, 100)},
 			[]employment.Worker{worker(5, 1), worker(6, 1)},
 			[]employment.Transfer{{1, 5, 2}, {2, 5, 1}, {2, 6, 3}}},
+		// Pool T = 2^63 - 1 over k = 3, 5 (K = 8): T * 3 = 27 670 116 110 564 327 421 does not fit
+		// in 64 bits, so the cumulative floor needs the 128-bit product:
+		// floor(T * 3 / 8) = 3 458 764 513 820 540 927 (remainder 5), and the second worker
+		// takes T less that, 5 764 607 523 034 234 880.
+		{"128-bit cumulative floor", []employment.Payer{payer(1, math.MaxInt64, 10000, math.MaxInt64)},
+			[]employment.Worker{worker(5, 3), worker(6, 5)},
+			[]employment.Transfer{{1, 5, 3458764513820540927}, {1, 6, 5764607523034234880}}},
 		// Pool 1 over k = 1, 1: floors 0, 1 give 0, 1; the zero row is not emitted.
 		{"a zero share emits no row", []employment.Payer{payer(1, 2, 5000, 5)},
 			[]employment.Worker{worker(5, 1), worker(6, 1)},
@@ -164,6 +172,33 @@ func FuzzSplit(f *testing.F) {
 		}
 		if len(rows) > 0 && out != pool {
 			t.Errorf("Split(%+v, %+v) paid %d, want the pool %d", payers, workers, out, pool)
+		}
+		// Every worker gets the cumulative-floor amount floor(T * C_j / K) - floor(T * C_{j-1} / K),
+		// with T the pool and K the sum of k, computed here with math/big.
+		var kSum int64
+		for _, wk := range workers {
+			if wk.K < 1 {
+				return
+			}
+			kSum += wk.K
+		}
+		if kSum < 0 || len(rows) == 0 {
+			return
+		}
+		got := map[int]int64{}
+		for _, row := range rows {
+			got[row.Worker] += row.Amount
+		}
+		var run, prev int64
+		for _, wk := range workers {
+			run += wk.K
+			cum := new(big.Int).Mul(big.NewInt(pool), big.NewInt(run))
+			cum.Quo(cum, big.NewInt(kSum))
+			want := cum.Int64() - prev
+			prev = cum.Int64()
+			if got[wk.Ref] != want {
+				t.Errorf("Split(%+v, %+v): worker %d got %d, want the cumulative floor %d", payers, workers, wk.Ref, got[wk.Ref], want)
+			}
 		}
 		for ref, p := range paid {
 			if p > budget[ref] {

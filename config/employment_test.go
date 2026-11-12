@@ -69,3 +69,49 @@ func TestLoad_Employment(t *testing.T) {
 		t.Errorf("HashConfig(file) != HashConfig(the same Go value), want equal (FR-EMP-079)")
 	}
 }
+
+// TestLoad_EmploymentRejects verifies that the payroll form's loader refuses what
+// the file must not say: a key of the hire form (the form this one is a subset of),
+// a payroll_bp that is not an integer, a key outside the employer block, and an
+// employment table that is not a table. Each case breaks one thing in an otherwise
+// valid document.
+//
+// Requirement: FR-EMP-080
+func TestLoad_EmploymentRejects(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name, doc string
+	}{
+		{"hire-form key of the module", minimal + "[modules.employment]\nmax_open = 4\n"},
+		{"hire-form key of the block", minimal + "[modules.employment]\n[role.a.employer]\nmax_hires = 2\n"},
+		{"payroll_bp as a float", minimal + "[modules.employment]\n[role.a.employer]\npayroll_bp = 5000.5\n"},
+		{"payroll_bp as a string", minimal + "[modules.employment]\n[role.a.employer]\npayroll_bp = \"5000\"\n"},
+		{"hireable as an integer", minimal + "[modules.employment]\n[role.a]\nhireable = 1\n"},
+		{"employment as a scalar", minimal + "[modules]\nemployment = 1\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if cfg, err := parseStrings(tt.doc); err == nil {
+				t.Errorf("Parse(%s) = %+v, nil, want an error", tt.name, cfg)
+			}
+		})
+	}
+}
+
+// FuzzLoadEmployment is FuzzLoad with the seeds of the payroll form: the document
+// above and documents that break each key of the module. It asserts the same
+// properties.
+//
+// Requirement: FR-EMP-080
+//
+// Fix: found by this fuzz test in its first run. A document with the module on and
+// an employer role but no Hireable role validates with ErrEmploymentShape, a rule
+// that validationSentinels (helpers_test.go) did not list, so classified rejected
+// a correct validation error. The committed input in testdata/fuzz/FuzzLoadEmployment
+// pins it. The defect was in the test's list of sentinels, not in the loader.
+func FuzzLoadEmployment(f *testing.F) {
+	f.Add([]byte(employmentDoc), []byte("[role.boss.employer]\npayroll_bp = 0\n"), []byte("[modules.employment]\nbogus = 1\n"))
+	f.Add([]byte(minimal), []byte("[role.a.employer]\npayroll_bp = 10001\n"), []byte("[role.a]\nhireable = \"yes\"\n"))
+	f.Fuzz(loadProperties)
+}
