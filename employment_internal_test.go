@@ -428,3 +428,16 @@ func sumBalances(t *testing.T, w *World, slots []int) Money {
 	}
 	return sum
 }
+
+// TestPayroll_PayerOutOfRangeIsAnInvariant verifies that a payer whose receipts are
+// negative, which no settled trade produces, stops the step with the programmer
+// invariant and not with a silent zero or a wrapped budget.
+//
+// Requirement: FR-EMP-068
+func TestPayroll_PayerOutOfRangeIsAnInvariant(t *testing.T) {
+	t.Parallel()
+	w := payrollWorld(t, 1, 1, 10_000, 5_000, 1, nil)
+	payer := slotsOf(w, "payer")[0]
+	w.welfare.at(payer).receipts = -1
+	mustPanicInvariant(t, "the payroll inputs of a payer are out of range", func() { _ = w.p41bPayroll() })
+}

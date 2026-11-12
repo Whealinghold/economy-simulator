@@ -190,7 +190,7 @@ func (w *World) payRegion(g RegionID) error {
 	for _, p := range e.payers[g] {
 		due, budget, ok := payroll.Budget(p)
 		if !ok {
-			invariant("the budget of a payer does not fit in int64")
+			invariant("the payroll inputs of a payer are out of range (negative receipts, or PayrollBP outside 1 to 10 000) or its due does not fit in int64")
 		}
 		t := &e.byRole[w.agents[p.Ref].role].ev
 		sum, ok := checked.Add(int64(t.Due), due)
