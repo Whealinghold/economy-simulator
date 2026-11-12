@@ -236,13 +236,13 @@ all-on from it).
 | Create | Specs | Status |
 | --- | --- | --- |
 | Work before any row: the stale CHK and WLD passages, the race-aware scenario tests and gate, the ADR acceptances, CI and the second architecture (no module code) | CHK, WLD, ADR 0002, 0009 | merged (PR #14: Phases 1 to 4 and 6; the CI workflow is the `ci.yml` row below) |
-| `internal/codec` and `checkpoint.go` (`Checkpoint`, `RestoreWorld`, `Stateful`, `WithReseed` over the pure reseed function of Stage 0, `WorldRestored`, `ErrOptionContext`); `testdata/checkpoints/` | CHK | merged (PR #15) |
-| `internal/graph` and `regions.go` (the graph, distances, components, overrides, the guarded relocation (unexported `relocate`, `RelocationRefusal`) and the edge status (`Graph`, `Snapshot.Edges`)) | REG | merged (PR #17) |
+| `internal/codec` and `checkpoint.go` (`Checkpoint`, `RestoreWorld`, `Stateful`, `WithReseed` over the pure reseed function of Stage 0, `WorldRestored`, `ErrOptionContext`); `testdata/checkpoints/` | CHK | merged (PRs #15 and #16) |
+| `internal/graph` and `regions.go` (the graph, distances, components, overrides, the guarded relocation (unexported `relocate`, `RelocationRefusal`) and the edge status (`Graph`, `Snapshot.Edges`)) | REG | merged (PRs #17 and #18) |
 | `scale.go` (weights, the census) | SCL | merged (PR #19) |
-| `demand.go` (the first module file: it proves the template of 2.10.1) | DEM | merged (PR #21) |
+| `demand.go` (the first module file: it proves the template of 2.10.1) | DEM | merged (PRs #20, #21 and #23; ADR 0010 accepted in #22) |
 | `moneyflow.go` and `internal/moneyflow` (core identities; the flows as a module) | MON | merged (PR #24) |
-| `estates.go` (the `Estates` module part, appended: relief and the pool as a money-flow target; `ReliefPaid`, `Region.PoolRelease` and `Region.ReliefBelow`) | EST 2.6; CFG 6.2.4; MON 4.3.2 | merged |
-| Rebalance of the reference pack once demand, money flows and relief exist (pack data, warm start, goldens moved once) | REF, VIA, STB | instrumentation merged (PR A); ladder stopped without an accepted rung (D369, N-325), ruling E1 applied; a second attempt (plan 2-25) also stopped: criterion 1 is not met, the record is N-352 (the survival-screen harness is merged, PR #50; the four default-off levers are parked unmerged on `origin/stage-2-done-stability`); no pack or golden moved |
+| `estates.go` (the `Estates` module part, appended: relief and the pool as a money-flow target; `ReliefPaid`, `Region.PoolRelease` and `Region.ReliefBelow`) | EST 2.6; CFG 6.2.4; MON 4.3.2 | merged (PR #25) |
+| Rebalance of the reference pack once demand, money flows and relief exist (pack data, warm start, goldens moved once) | REF, VIA, STB | instrumentation merged (PR A #26); the ladder result merged (PR B #27); the ladder stopped without an accepted rung (D369, N-325), ruling E1 applied; a second attempt (plan 2-25) also stopped: criterion 1 is not met, the record is N-352 (the survival-screen harness is merged, PR #50; the four default-off levers are parked unmerged on `origin/stage-2-done-stability`); no pack or golden moved |
 | `resources.go` and `internal/endowment`, `internal/curve` | RES | merged (PRs #28, #29, #30) |
 | `subsistence.go` and `internal/ownuse` | SUB | merged (PR #31) |
 | `population.go` and `internal/population` | POP | merged (PR #32) |
