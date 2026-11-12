@@ -180,7 +180,9 @@ func (e *employment) collectAgent(w *World, i int) {
 // test can inject either from the root.
 func (w *World) payRegion(g RegionID) error {
 	e := w.employment
-	clear(e.byRole)
+	if w.obs.supplied {
+		clear(e.byRole)
+	}
 	for _, p := range e.payers[g] {
 		due, budget, ok := payroll.Budget(p)
 		if !ok {
