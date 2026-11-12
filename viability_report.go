@@ -111,6 +111,13 @@ type CensusRow struct {
 	//   - a programme with no labour share (a tight capacity row, FR-VIA-012);
 	//   - a figure that does not fit int64.
 	HasIncome bool
+	// PayrollOutBP and PayrollInBP are the pay a household of the group pays and
+	// receives each tick under the employment module, in basis points of its upkeep
+	// cost at the seed prices, rounded half to even (the formula of IncomeBP with the
+	// pay in the place of the wage times the labour). They are 0 with the module
+	// off, for a group that neither pays nor is paid, and where the programme kept
+	// its payroll-free duals (spec-viability.md 5.6, FR-VIA-069).
+	PayrollOutBP, PayrollInBP int64
 }
 
 // ActiveIn lists the regions in which a recipe is active in the pooled solution.
@@ -254,6 +261,10 @@ type Report struct {
 	Headroom []HeadroomRow
 	Rent     []RentRow
 	Runway   []RunwayRow
+	// PayrollInfeasible lists the regions whose programme kept its payroll-free
+	// duals under the employment module, with the reason (spec-viability.md 5.6);
+	// nil with the module off.
+	PayrollInfeasible []PayrollRecord
 }
 
 // normalise puts every list of the report in ascending region then commodity or
@@ -279,6 +290,7 @@ func (r *Report) normalise() {
 	r.Headroom = sortedUnique(r.Headroom, func(a, b HeadroomRow) int { return cmpPair(a.Region, a.Resource, b.Region, b.Resource) })
 	r.Rent = sortedUnique(r.Rent, func(a, b RentRow) int { return cmpPair(a.Region, a.Resource, b.Region, b.Resource) })
 	r.Runway = sortedUnique(r.Runway, func(a, b RunwayRow) int { return cmpPair(a.Region, a.Resource, b.Region, b.Resource) })
+	r.PayrollInfeasible = sortedUnique(r.PayrollInfeasible, func(a, b PayrollRecord) int { return cmpPair(a.Region, a.Reason, b.Region, b.Reason) })
 }
 
 // cmpString orders two strings.
@@ -325,6 +337,9 @@ func (rc *regionCtx) residual() {
 			continue
 		}
 		target := steady.Rat(wd, 1).Add(rc.p.pr.Rent[at].Times(rc.scale))
+		if rc.p.pay != nil {
+			target = target.Add(rc.p.pay.perExec[at].Times(rc.scale)) // the pay the net-wage equation moves (5.6)
+		}
 		dev, ok := a.act.ValueAdded(rc.price).Add(target.Mul(-1, 1)).Abs().Quo(target)
 		if !ok {
 			continue
@@ -468,6 +483,7 @@ func (rc *regionCtx) census() {
 			Region: rc.id, Role: rc.s.m.c.Roles[gc.role].ID, Households: h, Balanced: b, Imbalance: h - b, Short: gc.short,
 		}
 		row.IncomeBP, row.HasIncome = rc.income(gc, labour[gi])
+		row.PayrollOutBP, row.PayrollInBP = rc.payrollBP(gi)
 		rep.Census = append(rep.Census, row)
 	}
 	rc.recipeCensus()
