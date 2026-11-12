@@ -53,6 +53,7 @@ type payrollCtx struct {
 	in     steady.PayrollInput
 	base   []int // the first group of each region of the programme
 	shared bool  // an active recipe of a payer or Hireable group is also listed by another group
+	over   bool  // a group's own consumption does not fit int64
 }
 
 // payroll re-solves the duals of programme p for the payroll of the
@@ -64,7 +65,7 @@ func (s *viaSolve) payroll(p *viaProgramme) {
 	if len(regions) == 0 {
 		return // no region has both a payer and a Hireable group: nothing is paid
 	}
-	if len(p.md.Lanes) > 0 || len(p.nominalSeed) > 0 || pc.shared {
+	if len(p.md.Lanes) > 0 || len(p.nominalSeed) > 0 || pc.shared || pc.over {
 		s.payrollFailed(p, regions, payrollUnsupported)
 		return
 	}
@@ -121,7 +122,9 @@ func (s *viaSolve) payrollInput(p *viaProgramme) payrollCtx {
 				pg.BP = role.Employer.PayrollBP
 			}
 			for _, it := range row.upkeepIn(r) {
-				pg.Own[it.commodity] = int64(it.quantity) * g.Households
+				own, ok := checked.Mul(int64(it.quantity), g.Households)
+				pc.over = pc.over || !ok
+				pg.Own[it.commodity] = own
 			}
 			pc.in.Groups = append(pc.in.Groups, pg)
 			roles = append(roles, row)

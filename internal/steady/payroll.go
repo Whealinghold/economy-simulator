@@ -325,14 +325,14 @@ func (p *payroll) solve() ([]*big.Rat, PayrollReason) {
 		norm[i] = new(big.Rat)
 	}
 	for c := 0; c < p.m.Commodities; c++ {
-		var tot int64
+		tot := new(big.Rat)
 		for _, rg := range p.m.Regions {
 			if c < len(rg.Upkeep) {
-				tot += rg.Upkeep[c]
+				tot.Add(tot, big.NewRat(rg.Upkeep[c], 1))
 			}
 		}
 		if u := p.goods[c]; u >= 0 {
-			norm[u].Add(norm[u], big.NewRat(tot, 1))
+			norm[u].Add(norm[u], tot)
 		}
 	}
 	norm[p.n] = big.NewRat(1, 1)

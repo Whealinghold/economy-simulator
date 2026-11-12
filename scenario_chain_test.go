@@ -54,10 +54,11 @@ func payrollSeedCold(t *testing.T) (economysim.Config, economysim.SteadyState) {
 // trial T1, the money the payers owed by the payroll rule (the sum of
 // PayrollPaid.Due) with the receipts the payroll-aware solver assumed (assumption
 // A1 of plan 2-29: a payer's receipts are its net sales at the duals, spec-viability.md
-// 5.6). It prints the ratio of measured to static and does not assert a bound: the
-// reading is the falsifier of H-P, and the 10% of plan 2-29 Phase 4 is applied by the
-// reader of the log. It asserts the exact facts: the module is on and pays, and
-// Due = Paid + Cut in every event (no money is created or lost by the rule).
+// 5.6). It asserts that the measured Due per tick is within 10% of the static
+// receipts (FR-VIA-066; measured 97.5%) and logs the ratio. This is a check of the
+// arithmetic of the solver's receipts, not of the simulation's equilibrium: H-P was
+// falsified separately. It also asserts the exact facts: the module is on and pays,
+// and Due = Paid + Cut in every event (no money is created or lost by the rule).
 //
 // Static per tick = sum over payer groups of PayrollOutBP / 10 000 times a
 // household's upkeep cost at the seed prices times the group's households (the
@@ -105,8 +106,12 @@ func TestScenarioChain_PayrollReceiptsMatchStatic(t *testing.T) {
 	if events == 0 || due == 0 {
 		t.Fatalf("PayrollPaid events = %d, due = %d over %d ticks, want a payroll paid", events, due, ticks)
 	}
+	ratio := due * 10000 / (perTick * ticks)
 	t.Logf("static payroll per tick %d, measured Due per tick %d (paid %d, cut %d) over %d ticks: measured/static = %d bp",
-		perTick, due/ticks, paid/ticks, cut/ticks, ticks, due*10000/(perTick*ticks))
+		perTick, due/ticks, paid/ticks, cut/ticks, ticks, ratio)
+	if ratio < 9000 || ratio > 11000 {
+		t.Errorf("measured/static payroll = %d bp over %d ticks, want within 10%% of 10000 (FR-VIA-066)", ratio, ticks)
+	}
 }
 
 // chainClaimSeeds and chainClaimTicks are the seeds and the length of the count
