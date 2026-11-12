@@ -17,7 +17,9 @@ Status values, in the order a row moves through them: **not started** (no plan),
 **plan written** (a plan exists, not yet audited ready), **plan audited**
 (the plan passed its audit with no blocking issue, ready to implement), **in
 progress**, **done** (with the commit). Stages 0, 2 and 3 still use **planned** for
-a row that has no plan. Update the status in the change that moves it.
+a row that has no plan. A Stage 2 row whose code is on `main` says **merged** with
+the pull request number; **built** (code written, not merged) and **not built** are
+used only where they are true. Update the status in the change that moves it.
 
 ## Stage 0: foundations (no economics)
 
@@ -233,31 +235,31 @@ all-on from it).
 
 | Create | Specs | Status |
 | --- | --- | --- |
-| Work before any row: the stale CHK and WLD passages, the race-aware scenario tests and gate, the ADR acceptances, CI and the second architecture (no module code) | CHK, WLD, ADR 0002, 0009 | built (Phases 1 to 4 and 6; the CI workflow is the `ci.yml` row below) |
-| `internal/codec` and `checkpoint.go` (`Checkpoint`, `RestoreWorld`, `Stateful`, `WithReseed` over the pure reseed function of Stage 0, `WorldRestored`, `ErrOptionContext`); `testdata/checkpoints/` | CHK | merged |
-| `internal/graph` and `regions.go` (the graph, distances, components, overrides, the guarded relocation (unexported `relocate`, `RelocationRefusal`) and the edge status (`Graph`, `Snapshot.Edges`)) | REG | merged |
-| `scale.go` (weights, the census) | SCL | merged |
-| `demand.go` (the first module file: it proves the template of 2.10.1) | DEM | merged |
-| `moneyflow.go` and `internal/moneyflow` (core identities; the flows as a module) | MON | merged |
+| Work before any row: the stale CHK and WLD passages, the race-aware scenario tests and gate, the ADR acceptances, CI and the second architecture (no module code) | CHK, WLD, ADR 0002, 0009 | merged (PR #14: Phases 1 to 4 and 6; the CI workflow is the `ci.yml` row below) |
+| `internal/codec` and `checkpoint.go` (`Checkpoint`, `RestoreWorld`, `Stateful`, `WithReseed` over the pure reseed function of Stage 0, `WorldRestored`, `ErrOptionContext`); `testdata/checkpoints/` | CHK | merged (PR #15) |
+| `internal/graph` and `regions.go` (the graph, distances, components, overrides, the guarded relocation (unexported `relocate`, `RelocationRefusal`) and the edge status (`Graph`, `Snapshot.Edges`)) | REG | merged (PR #17) |
+| `scale.go` (weights, the census) | SCL | merged (PR #19) |
+| `demand.go` (the first module file: it proves the template of 2.10.1) | DEM | merged (PR #21) |
+| `moneyflow.go` and `internal/moneyflow` (core identities; the flows as a module) | MON | merged (PR #24) |
 | `estates.go` (the `Estates` module part, appended: relief and the pool as a money-flow target; `ReliefPaid`, `Region.PoolRelease` and `Region.ReliefBelow`) | EST 2.6; CFG 6.2.4; MON 4.3.2 | merged |
-| Rebalance of the reference pack once demand, money flows and relief exist (pack data, warm start, goldens moved once) | REF, VIA, STB | instrumentation merged (PR A); ladder stopped without an accepted rung (D369, N-325), ruling E1 applied; no pack or golden moved |
-| `resources.go` and `internal/endowment`, `internal/curve` | RES | merged (PRs A, B, C) |
-| `subsistence.go` and `internal/ownuse` | SUB | merged |
-| `population.go` and `internal/population` | POP | in progress |
-| `transport.go` and `internal/transit` | TRN, CAR | built (the lanes in the solver are plan 2-12b: `Lane`, `WithLanes`, `Config.TransportLanes`; `RelocateForTest` and `SetEdgeStatusesForTest` are dropped, never needed) |
-| `information.go` and `internal/rumour` | INF | built (stage-2-13; audited 2026-11-11) |
-| `migration.go` and `internal/migration` | MIG | built (Phases 1 to 8; audited 2026-11-11) |
-| `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | done on branch stage-2-done-merchants (commit recorded at merge; plan 2-26: the merchant reruns S30 to S32 and S46, X1 and X2 dynamic report-only, `TestDeterminism_Merchants`, the `two+merchants` invariants row, the FR-WEL-009 window term; audited 2026-11-11) |
-| `external.go` and `internal/outside` | EXT | built (audited 2026-11-11; gates at the exit gate) |
+| Rebalance of the reference pack once demand, money flows and relief exist (pack data, warm start, goldens moved once) | REF, VIA, STB | instrumentation merged (PR A); ladder stopped without an accepted rung (D369, N-325), ruling E1 applied; a second attempt (plan 2-25) also stopped: criterion 1 is not met, the record is N-352 (the survival-screen harness is merged, PR #50; the four default-off levers are parked unmerged on `origin/stage-2-done-stability`); no pack or golden moved |
+| `resources.go` and `internal/endowment`, `internal/curve` | RES | merged (PRs #28, #29, #30) |
+| `subsistence.go` and `internal/ownuse` | SUB | merged (PR #31) |
+| `population.go` and `internal/population` | POP | merged (PR #32) |
+| `transport.go` and `internal/transit` | TRN, CAR | merged (PR #34; the lanes in the solver, PR #54: `Lane`, `WithLanes`, `Config.TransportLanes`; `RelocateForTest` and `SetEdgeStatusesForTest` are dropped, never needed) |
+| `information.go` and `internal/rumour` | INF | merged (PR #35; audited 2026-11-11) |
+| `migration.go` and `internal/migration` | MIG | merged (PR #37: Phases 1 to 8; audited 2026-11-11) |
+| `contract.go`, `internal/merchant` and `strategy/` (`Merchant`, `Options`) | MER | merged (PRs #39 and #53; plan 2-26 in #53: the merchant reruns S30 to S32 and S46, X1 and X2 dynamic report-only, `TestDeterminism_Merchants`, the `two+merchants` invariants row, the FR-WEL-009 window term; audited 2026-11-11) |
+| `external.go` and `internal/outside` | EXT | merged (PR #40; audited 2026-11-11) |
 | `integration.go` (external agents, `Direct`, `Relocate`, the slot setters, the queries) | INT (minimal: shocks and a player) | merged (PR #42, 2026-11-10) |
-| `indicator/` and `internal/measure` (presets 1 to 21 of `spec-indicators.md` 9.1; presets 22 to 25 are built in Stage 3 with EMP, RSK and STO) | IND | built (audited 2026-11-11) |
-| `internal/verdict` and the `stylised_long` build tag | STY | built (Phases 1 to 9, 2026-11-10; audited 2026-11-11); no band or threshold set, the first setting run waits on O1 and plan 8 |
-| `experiment/`, `internal/design`, `internal/reduce` | EXP | merged (stage-2-20; audited 2026-11-11) |
-| `internal/calibration` and `testdata/calibration/` | CLB | built (Phases 1 to 8, stage-2-21; audited 2026-11-11) |
-| `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | built (stage-2-22, Phases 1 to 10; audited 2026-11-11) |
-| `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | done on branch stage-2-23 (commit recorded at merge) |
-| `.github/workflows/ci.yml` (three jobs: check, full with the Codacy coverage upload, and arm64; owner decision of 2026-10-23) | testing.md 9.1; architecture.md 7.4; N-019 | `doc/plans/plan-2-ci.md` | built; first run 2026-11-11 (run 43019781252): arm64 green in 16m50s on a native runner; hosted CI proves `check` (short race) and `arm64` only: gate R timed out at 1h0m on a 4-vCPU runner twice (runs 43019781252, 43038922592; `examples/realm` 597 s) and gate F is estimated, not measured, to be far beyond one; `full` is opt-in (dispatch or label `full`, runner `vars.FULL_RUNNER`, R and F separate steps) and gates R and F stay dev-host gates; owner decision N-353; pending: the F wall time, the Codacy figure |
-| `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | built in part (PRs A to C; PR D waits on plans 8 and 19; audited 2026-11-11) |
+| `indicator/` and `internal/measure` (presets 1 to 21 of `spec-indicators.md` 9.1; presets 22 to 25 are built in Stage 3 with EMP, RSK and STO) | IND | merged (PR #36; audited 2026-11-11) |
+| `internal/verdict` and the `stylised_long` build tag | STY | merged (PR #45: Phases 1 to 9, 2026-11-10; audited 2026-11-11); no band or threshold set, the first setting run waits on criterion 1 (N-352) |
+| `experiment/`, `internal/design`, `internal/reduce` | EXP | merged (PR #38; audited 2026-11-11) |
+| `internal/calibration` and `testdata/calibration/` | CLB | merged (PR #41: Phases 1 to 8; audited 2026-11-11) |
+| `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | merged (PR #43: Phases 1 to 10; audited 2026-11-11) |
+| `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | merged (PR #33) |
+| `.github/workflows/ci.yml` (three jobs: check, full with the Codacy coverage upload, and arm64; owner decision of 2026-10-23) | testing.md 9.1; architecture.md 7.4; N-019 | merged (PRs #49, #51, #52); first run 2026-11-11 (run 43019781252): arm64 green in 16m50s on a native runner; hosted CI proves `check` (short race) and `arm64` only: gate R timed out at 1h0m on a 4-vCPU runner twice (runs 43019781252, 43038922592; `examples/realm` 597 s) and gate F is estimated, not measured, to be far beyond one; `full` is opt-in (dispatch or label `full`, runner `vars.FULL_RUNNER`, R and F separate steps) and gates R and F stay dev-host gates; owner decision N-353; pending: the F wall time, the Codacy figure; the owner's repository actions are open (secret `CODACY_PROJECT_TOKEN`, branch protection requiring `check` and `arm64`, fork-PR approval) |
+| `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | merged in part (PR A #44 the inspector, PR B #47 the colony and the realm pack and server, PR C #48 the cost record; audited 2026-11-11); PR D (`TestScenarioStable_FiveWarm`, bands, `expected/five.scenarios.txt`) not built, blocked on criterion 1 (N-352, N-344) |
 
 Each module file ships in one PR with: its `internal/` package and unit tests,
 its overlay under `testdata/chains/overlay/` (the demand module's is `testdata/chains/demand.toml`, where `spec-reference-chain.md` 4.4.6 puts it), its module-alone golden under
@@ -273,6 +275,38 @@ only a configuration file, shown by the second setting; a checkpoint taken
 mid-run and resumed is bit-identical; the consumer example builds a complete
 server from the public API; the cost budget of SCL holds for the first
 consumer's world size.
+
+### Stage 2 status (2026-11-12)
+
+Every pull request of the table above is on `main` (the last is #54). Stage 2 is
+**not done**: criterion 1 of `vision.md` section 5 is not met, and the "Done when"
+paragraph below stays the criterion. Each criterion, as it stands today:
+
+| # | Criterion | State | How verified |
+| --- | --- | --- | --- |
+| 1 | The reference chain runs to a stable state from a warm start and passes the STY bands | **not met** | N-352: every reference pack goes extinct (`one`, `one-demand`, `five` warm and `all` reach 0 households by tick 1 100). Four default-off engine levers and a nine-trial data ladder did not give a healthy economy: the best setting keeps the household count but 85% to 90% of non-cook household-ticks are unfed. No band is set (`testdata/chains/bands/five.toml` has no value for `x4.*` or `x3.ms_per_tick`), no pack, warm start or golden moved. |
+| 2 | Invariant, determinism, golden and configuration-only chain tests pass on amd64 and arm64 | **met** (quick pattern on arm64; see below) | amd64: the `check` job (`go test -short -race`, every module) is green on PR #54 (run 43141053976), and gates R and F pass on the dev host (the lanes head `9c52695`: gate R exit 0, gate F exit 0, 33 of 33 coverage scopes at their minimums; gates R and F are not run by hosted CI, N-353). arm64: the `arm64` job (native `ubuntu-24.04-arm`, `scripts/ci/arm64.sh`) is green on the push to `main` of PR #53 (run 43103409906, 16m57s) and on PR #54 (run 43141053976). In the root module it runs `QUICK_PATTERN` of `scripts/ci/common.sh` (`TestScenario\|TestDeterminism\|TestGolden\|TestInvariants\|TestCheckpoint\|TestFork\|TestConfigOnly\|TestFixture\|TestPacks\|TestCensus\|TestExpected\|TestStylised\|TestCost\|TestStable`, all seeds, no race), and `go test -short` in every other module. It is the quick run of `testing.md` 9.1, not gates R or F, and the arm64 build is native. N-343 is closed. |
+| 3 | A new commodity or chain needs only a configuration file; a second, unrelated setting shows it | **met** | `examples/colony` is a second setting that is a pack of configuration files and `colony.go` (`TestColony_ExtraLayerNeedsOnlyConfiguration`); `TestConfigOnly_SecondRunsToTheStablePredicate` (`config_chain_test.go`) and `TestConfigOnly_AllPackHasNoGoSpecific` (`all_pack_test.go`) run the `second` and `all` packs with no Go change. That a chain runs is shown; that it is stable is criterion 1. |
+| 4 | A checkpoint taken mid-run and resumed gives the same result as an uninterrupted run | **met** | `TestFork_OneAtN` (`checkpoint_fork_test.go`, FR-CHK-050, 052, 053, 026) forks at several ticks on seeds 1 to 4 and compares with the uninterrupted run; the other `TestFork_*` tests cover observers, split runs, restore of a restore, directives and removed agents. The tests are in the quick pattern, so they also ran on arm64. |
+| 5 | A consumer example builds a complete server from the public API alone, and the RPG data pack runs | **met in part** | `examples/realm` is its own module that imports the core by its public path (PR #47: `server.go`, `game.go`, the `pack/` and the RPG preset of `denomination/`; `TestPack_StartupSolveIsWarmFive`, `serve_e2e_test.go`). The pack runs, but its economy collapses like every pack (N-352), and PR D of plan 24 (`TestScenarioStable_FiveWarm`, bands, `expected/five.scenarios.txt`) is not built: it waits on criterion 1 (N-344). |
+| 6 | The cost budget of SCL holds for the first consumer's world size | **met in part** | `cost_five_test.go` and `spec-scale.md` 12.1 record a measurement and assert nothing (`testing.md` 8.2): `five` with every module off 50.2 ms a tick against the 53 ms budget, the all-on world 106.9 ms in the first run and 70.0 ms in a later one, `examples/realm` 68.7 ms. They were taken on a shared host under load 30 to 44 (i9-14900KF, GOMAXPROCS 4). Not shown: a quiet-host figure (the all-on gap to the budget was not isolated from load), and `x3.ms_per_tick` is unset in `bands/five.toml`, so no number is compared with a bound; the owner reads it against the consumer's tick rate. `spec-scale.md` 12.1 still says criterion 2 is not shown, which is now false. |
+
+**Remains for Stage 2:**
+
+- (a) Criterion 1. The owner decides between a money-circulation redesign of the
+  reference chain (cooks capture the surplus; demand is cash limited) and a
+  rewording of the criterion (N-352). PR D, the bands and the stable-five test
+  wait on it.
+- (b) The owner's repository actions: the secret `CODACY_PROJECT_TOKEN` (until it
+  is set, the Codacy upload of `full` fails where `full` is run), branch protection
+  on `main` requiring `check` and `arm64` (the branch is not protected today), and
+  the fork-pull-request approval setting.
+- (c) N-353: a runner or a sharding that lets gate F run in CI, or an amendment of
+  `testing.md` 9.1 (it says CI must run F); and the gate F timeout, which is 120m in
+  the rule while the root package needs 2h20m to 2h34m on the dev host (the dev-host
+  runs use 200m).
+- (d) The cost figure on a quiet host (criterion 6).
+- (e) The CI hardening backlog is kept in the supervisor's notes, not here.
 
 ## Stage 3: later
 

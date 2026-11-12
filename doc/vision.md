@@ -148,8 +148,9 @@ Reasons for the less obvious placements:
    `rules/testing.md` pass on two architectures (amd64 and arm64). The owner
    decided on 2026-10-23: CI yes, with an arm64 job (`roadmap-v1.md` Stage 2, plan
    2-1 Phase 5). The workflow `.github/workflows/ci.yml` exists (`doc/plans/plan-2-ci.md`)
-   and runs the arm64 job on a native GitHub arm64 runner; the item is shown when
-   that job has run green (N-343).
+   and runs the arm64 job on a native GitHub arm64 runner; the `arm64` job ran green
+   on 2026-11-11 (run 43103409906), so the item is shown for the quick run of
+   `testing.md` 9.1 (`roadmap-v1.md`, Stage 2 status).
 3. A new commodity or chain needs only a configuration file (architecture.md
    9.4). This holds for a second, unrelated setting's recipes as well as for
    the reference chain, so the recipe format is shown to be adaptable and not
