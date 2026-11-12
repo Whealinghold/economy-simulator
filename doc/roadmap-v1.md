@@ -281,7 +281,7 @@ consumer's world size.
 
 Every pull request of the table above is on `main` (the last is #54). Stage 2 is
 **not done**: criterion 1 of `vision.md` section 5 is not met, and the "Done when"
-paragraph below stays the criterion. Each criterion, as it stands today:
+paragraph below stays the criterion. PR B of the stage-2-chain (plan 2-29, candidate (a) of N-352: a payroll-aware `SolveSteadyState` and a new pack `payroll`) is in progress on `stage-2-chain-b`; it changes no status here and claims nothing on criterion 1. Each criterion, as it stands today:
 
 | # | Criterion | State | How verified |
 | --- | --- | --- | --- |

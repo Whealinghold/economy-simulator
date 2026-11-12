@@ -114,7 +114,8 @@ economy-sim/
   strategy_default.go  strategy_work.go  strategy_view.go          (AGT)
   spawner_report.go                                                (SPN)
   production_report.go                                             (PRO)
-  viability_check.go  viability_table.go  viability_report.go  viability_lanes.go  (VIA)
+  viability_check.go  viability_table.go  viability_report.go  viability_lanes.go
+  viability_payroll.go                                                (VIA)
   construct.go  construct_warm.go  fanin.go  phase_start.go
   phase_production.go  phase_trade.go  phase_outcomes.go
   phase_exit.go                                                    (WLD)
@@ -161,8 +162,8 @@ economy-sim/
                          the core rules over primitive structs (household: the
                          agent's consumption, targets, tiers, spend cap and work
                          rules; occupation: the spawner's signals, caps, ranking,
-                         renewal and placement; steady: the exact solver,
-                         math/big allowed, 3.5)
+                         renewal and placement; steady: the exact solver
+                         and the payroll-aware duals of payroll.go, math/big allowed, 3.5)
     moneyflow/  population/  transit/  endowment/  rumour/  outside/  ownuse/
     migration/  merchant/  room/  employment/  settlement/  tenure/  polity/
     credit/  facility/  risk/  fiscal/  institution/  saving/  technology/
@@ -292,7 +293,7 @@ hooks of decision 1 of ADR 0010: the call sites of the fan-ins, the calls of the
 agent-lifecycle fan-ins from `createAgent`, `spawnEntrant`, the integration add
 and `takeRole`, guarded calls from the `DefaultStrategy` files into methods
 defined in the module file (the Work and Trade seams of later modules, plan 10,
-included), the term in `viability.go`, named `phase_*.go` calls such as
+included), the term in `viability.go` (the wants term of the demand module, and the guarded call of the payroll-aware duals into `viability_payroll.go`, ADR 0012), named `phase_*.go` calls such as
 `p36Aggregates`, the audit call, the `offStage` extensions and the module keys
 of the loader in `config/mapping.go`. A hook holds no branch on the module's
 data and no arithmetic.
@@ -1074,4 +1075,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: c4fe78572c8c450e187ee13c
+RULE-TAG: 1d0a49df100e2cab0d2ccd8d

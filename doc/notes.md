@@ -57,7 +57,7 @@ PR description.
 | CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350 |
@@ -78,7 +78,7 @@ PR description.
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226, N-327 |
 | SAV | N-145, N-156, N-195, N-197 |
@@ -88,11 +88,11 @@ PR description.
 | SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-305, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-221, N-244, N-327 |
-| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352 |
+| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356 |
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-214 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322 |
-| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346 |
 | WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337 |
 
@@ -2213,6 +2213,8 @@ PR description.
 - **Next owner decision (a design question about the reference chain, not another bounded experiment; not settled here).** Candidates, with the evidence for each: (a) a payroll-aware `SolveSteadyState` and a discretionary sub-chain sized by final demand (about 100 households, not 204) with a recipe change so `tool_b` demand does not collapse: cheapest, at most 6 trials, needs the payroll module, merged but unused (evidence: the flows analysis, E2, E4); (b) the full hire form of `spec-employment.md`, which pays by hiring and need rather than by executions, 3 to 4 times the cost of (a) (evidence: payroll pays surplus roles); (c) redesign the reference chain's discretionary sub-chain as data only, a design question for the owner about the setting the reference chain stands for (evidence: route 1 and E4, the closed chain cannot be fed by its own outside demand). Credit is not indicated. A rewording of criterion 1 stays the alternative. Until then PR D, any band on a collapsing run and any "stable" claim stay off (N-027). Not tried: `halt_idle_ticks` alone.
 - **Update (2026-11-12, plan 2-28 Phase 1, plan 2-28, owner decision D-O5):** a work-tied wage was spiked: a payer share of 50% of the cooks' receipts kept households within 3% of the start at tick 1 100 on 7 of 8 seeds (seeds 1 to 4 and 102 to 104 flat to 2 200; seed 101 collapsed), 25% and 37.5% collapsed two seeds in four late, 62.5% and above every seed early; cooks' share of the money fell from 43% to 58% to 9% to 25%; non-cook households unfed stayed at 33% to 43%. Necessary, not sufficient. The payroll form is specified (`spec-employment.md` 24, ADR 0011) as a default-off module that merges on its own proof and claims nothing on criterion 1; built only if the pack-data redesign exhausts its stop rule.
 
+- **Update (2026-11-12, plan 2-29 Phase 1):** candidate (a) is executed on `stage-2-chain-b` (plan 2-29, ADR 0012, `spec-viability.md` 5.6, pack `payroll`); what it must keep in mind is N-356.
+
 ### N-353 Gate R and gate F do not fit a hosted runner: `full` is opt-in, the owner chooses how CI runs F
 
 - **Areas:** CODE, ALL
@@ -2233,6 +2235,12 @@ PR description.
 - **Raised:** 2026-11-12, plan 2-28 Phase 1 (`spec-employment.md` 24); narrowed 2026-11-12, plan 2-28 Phase 3.
 - **Note:** The payroll form owed the position, the catalogue rows (`PayrollPaid`, `economysim.payroll.paid`), the reason `wage_pay` and the pooled-wage hook; Phase 3 built them (`p41bPayroll`, `internal/ledger.WagePay` with the row agent to agent, rank and code 23). What stays owed: the hire form appends `MaxOpen` to `Employment` and the hire block to `Employer` with the next free ids, adds the pairing escrow to agent to the `wage_pay` row of `internal/ledger` (the spec row already names both), and does not reuse `PayrollBP` for `WorkerShareBP`.
 
+### N-356 The payroll-aware solver: what it assumes and where it stops
+
+- **Areas:** VIA, REF, EMP, STY
+- **Raised:** 2026-11-12, plan 2-29 Phase 1 (`spec-viability.md` 5.6, ADR 0012).
+- **Note:** (1) Hypothesis H-P: payroll moves money, not goods, so only the duals change; plan 2-29 Phase 4 (trial T1) is its falsifier, and this note takes the outcome. (2) Assumption A1: the static receipts of a payer are its net sales (net output less its own households' upkeep) at the duals; it is tested against the measured `PayrollPaid.Due` within 10% (FR-VIA-066). (3) The re-solve covers a programme with no lanes, no nominal seed (N-085) and no recipe shared with another role (N-306); otherwise the payroll-free duals stay and `PayrollInfeasible` says `unsupported`. (4) The re-solved duals may be non-unique per commodity like any dual (N-311): only the global flags exist. (5) The claim of FR-REF-045 is a count claim about the pack `payroll`, `in sample` (N-135), not "stable" (N-027, N-339) and not FR-REF-042; the static gates FR-REF-043 and 044 do not mean stability (N-325). (6) The layers of `payroll` sit on `one-demand`, not `five`: they do not join `allLayers` (N-336). (7) The hire form must not reuse `PayrollBP` (N-355).
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2245,4 +2253,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 0fb25cec17dca3a7da85b49f
+NOTES-TAG: 75f61db3a38547db00e6bb76
