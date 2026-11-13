@@ -469,7 +469,7 @@ func pairsModules(e *encoder, m Modules) {
 	pairsLaterModules(e, m)
 }
 
-// pairsLaterModules writes the pairs of the modules of ids 9, 10, 13 and 25 of
+// pairsLaterModules writes the pairs of the modules of ids 9, 10, 13, 19 and 25 of
 // Modules, after those pairsModules writes (a continuation for the Lizard limit).
 func pairsLaterModules(e *encoder, m Modules) {
 	if m.Migration != nil {
@@ -486,10 +486,34 @@ func pairsLaterModules(e *encoder, m Modules) {
 		e.id(13)
 		e.end()
 	}
+	if m.Polity != nil {
+		e.id(19)
+		pairsPolity(e, *m.Polity)
+		e.end()
+	}
 	if m.Estates != nil {
 		e.id(25)
 		e.end()
 	}
+}
+
+// pairsPolity writes the pairs of a PolityConfig: Jurisdictions 1, Members 2.
+// Jurisdiction has ID 1, Parent 2, Seat 3, StartMoney 4 (Label is presentation
+// only and has no id); Member has Region 1, Jurisdiction 2. The lists are written
+// in canonical order, the jurisdictions by ID and the members by region. The
+// pointer is written even when empty, so a module that is on and empty differs
+// from one that is off.
+func pairsPolity(e *encoder, p PolityConfig) {
+	encodeList(e, 1, p.Jurisdictions, func(e *encoder, j Jurisdiction) {
+		e.text(1, j.ID)
+		e.text(2, j.Parent)
+		e.text(3, j.Seat)
+		e.num(4, int64(j.StartMoney))
+	})
+	encodeList(e, 2, p.Members, func(e *encoder, m Member) {
+		e.text(1, m.Region)
+		e.text(2, m.Jurisdiction)
+	})
 }
 
 // pairsMoneyFlow writes the pairs of a MoneyFlow: ID 1, Kind 2, Target 3, Amount

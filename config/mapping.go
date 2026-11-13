@@ -314,6 +314,36 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Employment = &economysim.Employment{}
 		es.finish()
 	}
+	if ps := m.sub("polity"); ps != nil {
+		cfg.Modules.Polity = l.polity(ps)
+		ps.finish()
+	}
+}
+
+// polity reads [modules.polity] (spec-config.md 6.2, spec-polity.md 3.4.2): the
+// jurisdictions as [jurisdiction.<id>] (keys parent, seat, start_money, label) and
+// the membership as [member] with one key per region, <region> = "<jurisdiction>".
+// A key-less table switches the module on. The rows come out in ID order because
+// every level is read in the order of the keys.
+func (l *loader) polity(t *tbl) *economysim.PolityConfig {
+	var m economysim.PolityConfig
+	t.entities("jurisdiction", func(id string, e *tbl) {
+		j := economysim.Jurisdiction{ID: id}
+		e.text("parent", &j.Parent)
+		e.text("seat", &j.Seat)
+		integer(e, "start_money", &j.StartMoney)
+		e.text("label", &j.Label)
+		m.Jurisdictions = append(m.Jurisdictions, j)
+	})
+	if mt := t.sub("member"); mt != nil {
+		for _, region := range slices.Sorted(maps.Keys(mt.m)) {
+			row := economysim.Member{Region: region}
+			mt.text(region, &row.Jurisdiction)
+			m.Members = append(m.Members, row)
+		}
+		mt.finish()
+	}
+	return &m
 }
 
 // world reads the [world] table over DefaultWorldParams (spec-config.md 3.7.2).

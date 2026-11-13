@@ -1358,4 +1358,35 @@
 //     detectors, per seed set, in a fixed order with no float and no clock.
 //   - Acceptance tier: where a fact runs: short (unit), gate, nightly or long (a build
 //     tag), by its run length and seeds.
+//   - Jurisdiction: a named node of one tree over the regions, with an optional parent
+//     and an optional seat; it has no behaviour, law or state of its own (Jurisdiction
+//     is the type of its configuration row, JurisdictionID its typed ID, an index in
+//     ascending order of the ID string, and NoJurisdiction means none).
+//   - Polity: the jurisdiction tree and the membership of the regions, as a plain-data
+//     value with the queries of the module (Polity); PolityConfig is the module, a
+//     pointer of Config.Modules (spec-polity.md). Member is the row that makes a region a
+//     direct member of a jurisdiction.
+//   - Root (of a polity): a jurisdiction with no parent; a forest has several.
+//   - Chain (of a region): its direct jurisdiction and the ancestors of it, innermost
+//     first; empty for a region with no row.
+//   - Covers: a jurisdiction covers a region when it is in the region's chain.
+//   - Common jurisdiction: the innermost jurisdiction that covers two regions, or none.
+//   - Region crossing: for an ordered pair of regions, the jurisdictions a good exits (innermost
+//     first) and enters (outermost first) in going from the first to the second (the type
+//     Crossing).
+//   - Exit, Enter: the two lists of a crossing.
+//   - Border: the crossing of an ordered pair when Exit or Enter is not empty; it is
+//     derived, not stored.
+//   - Border depth: the depth of the common jurisdiction of two regions, or -1.
+//   - Seat: the region a jurisdiction is governed from, where its treasury account sits.
+//   - Governed: a jurisdiction with a seat; it has a treasury.
+//   - Grouping: a jurisdiction with no seat; it has a place in the tree and creates
+//     nothing.
+//   - Treasury: the account of a governed jurisdiction, of the kind Treasury, with a
+//     pseudo-agent; it is not the pool of a region (JurisdictionRow is its snapshot row).
+//   - Treasury sector: the non-boundary sector of the money identity that holds the
+//     treasury accounts (RegionRow.MoneyTreasury).
+//   - Combining mode: how the rows of a table keyed by jurisdiction combine along a
+//     chain: innermost (the first row), added (the sum) or scaled (the product, rounded
+//     once).
 package economysim
