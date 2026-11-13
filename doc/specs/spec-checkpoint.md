@@ -373,9 +373,12 @@ is off, is corrupt (R6). A **thing** is `0` for money and `1 + c` for the commod
 4.2.8. **A section of a module that is not built yet is a zero-row skeleton.** Tags 10
 and 11 are always present (4.2.1) and their owners (SKL, REG) are built after the
 checkpoint. Until then each is written as its counts at 0: four counts for tag 10 and one
-for tag 11. The owner replaces the writer and the reader and keeps the skeleton as a
-**prefix** of the layout it adds, so a world with no row has the same bytes before and
-after the owner is built and the digest of a checkpoint does not move.
+for tag 11. The owner replaces the writer and the reader, and a world with no row has the
+same bytes before and after the owner is built, so the digest of a checkpoint does not
+move. Tag 11 (REG) keeps its count as the prefix of its rows. Tag 10 (SKL, built in plan
+3-skl) writes each count followed by its rows, four times (4.2 row 10), so the four
+back-to-back zeros of the skeleton are the same bytes as that layout only when all four
+counts are 0; the skeleton is not a prefix of a layout that has rows.
 
 ### 4.3 Derived and rebuilt on restore
 
