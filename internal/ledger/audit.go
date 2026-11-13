@@ -220,7 +220,7 @@ func (l *Ledger) auditRoom(id int, a *account) error {
 		return nil
 	}
 	if a.kind != KindAgent || !r.Limited {
-		return auditFail(IdentityRoom, id, None, "an account that is not a limited agent holds a room")
+		return auditFail(IdentityRoom, id, None, "an account that is not a limited agent holds a room: kind %d, limited %t", a.kind, r.Limited)
 	}
 	if r.negative() {
 		return auditFail(IdentityRoom, id, None, "a figure of the room is negative: %+v", *r)
@@ -232,8 +232,9 @@ func (l *Ledger) auditRoom(id int, a *account) error {
 	if mass != r.LoadMass || bulk != r.LoadBulk {
 		return auditFail(IdentityRoom, id, None, "the load is (%d, %d) and the lots weigh (%d, %d)", r.LoadMass, r.LoadBulk, mass, bulk)
 	}
-	if exceeds(r.LoadMass, r.ReservedMass, r.Mass) || exceeds(r.LoadBulk, r.ReservedBulk, r.Bulk) {
-		return auditFail(IdentityRoom, id, None, "load (%d, %d) plus reserved (%d, %d) is above the room (%d, %d)", r.LoadMass, r.LoadBulk, r.ReservedMass, r.ReservedBulk, r.Mass, r.Bulk)
+	overMass, overBulk := exceeds(r.LoadMass, r.ReservedMass, r.Mass), exceeds(r.LoadBulk, r.ReservedBulk, r.Bulk)
+	if overMass || overBulk {
+		return auditFail(IdentityRoom, id, None, "load (%d, %d) plus reserved (%d, %d) is above the room (%d, %d): mass %t, bulk %t", r.LoadMass, r.LoadBulk, r.ReservedMass, r.ReservedBulk, r.Mass, r.Bulk, overMass, overBulk)
 	}
 	return nil
 }

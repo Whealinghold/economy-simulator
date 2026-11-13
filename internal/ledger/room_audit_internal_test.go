@@ -54,6 +54,46 @@ func TestAuditRoom_LotsThatOverflowAreNamedAsSuch(t *testing.T) {
 	}
 }
 
+// TestAuditRoom_OverRoomNamesTheDimension verifies that the audit of a room
+// that is over says which dimension is over, so that a mass overrun is not read
+// as a bulk one.
+//
+// Requirement: FR-STO-040
+func TestAuditRoom_OverRoomNamesTheDimension(t *testing.T) {
+	t.Parallel()
+	g, ids := healthy(t)
+	id := limitedAgentWithLots(t, g, ids)
+	a := &g.l.accounts[id]
+	a.room.Mass = a.room.LoadMass - 1
+	var ae *AuditError
+	err := g.l.Audit()
+	if !errors.As(err, &ae) || ae.Identity != IdentityRoom || ae.Account != id {
+		t.Fatalf("Audit() = %v, want the room identity of account %d", err, id)
+	}
+	if !strings.Contains(ae.Detail, "mass true, bulk false") {
+		t.Errorf("Detail = %q, want it to name mass and not bulk", ae.Detail)
+	}
+}
+
+// TestAuditRoom_RoomOnUnlimitedAccountNamesKind verifies that the failure of a
+// room held by an account that cannot have one says the kind and the flag.
+//
+// Requirement: FR-STO-040
+func TestAuditRoom_RoomOnUnlimitedAccountNamesKind(t *testing.T) {
+	t.Parallel()
+	g, ids := healthy(t)
+	id := limitedAgentWithLots(t, g, ids)
+	g.l.accounts[id].room.Limited = false
+	var ae *AuditError
+	err := g.l.Audit()
+	if !errors.As(err, &ae) || ae.Identity != IdentityRoom || ae.Account != id {
+		t.Fatalf("Audit() = %v, want the room identity of account %d", err, id)
+	}
+	if !strings.Contains(ae.Detail, "limited false") {
+		t.Errorf("Detail = %q, want it to carry the limited flag", ae.Detail)
+	}
+}
+
 // TestAudit_ClosedAccountHoldsNoRoom verifies that a closed account that still
 // has a room is a structure failure: a closed account is wholly zeroed.
 //
