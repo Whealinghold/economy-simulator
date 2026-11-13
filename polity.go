@@ -561,9 +561,9 @@ func polityNames(c *Config) []string {
 	return out
 }
 
-// polityCounts returns the number of jurisdictions and of governed ones, for the
+// polityTotals returns the number of jurisdictions and of governed ones, for the
 // construction summary.
-func polityCounts(c *Config) (total, governed int) {
+func polityTotals(c *Config) (total, governed int) {
 	for i := range c.Modules.Polity.Jurisdictions {
 		if c.Modules.Polity.Jurisdictions[i].Seat != "" {
 			governed++
