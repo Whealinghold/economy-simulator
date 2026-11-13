@@ -96,12 +96,8 @@ func PayrollSolve(m Model, o Outcome, in PayrollInput) PayrollResult {
 	if len(in.Group) != len(m.Activities) {
 		panic("steady: invariant violated: payroll group list does not match the activities")
 	}
-	if len(m.Lanes) > 0 || badGroups(m, in) || badShape(m, o) {
-		res.Reason = PayrollUnsupported
-		return res
-	}
-	_, l, err := Build(m)
-	if err != nil {
+	l, ok := payrollLayout(m, o, in)
+	if !ok {
 		res.Reason = PayrollUnsupported
 		return res
 	}
@@ -121,7 +117,28 @@ func PayrollSolve(m Model, o Outcome, in PayrollInput) PayrollResult {
 	}
 	res.Applied = true
 	res.Outcome = p.outcome(x)
-	for g, gr := range in.Groups {
+	p.pay(&res, x)
+	return res
+}
+
+// payrollLayout returns the layout of the model m, and false when the model, the
+// groups or the outcome are not supported (lanes, a bad group list, an outcome of
+// another shape, or a model that does not build).
+func payrollLayout(m Model, o Outcome, in PayrollInput) (Layout, bool) {
+	if len(m.Lanes) > 0 || badGroups(m, in) || badShape(m, o) {
+		return Layout{}, false
+	}
+	_, l, err := Build(m)
+	if err != nil {
+		return Layout{}, false
+	}
+	return l, true
+}
+
+// pay fills the pay paid and received of each group of a region that pays into
+// res, from the solution x.
+func (p *payroll) pay(res *PayrollResult, x []*big.Rat) {
+	for g, gr := range p.in.Groups {
 		switch {
 		case gr.BP > 0 && p.flowing[gr.Region]:
 			res.Out[g] = fromRat(p.out(g, x))
@@ -129,7 +146,6 @@ func PayrollSolve(m Model, o Outcome, in PayrollInput) PayrollResult {
 			res.In[g] = fromRat(new(big.Rat).Mul(p.sigma(gr.Region, x), p.lab[g]))
 		}
 	}
-	return res
 }
 
 // zeros returns n zero fractions.
@@ -147,15 +163,30 @@ func zeros(n int) []Frac {
 // duration.
 func badGroups(m Model, in PayrollInput) bool {
 	for _, g := range in.Groups {
-		if g.Region < 0 || g.Region >= len(m.Regions) || g.BP < 0 || g.BP > 10_000 || (g.BP > 0 && g.Hireable) {
+		if badGroup(m, g) {
 			return true
 		}
-		for _, own := range g.Own {
-			if own < 0 {
-				return true
-			}
+	}
+	return badAssignment(m, in)
+}
+
+// badGroup reports a group both payer and Hireable, a region out of range, a
+// negative or too large share, or a negative own consumption.
+func badGroup(m Model, g PayrollGroup) bool {
+	if g.Region < 0 || g.Region >= len(m.Regions) || g.BP < 0 || g.BP > 10_000 || (g.BP > 0 && g.Hireable) {
+		return true
+	}
+	for _, own := range g.Own {
+		if own < 0 {
+			return true
 		}
 	}
+	return false
+}
+
+// badAssignment reports an activity assigned to a group that does not exist or
+// is of another region, or an activity of no duration.
+func badAssignment(m Model, in PayrollInput) bool {
 	for k, g := range in.Group {
 		if g < -1 || g >= len(in.Groups) || (g >= 0 && in.Groups[g].Region != m.Activities[k].Region) {
 			return true
@@ -178,8 +209,16 @@ func badShape(m Model, o Outcome) bool {
 // prepare computes the flows, labour, net vectors, sales and pools, and numbers
 // the unknowns.
 func (p *payroll) prepare() {
+	p.byPair = resRows(p.m.Resources)
+	p.flows()
+	p.pools()
+	p.markFlowing()
+	p.number()
+}
+
+// flows computes the flow, the net vector and the labour of each group.
+func (p *payroll) flows() {
 	m := p.m
-	p.byPair = resRows(m.Resources)
 	p.f = make([]*big.Rat, len(m.Activities))
 	p.net = make([][]NetEntry, len(m.Activities))
 	p.lab = make([]*big.Rat, len(p.in.Groups))
@@ -193,6 +232,11 @@ func (p *payroll) prepare() {
 			p.lab[g].Add(p.lab[g], new(big.Rat).Mul(p.f[k], big.NewRat(a.Duration, 1)))
 		}
 	}
+}
+
+// pools computes the labour pool of each region and the sales of each payer group.
+func (p *payroll) pools() {
+	m := p.m
 	p.sold = make([][]*big.Rat, len(p.in.Groups))
 	p.pool = make([]*big.Rat, len(m.Regions))
 	for r := range p.pool {
@@ -206,13 +250,16 @@ func (p *payroll) prepare() {
 			p.sold[g] = p.sales(g)
 		}
 	}
-	p.flowing = make([]bool, len(m.Regions))
+}
+
+// markFlowing marks the regions that pay.
+func (p *payroll) markFlowing() {
+	p.flowing = make([]bool, len(p.m.Regions))
 	for g, gr := range p.in.Groups {
 		if gr.BP > 0 && p.lab[g].Sign() > 0 && p.pool[gr.Region].Sign() > 0 {
 			p.flowing[gr.Region] = true
 		}
 	}
-	p.number()
 }
 
 // sales returns, by commodity, the units payer group g puts on the market a tick
@@ -281,24 +328,7 @@ func (p *payroll) number() {
 // v(p) - burden + pay - d w - rent - resource rents (spec-viability.md 5.6).
 func (p *payroll) row(k int) []*big.Rat {
 	a := p.m.Activities[k]
-	v := make([]*big.Rat, p.n)
-	for i := range v {
-		v[i] = new(big.Rat)
-	}
-	add := func(u int, c *big.Rat) {
-		if u >= 0 {
-			v[u].Add(v[u], c)
-		}
-	}
-	d := big.NewRat(a.Duration, 1)
-	for _, e := range p.net[k] {
-		add(p.goods[p.l.GoodsRow(a.Region, e.Commodity)], e.Val)
-	}
-	add(p.wage[a.Region], new(big.Rat).Neg(d))
-	add(p.rent[k], big.NewRat(-1, 1))
-	for _, dr := range a.Draws {
-		add(p.res[p.byPair[[2]int{dr.Resource, a.Region}]], big.NewRat(-dr.Qty, 1))
-	}
+	v := p.baseRow(k)
 	g := p.in.Group[k]
 	if g < 0 || !p.flowing[a.Region] {
 		return v
@@ -306,24 +336,65 @@ func (p *payroll) row(k int) []*big.Rat {
 	gr := p.in.Groups[g]
 	switch {
 	case gr.BP > 0 && p.lab[g].Sign() > 0:
-		// minus d * beta * S(g, p) / L(g)
-		coef := new(big.Rat).Quo(new(big.Rat).Mul(d, p.beta(g)), p.lab[g])
-		for c, s := range p.sold[g] {
-			add(p.goods[p.l.GoodsRow(a.Region, c)], new(big.Rat).Neg(new(big.Rat).Mul(coef, s)))
-		}
+		p.payerTerm(v, k, g)
 	case gr.Hireable:
-		// plus d * sigma(p), sigma = sum of beta * S over the payers / pool
-		coef := new(big.Rat).Quo(d, p.pool[a.Region])
-		for h, hr := range p.in.Groups {
-			if hr.BP == 0 || hr.Region != a.Region {
-				continue
-			}
-			for c, s := range p.sold[h] {
-				add(p.goods[p.l.GoodsRow(a.Region, c)], new(big.Rat).Mul(new(big.Rat).Mul(coef, p.beta(h)), s))
-			}
-		}
+		p.hireableTerm(v, k)
 	}
 	return v
+}
+
+// addTo adds c to the unknown u of v, and does nothing for a dual held at 0.
+func addTo(v []*big.Rat, u int, c *big.Rat) {
+	if u >= 0 {
+		v[u].Add(v[u], c)
+	}
+}
+
+// baseRow returns the coefficients of activity k before any pay: v(p) - d w -
+// rent - resource rents.
+func (p *payroll) baseRow(k int) []*big.Rat {
+	a := p.m.Activities[k]
+	v := make([]*big.Rat, p.n)
+	for i := range v {
+		v[i] = new(big.Rat)
+	}
+	d := big.NewRat(a.Duration, 1)
+	for _, e := range p.net[k] {
+		addTo(v, p.goods[p.l.GoodsRow(a.Region, e.Commodity)], e.Val)
+	}
+	addTo(v, p.wage[a.Region], new(big.Rat).Neg(d))
+	addTo(v, p.rent[k], big.NewRat(-1, 1))
+	for _, dr := range a.Draws {
+		addTo(v, p.res[p.byPair[[2]int{dr.Resource, a.Region}]], big.NewRat(-dr.Qty, 1))
+	}
+	return v
+}
+
+// payerTerm adds to v the pay of payer group g, as seen by its activity k: minus
+// d * beta * S(g, p) / L(g).
+func (p *payroll) payerTerm(v []*big.Rat, k, g int) {
+	a := p.m.Activities[k]
+	d := big.NewRat(a.Duration, 1)
+	coef := new(big.Rat).Quo(new(big.Rat).Mul(d, p.beta(g)), p.lab[g])
+	for c, s := range p.sold[g] {
+		addTo(v, p.goods[p.l.GoodsRow(a.Region, c)], new(big.Rat).Neg(new(big.Rat).Mul(coef, s)))
+	}
+}
+
+// hireableTerm adds to v the pay received by a Hireable group, as seen by its
+// activity k: plus d * sigma(p), sigma = sum of beta * S over the payers / pool.
+func (p *payroll) hireableTerm(v []*big.Rat, k int) {
+	a := p.m.Activities[k]
+	d := big.NewRat(a.Duration, 1)
+	coef := new(big.Rat).Quo(d, p.pool[a.Region])
+	for h, hr := range p.in.Groups {
+		if hr.BP == 0 || hr.Region != a.Region {
+			continue
+		}
+		for c, s := range p.sold[h] {
+			addTo(v, p.goods[p.l.GoodsRow(a.Region, c)], new(big.Rat).Mul(new(big.Rat).Mul(coef, p.beta(h)), s))
+		}
+	}
 }
 
 // beta returns the share of payer group g as a fraction of 1.
@@ -332,12 +403,36 @@ func (p *payroll) beta(g int) *big.Rat { return big.NewRat(p.in.Groups[g].BP, 10
 // solve builds the equations of the active activities and the normalisation,
 // eliminates exactly and checks the solution.
 func (p *payroll) solve() ([]*big.Rat, PayrollReason) {
+	x, ok := eliminate(p.equations(), p.n)
+	if !ok {
+		return nil, PayrollNoUniqueSolution
+	}
+	for _, v := range x {
+		if v.Sign() < 0 {
+			return nil, PayrollNegativeDual
+		}
+	}
+	if p.inactiveProfit(x) {
+		return nil, PayrollInactiveProfit
+	}
+	return x, PayrollOK
+}
+
+// equations returns the augmented rows of the active activities, then the
+// normalisation.
+func (p *payroll) equations() [][]*big.Rat {
 	var eq [][]*big.Rat
 	for k := range p.m.Activities {
 		if p.o.Active[k] {
 			eq = append(eq, append(p.row(k), new(big.Rat)))
 		}
 	}
+	return append(eq, p.normalisation())
+}
+
+// normalisation returns the augmented row that fixes the scale of the duals: the
+// upkeep of all regions priced at the goods duals equals 1.
+func (p *payroll) normalisation() []*big.Rat {
 	norm := make([]*big.Rat, p.n+1)
 	for i := range norm {
 		norm[i] = new(big.Rat)
@@ -354,30 +449,25 @@ func (p *payroll) solve() ([]*big.Rat, PayrollReason) {
 		}
 	}
 	norm[p.n] = big.NewRat(1, 1)
-	eq = append(eq, norm)
-	x, ok := eliminate(eq, p.n)
-	if !ok {
-		return nil, PayrollNoUniqueSolution
-	}
-	for _, v := range x {
-		if v.Sign() < 0 {
-			return nil, PayrollNegativeDual
-		}
-	}
+	return norm
+}
+
+// inactiveProfit reports an inactive activity that pays more than its net wage at
+// the solution x.
+func (p *payroll) inactiveProfit(x []*big.Rat) bool {
 	for k := range p.m.Activities {
 		if p.o.Active[k] {
 			continue
 		}
-		r := p.row(k)
 		sum := new(big.Rat)
-		for i, c := range r {
+		for i, c := range p.row(k) {
 			sum.Add(sum, new(big.Rat).Mul(c, x[i]))
 		}
 		if sum.Sign() > 0 {
-			return nil, PayrollInactiveProfit
+			return true
 		}
 	}
-	return x, PayrollOK
+	return false
 }
 
 // eliminate solves the n unknowns of the augmented rows exactly by Gauss-Jordan
@@ -387,30 +477,12 @@ func eliminate(eq [][]*big.Rat, n int) ([]*big.Rat, bool) {
 	r := 0
 	pivotRow := make([]int, n)
 	for c := 0; c < n; c++ {
-		pr := -1
-		for i := r; i < len(eq); i++ {
-			if eq[i][c].Sign() != 0 {
-				pr = i
-				break
-			}
-		}
+		pr := firstNonZero(eq, c, r)
 		if pr < 0 {
 			return nil, false
 		}
 		eq[r], eq[pr] = eq[pr], eq[r]
-		inv := new(big.Rat).Inv(eq[r][c])
-		for j := c; j <= n; j++ {
-			eq[r][j].Mul(eq[r][j], inv)
-		}
-		for i := range eq {
-			if i == r || eq[i][c].Sign() == 0 {
-				continue
-			}
-			f := new(big.Rat).Set(eq[i][c])
-			for j := c; j <= n; j++ {
-				eq[i][j].Sub(eq[i][j], new(big.Rat).Mul(f, eq[r][j]))
-			}
-		}
+		clearColumn(eq, r, c, n)
 		pivotRow[c] = r
 		r++
 	}
@@ -424,6 +496,35 @@ func eliminate(eq [][]*big.Rat, n int) ([]*big.Rat, bool) {
 		x[c] = eq[pivotRow[c]][n]
 	}
 	return x, true
+}
+
+// firstNonZero returns the first row from row from down with a non-zero entry in
+// column c, or -1.
+func firstNonZero(eq [][]*big.Rat, c, from int) int {
+	for i := from; i < len(eq); i++ {
+		if eq[i][c].Sign() != 0 {
+			return i
+		}
+	}
+	return -1
+}
+
+// clearColumn scales pivot row r to 1 in column c and subtracts it from every
+// other row with a non-zero entry there, over the columns c to n.
+func clearColumn(eq [][]*big.Rat, r, c, n int) {
+	inv := new(big.Rat).Inv(eq[r][c])
+	for j := c; j <= n; j++ {
+		eq[r][j].Mul(eq[r][j], inv)
+	}
+	for i := range eq {
+		if i == r || eq[i][c].Sign() == 0 {
+			continue
+		}
+		f := new(big.Rat).Set(eq[i][c])
+		for j := c; j <= n; j++ {
+			eq[i][j].Sub(eq[i][j], new(big.Rat).Mul(f, eq[r][j]))
+		}
+	}
 }
 
 // value returns the value of the dual numbered u, 0 for a dual held at 0.

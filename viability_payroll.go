@@ -65,24 +65,13 @@ func (s *viaSolve) payroll(p *viaProgramme) {
 	if len(regions) == 0 {
 		return // no region has both a payer and a Hireable group: nothing is paid
 	}
-	if len(p.md.Lanes) > 0 || len(p.nominalSeed) > 0 || pc.shared || pc.over {
+	if pc.unsupported(p) {
 		s.payrollFailed(p, regions, payrollUnsupported)
 		return
 	}
 	res := steady.PayrollSolve(p.md, p.pr, pc.in)
-	switch res.Reason {
-	case steady.PayrollOK:
-	case steady.PayrollNoUniqueSolution:
-		s.payrollFailed(p, regions, payrollNoUnique)
-		return
-	case steady.PayrollNegativeDual:
-		s.payrollFailed(p, regions, payrollNegativeDual)
-		return
-	case steady.PayrollInactiveProfit:
-		s.payrollFailed(p, regions, payrollInactiveProfit)
-		return
-	default:
-		s.payrollFailed(p, regions, payrollUnsupported)
+	if reason, failed := payrollFailure(res.Reason); failed {
+		s.payrollFailed(p, regions, reason)
 		return
 	}
 	if !res.Applied {
@@ -95,6 +84,30 @@ func (s *viaSolve) payroll(p *viaProgramme) {
 	}
 	p.out, p.pr = res.Outcome, res.Outcome
 	p.pay = &payrollRows{base: pc.base, out: res.Out, in: res.In, labour: res.Labour, perExec: perExec}
+}
+
+// unsupported reports a programme the payroll does not handle: lanes, a nominal
+// seed, a recipe shared with another group, or an own consumption that does not
+// fit int64.
+func (pc payrollCtx) unsupported(p *viaProgramme) bool {
+	return len(p.md.Lanes) > 0 || len(p.nominalSeed) > 0 || pc.shared || pc.over
+}
+
+// payrollFailure maps the reason of a solve to the reason of the report, and
+// reports false for a solve that succeeded.
+func payrollFailure(r steady.PayrollReason) (reason string, failed bool) {
+	switch r {
+	case steady.PayrollOK:
+		return "", false
+	case steady.PayrollNoUniqueSolution:
+		return payrollNoUnique, true
+	case steady.PayrollNegativeDual:
+		return payrollNegativeDual, true
+	case steady.PayrollInactiveProfit:
+		return payrollInactiveProfit, true
+	default:
+		return payrollUnsupported, true
+	}
 }
 
 // payrollFailed lists the regions with the reason.
@@ -120,22 +133,41 @@ func (s *viaSolve) payrollInput(p *viaProgramme) payrollCtx {
 			if gr, _ := c.regionID(g.Region); gr != r {
 				continue
 			}
-			ro, _ := c.roleID(g.Role)
-			role, row := &c.Roles[ro], s.m.roles.row(ro)
-			pg := steady.PayrollGroup{Region: k, Hireable: role.Hireable, Own: make([]int64, len(c.Commodities))}
-			if role.Employer != nil {
-				pg.BP = role.Employer.PayrollBP
-			}
-			for _, it := range row.upkeepIn(r) {
-				own, ok := checked.Mul(int64(it.quantity), g.Households)
-				pc.over = pc.over || (!ok && pg.BP > 0) // Own is read only for a payer
-				pg.Own[it.commodity] = own
-			}
+			pg, row, over := s.payrollGroup(g, r, k)
+			pc.over = pc.over || over
 			pc.in.Groups = append(pc.in.Groups, pg)
 			roles = append(roles, row)
 		}
 	}
 	pc.base = first
+	s.payrollAssign(p, &pc, roles, first)
+	return pc
+}
+
+// payrollGroup builds the payroll group of configuration group g in region r,
+// which is region k of the programme, with the role row of the group. The flag
+// is true when the own consumption of a payer does not fit int64.
+func (s *viaSolve) payrollGroup(g *Group, r RegionID, k int) (steady.PayrollGroup, *roleRow, bool) {
+	c := s.m.c
+	ro, _ := c.roleID(g.Role)
+	role, row := &c.Roles[ro], s.m.roles.row(ro)
+	pg := steady.PayrollGroup{Region: k, Hireable: role.Hireable, Own: make([]int64, len(c.Commodities))}
+	if role.Employer != nil {
+		pg.BP = role.Employer.PayrollBP
+	}
+	over := false
+	for _, it := range row.upkeepIn(r) {
+		own, ok := checked.Mul(int64(it.quantity), g.Households)
+		over = over || (!ok && pg.BP > 0) // Own is read only for a payer
+		pg.Own[it.commodity] = own
+	}
+	return pg, row, over
+}
+
+// payrollAssign sets the group of each activity of the programme in pc.in.Group,
+// given the role row of each group and the first group of each region, and marks
+// pc.shared.
+func (s *viaSolve) payrollAssign(p *viaProgramme, pc *payrollCtx, roles []*roleRow, first []int) {
 	pc.in.Group = make([]int, len(p.md.Activities))
 	for at := range pc.in.Group {
 		pc.in.Group[at] = -1 // an activity no region lists belongs to no group, not to group 0
@@ -146,24 +178,29 @@ func (s *viaSolve) payrollInput(p *viaProgramme) payrollCtx {
 			end = first[k+1]
 		}
 		for i, a := range s.m.acts[r] {
-			at := p.base[k] + i
-			pc.in.Group[at] = -1
-			listing := 0
-			for g := first[k]; g < end; g++ {
-				if !slices.Contains(roles[g].recipes, a.recipe) {
-					continue
-				}
-				listing++
-				if pc.in.Group[at] < 0 && (pc.in.Groups[g].BP > 0 || pc.in.Groups[g].Hireable) {
-					pc.in.Group[at] = g
-				}
-			}
-			if listing > 1 && pc.in.Group[at] >= 0 && p.out.Active[at] {
-				pc.shared = true
-			}
+			pc.assign(p.base[k]+i, a.recipe, p.out.Active[p.base[k]+i], roles, first[k], end)
 		}
 	}
-	return pc
+}
+
+// assign sets the group of activity at, which runs recipe, to the first payer or
+// Hireable group of roles[lo:hi] that lists the recipe, and marks shared when an
+// active activity of such a group is listed by another group too.
+func (pc *payrollCtx) assign(at int, recipe RecipeID, active bool, roles []*roleRow, lo, hi int) {
+	pc.in.Group[at] = -1
+	listing := 0
+	for g := lo; g < hi; g++ {
+		if !slices.Contains(roles[g].recipes, recipe) {
+			continue
+		}
+		listing++
+		if pc.in.Group[at] < 0 && (pc.in.Groups[g].BP > 0 || pc.in.Groups[g].Hireable) {
+			pc.in.Group[at] = g
+		}
+	}
+	if listing > 1 && pc.in.Group[at] >= 0 && active {
+		pc.shared = true
+	}
 }
 
 // payrollRegions lists the regions of the programme that have a payer and a
