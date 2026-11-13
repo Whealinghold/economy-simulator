@@ -131,6 +131,7 @@ economy-sim/
   contract_settle.go                                                   (MER)
   external_state.go                                                    (EXT)
   integration_estate.go  integration_directive.go  integration_slots.go  (INT)
+  storage_validate.go  storage_commit.go  storage_report.go          (STO)
 
   # Module files, one per optional module (2.10.1), named after the concept.
   demand.go  resources.go  subsistence.go  population.go  transport.go
@@ -1076,4 +1077,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: bdb8a4b7fa1ed8fd3b2e7aec
+RULE-TAG: 310908f2ed0da3b724d90059

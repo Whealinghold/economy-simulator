@@ -1294,6 +1294,33 @@ order of 6.3.2 and of 5.5.2, the names `no_room`, `consignee_full` and `has_stor
 rule that an amount of a stores flow is per store (7.1.2), the order of the checks
 of 5.2.1 and 5.4.1.
 
+### 12.5 The file layout (N-221)
+
+The base room, the role rows and the classes are written in the file form of
+`spec-config.md` 6.2.1, one table per row and no region key:
+
+```toml
+[modules.storage.base]              # absent: no role has a default base room
+mass = 400
+bulk = 200
+
+[modules.storage.role.grower]       # one table per role; a row replaces [base] for its role
+stores = ["bin"]                    # store class IDs, in class order; a class may repeat
+[modules.storage.role.grower.base]  # absent: the role is unlimited (12.1.1)
+mass = 600
+bulk = 300
+
+[modules.storage.class.bin]         # one table per class (7.3)
+mass = 400
+bulk = 300
+needs = "market"                    # optional; a flag of spec-settlements.md
+```
+
+The keys are `mass` and `bulk` (each 0 to `MaxRoom`), `stores`, `needs`, and the
+presentation-only `label` of a class. An empty table `[modules.storage]` switches the
+module on with no limited role (`no_limited_role`, 13.2). The hash ids of the fields are
+in `spec-config.md` 8.2.2. This closes N-221.
+
 ## 13. Validation
 
 ### 13.1 Errors
@@ -1970,7 +1997,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | The bounds `MaxRoom`, `MaxStoresPerAgent`, `MaxStoreClasses`, the validation of 13 | root package, `bounds.go`, `validate.go` |
 | The room, load, pledge, reserved room, `SetRoom`, `SetPledge`, `ReserveRoom`, `FreeRoom` and the credit forms | `internal/ledger` (stdlib only; the sizes are a table of primitives) |
 | The bound of 5.3.2, the target scaling of 6.2.2, the discard order of 6.3.2 and 5.5.2, the stored load of 8.3.2 | `internal/room` (new: pure rules over primitive slices, stdlib only; architecture.md 2.9). The root converts inline at the call (architecture.md 2.9) |
-| The stores of an agent | the agent record of the root package (`agent.go`), saved by `checkpoint.go` |
+| The stores of an agent | a module slice of `storage.go` indexed by agent slot (N-244, architecture.md 2.10.1: `agent.go` holds core fields only), written once in the agent record by `checkpoint_*.go` (tag 3, hosted, N-128) |
 | The target kind `stores` of a money flow | `moneyflow` of `spec-money-supply.md` (`internal/moneyflow`) with the class table passed in |
 | The refusal `has_store` | the registry of `region_bound` refusals of `spec-regions.md` 6.5.2 |
 

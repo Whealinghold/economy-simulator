@@ -50,11 +50,11 @@ PR description.
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
-| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-221, N-276, N-324, N-329, N-331, N-345, N-349 |
+| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349 |
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354 |
+| CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356 |
@@ -87,7 +87,7 @@ PR description.
 | SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-264, N-268, N-244, N-305, N-317 |
 | SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-305, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
-| STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-221, N-244, N-327 |
+| STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357 |
 | STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356 |
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-214 |
@@ -1582,13 +1582,6 @@ PR description.
 - **Update (2026-10-13, minor gaps of the Stage 0 audit):** applied in part. `models/clb/registry.py` is respelled (`modules.resources.*`, `modules.demand.*`, `modules.transport.mode.*`, `modules.external.node.*`, `modules.tenure.term.*`) and re-run in Docker; the path and flag checks pass. `spec-calibration.md` S-CFG01 and 6.3 now list `Estates` as the last pointer (23 names: the owner table has no pointer row for `Demand` and `MoneySupply`, which are scopes of S-DEM01 and S-MON01), and FR-CLB-002 reads `RegionTaste` and `Taste.Role` as owner rows. **Still owed:** four coverage checks of the registry fail against the live owner table (`registry.out` records FAILED): the element-type, `Config.Edges`, `RegionPrices`, `WarmStart`, `Yields`, `World.Scale`, `JobSpec`, `Month`, `Season` rows each need a class, a stage, the flags `in` and `chk` and an owner section, which is a classification decision per field and not a respelling; the groups still use the old scope tokens; the CFG 3.7 names `Days` and `InProgressBP` and the nested `Scale` have no scope. Run the script as `docker run --rm -e PYTHONDONTWRITEBYTECODE=1 -v $PWD/doc:/d:ro -w /d/specs/models/clb python:3-slim python registry.py`.
 - **Update (2026-11-09, plan 2-21 Phase 1):** applied, to be confirmed by the supervisor: the owner pairs without a key or group field are classified (groups S-CAL02, S-CAL03, S-PRO03 to S-PRO09, S-RES01, S-RES07, S-SCL03, S-VIA04 to S-VIA08, S-POP03 and the rescoped S-REG01, S-PRO05, S-VIA01, S-DEM01 to S-DEM03, S-MON01, S-CFG01), the registry-only scope tokens now spell the owner table's (`Output`, `Tool`, `WantItem`, `YieldProfile`, `Config`, `MoneySupply`), and `models/clb/registry.py` prints no FAIL (`registry.out` regenerated). The owner table now says `WorldParams` where the registry says `World` (N-329). Close when the supervisor confirms the classes.
 
-### N-221 STO confirms the file layout of its base room and role rows
-
-- **Areas:** STO, CFG
-- **Raised:** 2026-10-12, `spec-config.md` 6.2.1 (N-102, closed).
-- **Note:** `spec-storage.md` states only `[modules.storage.class.<id>]` (7.3). Rule 6.2.1 of CFG derives `[modules.storage.base]` (mass, bulk) and `[modules.storage.role.<id>]` (stores, base). STO confirms or restates them in its own section.
-- **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row. Left open.
-
 ### N-222 The cost of a reseed at every draw site is measured on paper only
 
 - **Areas:** SCL, CODE
@@ -2260,6 +2253,12 @@ PR description.
 - **Raised:** 2026-11-12, plan 2-29 Phase 1 (`spec-viability.md` 5.6, ADR 0012).
 - **Note:** (1) Hypothesis H-P: payroll moves money, not goods, so only the duals change. **Outcome of its falsifier (plan 2-29 Phase 4, trial T1, 2026-11-12): FALSIFIED on the pre-declared reading.** The census was the payroll-aware solver's balanced one (cook 210, forester 138, grower 133, maker 33, refiner 31, digger 25, comfort 15, treat 15; income 10 395 to 10 742 bp, spread 1.03). Cooks kept 38% of that census at tick 600 (81, 80, 79, 78 of 210 on seeds 101 to 104; 100 to 107 already at tick 100, the exodus is in window 0 by distress and review), so 0 of 4 seeds kept 90% (bar: 3 of 4). The receipts model A1 held (measured `PayrollPaid.Due` 97.5% of the static receipts over ticks 1 to 10, FR-VIA-066), so the premise that failed is that the seeded duals are the steady state the occupation review sees, not the receipts. What the payroll-aware solve did do: households 597 to 600 of 600 at tick 1 600 on all four seeds and no extinct role (E2 lost 18% to 28%), but 481 on seed 103 at tick 2 200, non-cook unfed 34% to 38%, cooks 10.7% to 12.3% of households holding 43% to 65% of the money, prices 37% to 47% of reference. The plan's rule stopped the ladder at T1; the supervisor decision D-P5 ran T2 to T6 anyway, because the claim is judged on outcomes and a trial costs seconds. **H-P stays falsified through T6: the cooks hold 29% to 45% of the solver's census at tick 600 in every trial (T6, the pack `payroll`: 64 to 83 of 223).** The solver's census is the static payroll-aware balance, not the simulation's equilibrium; what carries the household count is the payroll module (T6 with the module off collapses), not the solver. See N-352, route 3 and the owner decision of 2026-11-13 (the limitation is accepted, not cured). (2) Assumption A1: the static receipts of a payer are its net sales (net output less its own households' upkeep) at the duals; it is tested against the measured `PayrollPaid.Due` within 10% (FR-VIA-066). (3) The re-solve covers a programme with no lanes, no nominal seed (N-085) and no recipe shared with another role (N-306); otherwise the payroll-free duals stay and `PayrollInfeasible` says `unsupported`. (4) The re-solved duals may be non-unique per commodity like any dual (N-311): only the global flags exist. (5) The claim of FR-REF-045 is a household-count claim about the pack `payroll` on seeds 101 to 104 (met; partial beyond them: 25 of 30 on seeds 1 to 30), `in sample` (N-135), not "stable" (N-027, N-339) and not FR-REF-042; the static gates FR-REF-043 and 044 do not mean stability (N-325). (6) The layers of `payroll` sit on `one-demand`, not `five`: they do not join `allLayers` (N-336). (7) The hire form must not reuse `PayrollBP` (N-355).
 
+### N-357 A guarded hook call in a fan-in can break the Lizard limit
+
+- **Areas:** STO, CODE
+- **Raised:** 2026-11-13, plan 3-sto Phase 1 (E1, measured with `lizard -l go -C 10 -a 8 -L 100 -w`).
+- **Note:** `fillAgentView` and `removeAgent` of `fanin.go` are at CCN 10 today, one guarded call (`if w.x != nil`) from the limit of N-243; `ckLines` of `transport_request.go` is at 9, `plannedRecipe` of `strategy_default.go` at 9, `limitList` of `production.go` at 9, and `ckProvisioned` of `transport_request.go` is already at 11. Every Stage 3 module that adds a guarded call to one of them, as ADR 0010 allows, forces a refactor first (a fixed-order table of module fillers called in a loop, or a split by concern) in the same change. The first module to need it makes it, in its own commit before the hook; the others reuse it.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2272,4 +2271,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: ffa06a0b8159c72f08471dca
+NOTES-TAG: 354d61702255198fe52f6578

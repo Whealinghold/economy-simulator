@@ -136,6 +136,7 @@ economy-sim/
 │   migration_pass.go migration_report.go (MIG)
 │   contract_settle.go (MER)  external_state.go (EXT)
 │   integration_estate.go integration_directive.go integration_slots.go (INT)
+│   storage_validate.go storage_commit.go storage_report.go (STO)
 │                           # CONTINUATION files: a concept past the Lizard limits
 │                           #   of N-243 is split; each maps to the area code of
 │                           #   its concept, and its _test.go carries that area's

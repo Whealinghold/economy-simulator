@@ -1334,4 +1334,44 @@
 //     detectors, per seed set, in a fixed order with no float and no clock.
 //   - Acceptance tier: where a fact runs: short (unit), gate, nightly or long (a build
 //     tag), by its run length and seeds.
+//   - Store: a facility that adds room to the account of the agent that owns it, of a
+//     store class; the agent owns it and no other agent uses it (spec-storage.md 3.5).
+//   - Store class: a kind of store, data: a capacity pair and an optional settlement
+//     flag; no code names one (StoreClass, spec-storage.md 3.2).
+//   - StoreClass: the configuration row of a store class: its ID, mass room, bulk room
+//     and the flag its region's settlement class must carry.
+//   - StoreClassID: the typed ID of a store class, its position in the sorted classes of
+//     the effective configuration.
+//   - Storage: the optional module that gives an account a room; its presence in
+//     Config.Modules switches it on (spec-storage.md 12.1).
+//   - Capacity: a pair of room, a mass room and a bulk room, as a base room or one
+//     store adds; as a type it is the pair of the Storage configuration.
+//   - RoleRoom: the storage row of one role: its base room per household and the store
+//     classes each agent of the role is created with.
+//   - Room: the pair of mass and bulk an account may hold; goods fit it if and only if
+//     both sums are within it. Only a limited account has one.
+//   - Base room: the room per household of a role, the household's own space; the room
+//     of an account is its weight times the base room plus the capacity of its stores.
+//   - Limited (account): an account that has a room, which is an agent whose role has a
+//     base room; a pseudo-agent is never limited, and an unlimited account has no bound.
+//   - Pledge: the room that goods not yet in an account will take, the pending output of
+//     the agent's job and the lines of the shipments that name it as consignee; derived,
+//     never saved.
+//   - Reserved room: the room of the bids an account has admitted in the current tick;
+//     it exists only inside a tick.
+//   - Free room: the room less the load, the pledge and the reserved room, read as 0
+//     where it would be negative.
+//   - Upkeep room: the load of one tick's upkeep of an agent, the room that a job start
+//     and a dispatch must leave free.
+//   - Cut of the room: a fall of the room below what a pledge needs, by a weight
+//     reduction or a role change; the pledge is then cut at the credit, never refused.
+//   - Stored load: the part of an account's load above its base room, up to the
+//     capacity of its stores, a read with no attribution to commodities.
+//   - Buffer store: a store of large capacity held against a shortage; its owner is a
+//     strategy of its own (spec-storage.md 10.1).
+//   - Owns a store: an agent owns a store if its stores of any class are at least one;
+//     it then cannot make a self-carried trip or a relocation.
+//   - StoreChanged: the event of one store added to an agent or removed from it.
+//   - RoomLimited: the event of a region and role's tick in which a room cut or refused
+//     a start, a bid or a shipment, or the default strategy discarded.
 package economysim
