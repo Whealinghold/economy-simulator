@@ -226,7 +226,10 @@ func (l *Ledger) auditRoom(id int, a *account) error {
 		return auditFail(IdentityRoom, id, None, "a figure of the room is negative: %+v", *r)
 	}
 	mass, bulk, err := l.loadOfLots(a)
-	if err != nil || mass != r.LoadMass || bulk != r.LoadBulk {
+	if err != nil {
+		return auditFail(IdentityRoom, id, None, "the lots weigh more than int64 holds, and the load is (%d, %d)", r.LoadMass, r.LoadBulk)
+	}
+	if mass != r.LoadMass || bulk != r.LoadBulk {
 		return auditFail(IdentityRoom, id, None, "the load is (%d, %d) and the lots weigh (%d, %d)", r.LoadMass, r.LoadBulk, mass, bulk)
 	}
 	if exceeds(r.LoadMass, r.ReservedMass, r.Mass) || exceeds(r.LoadBulk, r.ReservedBulk, r.Bulk) {
@@ -242,7 +245,7 @@ func (r *Room) negative() bool {
 
 // closedHoldsState reports whether a closed account is not wholly zeroed.
 func closedHoldsState(a *account) bool {
-	return a.balance != 0 || a.reserved != 0 || len(a.lots) != 0 || a.hasHint || a.owner != 0 || a.region != 0 || a.kind == KindBoundary
+	return a.balance != 0 || a.reserved != 0 || len(a.lots) != 0 || a.hasHint || a.owner != 0 || a.region != 0 || a.kind == KindBoundary || a.room != nil
 }
 
 // auditMoney checks the region and the money balance of a non-boundary account.
