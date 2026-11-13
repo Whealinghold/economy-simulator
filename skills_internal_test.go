@@ -545,3 +545,44 @@ func FuzzLoadSkillsSection(f *testing.F) {
 		}
 	})
 }
+
+// TestSkills_PlantedStateSurvivesTicksAndFork verifies, with real components, that
+// a world holding a traineeship, two queues and a Warn run keeps them untouched
+// through further steps (PR A adds no behaviour, so nothing may move them), passes
+// its audit, and that a world restored from a checkpoint taken then stays equal to
+// the original, checkpoint byte for byte, after the same further steps.
+//
+// Guard: the state is carried by tag 10 only, and the fork of a world with skills
+// must replay the original; a field of the state that the codec drops, or a hook
+// that mutates it during a tick, shows up as a different checkpoint here.
+//
+// Requirement: FR-SKL-027, FR-CHK-050
+func TestSkills_PlantedStateSurvivesTicksAndFork(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	w, c := skillsWorld(t, 8)
+	plantSkills(w, c)
+	before := section10(t, w)
+	fork := restoreWith(t, w, skillsConfig())
+	step(t, w, 6)
+	step(t, fork, 6)
+	if got := section10(t, w); !bytes.Equal(got, before) {
+		t.Errorf("tag 10 after 6 steps = %v, want the planted %v", got, before)
+	}
+	if got := section10(t, fork); !bytes.Equal(got, before) {
+		t.Errorf("tag 10 of the fork after 6 steps = %v, want the planted %v", got, before)
+	}
+	a, err := w.Checkpoint()
+	if err != nil {
+		t.Fatalf("Checkpoint() error = %v, want nil", err)
+	}
+	b, err := fork.Checkpoint()
+	if err != nil {
+		t.Fatalf("Checkpoint() of the fork error = %v, want nil", err)
+	}
+	if !bytes.Equal(a.b, b.b) {
+		t.Errorf("checkpoint of the fork differs from the original after the same 6 steps (%d and %d bytes)", len(b.b), len(a.b))
+	}
+}
