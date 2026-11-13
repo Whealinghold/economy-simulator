@@ -1,6 +1,7 @@
 package room_test
 
 import (
+	"math"
 	"slices"
 	"testing"
 
@@ -201,5 +202,21 @@ func TestExcessOrder_LotLoadOverflowMeetsTheShortfall(t *testing.T) {
 	want := []room.Step{{Cand: 0, Lot: 0, Units: 1 << 40}}
 	if !met || !slices.Equal(steps, want) {
 		t.Errorf("ExcessOrder = %v, %v, want %v, true", steps, met, want)
+	}
+}
+
+// TestExcessOrder_UnitsSumSaturates verifies the lots of a candidate whose
+// units sum past int64 still rank by a saturated load, not a wrapped one.
+//
+// Requirement: FR-STO-018
+func TestExcessOrder_UnitsSumSaturates(t *testing.T) {
+	t.Parallel()
+	cands := []room.Candidate{
+		{Commodity: 1, Size: room.Pair{Mass: 1}, Lots: []int64{math.MaxInt64, math.MaxInt64}},
+		{Commodity: 2, Size: room.Pair{Mass: 1}, Lots: []int64{5}},
+	}
+	steps, met := room.ExcessOrder(room.Pair{Mass: 100}, room.Pair{Mass: 10}, cands)
+	if !met || len(steps) == 0 || steps[0].Cand != 0 {
+		t.Errorf("ExcessOrder = %v, %v, want the first candidate to go first", steps, met)
 	}
 }

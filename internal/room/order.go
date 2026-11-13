@@ -90,7 +90,11 @@ func pick(cands []Candidate, left [][]int64, d int) int {
 		size := dimOf(c.Size, d)
 		var units int64
 		for _, n := range left[i] {
-			units += n
+			if v, ok := checked.Add(units, n); ok {
+				units = v
+			} else {
+				units = math.MaxInt64
+			}
 		}
 		if size <= 0 || units == 0 {
 			continue
