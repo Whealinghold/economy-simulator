@@ -129,3 +129,40 @@ func TestAudit_ClosedAccountHoldsNoRoom(t *testing.T) {
 		t.Errorf("Audit() = %v, want the structure identity of account %d", err, id)
 	}
 }
+
+// TestAuditRoom_NegativeFigureFails verifies that a room with a negative
+// figure (a load, a pledge, a reserved room or a size of the room) fails the
+// audit under the room identity, each of the eight in turn.
+//
+// Guard: a negative pledge or reserved room would raise the free room above
+// the room; the audit is the only check that reads them after the fact.
+//
+// Requirement: FR-STO-040
+func TestAuditRoom_NegativeFigureFails(t *testing.T) {
+	t.Parallel()
+	for name, set := range map[string]func(r *Room){
+		"mass":     func(r *Room) { r.Mass = -1 },
+		"bulk":     func(r *Room) { r.Bulk = -1 },
+		"load m":   func(r *Room) { r.LoadMass = -1 },
+		"load b":   func(r *Room) { r.LoadBulk = -1 },
+		"pledge m": func(r *Room) { r.PledgeMass = -1 },
+		"pledge b": func(r *Room) { r.PledgeBulk = -1 },
+		"resv m":   func(r *Room) { r.ReservedMass = -1 },
+		"resv b":   func(r *Room) { r.ReservedBulk = -1 },
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			g, ids := healthy(t)
+			id := limitedAgentWithLots(t, g, ids)
+			set(g.l.accounts[id].room)
+			var ae *AuditError
+			err := g.l.Audit()
+			if !errors.As(err, &ae) || ae.Identity != IdentityRoom || ae.Account != id {
+				t.Fatalf("Audit() = %v, want the room identity of account %d", err, id)
+			}
+			if !strings.Contains(ae.Detail, "negative") {
+				t.Errorf("Detail = %q, want it to say a figure is negative", ae.Detail)
+			}
+		})
+	}
+}
