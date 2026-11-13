@@ -125,7 +125,12 @@ func (l *Ledger) checkTransformRoom(a *account, inputs, outputs []Line, form Cre
 		return 0, 0, ErrBalanceOverflow
 	}
 	if !okOut {
-		return 0, 0, ErrNoRoom
+		// A load that does not fit int64 is above any room, reserved room and
+		// pledge; the form picks its own refusal, as in creditRoom.
+		if form == CreditFree {
+			return 0, 0, ErrNoRoom
+		}
+		return 0, 0, ErrReservationExceeds
 	}
 	return om, ob, checkRoomCredit(a, Size{om, ob}, Size{im, ib}, form)
 }

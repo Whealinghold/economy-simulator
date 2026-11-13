@@ -229,7 +229,7 @@ func (l *Ledger) auditRoom(id int, a *account) error {
 	if err != nil || mass != r.LoadMass || bulk != r.LoadBulk {
 		return auditFail(IdentityRoom, id, None, "the load is (%d, %d) and the lots weigh (%d, %d)", r.LoadMass, r.LoadBulk, mass, bulk)
 	}
-	if r.LoadMass+r.ReservedMass > r.Mass || r.LoadBulk+r.ReservedBulk > r.Bulk {
+	if exceeds(r.LoadMass, r.ReservedMass, r.Mass) || exceeds(r.LoadBulk, r.ReservedBulk, r.Bulk) {
 		return auditFail(IdentityRoom, id, None, "load (%d, %d) plus reserved (%d, %d) is above the room (%d, %d)", r.LoadMass, r.LoadBulk, r.ReservedMass, r.ReservedBulk, r.Mass, r.Bulk)
 	}
 	return nil

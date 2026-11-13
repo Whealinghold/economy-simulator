@@ -138,7 +138,7 @@ func (l *Ledger) SetRoom(id int, limited bool, mass, bulk int64) error {
 			return err
 		}
 	}
-	if r.LoadMass+r.ReservedMass > mass || r.LoadBulk+r.ReservedBulk > bulk {
+	if exceeds(r.LoadMass, r.ReservedMass, mass) || exceeds(r.LoadBulk, r.ReservedBulk, bulk) {
 		return ErrNoRoom
 	}
 	r.Limited, r.Mass, r.Bulk = true, mass, bulk
@@ -335,6 +335,13 @@ func plus(a, b int64) int64 {
 		return v
 	}
 	return math.MaxInt64
+}
+
+// exceeds reports whether a + b is above room, for non-negative a and b; a sum
+// that does not fit int64 is above any room.
+func exceeds(a, b, room int64) bool {
+	v, ok := checked.Add(a, b)
+	return !ok || v > room
 }
 
 // above returns err if d exceeds limit in either dimension, else nil.

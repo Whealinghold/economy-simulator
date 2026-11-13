@@ -108,9 +108,19 @@ func pick(cands []Candidate, left [][]int64, d int) int {
 
 // lower returns the shortfall after n units of size sz go.
 func lower(s, sz Pair, n int64) Pair {
-	m, _ := checked.Mul(n, sz.Mass)
-	b, _ := checked.Mul(n, sz.Bulk)
-	return Pair{Mass: s.Mass - m, Bulk: s.Bulk - b}
+	return Pair{Mass: shortfallAfter(s.Mass, n, sz.Mass), Bulk: shortfallAfter(s.Bulk, n, sz.Bulk)}
+}
+
+// shortfallAfter is s - n*sz. A product or difference that does not fit int64
+// removes more than any shortfall, so it saturates low (met).
+func shortfallAfter(s, n, sz int64) int64 {
+	m, ok := checked.Mul(n, sz)
+	if ok {
+		if v, ok := checked.Sub(s, m); ok {
+			return v
+		}
+	}
+	return math.MinInt64
 }
 
 func dimOf(p Pair, d int) int64 {

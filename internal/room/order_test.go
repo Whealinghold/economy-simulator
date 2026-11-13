@@ -186,3 +186,20 @@ func TestDiscardOrder_CeilingAndRerank(t *testing.T) {
 		t.Errorf("DiscardOrder = %v, %v, want %v, true", steps, met, want)
 	}
 }
+
+// TestExcessOrder_LotLoadOverflowMeetsTheShortfall verifies a lot whose load
+// does not fit int64 lowers every shortfall: nothing else goes.
+//
+// Requirement: FR-STO-018
+func TestExcessOrder_LotLoadOverflowMeetsTheShortfall(t *testing.T) {
+	t.Parallel()
+	cands := []room.Candidate{
+		{Commodity: 1, Size: room.Pair{Mass: 1 << 40}, Lots: []int64{1 << 40}},
+		{Commodity: 2, Size: room.Pair{Mass: 1}, Lots: []int64{5}},
+	}
+	steps, met := room.ExcessOrder(room.Pair{Mass: 100}, room.Pair{Mass: 10}, cands)
+	want := []room.Step{{Cand: 0, Lot: 0, Units: 1 << 40}}
+	if !met || !slices.Equal(steps, want) {
+		t.Errorf("ExcessOrder = %v, %v, want %v, true", steps, met, want)
+	}
+}

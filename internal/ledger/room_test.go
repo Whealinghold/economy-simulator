@@ -846,3 +846,22 @@ func TestRoom_OverflowingCreditKeepsItsFormsRefusal(t *testing.T) {
 		}
 	}
 }
+
+// TestRoom_OverflowingTransformKeepsItsFormsRefusal verifies a Transform whose
+// output load does not fit int64 is refused as Move is (4.1.3): a reserved or
+// pledge credit is ErrReservationExceeds, a free one ErrNoRoom.
+//
+// Requirement: FR-STO-007
+func TestRoom_OverflowingTransformKeepsItsFormsRefusal(t *testing.T) {
+	t.Parallel()
+	const maxQty = int64(1e12)
+	sizes := []ledger.Size{{Mass: 1e7, Bulk: 1}, {}, {}, {}, {}}
+	f := newRoomFix(t, maxQty, sizes, true)
+	f.limit(t, f.a0, 1<<62, 1<<62)
+	out := []ledger.Line{{Commodity: 0, Quantity: maxQty}}
+	for form, want := range map[ledger.Credit]error{ledger.CreditReserved: ledger.ErrReservationExceeds, ledger.CreditPledge: ledger.ErrReservationExceeds, ledger.CreditFree: ledger.ErrNoRoom} {
+		if err := f.l.TransformCredited(f.a0, nil, out, form); !errors.Is(err, want) {
+			t.Errorf("form %d = %v, want %v", form, err, want)
+		}
+	}
+}
