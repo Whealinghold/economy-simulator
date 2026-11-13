@@ -272,3 +272,21 @@ func TestTickStarted_AfterPanickedStepDoesNotLeakCounts(t *testing.T) {
 		t.Errorf("orders.placed of the step after a panicked one = %d, want 0", v)
 	}
 }
+
+// TestSnapshot_TreasurySector verifies that money.supply takes the sector treasury
+// from RegionRow.MoneyTreasury while the snapshot's Modules holds polity, and that
+// the series is absent, not zero, while the module is off.
+//
+// Requirement: FR-POL-028, FR-OBS-041
+func TestSnapshot_TreasurySector(t *testing.T) {
+	s := snapOf()
+	s.Regions[0].MoneyTreasury = 55_000
+	off := newHarness(t)
+	off.obs.RecordSnapshot(s)
+	absent(t, off.collect(), "money.supply", "region", "r0", "sector", "treasury")
+
+	s.Modules = []string{"polity"}
+	on := newHarness(t)
+	on.obs.RecordSnapshot(s)
+	check(t, on.collect(), "money.supply", 55_000, "region", "r0", "sector", "treasury")
+}

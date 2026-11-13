@@ -309,3 +309,17 @@ func TestPolity_IDShift(t *testing.T) {
 		}
 	}
 }
+
+// TestPolity_TreasuryAgentAllocatesNothing verifies that TreasuryAgent, a class 1
+// query (spec-integration.md 6.2), is O(1) and allocates nothing.
+//
+// Requirement: FR-POL-016, NFR-POL-001
+func TestPolity_TreasuryAgentAllocatesNothing(t *testing.T) {
+	w := newMill(t, treasuryConfig())
+	if n := testing.AllocsPerRun(100, func() {
+		w.TreasuryAgent(0)
+		w.TreasuryAgent(2)
+	}); n != 0 {
+		t.Errorf("TreasuryAgent allocated %v times per run, want 0", n)
+	}
+}

@@ -13,9 +13,9 @@ import (
 // names, so the method needs nothing of the world or of the adapter's table.
 type snapNames struct {
 	commodity, region, role, recipe, mode []string
-	// population and migration say the module is on in the snapshot (Modules): a
-	// gauge of a module that is off is absent, not zero.
-	population, migration bool
+	// population, migration and polity say the module is on in the snapshot (Modules):
+	// a gauge of a module that is off is absent, not zero.
+	population, migration, polity bool
 }
 
 // at is the attribute of place i of a name list, or the zero attribute (which
@@ -46,7 +46,8 @@ func (o *Observer) gauge(inst int, v int64, kv ...attribute.KeyValue) {
 // where it makes no sense and a nil slice drop or skip the row; it never panics.
 func (o *Observer) RecordSnapshot(s economysim.Snapshot) {
 	n := snapNames{commodity: s.Names.Commodities, region: s.Names.Regions, role: s.Names.Roles, recipe: s.Names.Recipes,
-		mode: s.Names.Modes, population: slices.Contains(s.Modules, "population"), migration: slices.Contains(s.Modules, "migration")}
+		mode: s.Names.Modes, population: slices.Contains(s.Modules, "population"), migration: slices.Contains(s.Modules, "migration"),
+		polity: slices.Contains(s.Modules, "polity")}
 	for _, m := range s.Markets {
 		o.recordMarket(n, m)
 	}
@@ -133,6 +134,9 @@ func (o *Observer) recordRegion(n snapNames, r economysim.RegionRow) {
 	sector(0, r.MoneyHouseholds)
 	sector(1, r.MoneyPool)
 	sector(2, r.MoneyContract)
+	if n.polity {
+		sector(3, r.MoneyTreasury)
+	}
 	if n.population && r.HouseholdCap > 0 {
 		o.gauge(iPopulationCap, r.HouseholdCap, region)
 	}

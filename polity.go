@@ -677,6 +677,37 @@ func (w *World) attachTreasuries() error {
 // auditTreasuries is the hook of the audit (architecture.md 2.10.1).
 func (w *World) auditTreasuries() error { return w.polity.audit(w.ledger) }
 
+// rows returns the JurisdictionRow of each treasury in ascending JurisdictionID, nil
+// with none. With start true the money is the StartMoney (WorldCreated), else the
+// balance of the account (the snapshot).
+func (p *polity) rows(l *ledger.Ledger, start bool) []JurisdictionRow {
+	if p.treasuryCount() == 0 {
+		return nil
+	}
+	out := make([]JurisdictionRow, len(p.tr))
+	for i := range p.tr {
+		t := &p.tr[i]
+		out[i] = JurisdictionRow{Jurisdiction: t.j, Seat: t.seat, Agent: t.agent, Money: t.start}
+		if !start {
+			v, _ := l.Account(t.account)
+			out[i].Money = Money(v.Balance)
+		}
+	}
+	return out
+}
+
+// snapshotTreasuries fills the polity rows of a snapshot: the treasuries' rows, the
+// money of each seat region's treasuries, and the money of the world (spec-polity.md
+// 10.5). It leaves the snapshot alone with no treasury.
+func (w *World) snapshotTreasuries(s *Snapshot) {
+	s.Jurisdictions = w.polity.rows(w.ledger, false)
+	for _, r := range s.Jurisdictions {
+		row := &s.Regions[r.Seat]
+		row.MoneyTreasury = satMoney(row.MoneyTreasury, r.Money, 0)
+		s.Money = satMoney(s.Money, r.Money, 0)
+	}
+}
+
 // TreasuryAgent returns the treasury pseudo-agent of a governed jurisdiction
 // (spec-polity.md 5.5.1); false for a grouping, an unknown j or a world without the
 // module. It is O(1) and allocates nothing.

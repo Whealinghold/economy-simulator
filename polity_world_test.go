@@ -352,7 +352,7 @@ func TestPolity_NoRegionFieldRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	allowed := map[string]bool{"polity.go": true, "config.go": true, "construct.go": true, "event.go": true, "world.go": true, "validate.go": true,
+	allowed := map[string]bool{"polity.go": true, "config.go": true, "construct.go": true, "event.go": true, "world.go": true, "snapshot.go": true, "validate.go": true,
 		"hash.go": true, "errors.go": true, "bounds.go": true, "defaults.go": true, "doc.go": true}
 	for _, f := range files {
 		if strings.HasSuffix(f, "_test.go") || allowed[f] {

@@ -29,8 +29,9 @@ var stageTwoScenarios = []struct {
 	{67, 72, "plans 15 and 16 (MER)"},
 	{73, 76, "plan 24 (WLD), unit models"},
 	{79, 83, "plan 17 (INT)"},
-	// Stage 3: S113 (POL-S2) arrives with the treasury, in the second pull request of plan 3-pol.
-	{112, 112, "plan 3-pol (POL-S1)"},
+	// Stage 3: S112 (POL-S1) in the first pull request of plan 3-pol, S113 (POL-S2) with the
+	// treasury in the second.
+	{112, 113, "plan 3-pol (POL-S1, POL-S2)"},
 }
 
 // scenariosNotBuilt are the numbers of stageTwoScenarios that have no test yet, the staged
