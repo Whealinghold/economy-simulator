@@ -109,25 +109,41 @@ func (w *World) canTrain(a *agent) bool {
 	return a.weight == 1 && !w.skills.isTrainee(a.id) && !w.onJourney(a) && !w.offStage(a)
 }
 
+// trainersOf lists the agents of role r in region g that can take a trainee, in
+// ascending ID, with the trainees each holds.
+func (w *World) trainersOf(g RegionID, r RoleID) []trainerSlot {
+	var trainers []trainerSlot
+	for i := w.firstHousehold; i < len(w.agents); i++ {
+		if a := &w.agents[i]; a.weight >= 1 && a.role == r && w.regionOf(a) == g && w.canTrain(a) {
+			trainers = append(trainers, trainerSlot{id: a.id, held: w.skills.held(a.id)})
+		}
+	}
+	return trainers
+}
+
+// freest returns the index of the trainer with the fewest trainees, the lower ID
+// first, and false when every trainer holds max.
+func freest(trainers []trainerSlot, max int64) (int, bool) {
+	best := -1
+	for i, t := range trainers {
+		if t.held < max && (best < 0 || t.held < trainers[best].held) {
+			best = i
+		}
+	}
+	return best, best >= 0
+}
+
 // fillPlaces fills the places of role r in region g from its queue, in queue order
 // (spec-skill-barriers.md 4.2.1 step 2, 4.3.1). An applicant that is away or on a
 // journey waits and the next is tried; the first applicant whose gain is
 // negative, or the lack of a free place, ends the filling. The gain decides a new
 // place only, never a traineeship in progress.
 func (w *World) fillPlaces(g RegionID, r RoleID) {
-	s := w.skills
-	cell := s.cell(g, r)
-	cfg := &w.cfg.Roles[r]
-	var trainers []trainerSlot
-	for i := w.firstHousehold; i < len(w.agents); i++ {
-		if a := &w.agents[i]; a.weight >= 1 && a.role == r && w.regionOf(a) == g && w.canTrain(a) {
-			trainers = append(trainers, trainerSlot{id: a.id, held: s.held(a.id)})
-		}
-	}
-	gain := w.newGainer(g, r)
+	s, cell := w.skills, w.skills.cell(g, r)
+	trainers, gain := w.trainersOf(g, r), w.newGainer(g, r)
 	for i := 0; i < len(s.queue[cell]); {
-		at := slices.IndexFunc(trainers, func(t trainerSlot) bool { return t.held < cfg.MaxTrainees })
-		if at < 0 {
+		at, free := freest(trainers, w.cfg.Roles[r].MaxTrainees)
+		if !free {
 			return
 		}
 		ap := s.queue[cell][i]
@@ -139,25 +155,13 @@ func (w *World) fillPlaces(g RegionID, r RoleID) {
 		if !gain.ok(a) {
 			return
 		}
-		// The trainer with the fewest trainees, the lower ID first.
-		best := slices.MinFunc(trainers, func(x, y trainerSlot) int {
-			return cmp.Or(cmp.Compare(boolInt(x.held >= cfg.MaxTrainees), boolInt(y.held >= cfg.MaxTrainees)), cmp.Compare(x.held, y.held), cmp.Compare(x.id, y.id))
-		})
-		trainers[slices.IndexFunc(trainers, func(t trainerSlot) bool { return t.id == best.id })].held++
+		trainers[at].held++
 		s.dequeue(ap.agent)
-		s.start(ap.agent, best.id, r, ap.served, ap.applied)
+		s.start(ap.agent, trainers[at].id, r, ap.served, ap.applied)
 		if w.obs.supplied {
-			w.obs.deliver(TraineeshipStarted{Tick: w.Tick(), Trainee: ap.agent, Trainer: best.id, Role: r, Region: g})
+			w.obs.deliver(TraineeshipStarted{Tick: w.Tick(), Trainee: ap.agent, Trainer: trainers[at].id, Role: r, Region: g})
 		}
 	}
-}
-
-// boolInt is 1 for true and 0 for false, for an ordering key.
-func boolInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
 }
 
 // gainer decides whether a trainer takes a trainee in role r of region g
@@ -255,6 +259,9 @@ func (w *World) execApply(g RegionID, a *agent, d Decision) {
 // for every kind, since a switch or an entry into a training role is refused too.
 func (w *World) applyFacts(f *occupation.Facts, a *agent, d *Decision) {
 	s := w.skills
+	if s == nil {
+		return
+	}
 	f.TrainingRole = f.RoleKnown && w.cfg.Roles[d.Role].TrainingTicks > 0
 	if a != nil {
 		f.InTraineeship = s.isTrainee(a.id) || s.isTrainer(a.id)
@@ -295,7 +302,7 @@ func (w *World) fillAgentSkills(row *RegionAgent, a *agent) {
 	}
 }
 
-// dropAgent is the step of a removal that belongs to the traineeships
+// dropAgent (a no-op while w.skills is nil) is the step of a removal that belongs to the traineeships
 // (spec-agents.md 3.6 step 2, spec-skill-barriers.md 4.6; FR-SPN-011: a removal is
 // never refused for a traineeship). It runs before the removal's own events:
 //   - an applicant leaves its queue;
@@ -309,6 +316,9 @@ func (w *World) fillAgentSkills(row *RegionAgent, a *agent) {
 // It draws nothing.
 func (w *World) dropAgent(a *agent) {
 	s, region := w.skills, w.regionOf(a)
+	if s == nil {
+		return
+	}
 	s.dequeue(a.id)
 	if s.isTrainer(a.id) {
 		for _, id := range slices.Clone(s.trainer[a.id].trainees) {

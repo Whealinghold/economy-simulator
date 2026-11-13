@@ -349,11 +349,11 @@ func (w *World) valueBoard() {
 	}
 }
 
-// fillBoard sets the Board of the view of agent a: the upkeep of its trainees in
+// fillBoard (a no-op while w.skills is nil) sets the Board of the view of agent a: the upkeep of its trainees in
 // the units of one tick, per commodity in commodity order (spec-agents.md 5.7).
 func (w *World) fillBoard(v *AgentView, a *agent) {
 	s := w.skills
-	if !s.isTrainer(a.id) {
+	if s == nil || !s.isTrainer(a.id) {
 		return
 	}
 	s.board = s.board[:0]

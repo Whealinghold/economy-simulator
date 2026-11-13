@@ -43,9 +43,9 @@ func runSkillPack(t *testing.T, pack string, ticks int, seed uint64) skillRun {
 
 // TestScenario_SkillOverlayRunsWithAudit verifies the exit check of plan 3-skl
 // Phase 4: the pack one with the traineeship overlay (120 ticks of training on
-// cook and crafter_a) runs 200 ticks with the audit on, so every identity of the
+// cook and crafter_a) runs 300 ticks with the audit on, so every identity of the
 // ledger holds at each tick whatever the default spawner and the queue did, the
-// default spawner applies and places trainees (the module is not inert), and two
+// default spawner applies and places trainees (the module is not inert; pack one starves, so no course completes here, which Phase 8's pack probe of plan risk R1 settles), and two
 // runs of one seed end in the same snapshot.
 //
 // Requirement: FR-SKL-010, FR-SKL-016, FR-SKL-017, FR-SKL-027
@@ -54,9 +54,9 @@ func TestScenario_SkillOverlayRunsWithAudit(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test, skipped with -short")
 	}
-	a, b := runSkillPack(t, "one", 200, 7), runSkillPack(t, "one", 200, 7)
+	a, b := runSkillPack(t, "one", 300, 7), runSkillPack(t, "one", 300, 7)
 	if a.started == 0 {
-		t.Errorf("seed 7: no traineeship started in 200 ticks, want the default spawner to apply and the queue to place")
+		t.Errorf("seed 7: no traineeship started in 300 ticks, want the default spawner to apply and the queue to place")
 	}
 	if !reflect.DeepEqual(a.snapshot, b.snapshot) || a.started != b.started {
 		t.Errorf("seed 7: two runs ended in different snapshots or counts (%d, %d started), want the same", a.started, b.started)

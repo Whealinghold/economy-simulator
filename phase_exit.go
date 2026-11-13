@@ -333,7 +333,7 @@ func (w *World) execute(g RegionID, d Decision) error {
 // refusal returns the reason a decision is refused, or "" when it passes. The
 // kinds of the slice map one to one onto internal/occupation's.
 func (w *World) refusal(g RegionID, d *Decision) Reason {
-	if d.Kind < DecideRemove || d.Kind > DecideApply || (d.Kind == DecideApply && w.skills == nil) {
+	if !w.knownKind(d.Kind) {
 		return reasonUnknownKind
 	}
 	f := occupation.Facts{
@@ -344,10 +344,14 @@ func (w *World) refusal(g RegionID, d *Decision) Reason {
 		f.AgentKnown, f.External, f.SameRole, f.Weight = true, a.external && !a.mortal, a.role == d.Role, a.weight
 		f.OnJourney = (d.Kind == DecideSwitch || d.Kind == DecideApply) && w.onJourney(a) // only a switch and an apply read it (spec-spawner.md 4)
 	}
-	if w.skills != nil {
-		w.applyFacts(&f, w.agentIn(g, d.Agent), d)
-	}
+	w.applyFacts(&f, w.agentIn(g, d.Agent), d) // the traineeships' facts, a no-op while w.skills is nil
 	return refusalReason(occupation.Refuse(occupation.Kind(d.Kind), f))
+}
+
+// knownKind reports whether the world executes decisions of kind k: the four of
+// the slice, and an Apply while some role has a traineeship.
+func (w *World) knownKind(k DecisionKind) bool {
+	return k >= DecideRemove && (k <= DecideEnter || (k == DecideApply && w.skills != nil))
 }
 
 // agentIn returns the household agent id when it exists and its account is in

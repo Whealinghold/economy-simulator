@@ -483,21 +483,36 @@ func (c *decider) applies() {
 		s.ahead[i] = v.Roles[i].QueueAhead
 	}
 	for i := range v.Agents {
-		a := &v.Agents[i]
-		if a.External || s.acted[i] || a.Weight != 1 || a.InTraineeship || a.Queued || !occupation.ReviewDue(int64(a.Agent), v.Tick, v.ReviewTicks) {
-			continue
+		if c.mayApply(i) {
+			c.applyBest(&v.Agents[i])
 		}
-		var eo int64
-		ri := c.roleIdx(a.Role)
-		if ri >= 0 && s.sig[ri].has {
-			eo = s.sig[ri].e
-		}
-		for _, d := range s.train {
-			if d != ri && c.applyOK(a, d, eo) {
-				c.d.List = append(c.d.List, Decision{Kind: DecideApply, Agent: a.Agent, Role: v.Roles[d].Role, Cause: CauseReview})
-				s.ahead[d]++
-				break
-			}
+	}
+}
+
+// mayApply reports whether agent i can apply: weight 1, not external, not a trainee
+// or a trainer with trainees, not queued, not acted on and due for a review.
+func (c *decider) mayApply(i int) bool {
+	v, a := c.v, &c.v.Agents[i]
+	if a.External || c.s.acted[i] || a.Weight != 1 || a.InTraineeship || a.Queued {
+		return false
+	}
+	return occupation.ReviewDue(int64(a.Agent), v.Tick, v.ReviewTicks)
+}
+
+// applyBest appends the Apply of agent a to the best role, in the order of
+// s.train, for which the queue-discounted inequality holds.
+func (c *decider) applyBest(a *RegionAgent) {
+	v, s := c.v, c.s
+	var eo int64
+	ri := c.roleIdx(a.Role)
+	if ri >= 0 && s.sig[ri].has {
+		eo = s.sig[ri].e
+	}
+	for _, d := range s.train {
+		if d != ri && c.applyOK(a, d, eo) {
+			c.d.List = append(c.d.List, Decision{Kind: DecideApply, Agent: a.Agent, Role: v.Roles[d].Role, Cause: CauseReview})
+			s.ahead[d]++
+			return
 		}
 	}
 }

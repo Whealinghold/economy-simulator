@@ -35,9 +35,7 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if w.sub != nil {
 		return w.sub.fillView(w, v, a, &w.tk.vctx)
 	}
-	if w.skills != nil {
-		w.fillBoard(v, a)
-	}
+	w.fillBoard(v, a)
 	return nil
 }
 
@@ -81,9 +79,7 @@ func (w *World) checkTradePlan(a *agent, p *TradePlan) {
 // A module's step is appended below its slot, and the events stay last.
 func (w *World) removeAgent(a *agent, cause Cause) error {
 	tick, region := w.Tick(), w.regionOf(a)
-	if w.skills != nil {
-		w.dropAgent(a) // step 2: its queue entry goes (a trainer's trainees return before its own events)
-	}
+	w.dropAgent(a) // step 2 of the traineeships, nil-safe: a queue entry goes, a trainer's trainees return before its own events
 	if a.hasJob() {
 		w.abandonJob(a, region, ReasonAgentRemoved)
 	}
