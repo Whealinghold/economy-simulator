@@ -380,6 +380,15 @@ func TestCheckpoint_SkillsRefusesCorrupt(t *testing.T) {
 			s.trainees = [][5]int64{{a(hm[0]), hw, 1, 0, 1}, {a(ym[0]), yw, 1, 0, 1}}
 			s.trainers = []trainerRow{{yw, 0, []int64{a(ym[0])}}, {hw, 0, []int64{a(hm[0])}}}
 		}), nil},
+		// Defensive: an ID of 2^63 or more is a negative AgentID once converted; the
+		// cross-check indexed with it and panicked.
+		// Two real trainees keep the binary search of the first cross-check pass, so
+		// only the last element is wrong.
+		{"trainer lists an agent ID above int64", with(func(s *skillSection) {
+			s.trainees = [][5]int64{{a(hm[0]), hw, 1, 2, 3}, {a(hm[1]), hw, 1, 2, 3}}
+			s.trainers = []trainerRow{{hw, 0, []int64{a(hm[0]), a(hm[1]), -1}}}
+		}), nil},
+		{"trainer lists an agent beyond the agents", with(func(s *skillSection) { s.trainers = []trainerRow{{hw, 0, []int64{a(hm[0]), 1 << 40}}} }), nil},
 		{"trainee listed twice by its trainer", with(func(s *skillSection) { s.trainers = []trainerRow{{hw, 0, []int64{a(hm[0]), a(hm[0])}}} }), nil},
 		{"queued trainee", with(func(s *skillSection) { s.queues = []queueRow{{0, 1, [][3]int64{{a(hm[0]), 3, 0}}}} }), nil},
 		{"agent queued twice in one queue", with(func(s *skillSection) { s.queues = []queueRow{{0, 1, [][3]int64{{a(hm[1]), 3, 0}, {a(hm[1]), 4, 0}}}} }), nil},
@@ -415,6 +424,7 @@ func TestCheckpoint_SkillsRefusesCorrupt(t *testing.T) {
 			}
 			if err == nil {
 				t.Errorf("loadSkills + skillsCross accepted %+v, want a refusal", tt.sec)
+
 			}
 		})
 	}

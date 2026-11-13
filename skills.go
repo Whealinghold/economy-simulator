@@ -74,7 +74,7 @@ func (s *skills) cell(region RegionID, role RoleID) int { return int(region)*s.r
 
 // isTrainee reports whether the agent is a trainee.
 func (s *skills) isTrainee(id AgentID) bool {
-	return int(id) < len(s.trainee) && s.trainee[id].live
+	return id >= 0 && int(id) < len(s.trainee) && s.trainee[id].live
 }
 
 // trainerOf returns the trainer of the agent when it is a trainee.
@@ -87,7 +87,7 @@ func (s *skills) trainerOf(id AgentID) (AgentID, bool) {
 
 // isTrainer reports whether the agent has at least one trainee.
 func (s *skills) isTrainer(id AgentID) bool {
-	return int(id) < len(s.trainer) && len(s.trainer[id].trainees) > 0
+	return id >= 0 && int(id) < len(s.trainer) && len(s.trainer[id].trainees) > 0
 }
 
 // holds is the test of the region_bound obligation in_traineeship: a trainee, or a

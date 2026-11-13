@@ -212,6 +212,10 @@ func (w *World) readTrainers(r *codec.Reader) {
 		last := uint64(0)
 		for j := range m {
 			t := r.Strict(last, j > 0)
+			if t >= uint64(len(w.agents)) {
+				r.Failf("trainer %d lists %d, which is not an agent", id, t)
+				return
+			}
 			list, last = append(list, AgentID(t)), t
 		}
 		if r.Err() != nil {
