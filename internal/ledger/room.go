@@ -247,17 +247,27 @@ func (l *Ledger) RoomLeft(id int) (mass, bulk int64, err error) {
 // free is Room - Load - Pledge - Reserved per dimension, floored at 0. The
 // values are bounded far below int64 by the invariant, and a result that does
 // not fit is read as 0, the safe side.
-func (r *Room) free() (mass, bulk int64) {
-	return headroom(r.Mass, r.LoadMass, r.PledgeMass, r.ReservedMass), headroom(r.Bulk, r.LoadBulk, r.PledgeBulk, r.ReservedBulk)
+func (r *Room) free() (mass, bulk int64) { return r.freeWith(Size{}) }
+
+// freeWith is free after the load freed has gone: the floor at 0 is taken
+// after the freed load is added, so a pledge above the room is not forgiven.
+func (r *Room) freeWith(freed Size) (mass, bulk int64) {
+	return headroom(r.Mass, r.LoadMass, r.PledgeMass, r.ReservedMass, freed.Mass),
+		headroom(r.Bulk, r.LoadBulk, r.PledgeBulk, r.ReservedBulk, freed.Bulk)
 }
 
 // left is Room - Load - Reserved per dimension, floored at 0.
-func (r *Room) left() (mass, bulk int64) {
-	return headroom(r.Mass, r.LoadMass, 0, r.ReservedMass), headroom(r.Bulk, r.LoadBulk, 0, r.ReservedBulk)
+func (r *Room) left() (mass, bulk int64) { return r.leftWith(Size{}) }
+
+// leftWith is left after the load freed has gone.
+func (r *Room) leftWith(freed Size) (mass, bulk int64) {
+	return headroom(r.Mass, r.LoadMass, 0, r.ReservedMass, freed.Mass),
+		headroom(r.Bulk, r.LoadBulk, 0, r.ReservedBulk, freed.Bulk)
 }
 
-// headroom returns room less the three uses, or 0 when it is negative.
-func headroom(room, a, b, c int64) int64 {
+// headroom returns room less the three uses plus freed, or 0 when it is
+// negative.
+func headroom(room, a, b, c, freed int64) int64 {
 	v, ok := checked.Sub(room, a)
 	if ok {
 		v, ok = checked.Sub(v, b)
@@ -267,6 +277,10 @@ func headroom(room, a, b, c int64) int64 {
 	}
 	if !ok {
 		return 0
+	}
+	// freed is not negative, so the sum can only overflow upwards.
+	if v, ok = checked.Add(v, freed); !ok {
+		return math.MaxInt64
 	}
 	return max(v, 0)
 }
@@ -321,20 +335,11 @@ func checkRoomCredit(a *account, d, freed Size, form Credit) error {
 		if err := above(d, Size{r.PledgeMass, r.PledgeBulk}, ErrReservationExceeds); err != nil {
 			return err
 		}
-		lm, lb := r.left()
-		return above(d, Size{plus(lm, freed.Mass), plus(lb, freed.Bulk)}, ErrNoRoom)
+		lm, lb := r.leftWith(freed)
+		return above(d, Size{lm, lb}, ErrNoRoom)
 	}
-	fm, fb := r.free()
-	return above(d, Size{plus(fm, freed.Mass), plus(fb, freed.Bulk)}, ErrNoRoom)
-}
-
-// plus is a + b for two non-negative values, saturating at the largest int64
-// so that a limit never wraps below the credit it is tested against.
-func plus(a, b int64) int64 {
-	if v, ok := checked.Add(a, b); ok {
-		return v
-	}
-	return math.MaxInt64
+	fm, fb := r.freeWith(freed)
+	return above(d, Size{fm, fb}, ErrNoRoom)
 }
 
 // exceeds reports whether a + b is above room, for non-negative a and b; a sum

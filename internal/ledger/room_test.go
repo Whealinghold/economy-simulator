@@ -865,3 +865,27 @@ func TestRoom_OverflowingTransformKeepsItsFormsRefusal(t *testing.T) {
 		}
 	}
 }
+
+// TestRoom_TransformDoesNotForgiveAPledgeAboveTheRoom verifies the floor at 0
+// of the free room is taken after the freed inputs are added (3.4.4): in a room
+// of (10, 10) with load 5 and pledge 8 the free room is -3, so inputs of 5
+// free 2, and an output of 5 is ErrNoRoom while an output of 2 fits.
+//
+// Requirement: FR-STO-005
+func TestRoom_TransformDoesNotForgiveAPledgeAboveTheRoom(t *testing.T) {
+	t.Parallel()
+	f := newRoomFix(t, 1000, rSizes, true)
+	f.limit(t, f.a0, 10, 10)
+	f.give(t, f.a0, rUnit, 5)
+	if err := f.l.SetPledge(f.a0, 8, 8); err != nil {
+		t.Fatalf("setup: SetPledge: %v", err)
+	}
+	in := []ledger.Line{{Commodity: rUnit, Quantity: 5}}
+	if err := f.l.Transform(f.a0, in, []ledger.Line{{Commodity: rPlain, Quantity: 2}}); !errors.Is(err, ledger.ErrNoRoom) {
+		t.Errorf("output (4, 2) from freed (5, 5) with free -3 = %v, want ErrNoRoom", err)
+	}
+	if err := f.l.Transform(f.a0, in, []ledger.Line{{Commodity: rUnit, Quantity: 2}}); err != nil {
+		t.Errorf("output (2, 2) from freed (5, 5) with free -3 = %v, want nil", err)
+	}
+	f.checkLoad(t)
+}
