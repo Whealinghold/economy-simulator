@@ -1,6 +1,7 @@
 package economysim_test
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -582,6 +583,240 @@ func TestPolity_WarningsAreLogged(t *testing.T) {
 			if a.Key == "rule" && (a.Value.String() == "jurisdiction_empty" || a.Value.String() == "region_unassigned") {
 				t.Errorf("a clean polity logged %v, want no polity warning", l)
 			}
+		}
+	}
+}
+
+// TestPolity_Names verifies that the names table carries the jurisdictions indexed
+// by JurisdictionID, in ascending ID string order and not in the order the rows were
+// written, on both the snapshot and the world-created event, and is nil with the
+// module off.
+//
+// Requirement: FR-POL-027, FR-POL-002
+func TestPolity_Names(t *testing.T) {
+	t.Parallel()
+	rec := &recorder{}
+	w := polityWorld(t, economysim.WithObserver(rec))
+	want := []string{"coast", "crown", "inland", "uplands"} // written as crown, coast, inland, uplands
+	snap, err := w.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot() error = %v, want nil", err)
+	}
+	if !slices.Equal(snap.Names.Jurisdictions, want) {
+		t.Errorf("Snapshot().Names.Jurisdictions = %v, want %v", snap.Names.Jurisdictions, want)
+	}
+	var created *economysim.WorldCreated
+	for _, e := range rec.events {
+		if wc, ok := e.(economysim.WorldCreated); ok {
+			created = &wc
+		}
+	}
+	if created == nil || !slices.Equal(created.Names.Jurisdictions, want) {
+		t.Fatalf("WorldCreated names = %+v, want Jurisdictions %v", created, want)
+	}
+	p := w.Polity()
+	for id, name := range snap.Names.Jurisdictions {
+		if p.Name(economysim.JurisdictionID(id)) != name {
+			t.Errorf("Polity().Name(%d) = %q, want %q (the names table)", id, p.Name(economysim.JurisdictionID(id)), name)
+		}
+	}
+	snap.Names.Jurisdictions[0] = "changed"
+	if again, _ := w.Snapshot(); again.Names.Jurisdictions[0] != "coast" {
+		t.Error("a Snapshot shares the names of the jurisdictions with the world, want a copy")
+	}
+	off, err := economysim.NewWorld(referenceConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s, _ := off.Snapshot(); s.Names.Jurisdictions != nil {
+		t.Errorf("Names.Jurisdictions with the module off = %v, want nil", s.Names.Jurisdictions)
+	}
+}
+
+// TestPolity_WrittenOrderIsIrrelevant verifies that the order in which the rows of
+// the module were written changes nothing a consumer sees: the same configuration
+// hash, the same Polity value, the same names table and the same snapshot after some
+// steps, because the jurisdictions are sorted and the IDs follow the sorted order.
+//
+// Requirement: FR-POL-002, FR-POL-022, NFR-POL-004
+//
+// Guard: a map iteration or an unsorted slice in the construction would give two
+// consumers who write the same file in two orders two different JurisdictionIDs.
+func TestPolity_WrittenOrderIsIrrelevant(t *testing.T) {
+	t.Parallel()
+	a := polityWorldConfig()
+	b := polityWorldConfig()
+	slices.Reverse(b.Modules.Polity.Jurisdictions)
+	slices.Reverse(b.Modules.Polity.Members)
+	if economysim.HashConfig(a) != economysim.HashConfig(b) {
+		t.Error("HashConfig differs between two orders of the same rows")
+	}
+	wa, err := economysim.NewWorld(a, economysim.WithSeed(3))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wb, err := economysim.NewWorld(b, economysim.WithSeed(3))
+	if err != nil {
+		t.Fatalf("NewWorld(reversed rows) error = %v, want nil", err)
+	}
+	for range 4 {
+		if err := wa.Step(); err != nil {
+			t.Fatal(err)
+		}
+		if err := wb.Step(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sa, _ := wa.Snapshot()
+	sb, _ := wb.Snapshot()
+	if !reflect.DeepEqual(wa.Polity(), wb.Polity()) || !reflect.DeepEqual(sa, sb) {
+		t.Error("two orders of the same rows gave a different Polity or snapshot")
+	}
+}
+
+// TestPolity_DeterministicEvents verifies that two worlds from one configuration and
+// seed emit the same events in the same order over several steps, the stream of
+// construction included, so no map order or unstable sort of the module reaches an
+// observer.
+//
+// Requirement: NFR-POL-004
+func TestPolity_DeterministicEvents(t *testing.T) {
+	t.Parallel()
+	run := func() []economysim.Event {
+		rec := &recorder{}
+		w := polityWorld(t, economysim.WithSeed(9), economysim.WithObserver(rec), economysim.WithAudit())
+		for range 8 {
+			if err := w.Step(); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return rec.events
+	}
+	one, two := run(), run()
+	if len(one) == 0 || len(one) != len(two) {
+		t.Fatalf("two runs emitted %d and %d events, want equal and non-zero", len(one), len(two))
+	}
+	for i := range one {
+		if !reflect.DeepEqual(one[i], two[i]) {
+			t.Fatalf("event %d differs between two runs: %#v and %#v", i, one[i], two[i])
+		}
+	}
+}
+
+// TestPolity_OverlayBuildsAWorld is the integration of the loader, the validator and
+// the world: overlay/polity.toml, layered on the warm five, loads, validates and
+// builds a world whose Polity is the tree the file describes (a root over two
+// groups, three regions in one and two in the other), the names table lists the
+// three jurisdictions, the module is named in the snapshot, and the world runs ten
+// ticks with the audit on.
+//
+// Requirement: FR-POL-006, FR-POL-009, FR-POL-025, FR-POL-027, FR-CFG-092
+func TestPolity_OverlayBuildsAWorld(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	t.Parallel()
+	cfg := loadValidPack(t, fivePolity...)
+	w, err := economysim.NewWorld(cfg, economysim.WithSeed(1), economysim.WithAudit())
+	if err != nil {
+		t.Fatalf("NewWorld(five + polity.toml) error = %v, want nil", err)
+	}
+	for range 10 {
+		if err := w.Step(); err != nil {
+			t.Fatalf("Step() at tick %d error = %v, want nil", w.Tick(), err)
+		}
+	}
+	p := w.Polity()
+	root, ok := p.Lookup("root")
+	groupA, okA := p.Lookup("group_a")
+	groupB, okB := p.Lookup("group_b")
+	if !ok || !okA || !okB || p.Len() != 3 {
+		t.Fatalf("Lookup root, group_a, group_b = %v %v %v, Len() = %d, want all found and 3", ok, okA, okB, p.Len())
+	}
+	snap, err := w.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(snap.Modules, "polity") || !slices.Equal(snap.Names.Jurisdictions, []string{"group_a", "group_b", "root"}) {
+		t.Errorf("Snapshot() Modules = %v, Names.Jurisdictions = %v, want polity and [group_a group_b root]", snap.Modules, snap.Names.Jurisdictions)
+	}
+	byName := map[string]economysim.RegionID{}
+	for i, r := range snap.Names.Regions {
+		byName[r] = economysim.RegionID(i)
+	}
+	for region, group := range map[string]economysim.JurisdictionID{"centre": groupA, "north": groupA, "west": groupA, "east": groupB, "south": groupB} {
+		id, found := byName[region]
+		if !found {
+			t.Fatalf("region %q is not in the names table %v", region, snap.Names.Regions)
+		}
+		if got := p.Chain(id); !slices.Equal(got, []economysim.JurisdictionID{group, root}) {
+			t.Errorf("Chain(%s) = %v, want [%d %d] (its group, then the root)", region, got, group, root)
+		}
+	}
+	if got := len(p.Regions(root)); got != 5 {
+		t.Errorf("len(Regions(root)) = %d, want 5", got)
+	}
+	if len(p.Governed()) != 0 {
+		t.Errorf("Governed() = %v, want none: the overlay has no seat", p.Governed())
+	}
+}
+
+// TestPolity_WithTheExternalModule verifies that the polity module and the external
+// module work together: an outside node may be a member of a jurisdiction and takes a
+// chain like any region, the world builds and steps with the audit on, the module
+// list names both, and a seat on the node is refused (the one rule that needs the
+// other module).
+//
+// Requirement: FR-POL-014, FR-POL-001
+func TestPolity_WithTheExternalModule(t *testing.T) {
+	t.Parallel()
+	c := polityOutsideConfig()
+	w, err := economysim.NewWorld(c, economysim.WithAudit())
+	if err != nil {
+		t.Fatalf("NewWorld(polity + external) error = %v, want nil", err)
+	}
+	for range 3 {
+		if err := w.Step(); err != nil {
+			t.Fatalf("Step() error = %v, want nil", err)
+		}
+	}
+	snap, err := w.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(snap.Modules, "polity") || !slices.Contains(snap.Modules, "external") {
+		t.Errorf("Snapshot().Modules = %v, want polity and external", snap.Modules)
+	}
+	p := w.Polity()
+	realm, _ := p.Lookup("realm")
+	for r := range snap.Names.Regions {
+		if got := p.Chain(economysim.RegionID(r)); !slices.Equal(got, []economysim.JurisdictionID{realm}) {
+			t.Errorf("Chain(%s) = %v, want [realm]: every region, the outside nodes too, is a member", snap.Names.Regions[r], got)
+		}
+	}
+	bad := polityOutsideConfig()
+	bad.Modules.Polity.Jurisdictions[0].Seat = "coast"
+	if _, err := economysim.NewWorld(bad); !errors.Is(err, economysim.ErrSeatOutsideNode) {
+		t.Errorf("NewWorld(seat on an outside node) error = %v, want ErrSeatOutsideNode", err)
+	}
+}
+
+// TestPolity_BetweenWithTheModuleOff verifies that Between on the empty Polity of a
+// world with the module off lists no edge, whatever the graph and the IDs.
+//
+// Requirement: FR-POL-001, FR-POL-011
+func TestPolity_BetweenWithTheModuleOff(t *testing.T) {
+	t.Parallel()
+	c := polityWorldConfig()
+	c.Modules.Polity = nil
+	w, err := economysim.NewWorld(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := w.Polity()
+	for _, ab := range [][2]economysim.JurisdictionID{{0, 1}, {1, 0}, {0, 0}, {-1, 3}} {
+		if got := p.Between(w.Graph(), ab[0], ab[1]); len(got) != 0 {
+			t.Errorf("Between(%d, %d) with the module off = %v, want none", ab[0], ab[1], got)
 		}
 	}
 }
