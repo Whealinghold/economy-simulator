@@ -220,3 +220,22 @@ func TestExcessOrder_UnitsSumSaturates(t *testing.T) {
 		t.Errorf("ExcessOrder = %v, %v, want the first candidate to go first", steps, met)
 	}
 }
+
+// TestExcessOrder_ShortfallThatOverflowsSaturates verifies a load above the
+// room by more than int64 holds (a negative room, which no ledger produces) is
+// a shortfall, not a wrapped difference that reads as none: the lot goes and
+// the shortfall that remains is reported as not met.
+//
+// Fix: DP3-STO-3. load - room wrapped to a negative number, so ExcessOrder
+// returned no step and met true for an account far above its room.
+//
+// Requirement: FR-STO-018
+func TestExcessOrder_ShortfallThatOverflowsSaturates(t *testing.T) {
+	t.Parallel()
+	cands := []room.Candidate{{Commodity: 1, Size: room.Pair{Mass: 1, Bulk: 1}, Lots: []int64{7}}}
+	steps, met := room.ExcessOrder(room.Pair{Mass: math.MaxInt64, Bulk: 1}, room.Pair{Mass: -1, Bulk: 1}, cands)
+	want := []room.Step{{Cand: 0, Lot: 0, Units: 7}}
+	if met || !slices.Equal(steps, want) {
+		t.Errorf("ExcessOrder = %v, %v, want %v, false (the 7 units cannot meet it)", steps, met, want)
+	}
+}
