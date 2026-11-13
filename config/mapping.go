@@ -318,6 +318,47 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Polity = l.polity(ps)
 		ps.finish()
 	}
+	if ss := m.sub("storage"); ss != nil {
+		cfg.Modules.Storage = l.storage(ss)
+		ss.finish()
+	}
+}
+
+// storage reads [modules.storage] (spec-config.md 6.2.1, spec-storage.md 12.5): the
+// base room as [base] (keys mass, bulk), a role row as [role.<id>] (key stores, and
+// a [role.<id>.base] table), and a class as [class.<id>] (keys mass, bulk, needs,
+// label). A key-less table switches the module on; a base table with no key is a
+// base room of 0, and an absent one is unlimited. The rows come out in ID order
+// because every level is read in the order of the keys.
+func (l *loader) storage(t *tbl) *economysim.Storage {
+	var m economysim.Storage
+	m.Base = capacity(t.sub("base"))
+	t.entities("role", func(id string, e *tbl) {
+		r := economysim.RoleRoom{Role: id}
+		e.strings("stores", &r.Stores)
+		r.Base = capacity(e.sub("base"))
+		m.Roles = append(m.Roles, r)
+	})
+	t.entities("class", func(id string, e *tbl) {
+		c := economysim.StoreClass{ID: id}
+		readInts(e, []intField{{"mass", &c.Mass}, {"bulk", &c.Bulk}})
+		e.text("needs", &c.Needs)
+		e.text("label", &c.Label)
+		m.Classes = append(m.Classes, c)
+	})
+	return &m
+}
+
+// capacity reads a room table (keys mass and bulk) and finishes it; nil for an
+// absent table.
+func capacity(t *tbl) *economysim.Capacity {
+	if t == nil {
+		return nil
+	}
+	var c economysim.Capacity
+	readInts(t, []intField{{"mass", &c.Mass}, {"bulk", &c.Bulk}})
+	t.finish()
+	return &c
 }
 
 // polity reads [modules.polity] (spec-config.md 6.2, spec-polity.md 3.4.2): the
@@ -678,6 +719,7 @@ func (l *loader) moneySupply(t *tbl) *economysim.MoneySupply {
 			tg.text("kind", &f.Target.Kind)
 			tg.text("region", &f.Target.Region)
 			tg.text("role", &f.Target.Role)
+			tg.text("store", &f.Target.Store)
 			tg.finish()
 		}
 		readInts(e, []intField{

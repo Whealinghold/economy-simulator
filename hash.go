@@ -469,7 +469,7 @@ func pairsModules(e *encoder, m Modules) {
 	pairsLaterModules(e, m)
 }
 
-// pairsLaterModules writes the pairs of the modules of ids 9, 10, 13, 19 and 25 of
+// pairsLaterModules writes the pairs of the modules of ids 9, 10, 12, 13, 19 and 25 of
 // Modules, after those pairsModules writes (a continuation for the Lizard limit).
 func pairsLaterModules(e *encoder, m Modules) {
 	if m.Migration != nil {
@@ -480,6 +480,11 @@ func pairsLaterModules(e *encoder, m Modules) {
 	if m.Merchants != nil {
 		e.id(10)
 		e.num(1, m.Merchants.MaxOpen)
+		e.end()
+	}
+	if m.Storage != nil {
+		e.id(12)
+		pairsStorage(e, *m.Storage)
 		e.end()
 	}
 	if m.Employment != nil {
@@ -495,6 +500,40 @@ func pairsLaterModules(e *encoder, m Modules) {
 		e.id(25)
 		e.end()
 	}
+}
+
+// pairsStorage writes the pairs of a Storage: Base 1, Roles 2, Classes 3. A
+// Capacity has Mass 1 and Bulk 2; a RoleRoom has Role 1, Base 2 and Stores 3, the
+// class IDs in class order; a StoreClass has ID 1, Mass 2, Bulk 3 and Needs 4
+// (Label is presentation only and has no id). A Base is a pointer: it is written
+// when it is non-nil even if both fields are zero, so an unlimited role and one with
+// a zero base room differ. The lists are in canonical order, the rows by role and
+// the classes by ID.
+func pairsStorage(e *encoder, s Storage) {
+	pairsBase(e, 1, s.Base)
+	encodeList(e, 2, s.Roles, func(e *encoder, r RoleRoom) {
+		e.text(1, r.Role)
+		pairsBase(e, 2, r.Base)
+		e.texts(3, r.Stores)
+	})
+	encodeList(e, 3, s.Classes, func(e *encoder, c StoreClass) {
+		e.text(1, c.ID)
+		e.num(2, c.Mass)
+		e.num(3, c.Bulk)
+		e.text(4, c.Needs)
+	})
+}
+
+// pairsBase writes a Capacity pointer under id: nothing for nil, else the id, the
+// pairs Mass 1 and Bulk 2 and the terminator, even when both are zero.
+func pairsBase(e *encoder, id uint16, c *Capacity) {
+	if c == nil {
+		return
+	}
+	e.id(id)
+	e.num(1, c.Mass)
+	e.num(2, c.Bulk)
+	e.end()
 }
 
 // pairsPolity writes the pairs of a PolityConfig: Jurisdictions 1, Members 2.
@@ -526,6 +565,7 @@ func pairsMoneyFlow(e *encoder, f MoneyFlow) {
 		e.text(1, f.Target.Kind)
 		e.text(2, f.Target.Region)
 		e.text(3, f.Target.Role)
+		e.text(4, f.Target.Store)
 	})
 	e.num(4, f.Amount)
 	e.num(5, f.Level)

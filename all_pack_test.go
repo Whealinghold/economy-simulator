@@ -145,7 +145,7 @@ func TestAllPack_EveryModuleIsOn(t *testing.T) {
 // Phase 3), which move golden/all with their explanation (testing.md 7.1.1). The
 // polity module's layer joins the all-on set once, jointly, at the close of Stage 3
 // (the owner decision of 2026-11-13: no Stage 3 module moves golden/all on its own).
-var allPackNotYetOn = map[string]bool{"Employment": true, "Polity": true}
+var allPackNotYetOn = map[string]bool{"Employment": true, "Polity": true, "Storage": true}
 
 // TestAllPack_OffGoldenUnmoved verifies that the warm five alone, every module off,
 // still has the configuration hash its expected file recorded, and that the all-on

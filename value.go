@@ -48,6 +48,12 @@ type ResourceID int
 // exchange.
 type ModeID int
 
+// StoreClassID is the index of a store class in ascending order of its ID
+// string, which is its position in Config().Modules.Storage.Classes (spec-storage.md
+// 3.6.2). It is not stable across configurations; use the string ID to persist or
+// exchange.
+type StoreClassID int
+
 // ShipmentID identifies a shipment. IDs are assigned in order of dispatch from 0
 // and are never reused within a world.
 type ShipmentID int64
