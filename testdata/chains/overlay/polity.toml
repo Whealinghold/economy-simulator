@@ -1,0 +1,21 @@
+# The polity module on the warm five, ungoverned (spec-polity.md 12.4.1, spec-reference-chain.md
+# 4.5, plan 3-pol). Layer it after the pack: base.toml, lines.toml, five.toml, warm-five.toml, this file.
+# A root jurisdiction over two child jurisdictions, one of three regions and one of two, with no seat
+# and no start_money: no account, no pseudo-agent and no ID shift, so the world is exactly the world
+# without the module except for the names table, the configuration hash, the module list and the
+# construction summary (FR-POL-019, scenario S112). A test double, not a design.
+
+[modules.polity.jurisdiction.root]
+
+[modules.polity.jurisdiction.group_a]
+parent = "root"
+
+[modules.polity.jurisdiction.group_b]
+parent = "root"
+
+[modules.polity.member]
+centre = "group_a"
+north = "group_a"
+west = "group_a"
+east = "group_b"
+south = "group_b"

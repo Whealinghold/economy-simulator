@@ -764,7 +764,7 @@ func TestValidate_LowestTargetSpreadEdges(t *testing.T) {
 // is a range error of its own) and a scale above 1 (a scale of exactly 1 is
 // valid).
 //
-// Requirement: FR-CFG-054
+// Requirement: FR-CFG-054, FR-SKL-012
 func TestValidate_TraineeshipNeedsWeightOneEdges(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1916,5 +1916,58 @@ func TestWarnings_RoleStockMoneyAndLockstepEdges(t *testing.T) {
 				t.Errorf("Warnings(%s) has %s at %v = %v, want %v; warnings: %v", tt.name, tt.rule, tt.path, has, tt.fires, got)
 			}
 		})
+	}
+}
+
+// TestValidate_SkillParameterEdges verifies the bounds of the four skill-barrier
+// parameters of spec-skill-barriers.md 5 at both edges: the limit itself passes
+// and one past it is ErrOutOfBounds at that field's path.
+//
+// Guard: the tests of the other bounds in this file read one side of the
+// range. An off-by-one in the table of bounds.go would accept a value one past
+// the limit (or refuse the limit) and pass both.
+//
+// Requirement: FR-SKL-026, FR-SKL-006
+func TestValidate_SkillParameterEdges(t *testing.T) {
+	t.Parallel()
+	role := func(f func(*economysim.Role, int64)) func(*economysim.Config, int64) {
+		return func(c *economysim.Config, v int64) { f(roleOf(c, "cook"), v) }
+	}
+	tests := []struct {
+		name     string
+		set      func(*economysim.Config, int64)
+		path     []string
+		lo, hi   int64
+		scaleOne bool // TrainingTicks above 0 needs a scale of 1 (FR-SKL-012)
+	}{
+		{"training ticks", role(func(r *economysim.Role, v int64) { r.TrainingTicks = v }),
+			[]string{"roles", "cook", "training_ticks"}, 0, 1_000_000, true},
+		{"max trainees", role(func(r *economysim.Role, v int64) { r.MaxTrainees = v }),
+			[]string{"roles", "cook", "max_trainees"}, 1, 100, false},
+		{"teaching load", role(func(r *economysim.Role, v int64) { r.TeachingLoad = v }),
+			[]string{"roles", "cook", "teaching_load"}, 0, 10_000, false},
+		{"capital return", func(c *economysim.Config, v int64) { c.Regions[0].CapitalReturn = v },
+			[]string{"regions", "north", "capital_return"}, 0, economysim.MaxBasisPoints, false},
+	}
+	for _, tt := range tests {
+		for _, edge := range []struct {
+			name  string
+			value int64
+			bad   bool
+		}{{"below", tt.lo - 1, true}, {"lower limit", tt.lo, false}, {"upper limit", tt.hi, false}, {"above", tt.hi + 1, true}} {
+			t.Run(tt.name+" "+edge.name, func(t *testing.T) {
+				t.Parallel()
+				c := referenceConfig()
+				tt.set(&c, edge.value)
+				if tt.scaleOne {
+					c.Groups[0].Scale = 1 // the cook's group; a larger scale is its own error
+				}
+				vs, _ := violations(c.Validate())
+				got := len(boundsAt(vs, economysim.ErrOutOfBounds, tt.path)) > 0
+				if got != edge.bad {
+					t.Errorf("Validate(%s = %d): out of bounds at %v = %t, want %t", tt.name, edge.value, tt.path, got, edge.bad)
+				}
+			})
+		}
 	}
 }

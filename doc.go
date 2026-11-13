@@ -315,6 +315,30 @@
 //     one account to another under a reason, refused whole or applied whole.
 //   - Trainee: an agent that learns a role under a trainer for a number of
 //     ticks; a recipe may be trainee-eligible.
+//   - Trainer: a living agent holding a role with TrainingTicks above 0 that
+//     takes trainees of that role, at most MaxTrainees at once.
+//   - Application: an agent's request to join the traineeship queue of a role
+//     in its region; one at a time. The default spawner makes it only for an
+//     agent of weight 1 when the return on the tool and the training beats the
+//     required return.
+//   - Queue (of applicants): the applicants for a role in a region, in the order
+//     of the tick they applied and then the agent ID; a trainee returned by a
+//     trainer's removal rejoins it ahead by ticks served.
+//   - Place: room for one trainee with a trainer; a place opens when a trainer
+//     holds fewer than MaxTrainees and the gain is not negative.
+//   - Teaching tick: a tick in which a trainer's teaching accumulator reaches
+//     10 000 and the trainer starts no skilled recipe; a job in progress goes on.
+//   - Teaching load: the share of a trainer's working time one trainee takes, in
+//     basis points (Role.TeachingLoad).
+//   - Expected wait: the ticks an applicant expects to queue, the applicants ahead
+//     times TrainingTicks over the places, rounded up.
+//   - Board: the upkeep a trainer supplies to its trainees in kind, consumed from
+//     the trainer's account; it is the trainee's whole income.
+//   - Held (completion): a trainee at TrainingTicks that stays a trainee, and keeps
+//     its trainer's place, while the target role has no headroom for it.
+//   - TraineeshipStarted, TraineeshipCompleted, TraineeshipEnded: the events of a
+//     place filled, a course completed (the agent changes role) and a course that
+//     ends without completing (the reason names why).
 //   - Upkeep: the goods one household must consume each tick to stay alive.
 //   - Warning: a configuration that is legal but probably a mistake; Warnings
 //     returns it as a value with a path and a rule and it never fails
@@ -1374,4 +1398,35 @@
 //   - StoreChanged: the event of one store added to an agent or removed from it.
 //   - RoomLimited: the event of a region and role's tick in which a room cut or refused
 //     a start, a bid or a shipment, or the default strategy discarded.
+//   - Jurisdiction: a named node of one tree over the regions, with an optional parent
+//     and an optional seat; it has no behaviour, law or state of its own (Jurisdiction
+//     is the type of its configuration row, JurisdictionID its typed ID, an index in
+//     ascending order of the ID string, and NoJurisdiction means none).
+//   - Polity: the jurisdiction tree and the membership of the regions, as a plain-data
+//     value with the queries of the module (Polity); PolityConfig is the module, a
+//     pointer of Config.Modules (spec-polity.md). Member is the row that makes a region a
+//     direct member of a jurisdiction.
+//   - Root (of a polity): a jurisdiction with no parent; a forest has several.
+//   - Chain (of a region): its direct jurisdiction and the ancestors of it, innermost
+//     first; empty for a region with no row.
+//   - Covers: a jurisdiction covers a region when it is in the region's chain.
+//   - Common jurisdiction: the innermost jurisdiction that covers two regions, or none.
+//   - Region crossing: for an ordered pair of regions, the jurisdictions a good exits (innermost
+//     first) and enters (outermost first) in going from the first to the second (the type
+//     Crossing).
+//   - Exit, Enter: the two lists of a crossing.
+//   - Border: the crossing of an ordered pair when Exit or Enter is not empty; it is
+//     derived, not stored.
+//   - Border depth: the depth of the common jurisdiction of two regions, or -1.
+//   - Seat: the region a jurisdiction is governed from, where its treasury account sits.
+//   - Governed: a jurisdiction with a seat; it has a treasury.
+//   - Grouping: a jurisdiction with no seat; it has a place in the tree and creates
+//     nothing.
+//   - Treasury: the account of a governed jurisdiction, of the kind Treasury, with a
+//     pseudo-agent; it is not the pool of a region (JurisdictionRow is its snapshot row).
+//   - Treasury sector: the non-boundary sector of the money identity that holds the
+//     treasury accounts (RegionRow.MoneyTreasury).
+//   - Combining mode: how the rows of a table keyed by jurisdiction combine along a
+//     chain: innermost (the first row), added (the sum) or scaled (the product, rounded
+//     once).
 package economysim

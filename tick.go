@@ -39,6 +39,7 @@ var positionList = [...]position{
 	{"P1.8", "EXT", line},
 	{"P1.9", "AGT", line},
 	{"P2.1", "PRO", line},
+	{"P2.2", "SKL", line},
 	{"P2.3", "RES", line},
 	{"P2.4", "SUB", line},
 	{"P2.5", "AGT", line},
@@ -81,7 +82,7 @@ var positionList = [...]position{
 var notBuiltPositions = [...]string{
 	"P0.3a",
 	"P1.3a", "P1.7a", "P1.7b", "P1.9a",
-	"P2.2", "P2.5a", "P2.8b",
+	"P2.5a", "P2.8b",
 	"P3.1a", "P3.3b", "P3.3c", "P3.4a", "P3.6a", "P3.6b", "P3.6c",
 	"P4.1a",
 	"P7.2a", "P7.2b",
@@ -135,6 +136,9 @@ func (w *World) positions() error {
 // in source order between positions and positionsTail.
 func (w *World) positionsProduce() error {
 	w.p21Complete()
+	if w.skills != nil {
+		w.p22Teaching()
+	}
 	w.p23Snapshot()
 	if w.sub != nil {
 		w.p24OwnUse()

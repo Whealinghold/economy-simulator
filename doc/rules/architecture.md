@@ -96,7 +96,10 @@ economy-sim/
   tick.go                the tick: one line per position of spec-world.md 6, and
                          the position table a test reads (2.10.3)
 
-  # Core concept files, one per concept.
+  # Core concept files, one per concept. skills.go is core data (the skill
+  # barriers have no Modules pointer, spec-config.md 3.7.2) and follows the
+  # module-file order of 2.10.1 with a nil pointer, w.skills, nil unless some
+  # role has TrainingTicks above 0.
   value.go               Money, Price, Quantity and the typed IDs (3.3)
   random.go              the seed, the one PCG and Rand, the site table and the
                          keyed stream (7.3, ADR 0008)
@@ -132,6 +135,7 @@ economy-sim/
   external_state.go                                                    (EXT)
   integration_estate.go  integration_directive.go  integration_slots.go  (INT)
   storage_validate.go  storage_commit.go  storage_report.go          (STO)
+  skills_queue.go  skills_report.go                                    (SKL)
 
   # Module files, one per optional module (2.10.1), named after the concept.
   demand.go  resources.go  subsistence.go  population.go  transport.go
@@ -168,7 +172,8 @@ economy-sim/
     moneyflow/  population/  transit/  endowment/  rumour/  outside/  ownuse/
     migration/  merchant/  room/  employment/  settlement/  tenure/  polity/
     credit/  facility/  risk/  fiscal/  institution/  saving/  technology/
-    policy/  insure/     one package per module whose rules need arithmetic or
+    policy/  insure/  skill/
+                         one package per module whose rules need arithmetic or
                          matching; the module file converts (2.9)
     measure/  verdict/  design/  reduce/  calibration/
                          the platform: the arithmetic of indicator/, the
@@ -1077,4 +1082,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 310908f2ed0da3b724d90059
+RULE-TAG: 354c9304a17403fb4bd93ae8

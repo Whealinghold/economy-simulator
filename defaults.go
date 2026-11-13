@@ -289,3 +289,8 @@ func DefaultOutsideGate(region string) OutsideGate {
 // DefaultEmployer returns the employer block with the placeholder share of
 // spec-employment.md 24.3.2: 5 000 basis points of the receipts (N-015, N-027).
 func DefaultEmployer() Employer { return Employer{PayrollBP: 5_000} }
+
+// The polity module (spec-polity.md 8) has no tunable with a default: a tree and
+// a membership are structure, and the default of the section as a whole is "no
+// jurisdictions", which is the world without the module. Its bounds are in
+// bounds.go (MaxJurisdictions, MaxPolityDepth).

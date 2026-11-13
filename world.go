@@ -108,9 +108,15 @@ type World struct {
 	// employment is the state of the employment module (payroll form), nil when
 	// it is off (employment.go).
 	employment *employment
+	// skills is the state of the traineeships, nil unless some role has
+	// TrainingTicks above 0 (skills.go). The skill barriers are core data and
+	// have no Modules pointer.
+	skills *skills
 	// external is the state of the external-sector module, nil when it is off
 	// (external.go).
 	external *external
+	// polity is the state of the polity module, nil when it is off (polity.go).
+	polity *polity
 	// integ is what INT keeps (integration.go).
 	integ integrationState
 	// firstHousehold is the agent ID of the first household: the number of

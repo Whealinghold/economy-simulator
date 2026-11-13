@@ -42,6 +42,9 @@ ShipmentRejected
 TickEnded
 TickStarted
 TradeExecuted
+TraineeshipCompleted
+TraineeshipEnded
+TraineeshipStarted
 TransitFactorChanged
 UpkeepShortfall
 WantShortfall

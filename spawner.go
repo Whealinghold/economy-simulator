@@ -119,6 +119,11 @@ type RoleView struct {
 	// tick, after its household cap; 0 while the module is off
 	// (spec-population.md 4.1).
 	PopBirths int64
+	// QueueAhead is the applicants queued for the role in the region, who are ahead
+	// of a new applicant (spec-skill-barriers.md 4.5). Trainers is the trainers
+	// that can take a trainee, and MaxTrainees the most trainees one of them may
+	// hold. All three are 0 for a role with no training.
+	QueueAhead, Trainers, MaxTrainees int64
 }
 
 // RegionAgent is one agent in a region as a spawner sees it. The name is not
@@ -154,13 +159,21 @@ type RegionAgent struct {
 	// births of RoleView.PopBirths) leaves the carry spent and the household count
 	// unmoved: DefaultSpawner plans both.
 	PopDeaths int64
+	// InTraineeship is true for a trainee, which may be neither switched nor
+	// applied, and for a trainer with trainees, which may not be switched
+	// (spec-skill-barriers.md 4.6.1).
+	InTraineeship bool
+	// Surplus is the agent's observed income per tick above its own upkeep,
+	// floored at 0, the surplus it gives up while in training
+	// (spec-skill-barriers.md 4.5).
+	Surplus Money
 }
 
 // DecisionKind is the kind of a decision of a spawner.
 type DecisionKind int
 
-// The kinds of decision. A module appends its own (DecideApply, by the skills
-// module).
+// The kinds of decision. A module appends its own (DecideApply, by the skill
+// barriers).
 const (
 	// DecideRemove removes every household of an agent.
 	DecideRemove DecisionKind = iota
@@ -170,6 +183,11 @@ const (
 	DecideSwitch
 	// DecideEnter adds Households to a role in the region.
 	DecideEnter
+	// DecideApply joins the traineeship queue of Role for Agent, an agent of
+	// weight 1 (spec-skill-barriers.md 4.5). The world executes it from the
+	// queue's phase (plan 3-skl Phase 4); until then it is refused as an unknown
+	// kind.
+	DecideApply
 )
 
 // Decision is one step of a plan.
@@ -614,26 +632,30 @@ func (c *decider) enter(r int, n int64) {
 	c.d.List = append(c.d.List, Decision{Kind: DecideEnter, Role: c.v.Roles[r].Role, Households: n, Cause: CauseRenewal})
 }
 
-// refusalReason maps a refusal of internal/occupation to its Reason. It is
-// total over the refusals of the slice; RefusalNone has no reason and gives "".
+// refusalReasons maps a refusal of internal/occupation to its Reason, indexed by
+// the refusal; it is never written. RefusalNone has no reason ("").
+var refusalReasons = [occupation.RefusalEnd]Reason{
+	occupation.UnknownAgent:     ReasonUnknownAgent,
+	occupation.UnknownRole:      ReasonUnknownRole,
+	occupation.ExternalAgent:    ReasonExternalAgent,
+	occupation.SameRole:         ReasonSameRole,
+	occupation.BadHouseholds:    ReasonBadHouseholds,
+	occupation.UnsupportedCause: ReasonUnsupportedCause,
+	occupation.OnJourney:        ReasonOnJourney,
+	occupation.InTraineeship:    ReasonInTraineeship,
+	occupation.NeedsWeightOne:   ReasonNeedsWeightOne,
+	occupation.NeedsTraineeship: ReasonNeedsTraineeship,
+	occupation.AlreadyQueued:    ReasonAlreadyQueued,
+}
+
+// refusalReason maps a refusal of internal/occupation to its Reason. It is total
+// over the refusals; RefusalNone, and a value outside the enumeration, have no
+// reason and give "".
 func refusalReason(r occupation.Refusal) Reason {
-	switch r {
-	case occupation.UnknownAgent:
-		return ReasonUnknownAgent
-	case occupation.UnknownRole:
-		return ReasonUnknownRole
-	case occupation.ExternalAgent:
-		return ReasonExternalAgent
-	case occupation.SameRole:
-		return ReasonSameRole
-	case occupation.BadHouseholds:
-		return ReasonBadHouseholds
-	case occupation.UnsupportedCause:
-		return ReasonUnsupportedCause
-	case occupation.OnJourney:
-		return ReasonOnJourney
+	if r < 0 || r >= occupation.RefusalEnd {
+		return ""
 	}
-	return ""
+	return refusalReasons[r]
 }
 
 // saveSpawner is tag 9 (spec-checkpoint.md 4.2; plan 2-2 D250): the sparse renewal

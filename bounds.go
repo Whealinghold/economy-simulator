@@ -508,3 +508,15 @@ const (
 	// the rows together move at most MaxMoney of list value.
 	MaxLineTotal = MaxMoney / (MaxCounterparties * MaxOutsideLines)
 )
+
+// The bounds of the polity module (spec-polity.md 8). Both are placeholders
+// (N-015, spec-polity.md 17.7).
+const (
+	// MaxJurisdictions is the most jurisdictions: the value of MaxRegions, since a
+	// jurisdiction that covers no region draws a warning and more is pointless.
+	MaxJurisdictions = MaxRegions
+	// MaxPolityDepth is the most levels of a chain of jurisdictions: a chain has at
+	// most this many entries and a jurisdiction at most this many less one
+	// ancestors.
+	MaxPolityDepth = 8
+)
