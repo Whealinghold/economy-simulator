@@ -2,6 +2,7 @@ package ledger_test
 
 import (
 	"errors"
+	"math"
 	"reflect"
 	"testing"
 
@@ -888,4 +889,30 @@ func TestRoom_TransformDoesNotForgiveAPledgeAboveTheRoom(t *testing.T) {
 		t.Errorf("output (2, 2) from freed (5, 5) with free -3 = %v, want nil", err)
 	}
 	f.checkLoad(t)
+}
+
+// TestRoom_OverflowingCreditIsRefusedInARoomOfMaxInt64 verifies a credit whose
+// load does not fit int64 is refused with its form's refusal even where the
+// free room is the largest int64: the load is above any room, so it must not
+// be saturated and compared with the room.
+//
+// Fix: DP3-STO-1. The load was saturated to MaxInt64 and fitted a free room of
+// MaxInt64, so the credit passed the check and loadAdd then panicked on the
+// overflow it was meant to rule out.
+//
+// Requirement: FR-STO-007
+func TestRoom_OverflowingCreditIsRefusedInARoomOfMaxInt64(t *testing.T) {
+	t.Parallel()
+	const maxQty = int64(1e12)
+	sizes := []ledger.Size{{Mass: 1e7, Bulk: 1}, {}, {}, {}, {}}
+	f := newRoomFix(t, maxQty, sizes, true)
+	f.limit(t, f.a0, math.MaxInt64, math.MaxInt64)
+	for form, want := range map[ledger.Credit]error{ledger.CreditReserved: ledger.ErrReservationExceeds, ledger.CreditPledge: ledger.ErrReservationExceeds, ledger.CreditFree: ledger.ErrNoRoom} {
+		if err := f.l.MoveCredited(f.initial[0], f.a0, 0, maxQty, ledger.Initial, false, form); !errors.Is(err, want) {
+			t.Errorf("MoveCredited form %d = %v, want %v", form, err, want)
+		}
+	}
+	if r := f.room(t, f.a0); r.LoadMass != 0 || r.LoadBulk != 0 {
+		t.Errorf("load after the refusals = (%d, %d), want (0, 0)", r.LoadMass, r.LoadBulk)
+	}
 }

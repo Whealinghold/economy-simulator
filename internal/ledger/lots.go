@@ -2,7 +2,6 @@ package ledger
 
 import (
 	"cmp"
-	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
@@ -391,8 +390,12 @@ func (l *Ledger) creditRoom(t *account, m goodsMove) error {
 	dm, db, ok := l.unitLoad(m.commodity, m.qty)
 	if !ok && t.room != nil {
 		// A load that does not fit int64 is above any room, reserved room and
-		// pledge: saturate so that the form picks its own refusal.
-		dm, db = math.MaxInt64, math.MaxInt64
+		// pledge, even a room of MaxInt64 that a saturated load would fit: the
+		// form picks its own refusal.
+		if m.credit == CreditFree {
+			return ErrNoRoom
+		}
+		return ErrReservationExceeds
 	}
 	return checkRoomCredit(t, Size{dm, db}, Size{}, m.credit)
 }
