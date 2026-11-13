@@ -525,3 +525,23 @@ var (
 	// Hireable role.
 	ErrEmploymentShape = errors.New("employment has the wrong shape")
 )
+
+// The sentinels of the polity module (spec-polity.md 9.1). They are root sentinels
+// matched with errors.Is. The module reuses ErrInvalidID, ErrDuplicateID,
+// ErrTooMany, ErrOutOfBounds and ErrUnknownRegion.
+var (
+	// ErrUnknownJurisdiction is a Parent or a membership row that names a
+	// jurisdiction that is not defined.
+	ErrUnknownJurisdiction = errors.New("unknown jurisdiction")
+	// ErrJurisdictionCycle is a parent chain that returns to the jurisdiction it
+	// started from, a self-parent included.
+	ErrJurisdictionCycle = errors.New("jurisdiction parent chain has a cycle")
+	// ErrSeatNotCovered is a Seat that is not a direct member of the jurisdiction or
+	// of one of its descendants.
+	ErrSeatNotCovered = errors.New("seat is not covered by the jurisdiction")
+	// ErrSeatOutsideNode is a Seat that is an outside node of the external module;
+	// it arises only with that module on.
+	ErrSeatOutsideNode = errors.New("seat is an outside node")
+	// ErrStartWithoutSeat is a StartMoney above 0 on a jurisdiction with no seat.
+	ErrStartWithoutSeat = errors.New("start money without a seat")
+)

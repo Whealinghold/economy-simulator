@@ -142,8 +142,10 @@ func TestAllPack_EveryModuleIsOn(t *testing.T) {
 // written yet, in the staged form of architecture.md 9.7: the change that writes
 // the layer deletes the entry, and the test fails on a stale one. The employment
 // module's layer comes with its overlay and its module-alone golden (plan 2-28
-// Phase 3), which move golden/all with their explanation (testing.md 7.1.1).
-var allPackNotYetOn = map[string]bool{"Employment": true}
+// Phase 3), which move golden/all with their explanation (testing.md 7.1.1). The
+// polity module's layer joins the all-on set once, jointly, at the close of Stage 3
+// (the owner decision of 2026-11-13: no Stage 3 module moves golden/all on its own).
+var allPackNotYetOn = map[string]bool{"Employment": true, "Polity": true}
 
 // TestAllPack_OffGoldenUnmoved verifies that the warm five alone, every module off,
 // still has the configuration hash its expected file recorded, and that the all-on

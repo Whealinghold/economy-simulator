@@ -123,6 +123,66 @@ type Modules struct {
 	// block and a Hireable role. Its hash id is 13, whatever its place in this
 	// struct.
 	Employment *Employment
+	// Polity is the polity module: jurisdictions as one tree over the regions, the
+	// membership of the regions and the treasury of a governed jurisdiction
+	// (spec-polity.md). Nil is off; non-nil is on, even when empty. It needs no other
+	// module. Its hash id is 19, whatever its place in this struct.
+	Polity *PolityConfig
+}
+
+// PolityConfig is the configuration of the polity module (spec-polity.md 8): the
+// jurisdictions and the membership of the regions. The type is called PolityConfig
+// because Polity is the value the queries are read through (spec-polity.md 4.2.1);
+// the scope Polity of the parameter-owner table resolves to this type. The zero
+// value is a module that is on with no jurisdiction, which is the world without the
+// module. After construction the lists are in canonical order (spec-config.md
+// 3.4).
+type PolityConfig struct {
+	// Jurisdictions are the jurisdictions, at most MaxJurisdictions. Their order is
+	// canonical by ID, bytewise, and their index in it is the JurisdictionID.
+	Jurisdictions []Jurisdiction
+	// Members are the membership rows, one per region at most, canonical by region.
+	Members []Member
+}
+
+// Jurisdiction is one node of the tree of the polity module (spec-polity.md 3).
+type Jurisdiction struct {
+	// ID is the identity, [a-z][a-z0-9_]* of at most 64 bytes, unique among
+	// jurisdictions (a jurisdiction may have the ID of a region).
+	ID string
+	// Parent is the parent jurisdiction, or empty for a root: a defined jurisdiction
+	// other than itself, with no cycle and fewer than MaxPolityDepth ancestors.
+	Parent string
+	// Seat is the region the jurisdiction is governed from, or empty for a grouping:
+	// a region it covers that is not an outside node. A governed jurisdiction has a
+	// treasury.
+	Seat string
+	// StartMoney is the money the treasury is created with, in minor units, 0 to
+	// MaxMoney, and only with a Seat.
+	StartMoney Money
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// Member says that a region is a direct member of a jurisdiction (spec-polity.md
+// 3.4.1). A region has at most one row.
+type Member struct {
+	// Region is a defined region.
+	Region string
+	// Jurisdiction is a defined jurisdiction.
+	Jurisdiction string
+}
+
+// canonical returns a copy of the module with the jurisdictions by ID and the
+// members by region (spec-config.md 3.4, spec-polity.md 3.2.1), nil for nil.
+func (m *PolityConfig) canonical() *PolityConfig {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Jurisdictions = sortedBy(m.Jurisdictions, func(a, b Jurisdiction) int { return cmp.Compare(a.ID, b.ID) })
+	out.Members = sortedBy(m.Members, func(a, b Member) int { return cmp.Compare(a.Region, b.Region) })
+	return &out
 }
 
 // Employment is the employment module in its payroll form (spec-employment.md
@@ -1202,6 +1262,7 @@ func (c Config) canonical() Config {
 	out.Modules.Transport = c.Modules.Transport.canonical()
 	out.Modules.Migration = c.Modules.Migration.canonical()
 	out.Modules.External = c.Modules.External.canonical(c.Calendar.Seasons)
+	out.Modules.Polity = c.Modules.Polity.canonical()
 	return out
 }
 

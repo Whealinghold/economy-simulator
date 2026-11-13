@@ -1347,8 +1347,9 @@
 //     first; empty for a region with no row.
 //   - Covers: a jurisdiction covers a region when it is in the region's chain.
 //   - Common jurisdiction: the innermost jurisdiction that covers two regions, or none.
-//   - Crossing: for an ordered pair of regions, the jurisdictions a good exits (innermost
-//     first) and enters (outermost first) in going from the first to the second (Crossing).
+//   - Region crossing: for an ordered pair of regions, the jurisdictions a good exits (innermost
+//     first) and enters (outermost first) in going from the first to the second (the type
+//     Crossing).
 //   - Exit, Enter: the two lists of a crossing.
 //   - Border: the crossing of an ordered pair when Exit or Enter is not empty; it is
 //     derived, not stored.
