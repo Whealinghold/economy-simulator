@@ -1234,7 +1234,7 @@ func (x *external) record(w *World, trades []Trade) {
 	regions := len(w.cfg.Regions)
 	for _, t := range trades {
 		for _, a := range [2]AgentID{t.Buyer, t.Seller} {
-			if int(a) < regions || int(a) >= w.firstHousehold {
+			if int(a) < regions || int(a) >= regions+len(x.cps) {
 				continue
 			}
 			cp := &x.cps[int(a)-regions]

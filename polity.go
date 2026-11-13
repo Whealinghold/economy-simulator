@@ -3,10 +3,12 @@ package economysim
 import (
 	"cmp"
 	"errors"
+	"fmt"
 	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/ledger"
 	pol "github.com/Whealinghold/economy-sim/internal/polity"
 )
 
@@ -527,9 +529,23 @@ func (p Polity) Governed() []JurisdictionID { return slices.Clone(p.gov) }
 
 // polity is the state of the module, nil while it is off (spec-polity.md 4.4.1):
 // the derived tables, built once at construction from the configuration and saved
-// nowhere (spec-polity.md 11).
+// nowhere (spec-polity.md 11), and the treasuries of the governed jurisdictions.
 type polity struct {
-	v Polity
+	v  Polity
+	tr []treasury // the governed jurisdictions, ascending JurisdictionID
+	// byJ is the index into tr of each jurisdiction, -1 for a grouping.
+	byJ []int32
+}
+
+// treasury is the account and the pseudo-agent of one governed jurisdiction
+// (spec-polity.md 5.1). agent and account are 0 until assignAgents and
+// openTreasuries or attachTreasuries.
+type treasury struct {
+	j       JurisdictionID
+	seat    RegionID
+	agent   AgentID
+	account int
+	start   Money
 }
 
 // newPolity builds the state of a canonical configuration the validator accepted,
@@ -538,7 +554,138 @@ func newPolity(c *Config) *polity {
 	if c.Modules.Polity == nil {
 		return nil
 	}
-	return &polity{v: buildPolity(c)}
+	p := &polity{v: buildPolity(c), byJ: make([]int32, len(c.Modules.Polity.Jurisdictions))}
+	for i := range p.byJ {
+		p.byJ[i] = -1
+	}
+	for _, j := range p.v.gov {
+		jc := &c.Modules.Polity.Jurisdictions[j]
+		p.byJ[j] = int32(len(p.tr))
+		p.tr = append(p.tr, treasury{j: j, seat: RegionID(p.v.seats[j]), start: jc.StartMoney})
+	}
+	return p
+}
+
+// treasuryCount is the number of treasuries, 0 for a nil module: the g of
+// spec-polity.md 5.2.2.
+func (p *polity) treasuryCount() int {
+	if p == nil {
+		return 0
+	}
+	return len(p.tr)
+}
+
+// assignAgents gives the treasuries the agent IDs from first on, in ascending
+// JurisdictionID (spec-polity.md 5.2.2).
+func (p *polity) assignAgents(first int) {
+	if p == nil {
+		return
+	}
+	for i := range p.tr {
+		p.tr[i].agent = AgentID(first + i)
+	}
+}
+
+// openTreasuries opens the Treasury account of each governed jurisdiction in
+// ascending JurisdictionID, after the Outside accounts and before any agent's
+// (spec-polity.md 5.2.1). The owner of the account is the JurisdictionID and its
+// region the seat's.
+func (p *polity) openTreasuries(l *ledger.Ledger) error {
+	if p == nil {
+		return nil
+	}
+	for i := range p.tr {
+		t := &p.tr[i]
+		id, err := l.Open(ledger.KindTreasury, int(t.j), int(t.seat))
+		if err != nil {
+			return fmt.Errorf("open the treasury account of jurisdiction %d: %w", t.j, err)
+		}
+		t.account = id
+	}
+	return nil
+}
+
+// fundTreasuries moves the StartMoney of each treasury from the boundary of the
+// reason initial, in ascending JurisdictionID, in the construction bucket and before
+// the households are created (spec-polity.md 5.4.1, FR-POL-018). It makes no other
+// transfer and adds no reason.
+func (p *polity) fundTreasuries(l *ledger.Ledger) error {
+	if p == nil {
+		return nil
+	}
+	for i := range p.tr {
+		t := &p.tr[i]
+		if t.start <= 0 {
+			continue
+		}
+		from, ok := l.Boundary(ledger.Initial, ledger.Money)
+		if !ok {
+			return errors.New("the ledger has no boundary account for the reason initial")
+		}
+		if err := l.Transfer(from, t.account, int64(t.start), ledger.Initial); err != nil {
+			return fmt.Errorf("fund the treasury of jurisdiction %d: %w", t.j, err)
+		}
+	}
+	return nil
+}
+
+// attachTreasuries finds the Treasury account of each governed jurisdiction in a
+// ledger that a restore has read: the accounts from first on, in ascending
+// JurisdictionID, each open, of the kind, owned by the jurisdiction and in the
+// seat's region (spec-polity.md 11, FR-POL-030).
+func (p *polity) attachTreasuries(l *ledger.Ledger, first int) error {
+	if p == nil {
+		return nil
+	}
+	for i := range p.tr {
+		t := &p.tr[i]
+		id := first + i
+		v, err := l.Account(id)
+		if err != nil || v.Kind != ledger.KindTreasury || v.Closed || v.Owner != int(t.j) || v.Region != int(t.seat) {
+			return fmt.Errorf("%w: account %d is not the open Treasury account of jurisdiction %d", ErrCheckpointCorrupt, id, t.j)
+		}
+		t.account = id
+	}
+	return nil
+}
+
+// audit checks that every governed jurisdiction still has its one open Treasury
+// account and that no balance is negative (spec-polity.md 5.3.1, FR-POL-029).
+func (p *polity) audit(l *ledger.Ledger) error {
+	if p == nil {
+		return nil
+	}
+	for i := range p.tr {
+		t := &p.tr[i]
+		v, err := l.Account(t.account)
+		if err != nil || v.Kind != ledger.KindTreasury || v.Closed || v.Owner != int(t.j) || v.Region != int(t.seat) {
+			return fmt.Errorf("the Treasury account of jurisdiction %d is missing, closed or changed", t.j)
+		}
+		if v.Balance < 0 {
+			return fmt.Errorf("the Treasury account of jurisdiction %d has the balance %d", t.j, v.Balance)
+		}
+	}
+	return nil
+}
+
+// attachTreasuries is the hook of the restore (spec-polity.md 11): the Treasury
+// accounts follow the estates' and the Outside accounts.
+func (w *World) attachTreasuries() error {
+	return w.polity.attachTreasuries(w.ledger, w.estates.accounts[0]+len(w.estates.accounts)+w.external.counterpartyCount())
+}
+
+// auditTreasuries is the hook of the audit (architecture.md 2.10.1).
+func (w *World) auditTreasuries() error { return w.polity.audit(w.ledger) }
+
+// TreasuryAgent returns the treasury pseudo-agent of a governed jurisdiction
+// (spec-polity.md 5.5.1); false for a grouping, an unknown j or a world without the
+// module. It is O(1) and allocates nothing.
+func (w *World) TreasuryAgent(j JurisdictionID) (AgentID, bool) {
+	p := w.polity
+	if p == nil || j < 0 || int(j) >= len(p.byJ) || p.byJ[j] < 0 {
+		return NoAgent, false
+	}
+	return p.tr[p.byJ[j]].agent, true
 }
 
 // Polity returns the jurisdiction tree and the membership of the regions: a deep
