@@ -74,3 +74,19 @@ func TestOf_Formula(t *testing.T) {
 		})
 	}
 }
+
+// TestStoredLoad_NegativeOwnRoomSaturates verifies that a weight or base below
+// 0 (outside the contract) cannot wrap load - weight * base: a difference that
+// overflows int64 is above any cap, so the stored load is the cap.
+//
+// Guard: architecture.md 3.5 forbids wrapped arithmetic. Without the checked
+// subtraction, MaxInt64 - (-1) wraps to MinInt64 and the stored load reads 0.
+func TestStoredLoad_NegativeOwnRoomSaturates(t *testing.T) {
+	t.Parallel()
+	caps := room.Pair{Mass: 200, Bulk: 80}
+	load := room.Pair{Mass: math.MaxInt64, Bulk: math.MaxInt64}
+	got := room.StoredLoad(caps, load, room.Pair{Mass: 1, Bulk: 1}, -1)
+	if got != caps {
+		t.Errorf("StoredLoad(%v, %v, (1,1), -1) = %v, want %v", caps, load, got, caps)
+	}
+}

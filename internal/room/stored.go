@@ -23,5 +23,11 @@ func storedDim(storesCap, load, base, weight int64) int64 {
 	if !ok {
 		return 0
 	}
-	return min(storesCap, max(0, load-own))
+	above, ok := checked.Sub(load, own)
+	if !ok {
+		// Only a negative own (a weight or base below 0, outside the
+		// contract) can overflow the difference: the load is above any cap.
+		return storesCap
+	}
+	return min(storesCap, max(0, above))
 }
