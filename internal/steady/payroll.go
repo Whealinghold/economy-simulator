@@ -81,6 +81,7 @@ type payroll struct {
 	// unk maps a dual to its unknown, -1 for a dual held at 0: goods rows, then
 	// one wage per region, then a rent per activity, then a rent per resource.
 	goods, wage, rent, res []int
+	byPair                 map[[2]int]int // resource row of a (resource, region) pair
 	n                      int
 }
 
@@ -178,6 +179,7 @@ func badShape(m Model, o Outcome) bool {
 // the unknowns.
 func (p *payroll) prepare() {
 	m := p.m
+	p.byPair = resRows(m.Resources)
 	p.f = make([]*big.Rat, len(m.Activities))
 	p.net = make([][]NetEntry, len(m.Activities))
 	p.lab = make([]*big.Rat, len(p.in.Groups))
@@ -294,9 +296,8 @@ func (p *payroll) row(k int) []*big.Rat {
 	}
 	add(p.wage[a.Region], new(big.Rat).Neg(d))
 	add(p.rent[k], big.NewRat(-1, 1))
-	byPair := resRows(p.m.Resources)
 	for _, dr := range a.Draws {
-		add(p.res[byPair[[2]int{dr.Resource, a.Region}]], big.NewRat(-dr.Qty, 1))
+		add(p.res[p.byPair[[2]int{dr.Resource, a.Region}]], big.NewRat(-dr.Qty, 1))
 	}
 	g := p.in.Group[k]
 	if g < 0 || !p.flowing[a.Region] {

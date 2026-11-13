@@ -338,7 +338,7 @@ func (rc *regionCtx) residual() {
 		}
 		target := steady.Rat(wd, 1).Add(rc.p.pr.Rent[at].Times(rc.scale))
 		target = rc.withPay(target, at)
-		dev, ok := a.act.ValueAdded(rc.price).Add(target.Mul(-1, 1)).Abs().Quo(target)
+		dev, ok := a.act.ValueAdded(rc.price).Add(target.Mul(-1, 1)).Abs().Quo(target.Abs()) // the pay can take the target below 0: the deviation stays a magnitude
 		if !ok {
 			continue
 		}

@@ -88,8 +88,13 @@ func (s *viaSolve) payroll(p *viaProgramme) {
 	if !res.Applied {
 		return
 	}
+	perExec, ok := payrollPerExecution(p, pc.in, res)
+	if !ok {
+		s.payrollFailed(p, regions, payrollUnsupported) // the pay per execution overflowed: keep the payroll-free duals
+		return
+	}
 	p.out, p.pr = res.Outcome, res.Outcome
-	p.pay = &payrollRows{base: pc.base, out: res.Out, in: res.In, labour: res.Labour, perExec: payrollPerExecution(p, pc.in, res)}
+	p.pay = &payrollRows{base: pc.base, out: res.Out, in: res.In, labour: res.Labour, perExec: perExec}
 }
 
 // payrollFailed lists the regions with the reason.
@@ -132,6 +137,9 @@ func (s *viaSolve) payrollInput(p *viaProgramme) payrollCtx {
 	}
 	pc.base = first
 	pc.in.Group = make([]int, len(p.md.Activities))
+	for at := range pc.in.Group {
+		pc.in.Group[at] = -1 // an activity no region lists belongs to no group, not to group 0
+	}
 	for k, r := range p.regions {
 		end := len(pc.in.Groups)
 		if k+1 < len(first) {
@@ -180,8 +188,9 @@ func payrollRegions(p *viaProgramme, in steady.PayrollInput) []int {
 
 // payrollPerExecution returns, by activity of the programme, the pay per
 // execution that moves the net-wage equation: d * Out / Labour of a payer's
-// group, minus d * In / Labour for a worker's, 0 for the rest.
-func payrollPerExecution(p *viaProgramme, in steady.PayrollInput, res steady.PayrollResult) []steady.Frac {
+// group, minus d * In / Labour for a worker's, 0 for the rest. The flag is false
+// when a quotient or product is not representable.
+func payrollPerExecution(p *viaProgramme, in steady.PayrollInput, res steady.PayrollResult) ([]steady.Frac, bool) {
 	out := make([]steady.Frac, len(p.md.Activities))
 	for at, a := range p.md.Activities {
 		out[at] = steady.Rat(0, 1)
@@ -191,14 +200,20 @@ func payrollPerExecution(p *viaProgramme, in steady.PayrollInput, res steady.Pay
 		}
 		switch {
 		case in.Groups[g].BP > 0:
-			per, _ := res.Out[g].Quo(res.Labour[g])
+			per, ok := res.Out[g].Quo(res.Labour[g])
+			if !ok {
+				return nil, false
+			}
 			out[at] = per.Mul(a.Duration, 1)
 		case in.Groups[g].Hireable:
-			per, _ := res.In[g].Quo(res.Labour[g])
+			per, ok := res.In[g].Quo(res.Labour[g])
+			if !ok {
+				return nil, false
+			}
 			out[at] = per.Mul(-a.Duration, 1)
 		}
 	}
-	return out
+	return out, true
 }
 
 // withPay adds to the residual target of activity at the pay the net-wage equation

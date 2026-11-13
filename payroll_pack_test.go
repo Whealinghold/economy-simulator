@@ -188,6 +188,7 @@ func TestPacks_Payroll(t *testing.T) {
 	// break-even = (tool / durability) / gain, at most 50% of ref at the solver's price, 100% at three times it;
 	// cross-multiplied so no division rounds: tool*100 <= limit*ref*durability*gain.
 	for _, c := range []struct{ mult, limit int64 }{{1, 50}, {3, 100}} {
+		t.Logf("tool margin at %dx the tool price: break-even is %d bp of the reference price (limit %d%%)", c.mult, c.mult*tool*10_000/(ref*durability*gain), c.limit)
 		if c.mult*tool*100 > c.limit*ref*durability*gain {
 			t.Errorf("tool margin at %dx the tool price: break-even %d/%d/%d is above %d%% of the reference price %d of prepared (FR-REF-044)", c.mult, c.mult*tool, durability, gain, c.limit, ref)
 		}

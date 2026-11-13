@@ -71,7 +71,7 @@ func TestPayrollPerExecution(t *testing.T) {
 		In:     []steady.Frac{steady.Rat(0, 1), steady.Rat(10, 1)},
 		Labour: []steady.Frac{steady.Rat(4, 1), steady.Rat(4, 1)},
 	}
-	got := payrollPerExecution(p, in, res)
+	got, _ := payrollPerExecution(p, in, res)
 	for at, want := range [][2]int64{{3, 1}, {-15, 2}, {0, 1}, {21, 2}} {
 		if at == 3 {
 			continue // checked below with a labour of 0
@@ -81,7 +81,7 @@ func TestPayrollPerExecution(t *testing.T) {
 		}
 	}
 	res.Labour[0] = steady.Rat(0, 1)
-	if got := payrollPerExecution(p, in, res); !fracEq(got[0], 0, 1) || !fracEq(got[3], 0, 1) {
+	if got, _ := payrollPerExecution(p, in, res); !fracEq(got[0], 0, 1) || !fracEq(got[3], 0, 1) {
 		t.Errorf("payrollPerExecution(labour 0) = %v/%v, %v/%v, want 0 (no division by a zero labour)", got[0].Num, got[0].Den, got[3].Num, got[3].Den)
 	}
 }

@@ -668,7 +668,7 @@ equations below define the **static payroll-aware balance** of the programme: th
 wage at which the net wage per working tick is equal across the active activities, at the fixed flows.
 That is all `SolveSteadyState` claims. The hypothesis behind the re-solve, **H-P** ("with the
 payroll-aware census and prices the cooks keep at least 90% of the solver's census at tick 600"), was
-**falsified in every trial run**: the cooks sit at 30% to 45% of the solver's census at tick 600 on
+**falsified in every trial run**: the cooks sit at 29% to 45% of the solver's census at tick 600 on
 every seed of every trial (trial T1: 38%, 78 to 81 of 210; trial T6, the pack `payroll`: 64 to 83 of
 223), and most of the exodus is in the first 100 ticks. The solver's census is therefore the static
 balance and **not** the simulation's equilibrium: the simulated economy does not sit at it. What was
