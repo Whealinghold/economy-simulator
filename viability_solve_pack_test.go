@@ -332,7 +332,10 @@ func TestSolveSteadyState_OverlaysSolve(t *testing.T) {
 	// The last two of the five-region files name the regions of `five`; the merchants overlays
 	// name the transport and information modules and the haul chain, which `one` does not carry
 	// (TestOverlay_MerchantsValidatesAndSolves solves them over their own layers).
-	notOnOne := []string{"overhang.toml", "resources-five.toml", "resources-five-binding.toml", "merchants.toml", "merchants-three.toml"}
+	// chain-payroll.toml is the data layer of the pack `payroll`: it sets the wants of the demand module
+	// and the payroll share of the employment module, which `one` carries neither of (TestPacks_Payroll
+	// loads, validates and solves it over its own layers).
+	notOnOne := []string{"overhang.toml", "resources-five.toml", "resources-five-binding.toml", "merchants.toml", "merchants-three.toml", "chain-payroll.toml"}
 	entries, err := os.ReadDir("testdata/chains/overlay")
 	if err != nil {
 		t.Fatalf("ReadDir(overlay) = %v", err)

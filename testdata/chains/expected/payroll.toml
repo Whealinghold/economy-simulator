@@ -1,0 +1,15 @@
+# What the load of the pack must give (spec-reference-chain.md 8.4). Recorded with
+# -update by config_test TestExpected_Packs; the top-level keys are those of the
+# cold layer set (the set SolveSteadyState solves), the warm_ keys those of the
+# set with the warm-start document. Change it by the rule for the golden files
+# (testing.md 7.2).
+config_hash = "449a178abbb8cfa55d22f5039d1af2ea61b387f0143dcd187c60946bbf902d64"
+surplus_bp = 29618
+labour_share_bp = 3377
+pivots = 15
+unpriced = []
+unpriced_wages = []
+warnings = [{ rule = "start_stock_below_target", path = "roles/comfort_maker/start_stock" }, { rule = "target_above_demand", path = "roles/comfort_maker/target_ratio" }, { rule = "tool_unaffordable", path = "roles/cook/start_money" }, { rule = "target_above_demand", path = "roles/cook/target_ratio" }, { rule = "target_above_demand", path = "roles/digger/target_ratio" }, { rule = "target_above_demand", path = "roles/forester/target_ratio" }, { rule = "cold_start_lockstep", path = "roles/grower/recipes" }, { rule = "window_extended", path = "roles/grower/recipes" }, { rule = "tool_unaffordable", path = "roles/grower/start_money" }, { rule = "target_above_demand", path = "roles/grower/target_ratio" }, { rule = "cold_start_lockstep", path = "roles/maker/recipes" }, { rule = "target_above_demand", path = "roles/maker/target_ratio" }, { rule = "cold_start_lockstep", path = "roles/refiner/recipes" }, { rule = "target_above_demand", path = "roles/refiner/target_ratio" }, { rule = "cold_start_lockstep", path = "roles/treat_maker/recipes" }, { rule = "start_stock_below_target", path = "roles/treat_maker/start_stock" }, { rule = "target_above_demand", path = "roles/treat_maker/target_ratio" }, { rule = "entry_share_window", path = "world/entry_share" }]
+warm_config_hash = "36f26aaeead293c967216a3100ccbe98c4460e5306faaea837305aa523b128d4"
+warm_warnings = [{ rule = "start_stock_below_target", path = "roles/comfort_maker/start_stock" }, { rule = "target_above_demand", path = "roles/comfort_maker/target_ratio" }, { rule = "tool_unaffordable", path = "roles/cook/start_money" }, { rule = "target_above_demand", path = "roles/cook/target_ratio" }, { rule = "target_above_demand", path = "roles/digger/target_ratio" }, { rule = "target_above_demand", path = "roles/forester/target_ratio" }, { rule = "window_extended", path = "roles/grower/recipes" }, { rule = "tool_unaffordable", path = "roles/grower/start_money" }, { rule = "target_above_demand", path = "roles/grower/target_ratio" }, { rule = "target_above_demand", path = "roles/maker/target_ratio" }, { rule = "target_above_demand", path = "roles/refiner/target_ratio" }, { rule = "start_stock_below_target", path = "roles/treat_maker/start_stock" }, { rule = "target_above_demand", path = "roles/treat_maker/target_ratio" }, { rule = "entry_share_window", path = "world/entry_share" }]
+surplus_wants_bp = 29618

@@ -19,7 +19,7 @@ import (
 // an equal hash, and its Validate does not panic and returns nil or an error
 // classified by a sentinel or a *ValidationError.
 //
-// The seeds are the layers of the packs one, second and famine (its estates overlay, FR-REF-040) of
+// The seeds are the layers of the packs one, second and famine (its estates overlay) and payroll (its data layer and warm start; FR-REF-040) of
 // testdata/chains, and
 // documents at and beyond the nesting and breadth limits; the corpus files of
 // testdata/fuzz/FuzzLoad hold the nested and the 10 000-key documents.
@@ -37,6 +37,7 @@ func FuzzLoad(f *testing.F) {
 	f.Add(read("second/second.toml"), read("second/warm-second.toml"), []byte(nil))
 	f.Add(read("base.toml"), read("one.toml"), read("defects/d4_long_job.toml"))
 	f.Add(read("base.toml"), read("famine.toml"), read("overlay/estates.toml"))
+	f.Add(read("overlay/employment.toml"), read("overlay/chain-payroll.toml"), read("warm-payroll.toml"))
 	f.Add([]byte(minimal), []byte("[world]\nscale = 2\n"), []byte("[world]\nscale = 3\n"))
 	f.Add([]byte(minimal+"[a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q]\n"), []byte("x = [[[[[[1]]]]]]\n"), []byte("y = { a = { b = 1 } }\n"))
 	f.Add([]byte(minimal+populationDoc[len(minimal):]), []byte("[modules.population]\nbirth_schedule = [ { ratio = 1 } ]\n"), []byte("[modules.population.region.a]\nhousehold_cap = -1\n"))

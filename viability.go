@@ -428,9 +428,10 @@ type viaProgramme struct {
 	md          steady.Model
 	out, pr     steady.Outcome
 	nominalBP   int64
-	nominalSeed []int // indexes into regions
-	wants       bool  // the model carries the fixed term of the wants
-	base        []int // the first column of each region's activities
+	nominalSeed []int        // indexes into regions
+	wants       bool         // the model carries the fixed term of the wants
+	base        []int        // the first column of each region's activities
+	pay         *payrollRows // the rows of the payroll-aware duals (5.6), nil while they were not applied
 }
 
 // viaSolve is the state of one SolveSteadyState call.
@@ -534,6 +535,9 @@ func (s *viaSolve) solve(ctx context.Context) error {
 		p, err := s.programme(ctx, set)
 		if err != nil {
 			return err
+		}
+		if s.m.c.Modules.Employment != nil {
+			s.payroll(p)
 		}
 		s.progs = append(s.progs, p)
 		if s.o.freeTrade {

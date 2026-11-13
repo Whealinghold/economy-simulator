@@ -281,7 +281,7 @@ consumer's world size.
 
 Every pull request of the table above is on `main` (the last is #54). Stage 2 is
 **not done**: criterion 1 of `vision.md` section 5 is not met, and the "Done when"
-paragraph below stays the criterion. Each criterion, as it stands today:
+paragraph below stays the criterion. PR B of the stage-2-chain (plan 2-29, candidate (a) of N-352: a payroll-aware `SolveSteadyState` and a new pack `payroll`) gave a partial result: the pack keeps its household count within 10% from tick 600 to 2 200 on seeds 101 to 104 and on 25 of 30 seeds, only with the payroll module on, while non-cook households stay 36% to 39% unfed, so criterion 4 and criterion 1 stay **not met** and no band is set (hypothesis H-P was falsified; N-352 route 3, N-356). Each criterion, as it stands today:
 
 | # | Criterion | State | How verified |
 | --- | --- | --- | --- |

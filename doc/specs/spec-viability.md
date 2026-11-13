@@ -646,6 +646,120 @@ with the number of activities times the number of constraints; a world at the
 maximum bounds of `spec-config.md` 4.1 is far larger, which is why `Validate` runs
 the programme only below the size gate (11).
 
+### 5.6 The payroll-aware steady state
+
+With `Modules.Employment` on (`spec-employment.md` 24, ADR 0011) an employer role pays
+`PayrollBP` basis points of its receipts of the tick to the households of the `Hireable`
+roles that worked, in proportion to their executions. That moves money and no goods, so
+the primal of 3.2 is unchanged: `lambda*`, the executions `x*` (and the flows `x* / lambda*`
+of 5.1), the capacity rows and the balanced census of 5.2 are those of the programme without
+it. What payroll changes is the **net wage per working tick** that each role is paid. With
+free choice of role (the spawner reads the observed wage including the pay,
+`spec-employment.md` 24.2.2) a steady state would be a state in which that net wage is equal across
+the active activities of a region, and the duals of 5.2 equalise value added **before**
+payroll. At those prices a payer earns less than a worker, and the occupation review moves
+payers out (N-352, trial E2; that the payroll-aware prices cure it is H-P, falsified, see below). `SolveSteadyState` therefore **re-solves the duals** from the
+unchanged primal when the module is on (D2 of plan 2-29, ADR 0012). It reads the payroll from
+the `Config` it is given (`Modules.Employment` non-nil, `Role.Employer.PayrollBP`,
+`Role.Hireable`); it takes no option.
+
+**What this section does and does not establish (plan 2-29, Phases 4 to 6; N-352, N-356).** The
+equations below define the **static payroll-aware balance** of the programme: the census, prices and
+wage at which the net wage per working tick is equal across the active activities, at the fixed flows.
+That is all `SolveSteadyState` claims. The hypothesis behind the re-solve, **H-P** ("with the
+payroll-aware census and prices the cooks keep at least 90% of the solver's census at tick 600"), was
+**falsified in every trial run**: the cooks sit at 29% to 45% of the solver's census at tick 600 on
+every seed of every trial (trial T1: 38%, 78 to 81 of 210; trial T6, the pack `payroll`: 64 to 83 of
+223), and most of the exodus is in the first 100 ticks. The solver's census is therefore the static
+balance and **not** the simulation's equilibrium: the simulated economy does not sit at it. What was
+established is narrower. (a) The receipts model of FR-VIA-066 holds: the measured `PayrollPaid.Due` is
+97.5% of the static receipts over ticks 1 to 10. (b) The payroll module is what carries the household
+count: the pack `payroll` with the module off (same knobs, same warm start) collapses (three of four
+seeds reach zero households, the fourth falls from 585 to 444), and with it on the households stay
+within 10% from tick 600 to tick 2 200 on seeds 101 to 104 (FR-REF-045). (c) That is a count and
+nothing more: 36% to 39% of non-cook household-ticks stay unfed, prices stay near 40% of the reference,
+the cooks hold four to five times their share of the money, and 5 of 30 seeds lose about 19% of the
+households late (N-352). The re-solve is kept because it makes the pack's census and warm start follow
+one configuration (ADR 0012), not because the static balance predicts the simulation.
+
+**Symbols (one region `rho` of a programme, at the flows of lambda 1).** A group is a
+(region, role) row of `Config.Groups`. `beta(g)` is `PayrollBP / 10 000` of a payer group
+`g`. `L(g) = sum over the activities r of g of d(r) * x(r)` is its labour in household-ticks
+a tick. `n_c(r)` is the net vector of an execution (3.1), `v(r, p) = sum over c of p(c) * n_c(r)`
+its value added. The group's **sales** of commodity `c` a tick are
+`sold(g, c) = max(0, sum over r of g of x(r) * n_c(r) - H(g) * u(g, c))`, with `H(g)` its
+households and `u(g, c)` the units of `c` in a household's upkeep: the net units it puts on
+the market, less what its own households eat (a cook eats its own `prepared` and buys none,
+`DEC-redesign.md` 1.1). Its **receipts** are `S(g, p) = sum over c of p(c) * sold(g, c)`, linear in
+`p`, as `welfare.receiptsOf` is the money a household received from the trades of the tick
+(assumption A1 of plan 2-29, tested against the measured `PayrollPaid.Due` by FR-VIA-066).
+The payers of `rho` pay `sum over payers g of beta(g) * S(g, p)`; the workers of `rho` are
+the groups of `Hireable` roles, with labour `L(h)`, and the pay per working household-tick is
+
+```
+sigma(rho, p) = ( sum over payer groups g of beta(g) * S(g, p) ) / ( sum over hireable groups h of L(h) )
+```
+
+0 when the denominator or the numerator is 0 (`internal/employment.Split` pays nothing with no
+worker or an empty pool). A worker is paid in proportion to its executions `K`, which is its
+working household-ticks: `production.Count` bounds the executions of a job by the agent's
+weight (`phase_production.go`, `welfare.workRead`), so a weight above 1 needs no special case
+(assumption A2, read at `phase_production.go` 125 and 407).
+
+**Equations.** For every activity `r` that is active (`x > 0`) in `rho`, with `g(r)` the
+group that lists its recipe:
+
+```
+payer      (g(r) a payer):    v(r, p) - d(r) * beta(g) * S(g, p) / L(g)    =  d(r) * w(rho) + rent(r) + sum of its draws' resource rents
+worker     (g(r) Hireable):   v(r, p) + d(r) * sigma(rho, p)               =  d(r) * w(rho) + rent(r) + sum of its draws' resource rents
+other:                        v(r, p)                                       =  d(r) * w(rho) + rent(r) + sum of its draws' resource rents
+```
+
+and the normalisation of 5.2, `sum over c of D(c) * p(c) = 1`. A payer group pays its share
+of the money in proportion to its labour, a worker group receives `sigma` for each
+household-tick. Every term is linear in `(p, w, rent)` at the fixed flows, so the system is
+linear. The unknowns are the duals that the payroll-free outcome gives a non-zero value (a
+row whose dual is 0 stays 0, which keeps a free good free and a slack row slack). The solver
+solves it **exactly in rationals** (`internal/steady/payroll.go`, architecture.md 3.5), and
+the result leaves as fixed point at the boundary, once, by the rules of 6.3 and 6.4 (prices
+and wages half to even). It is accepted only if (a) the solution is unique (a square system
+of full rank, consistent), (b) no price, wage or rent is negative, and (c) no inactive
+activity pays more than the net wage, `v(r, p)` adjusted as above `<=` `d(r) * w + rent`
+(condition (c) of 5.1). Otherwise the payroll-free duals stay and the report names why
+(`PayrollInfeasible`, 10.3). Neither the census nor a table is changed by a failure, and it is
+never a validation error.
+
+**What changes with the module on.** The seed prices (so the reference prices a pack writes
+from them), the starting wage, `IncomeBP` (now the income **net of payroll**, so FR-REF-041
+gates the net income: with every active group paid `w * L(g)`, a payer's household earns that
+after paying and a worker's earns it after being paid), and the warm start's money and stock,
+which read the seed prices. The census rows, the flows, the jobs' executions and the
+conservation of goods do not change. Two columns of the census row are appended and are 0 when
+the module is off: `PayrollOutBP` and `PayrollInBP`, the pay a household of the group pays or
+receives per tick in basis points of its upkeep cost at the seed prices (the formula of
+`IncomeBP`, with `beta * S` or `sigma * L` in the place of `w * L`). Over a region
+`sum of Out = sum of In` exactly in the exact outcome.
+
+**Scope.** The payroll-aware solve applies to a programme with no lanes, no nominal fallback
+(5.3.4) and in which no active recipe of a payer or `Hireable` group is also on the list of
+another role (its flow is not the group's alone: the rule of `IncomeBP`, 5.2). A programme
+outside that scope keeps its payroll-free duals and is reported with the reason `unsupported`.
+It does not apply to the autarky programmes beside a pooled one (9.2) or to the nominal
+programme, which feed no table.
+
+*Worked case (a toy, closed form).* One region, `D = 2` bread a tick for the basket, one
+commodity `flour` and two recipes with `d = 1`: `bake` (the payer group) nets `+2 bread - 1 flour`,
+`mill` (the `Hireable` group) nets `+1 flour`. At lambda 1 the flows are `x(bake) = x(mill) = 1`.
+Without payroll `p(bread) = 1/2`, `p(flour) = 1/2`, `w = 1/2`. With `beta` and no own consumption
+(`H u = 0` for the baker group), `sold(bake, bread) = 2`, `S = 2 p(bread) = 1` (at `p(bread) = 1/2`),
+`L(bake) = L(mill) = 1`, so `sigma = beta * S / L(mill) = 2 beta * p(bread)`. The equations are
+`bake: 2 p(bread) - p(flour) - 2 beta p(bread) = w`, `mill: p(flour) + 2 beta p(bread) = w`,
+`2 p(bread) = 1`, which give `p(bread) = 1/2`, `p(flour) = (1 - 2 beta) / 2`, `w = 1/2`: the wage
+is unchanged and the intermediate good is cheaper by the payroll. At `beta` 0 it is the
+payroll-free answer; at 2 500 bp `p(flour) = 1/4`; at 5 000 bp `p(flour) = 0` (a free good); above
+5 000 bp no non-negative solution exists and the report says `negative_dual`. Out of the payers
+`beta * S = beta` equals what the mill is paid, `sigma * L(mill) = beta`.
+
 ## 6. Arithmetic and rounding
 
 6.1. The solver computes in exact integers of unbounded size. It uses `math/big`
@@ -1312,7 +1426,7 @@ value, bound and count of each rule:
 `UnpricedWages` (regions with no starting wage, 8.2.5), `Drift`, `ResidualBP` and the list over
 `ResidualWarnBP`, `Census` (needed against configured households per group),
 `CapacityTight` (the activities whose capacity row is tight), `FacilityDecay` (each facility class with `Decay` or `WearPerUse` above 0, informational: it is not in the programme, 4.2.2), `Headroom` and `Rent` (per endowment and region: the sustainable draw over the draw at the reference programme at `lambda` 1, and the dual of its row; `spec-resources.md` 11.3), `endowment_runway` (a finite stock's years at the optimum), `Advantage` (9.2),
-`CapShortened` (stock cover cut to shelf life, 8.4.2), `NominalSeed` (the regions whose
+`PayrollInfeasible` (the regions whose programme kept its payroll-free duals under the employment module, with the reason, 5.6), `CapShortened` (stock cover cut to shelf life, 8.4.2), `NominalSeed` (the regions whose
 table came from the nominal programme, 5.3.4), `SurplusWantsBP` (`lambda*` of the
 programme with the wants, absent when the module is off and when that programme is infeasible, 3.2), `RegionSurplusBP` (per region, the autarky `SurplusBP`, and the pooled one for a region that trades: the figures that `spec-subsistence.md` 4.2 compares with `FloorBP`; the validator has the autarky figure only and the pooled one is in the solver's report alone; absent when a part was not run), `WageBelowTarget` (the
 role-economics check of `spec-welfare-and-wages.md` 7: value added per working tick
@@ -1637,6 +1751,12 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | FR-VIA-061 | With `WithLanes`, the solver MUST solve one programme for each weakly connected component of the lane graph over the regions with a group, MUST solve a region with no lane in autarky as without lanes, MUST ignore a lane with an end in a region that has no group, and MUST give the same result whatever the order of the lanes. |
 | FR-VIA-062 | In a lane programme the seed price of a commodity in a region MUST be the dual of that region's own goods row, scaled by the pooled rule of 6.3 over the component with each region's basket priced at its own prices, and for every lane the exact duals MUST satisfy `p(To, c) * (10 000 - LossBP) / 10 000 <= p(From, c) + w(From) * Labour / 10 000`. |
 | FR-VIA-063 | `WithLanes` MUST refuse, before any work, a lane with `From` equal to `To`, a duplicate, a negative `Labour`, a `LossBP` outside 0 to 9 999 and more than `MaxLanes` lanes, and `WithLanes` with `WithFreeTrade` MUST be `ErrOptionContext`; `SolveSteadyState` MUST refuse a lane that names an unknown region or commodity (`ErrUnknownRegion`, `ErrUnknownCommodity`) after validating the configuration and before building any programme. |
+| FR-VIA-064 | With `Modules.Employment` non-nil, `SolveSteadyState` MUST re-solve the duals of a programme in the scope of 5.6 so that the equations of 5.6 hold exactly, and MUST leave `lambda*`, `SurplusBP`, the labour share, the flows, the jobs' executions and the balanced census unchanged. It MUST read the payroll from the `Config` and take no option. The requirement fixes the arithmetic of the static balance; it does not say that the simulation sits at that balance (H-P was falsified, 5.6). |
+| FR-VIA-065 | The payroll-aware duals MUST be the unique solution of the linear system of 5.6 (a square system of full rank, consistent, with the duals that are 0 in the payroll-free outcome held at 0), computed in exact rationals, and MUST leave the solver as fixed point at its boundary by the rules of 6.3 and 6.4. |
+| FR-VIA-066 | The receipts of a payer group in the static model MUST be the value at the duals of its net sales a tick (net output of its activities at lambda 1 less its own households' upkeep, floored at 0 for each commodity), and the pay per working household-tick MUST be the payers' total over the labour of the `Hireable` groups. Over the pack `payroll` the static receipts MUST be within 10% of the measured `PayrollPaid.Due` per tick (a report, tested at the integration level). **Measured:** 97.5% over ticks 1 to 10 (`TestScenarioChain_PayrollReceiptsMatchStatic`), so assumption A1 held; the receipts were not what failed. |
+| FR-VIA-067 | In the exact outcome the payroll paid by the payers of a region MUST equal the payroll received by its workers exactly, and every active group MUST be paid the same net wage per working tick (`w`). A solution with a negative price, wage or rent, or in which an inactive activity pays more than the net wage, MUST NOT be used: the payroll-free duals stay and the report names the reason. |
+| FR-VIA-068 | With `Modules.Employment` nil, or with no payer group or no `Hireable` group in a programme, or at `PayrollBP` 0, the solver's table, report and warm start MUST be byte-equal to those it produced before the payroll form existed (the module-off identity), and the pinned hash and `testdata/golden/off/` MUST NOT move. |
+| FR-VIA-069 | `Report.PayrollInfeasible` MUST list, in region order, each region whose programme kept its payroll-free duals and the reason (`unsupported`, `no_unique_solution`, `negative_dual`, `inactive_profit`); a payroll diagnostic MUST NOT be an error and MUST NOT change a census or a table. `CensusRow.PayrollOutBP` and `PayrollInBP` MUST be 0 with the module off. |
 
 ### Non-functional
 
@@ -1646,6 +1766,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | NFR-VIA-002 | The V1 and V4 checks SHOULD run in time proportional to commodities times recipes, and the whole of `Validate` including V2 and V3 SHOULD finish in one second at the maximum sizes, by the size gate. Provisional. |
 | NFR-VIA-003 | The solver on 5 regions, 30 commodities and about 45 recipes SHOULD have a benchmark with `b.ReportAllocs()`. |
 | NFR-VIA-004 | The solver, the stagger and the table validators MUST have fuzz tests (testing.md 7.4) asserting that they never panic and that every result is an error or a valid table. |
+| NFR-VIA-005 | The payroll re-solve MUST be a pure function of the programme and the configuration (no random number, no log, no goroutine), MUST be bounded by the existing cell gate (it adds no pivot: it is one elimination over the non-zero duals), and SHOULD add no more than a tenth to the time of the solve it follows. Provisional (N-015). |
 
 ## 17. Observability
 
@@ -1767,6 +1888,8 @@ spec is written):
 | The checks of V1 to V4 | one unexported `checkViability`, in `viability_check.go`; `Validate` and `Warnings` both call it (`spec-config.md` 7.1.6), and it is not exported (architecture.md 2.8) |
 | The table from the solved programme | root package, `viability_table.go` |
 | The file split | the concept is split in three files, `viability.go` (the exported surface), `viability_check.go` and `viability_table.go`, for the size limits of N-243; a continuation file maps to this area code (`architecture.md` 2.6) |
+| The payroll-aware duals (5.6): the guarded call in `programme()`, the input and the write-back | root package, `viability_payroll.go` (a continuation file of this area); the call is a guarded line in `viability.go` with no logic (ADR 0012, architecture.md 2.10.1) |
+| The exact system of 5.6 | `internal/steady/payroll.go`: stdlib only (`math/big`), primitive slices |
 | The tableau, Bland's rule, the certificate, the greedy start count, the component search, the programme per component | `internal/steady`: stdlib only (`math/big`), primitive slices (architecture.md 2.9) |
 | The stagger and the application of the table | root package, `world.go`, `agent.go` at construction |
 | The bounds of section 11 | root package, `bounds.go` |

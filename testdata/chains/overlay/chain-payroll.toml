@@ -1,0 +1,46 @@
+# The pack `payroll` (plan 2-29, spec-reference-chain.md 4.4.8): pack one-demand with the employment
+# module in its payroll form, a data layer sized by the payroll-aware solver. Layers: base.toml,
+# demand.toml, one-demand.toml, overlay/employment.toml, this file, warm-payroll.toml.
+# A test double, not a design: every number is a placeholder (N-015, N-027). It is the layer T6 of the
+# ladder of plan 2-29 (N-352). What it changes against one-demand + overlay/employment.toml:
+#  - the data knobs of the E1 trials: staple yield in all seasons, privation thresholds, tool_b
+#    durability 32 (the static margin gate of FR-REF-044 reads it) and a mineral yield of 15 000;
+#  - the want periods of comfort and treat (the final demand that sizes the five discretionary roles);
+#  - payroll_bp 5 500;
+#  - the household counts, which are NOT chosen here: they are the census the payroll-aware solver
+#    balances for the layers above (fixed point of Report.Census.Balanced, FR-VIA-060), so the want data
+#    and the durability fix the discretionary roles and no count is cut by hand.
+# The warm start is warm-payroll.toml, the solver's table for the cold layers (FR-REF-043).
+# It carries a household-count claim only (FR-REF-045); no band is set and criterion 1 is not met.
+
+[region.north.yield.grow_staple]
+all = 10000
+[region.north.yield.dig_mineral]
+all = 15000
+[commodity.tool_b]
+durability = 32
+[world]
+remove_privation = 40
+change_privation = 12
+[region.north.group.comfort_maker]
+households = 11
+[region.north.group.cook]
+households = 223
+[region.north.group.digger]
+households = 14
+[region.north.group.forester]
+households = 145
+[region.north.group.grower]
+households = 141
+[region.north.group.maker]
+households = 28
+[region.north.group.refiner]
+households = 25
+[region.north.group.treat_maker]
+households = 13
+[modules.demand.want.comfort]
+period = 13
+[modules.demand.want.treat]
+period = 6
+[role.cook.employer]
+payroll_bp = 5500
