@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"slices"
 	"testing"
@@ -174,7 +175,9 @@ func TestSolveSteadyState_PayrollReports(t *testing.T) {
 		if len(st.Report.PayrollInfeasible) != 1 || st.Report.PayrollInfeasible[0].Region != "north" {
 			t.Fatalf("PayrollInfeasible = %+v, want one record for north", st.Report.PayrollInfeasible)
 		}
-		t.Logf("reason at 10 000 bp: %s", st.Report.PayrollInfeasible[0].Reason)
+		if got := st.Report.PayrollInfeasible[0].Reason; got != "negative_dual" {
+			t.Errorf("PayrollInfeasible reason at 10 000 bp = %q, want negative_dual (the cooks would pay more than they receive)", got)
+		}
 		if !reflect.DeepEqual(st.Table, free.Table) {
 			t.Errorf("a kept payroll-free solution must give the payroll-free table")
 		}
@@ -199,4 +202,50 @@ func TestSolveSteadyState_PayrollReports(t *testing.T) {
 			t.Errorf("PayrollInfeasible = %+v, want one record, reason unsupported", st.Report.PayrollInfeasible)
 		}
 	})
+}
+
+// TestSolveSteadyState_PayrollZeroShareIsRefused verifies that the module-off
+// identity of FR-VIA-068 for "no payer" and "no Hireable group" is not reachable
+// from a configuration: with the employment module on, a share of 0 basis points
+// and a configuration with no Hireable role are refused by validation before the
+// solver runs, so those two cases are covered by the unit tests of
+// internal/steady and of payrollRegions, and a payroll-free table is only ever
+// produced with the module off (TestSolveSteadyState_PayrollOffDifferential).
+//
+// Requirement: FR-VIA-068
+func TestSolveSteadyState_PayrollZeroShareIsRefused(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	base := loadPack(t, packOneDemandEmploymentCold...)
+	tests := []struct {
+		name  string
+		shape func(cfg *economysim.Config)
+		want  error
+	}{
+		{"share 0", func(cfg *economysim.Config) {
+			for i := range cfg.Roles {
+				if cfg.Roles[i].Employer != nil {
+					cfg.Roles[i].Employer = &economysim.Employer{PayrollBP: 0}
+				}
+			}
+		}, economysim.ErrOutOfBounds},
+		{"no Hireable role", func(cfg *economysim.Config) {
+			for i := range cfg.Roles {
+				cfg.Roles[i].Hireable = false
+			}
+		}, economysim.ErrEmploymentShape},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cfg := base
+			cfg.Roles = slices.Clone(base.Roles)
+			tt.shape(&cfg)
+			if _, err := economysim.SolveSteadyState(context.Background(), cfg); !errors.Is(err, tt.want) {
+				t.Errorf("SolveSteadyState(%s) error = %v, want %v", tt.name, err, tt.want)
+			}
+		})
+	}
 }

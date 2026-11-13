@@ -147,6 +147,14 @@ func TestScenarioChain_Claim(t *testing.T) {
 		t.Skip("gate F runs it without -race (plan 2-1 D229)")
 	}
 	cfg := loadValidPack(t, payrollWarm...)
+	// The claim is about the pack with the payroll on and without a floor under the count: a pack that
+	// set a floor (population min_households above 0) or turned the payroll off would not be this claim.
+	if cfg.Modules.Employment == nil {
+		t.Fatalf("Modules.Employment of the pack payroll = nil, want the module on")
+	}
+	if pop := cfg.Modules.Population; pop != nil && pop.MinHouseholds != 0 {
+		t.Fatalf("Population.MinHouseholds of the pack payroll = %d, want 0: no role_keep-type floor (FR-REF-045)", pop.MinHouseholds)
+	}
 	// The eight roles of the claim are those the pack gives households; the visitor role is closed and filled
 	// only by external agents, so it has no household at the start and is not a role that can go extinct.
 	staffed := map[string]bool{}
