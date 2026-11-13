@@ -643,3 +643,30 @@ func TestClone(t *testing.T) {
 		t.Errorf("Depth(uplands) of the clone = %d, want 2", d)
 	}
 }
+
+// TestBuild_RefusesChainStoreBeyondInt32 builds a line of 2 001 jurisdictions and
+// 1 100 000 regions that all sit in the deepest one: the flat chain store would
+// hold 2.2e9 entries, more than its int32 offsets can address, so Build refuses
+// with ErrSize instead of wrapping an offset.
+//
+// Requirement: FR-POL-004
+func TestBuild_RefusesChainStoreBeyondInt32(t *testing.T) {
+	t.Parallel()
+	const levels, regions = 2001, 1_100_000
+	parent := make([]int32, levels)
+	for i := range parent {
+		parent[i] = int32(i - 1)
+	}
+	member := make([]int32, regions)
+	for i := range member {
+		member[i] = levels - 1
+	}
+	_, err := polity.Build(parent, member, levels+1)
+	if !errors.Is(err, polity.ErrSize) {
+		t.Fatalf("Build(chain store beyond int32) = %v, want ErrSize", err)
+	}
+	// A forest that is within the bound still builds.
+	if _, err := polity.Build(parent[:3], []int32{2, 1, -1}, 8); err != nil {
+		t.Errorf("Build(small) = %v, want nil", err)
+	}
+}

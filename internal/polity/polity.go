@@ -3,6 +3,7 @@ package polity
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/bits"
 	"slices"
 
@@ -19,11 +20,16 @@ var (
 	ErrDepth = errors.New("polity: parent chain is too deep")
 	// ErrIndex is a parent or a member that is neither -1 nor a jurisdiction index.
 	ErrIndex = errors.New("polity: index out of range")
+	// ErrSize is an input whose tables would need an index beyond int32: more
+	// jurisdictions or regions than int32 holds, or a flat chain store longer than
+	// it. The offsets of the tables are int32, so a larger input is refused rather
+	// than wrapped.
+	ErrSize = errors.New("polity: tables too large")
 )
 
 // BuildError says which cause Build found and at which index: a jurisdiction
 // for ErrCycle and ErrDepth, a jurisdiction (parent) or a region (member) for
-// ErrIndex. Index is the lowest one at fault, so the report does not depend on
+// ErrIndex, and 0 for ErrSize. Index is the lowest one at fault, so the report does not depend on
 // the order of the input rows' discovery.
 type BuildError struct {
 	Err   error
@@ -72,6 +78,9 @@ type Tables struct {
 // jurisdictions (the J log J) is the caller's (spec-polity.md 3.2.1, 4.4.2).
 func Build(parent, member []int32, maxDepth int) (Tables, error) {
 	j := len(parent)
+	if j > math.MaxInt32 || len(member) > math.MaxInt32 {
+		return Tables{}, &BuildError{Err: ErrSize}
+	}
 	for i, p := range parent {
 		if p < -1 || int(p) >= j {
 			return Tables{}, &BuildError{Err: ErrIndex, Index: i}
@@ -90,6 +99,17 @@ func Build(parent, member []int32, maxDepth int) (Tables, error) {
 		if int(d) >= maxDepth {
 			return Tables{}, &BuildError{Err: ErrDepth, Index: i}
 		}
+	}
+	// The offsets of the flat stores are int32: refuse a chain store that does not
+	// fit before any of it is built.
+	var total int64
+	for _, m := range member {
+		if m >= 0 {
+			total += int64(depth[m]) + 1
+		}
+	}
+	if total > math.MaxInt32 {
+		return Tables{}, &BuildError{Err: ErrSize}
 	}
 	t := Tables{parent: slices.Clone(parent), depth: depth, member: slices.Clone(member)}
 	t.buildChains()
