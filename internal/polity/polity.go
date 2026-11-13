@@ -224,6 +224,16 @@ func (t *Tables) buildCovered() {
 	}
 }
 
+// Clone returns a deep copy of the tables that shares no storage with t.
+func (t Tables) Clone() Tables {
+	return Tables{
+		parent: slices.Clone(t.parent), depth: slices.Clone(t.depth), member: slices.Clone(t.member),
+		chains: slices.Clone(t.chains), chainAt: slices.Clone(t.chainAt),
+		children: slices.Clone(t.children), childrenAt: slices.Clone(t.childrenAt),
+		covered: slices.Clone(t.covered), coveredAt: slices.Clone(t.coveredAt),
+	}
+}
+
 // Len returns the number of jurisdictions.
 func (t Tables) Len() int { return len(t.parent) }
 

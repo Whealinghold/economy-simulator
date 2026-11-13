@@ -619,3 +619,27 @@ func TestScaled_AgainstBig(t *testing.T) {
 		}
 	}
 }
+
+// TestClone verifies that a clone answers every query as the original and shares no
+// storage with it.
+//
+// Requirement: FR-POL-013
+func TestClone(t *testing.T) {
+	t.Parallel()
+	tb := exampleA(t)
+	c := tb.Clone()
+	for r := int32(0); r < 5; r++ {
+		if !slices.Equal(c.Chain(r), tb.Chain(r)) {
+			t.Fatalf("Chain(%d) of the clone = %v, want %v", r, c.Chain(r), tb.Chain(r))
+		}
+	}
+	c.Chain(hills)[0] = 99
+	c.Covered(crown)[0] = 99
+	c.Children(crown)[0] = 99
+	if tb.Chain(hills)[0] != uplands || tb.Covered(crown)[0] != capital || tb.Children(crown)[0] != coast {
+		t.Error("mutating the clone changed the original")
+	}
+	if d, _ := c.Depth(uplands); d != 2 {
+		t.Errorf("Depth(uplands) of the clone = %d, want 2", d)
+	}
+}

@@ -161,3 +161,10 @@ const (
 	Counterparties = "counterparties"
 	Drift          = "drift"
 )
+
+// Jurisdictions and Governed are counts of jurisdictions and of governed
+// jurisdictions in the construction summary, in the line of the polity module.
+const (
+	Jurisdictions = "jurisdictions"
+	Governed      = "governed"
+)

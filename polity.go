@@ -6,11 +6,12 @@ import (
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
-	"github.com/Whealinghold/economy-sim/internal/polity"
+	pol "github.com/Whealinghold/economy-sim/internal/polity"
 )
 
 // This file is the polity module (spec-polity.md; architecture.md 2.10.1): the
-// validator of its configuration and its two warnings. The tables, the queries and
+// validator of its configuration and its two warnings, the Polity value its
+// queries are read through, and the module state. The tables, the queries and
 // the combiners are in internal/polity, and this file converts at the call. Outside
 // this file the module appears only in the catalogue files (config.go, hash.go,
 // bounds.go, defaults.go, errors.go, validate.go) and at the named hooks of ADR 0010.
@@ -99,14 +100,14 @@ func (v *validator) polityParents(base []string, m *PolityConfig) bool {
 		return false
 	}
 	cc := m.canonical()
-	_, err := polity.Build(polityParentArray(cc), nil, MaxPolityDepth)
-	var be *polity.BuildError
+	_, err := pol.Build(polityParentArray(cc), nil, MaxPolityDepth)
+	var be *pol.BuildError
 	if !errors.As(err, &be) { // nil: the forest is sound
 		return true
 	}
 	at := idx[cc.Jurisdictions[be.Index].ID]
 	p := path(base, "jurisdictions["+itoa(at)+"]", "parent")
-	if be.Err == polity.ErrCycle {
+	if be.Err == pol.ErrCycle {
 		v.rep.add(ErrJurisdictionCycle, p, cc.Jurisdictions[be.Index].Parent, "")
 	} else {
 		v.rep.add(ErrOutOfBounds, p, cc.Jurisdictions[be.Index].Parent, itoa(MaxPolityDepth))
@@ -296,4 +297,265 @@ func polityCoverage(c *Config, m *PolityConfig) (covering, assigned map[string]b
 		}
 	}
 	return covering, assigned
+}
+
+// JurisdictionID is the index of a jurisdiction in ascending order of its ID
+// string. It is not stable across configurations: adding a jurisdiction can
+// renumber the others. Use the string ID to persist or exchange one.
+type JurisdictionID int
+
+// NoJurisdiction means "none": a query returns it where a jurisdiction does not
+// exist, or where no jurisdiction covers both of two regions.
+const NoJurisdiction JurisdictionID = -1
+
+// Crossing is what a good leaves and enters in going from one region to another
+// (spec-polity.md 4.1.1).
+type Crossing struct {
+	// Exit lists the jurisdictions that cover the origin and not the destination,
+	// innermost first.
+	Exit []JurisdictionID
+	// Enter lists the jurisdictions that cover the destination and not the origin,
+	// outermost first.
+	Enter []JurisdictionID
+}
+
+// Polity is the jurisdiction tree and the membership of the regions: plain data,
+// immutable and without a mutating method. It cannot change during a run
+// (spec-polity.md 7.4), so the world returns an equal value every time. Like Graph,
+// each call of World.Polity returns a fresh deep copy that shares no storage with
+// the world, and so do the lists its methods return (architecture.md 12.4). The
+// zero value is the polity of a world without the module: no jurisdiction, and
+// every query answers none.
+type Polity struct {
+	names []string // the jurisdiction IDs, ascending: the index is the JurisdictionID
+	seats []int32  // the seat region of each jurisdiction, or -1 for a grouping
+	gov   []JurisdictionID
+	t     pol.Tables
+}
+
+// NewPolity checks the polity rules of spec-polity.md 9 on cfg and builds the value
+// the module on that configuration would have. It reports the first rule that fails
+// in the order of 9.1 as the framework of Validate does, and it checks nothing else
+// of cfg. A configuration with no polity module gives the zero Polity.
+func NewPolity(cfg Config) (Polity, error) {
+	if cfg.Modules.Polity == nil {
+		return Polity{}, nil
+	}
+	v := &validator{c: cfg}
+	v.lk = newLookup(&v.c)
+	v.validatePolity()
+	if err := v.rep.err(); err != nil {
+		return Polity{}, err
+	}
+	cc := cfg.canonical()
+	return buildPolity(&cc), nil
+}
+
+// buildPolity derives the Polity of a canonical configuration whose polity module
+// is on and valid: the regions are indexed by their position in the sorted list.
+func buildPolity(c *Config) Polity {
+	m := c.Modules.Polity
+	member := make([]int32, len(c.Regions))
+	for i := range member {
+		member[i] = -1
+	}
+	for _, row := range m.Members {
+		r, _ := c.regionID(row.Region)
+		j, _ := slices.BinarySearchFunc(m.Jurisdictions, row.Jurisdiction, func(e Jurisdiction, id string) int { return cmp.Compare(e.ID, id) })
+		member[r] = int32(j)
+	}
+	t, err := pol.Build(polityParentArray(m), member, MaxPolityDepth)
+	if err != nil {
+		invariant("the polity of a validated configuration failed to build: " + err.Error())
+	}
+	p := Polity{names: make([]string, len(m.Jurisdictions)), seats: make([]int32, len(m.Jurisdictions)), t: t}
+	for i, j := range m.Jurisdictions {
+		p.names[i], p.seats[i] = j.ID, -1
+		if j.Seat != "" {
+			r, _ := c.regionID(j.Seat)
+			p.seats[i] = int32(r)
+			p.gov = append(p.gov, JurisdictionID(i))
+		}
+	}
+	return p
+}
+
+// clone returns a deep copy that shares no storage with p.
+func (p Polity) clone() Polity {
+	return Polity{names: slices.Clone(p.names), seats: slices.Clone(p.seats), gov: slices.Clone(p.gov), t: p.t.Clone()}
+}
+
+// jurisdictions converts a list of internal indexes to a fresh list of IDs, nil
+// when empty.
+func jurisdictions(in []int32) []JurisdictionID {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]JurisdictionID, len(in))
+	for i, j := range in {
+		out[i] = JurisdictionID(j)
+	}
+	return out
+}
+
+// Len returns the number of jurisdictions.
+func (p Polity) Len() int { return len(p.names) }
+
+// Name returns the ID string of a jurisdiction, or "" if j is not one.
+func (p Polity) Name(j JurisdictionID) string {
+	if j < 0 || int(j) >= len(p.names) {
+		return ""
+	}
+	return p.names[j]
+}
+
+// Lookup returns the JurisdictionID of the jurisdiction with the given ID string.
+func (p Polity) Lookup(id string) (JurisdictionID, bool) {
+	i, ok := slices.BinarySearch(p.names, id)
+	if !ok {
+		return NoJurisdiction, false
+	}
+	return JurisdictionID(i), true
+}
+
+// Parent returns the parent of j; false for a root or a j that is not a
+// jurisdiction.
+func (p Polity) Parent(j JurisdictionID) (JurisdictionID, bool) {
+	par, ok := p.t.Parent(int32(j))
+	if !ok {
+		return NoJurisdiction, false
+	}
+	return JurisdictionID(par), true
+}
+
+// Children returns the children of j, ascending by JurisdictionID.
+func (p Polity) Children(j JurisdictionID) []JurisdictionID {
+	return jurisdictions(p.t.Children(int32(j)))
+}
+
+// Depth returns the number of ancestors of j, a root being 0; false for a j that is
+// not a jurisdiction.
+func (p Polity) Depth(j JurisdictionID) (int, bool) { return p.t.Depth(int32(j)) }
+
+// Of returns the direct jurisdiction of region r; false if it has none.
+func (p Polity) Of(r RegionID) (JurisdictionID, bool) {
+	j, ok := p.t.Of(int32(r))
+	if !ok {
+		return NoJurisdiction, false
+	}
+	return JurisdictionID(j), true
+}
+
+// Chain returns the jurisdictions of region r, its direct jurisdiction first and
+// the root last; empty if it has none.
+func (p Polity) Chain(r RegionID) []JurisdictionID { return jurisdictions(p.t.Chain(int32(r))) }
+
+// Covers reports whether jurisdiction j covers region r: j is in the chain of r.
+func (p Polity) Covers(j JurisdictionID, r RegionID) bool { return p.t.Covers(int32(j), int32(r)) }
+
+// Common returns the innermost jurisdiction that covers both regions, or
+// NoJurisdiction if there is none.
+func (p Polity) Common(a, b RegionID) JurisdictionID {
+	return JurisdictionID(p.t.Common(int32(a), int32(b)))
+}
+
+// Regions returns the regions jurisdiction j covers, ascending by RegionID, the
+// direct members of its descendants included.
+func (p Polity) Regions(j JurisdictionID) []RegionID {
+	in := p.t.Covered(int32(j))
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]RegionID, len(in))
+	for i, r := range in {
+		out[i] = RegionID(r)
+	}
+	return out
+}
+
+// Crossing returns what a good leaves and enters in going from one region to the
+// other (spec-polity.md 4.1.1). It is defined for any two regions, whether or not
+// an edge joins them, and does not depend on the status of an edge.
+func (p Polity) Crossing(from, to RegionID) Crossing {
+	exit, enter := p.t.Crossing(int32(from), int32(to))
+	return Crossing{Exit: jurisdictions(exit), Enter: jurisdictions(enter)}
+}
+
+// Between lists, in ascending EdgeID, the edges of g whose crossing has a in Exit
+// and b in Enter: an edge that leaves a region a covers and enters one b covers and
+// is internal to neither. A closed edge is listed. Two nested jurisdictions, or one
+// with itself, have no edge between them. It costs O(edges * depth).
+func (p Polity) Between(g Graph, a, b JurisdictionID) []EdgeID {
+	var out []EdgeID
+	for e := range g.Edges() {
+		v, _ := g.EdgeAt(EdgeID(e))
+		if p.t.EdgeBetween(int32(v.From), int32(v.To), int32(a), int32(b)) {
+			out = append(out, v.ID)
+		}
+	}
+	return out
+}
+
+// Seat returns the region jurisdiction j is governed from; false for a grouping or a
+// j that is not a jurisdiction.
+func (p Polity) Seat(j JurisdictionID) (RegionID, bool) {
+	if j < 0 || int(j) >= len(p.seats) || p.seats[j] < 0 {
+		return NoRegion, false
+	}
+	return RegionID(p.seats[j]), true
+}
+
+// Governed returns the governed jurisdictions, ascending by JurisdictionID.
+func (p Polity) Governed() []JurisdictionID { return slices.Clone(p.gov) }
+
+// polity is the state of the module, nil while it is off (spec-polity.md 4.4.1):
+// the derived tables, built once at construction from the configuration and saved
+// nowhere (spec-polity.md 11).
+type polity struct {
+	v Polity
+}
+
+// newPolity builds the state of a canonical configuration the validator accepted,
+// nil when the module is off.
+func newPolity(c *Config) *polity {
+	if c.Modules.Polity == nil {
+		return nil
+	}
+	return &polity{v: buildPolity(c)}
+}
+
+// Polity returns the jurisdiction tree and the membership of the regions: a deep
+// copy built fresh on every call, the empty Polity if the module is off. It cannot
+// change in a run, so a consumer calls it once and keeps the value. It works on a
+// failed world (spec-polity.md 4.2.4).
+func (w *World) Polity() Polity {
+	if w.polity == nil {
+		return Polity{}
+	}
+	return w.polity.v.clone()
+}
+
+// polityNames returns the names table of the jurisdictions, nil while the module is
+// off: the IDs in ascending order, the index being the JurisdictionID.
+func polityNames(c *Config) []string {
+	m := c.Modules.Polity
+	if m == nil {
+		return nil
+	}
+	out := make([]string, len(m.Jurisdictions))
+	for i := range m.Jurisdictions {
+		out[i] = m.Jurisdictions[i].ID
+	}
+	return out
+}
+
+// polityCounts returns the number of jurisdictions and of governed ones, for the
+// construction summary.
+func polityCounts(c *Config) (total, governed int) {
+	for i := range c.Modules.Polity.Jurisdictions {
+		if c.Modules.Polity.Jurisdictions[i].Seat != "" {
+			governed++
+		}
+	}
+	return len(c.Modules.Polity.Jurisdictions), governed
 }
