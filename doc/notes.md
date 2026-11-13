@@ -84,8 +84,8 @@ PR description.
 | SAV | N-145, N-156, N-195, N-197 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-140, N-192, N-268, N-348 |
-| SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-264, N-268, N-244, N-305, N-317 |
-| SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-305, N-352 |
+| SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-264, N-268, N-244, N-317 |
+| SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-221, N-244, N-327 |
 | STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356 |
@@ -1857,7 +1857,7 @@ PR description.
 - **Note:** The slice builds only the tool half of SKL: the inequality of `spec-skill-barriers.md` 2.5 (`ToolPrice`, `CapitalReturn` in the view) is in `internal/occupation`. `DecideApply` is not declared in the slice (SPN 3.3, plan 1-9 O10); a role with `TrainingTicks` above 0 is never entered by review, rung 1 or replacement, which is what SPN 6.2 says when no queue exists. `skills.go` (Stage 3) appends the queue-discounted rule of SKL 4.5 (`C_train`, `q_w`), the view fields `Surplus`, `QueueAhead`, `Trainers`, `MaxTrainees`, `InTraineeship`, the `Apply` emission for a weight-1 agent, the refusals `in_traineeship` and `needs_weight_one`, and the cause `traineeship`, all appended in module order.
 - **Update (2026-10-17, spawner edits):** the tool half is written in `spec-spawner.md` and `spec-skill-barriers.md`; `DecideApply` is not declared in the slice, and SKL appends it with the `Apply` emission (O10, ruled (a)). Left open for Stage 3 `skills.go`.
 - **Update (2026-10-18, plan 1-9 exit gate):** built as planned: `internal/occupation.CapitalOK` is the tool half, `DecideApply` is not declared, a role with `TrainingTicks` above 0 is never entered. Left open for Stage 3 `skills.go`.
-- **Update (2026-11-13, plan 3-skl Phase 1):** applied by plan 3-skl: `internal/occupation.ApplyOK` and the refusals in Phase 2, `DecideApply` and the types in Phase 3, the `Apply` emission in Phase 4. Remove at the gate.
+- **Update (2026-11-13, plan 3-skl Phase 1):** applied by plan 3-skl: `internal/occupation.ApplyOK` and the refusals in Phase 2, `DecideApply` and the types in Phase 3, the `Apply` emission in Phase 4 (2026-11-13, PR B1: built, `DecideApply` is executed, the default `Decide` applies). Remove at the gate.
 
 ### N-265 The renewal carry and the three runs are the world's state
 
@@ -1885,13 +1885,6 @@ PR description.
 - **Update (2026-11-09, plan 2-14 Phase 1):** MIG: `on_journey` (a `Refusal` after the existing values, a `region_bound` obligation) and the `RoleSince` of an arrival are built in plan 2-14 Phase 5; the tree has `offStage`, `regionBounds.add` and `reseedAtArrival` for it. Left open for SET, SUB, POP, SKL.
 - **Update (2026-11-11, plan 2-11):** POP fields `PopBirths`, `PopDeaths` and the effective `Renewal` 0 are appended in plan 2-11. Left open.
 - **Update (2026-11-13, plan 3-skl Phase 1):** applied for SKL (the refusals `in_traineeship`, `needs_weight_one`, `needs_traineeship`, `already_queued` and the cause `traineeship`, appended in module order, plan 3-skl); keep for SET.
-
-### N-305 When SKL appends `DecideApply`, SPN 6.2 and 6.3.0 must be re-read
-
-- **Areas:** SPN, SKL
-- **Raised:** 2026-10-17, WP5 report of the owed-edits job.
-- **Note:** `spec-spawner.md` 6.2's training rule (a role with `TrainingTicks` above 0 is never entered) and the counts of 6.3.0 hold only while no queue exists. The change that appends `DecideApply` (N-264) re-reads both and edits them in the same change.
-- **Update (2026-11-13, plan 3-skl Phase 1):** applied: `spec-spawner.md` 6.2 and 4 re-read and edited (E5, plan 3-skl): an `Apply` counts toward no cap. Remove with Phase 4.
 
 ### N-306 The census formula is pinned against `one`: the work share cancels
 
@@ -2284,4 +2277,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 693d76a17147b942d58173e8
+NOTES-TAG: c4f2f6685c51e7d92372407d
