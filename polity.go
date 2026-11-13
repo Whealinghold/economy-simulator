@@ -165,10 +165,15 @@ func (v *validator) polityMembers(base []string, m *PolityConfig) bool {
 // direct jurisdiction of the region or an ancestor of it. direct maps a region ID
 // to its direct jurisdiction ID; the parent links are acyclic by now.
 func polityCovers(m *PolityConfig, idx map[string]int, direct map[string]string, id, region string) bool {
-	for cur, ok := direct[region]; ok && cur != ""; cur = m.Jurisdictions[idx[cur]].Parent {
+	for cur, ok := direct[region]; ok && cur != ""; {
 		if cur == id {
 			return true
 		}
+		at, known := idx[cur]
+		if !known { // not reached on a validated order; never read index 0 for an unknown ID
+			return false
+		}
+		cur = m.Jurisdictions[at].Parent
 	}
 	return false
 }
@@ -501,7 +506,7 @@ func (p Polity) Between(g Graph, a, b JurisdictionID) []EdgeID {
 	var out []EdgeID
 	for e := range g.Edges() {
 		v, _ := g.EdgeAt(EdgeID(e))
-		if p.t.EdgeBetween(int32(v.From), int32(v.To), narrow(int(a)), narrow(int(b))) {
+		if p.t.EdgeBetween(narrow(int(v.From)), narrow(int(v.To)), narrow(int(a)), narrow(int(b))) {
 			out = append(out, v.ID)
 		}
 	}
