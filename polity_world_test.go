@@ -162,6 +162,36 @@ func TestPolity_Queries(t *testing.T) {
 // or equal jurisdictions, a closed edge still listed, and the chains and crossings
 // unchanged by closing edges 4 and 8 (an embargo of the coast, spec-polity.md 12.1).
 //
+// Requirement: FR-POL-006, FR-POL-007, FR-POL-008
+func TestPolity_HugeIDsAreNone(t *testing.T) {
+	t.Parallel()
+	p := polityWorld(t).Polity()
+	one := 1
+	huge := one << 32 // aliases ID 0 if truncated to int32
+	r, j := economysim.RegionID(huge), economysim.JurisdictionID(huge)
+	if got := p.Chain(r); len(got) != 0 {
+		t.Errorf("Chain(2^32) = %v, want empty", got)
+	}
+	if _, ok := p.Of(r); ok {
+		t.Error("Of(2^32) found a jurisdiction")
+	}
+	if p.Covers(jids(jCrown)[0], r) {
+		t.Error("Covers(crown, 2^32) = true, want false")
+	}
+	if _, ok := p.Depth(j); ok {
+		t.Error("Depth(2^32) ok, want false")
+	}
+	if _, ok := p.Parent(j); ok {
+		t.Error("Parent(2^32) ok, want false")
+	}
+	if got := p.Regions(j); len(got) != 0 {
+		t.Errorf("Regions(2^32) = %v, want empty", got)
+	}
+	if got := p.Common(r, r); got != economysim.NoJurisdiction {
+		t.Errorf("Common(2^32, 2^32) = %d, want NoJurisdiction", got)
+	}
+}
+
 // Requirement: FR-POL-011, FR-POL-033
 func TestPolity_Between(t *testing.T) {
 	t.Parallel()

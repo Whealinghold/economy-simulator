@@ -3,6 +3,7 @@ package economysim
 import (
 	"cmp"
 	"errors"
+	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
@@ -380,6 +381,15 @@ func buildPolity(c *Config) Polity {
 	return p
 }
 
+// narrow converts a public ID to the int32 of internal/polity, -1 (none) when it
+// does not fit, so an ID beyond int32 cannot alias a low index by truncation.
+func narrow(i int) int32 {
+	if i < math.MinInt32 || i > math.MaxInt32 {
+		return -1
+	}
+	return int32(i)
+}
+
 // clone returns a deep copy that shares no storage with p.
 func (p Polity) clone() Polity {
 	return Polity{names: slices.Clone(p.names), seats: slices.Clone(p.seats), gov: slices.Clone(p.gov), t: p.t.Clone()}
@@ -421,7 +431,7 @@ func (p Polity) Lookup(id string) (JurisdictionID, bool) {
 // Parent returns the parent of j; false for a root or a j that is not a
 // jurisdiction.
 func (p Polity) Parent(j JurisdictionID) (JurisdictionID, bool) {
-	par, ok := p.t.Parent(int32(j))
+	par, ok := p.t.Parent(narrow(int(j)))
 	if !ok {
 		return NoJurisdiction, false
 	}
@@ -430,16 +440,16 @@ func (p Polity) Parent(j JurisdictionID) (JurisdictionID, bool) {
 
 // Children returns the children of j, ascending by JurisdictionID.
 func (p Polity) Children(j JurisdictionID) []JurisdictionID {
-	return jurisdictions(p.t.Children(int32(j)))
+	return jurisdictions(p.t.Children(narrow(int(j))))
 }
 
 // Depth returns the number of ancestors of j, a root being 0; false for a j that is
 // not a jurisdiction.
-func (p Polity) Depth(j JurisdictionID) (int, bool) { return p.t.Depth(int32(j)) }
+func (p Polity) Depth(j JurisdictionID) (int, bool) { return p.t.Depth(narrow(int(j))) }
 
 // Of returns the direct jurisdiction of region r; false if it has none.
 func (p Polity) Of(r RegionID) (JurisdictionID, bool) {
-	j, ok := p.t.Of(int32(r))
+	j, ok := p.t.Of(narrow(int(r)))
 	if !ok {
 		return NoJurisdiction, false
 	}
@@ -448,21 +458,23 @@ func (p Polity) Of(r RegionID) (JurisdictionID, bool) {
 
 // Chain returns the jurisdictions of region r, its direct jurisdiction first and
 // the root last; empty if it has none.
-func (p Polity) Chain(r RegionID) []JurisdictionID { return jurisdictions(p.t.Chain(int32(r))) }
+func (p Polity) Chain(r RegionID) []JurisdictionID { return jurisdictions(p.t.Chain(narrow(int(r)))) }
 
 // Covers reports whether jurisdiction j covers region r: j is in the chain of r.
-func (p Polity) Covers(j JurisdictionID, r RegionID) bool { return p.t.Covers(int32(j), int32(r)) }
+func (p Polity) Covers(j JurisdictionID, r RegionID) bool {
+	return p.t.Covers(narrow(int(j)), narrow(int(r)))
+}
 
 // Common returns the innermost jurisdiction that covers both regions, or
 // NoJurisdiction if there is none.
 func (p Polity) Common(a, b RegionID) JurisdictionID {
-	return JurisdictionID(p.t.Common(int32(a), int32(b)))
+	return JurisdictionID(p.t.Common(narrow(int(a)), narrow(int(b))))
 }
 
 // Regions returns the regions jurisdiction j covers, ascending by RegionID, the
 // direct members of its descendants included.
 func (p Polity) Regions(j JurisdictionID) []RegionID {
-	in := p.t.Covered(int32(j))
+	in := p.t.Covered(narrow(int(j)))
 	if len(in) == 0 {
 		return nil
 	}
@@ -477,7 +489,7 @@ func (p Polity) Regions(j JurisdictionID) []RegionID {
 // other (spec-polity.md 4.1.1). It is defined for any two regions, whether or not
 // an edge joins them, and does not depend on the status of an edge.
 func (p Polity) Crossing(from, to RegionID) Crossing {
-	exit, enter := p.t.Crossing(int32(from), int32(to))
+	exit, enter := p.t.Crossing(narrow(int(from)), narrow(int(to)))
 	return Crossing{Exit: jurisdictions(exit), Enter: jurisdictions(enter)}
 }
 
@@ -489,7 +501,7 @@ func (p Polity) Between(g Graph, a, b JurisdictionID) []EdgeID {
 	var out []EdgeID
 	for e := range g.Edges() {
 		v, _ := g.EdgeAt(EdgeID(e))
-		if p.t.EdgeBetween(int32(v.From), int32(v.To), int32(a), int32(b)) {
+		if p.t.EdgeBetween(int32(v.From), int32(v.To), narrow(int(a)), narrow(int(b))) {
 			out = append(out, v.ID)
 		}
 	}
