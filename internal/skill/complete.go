@@ -1,5 +1,7 @@
 package skill
 
+import "math"
+
 // Outcome is what the entry step of a region does with a trainee
 // (spec-skill-barriers.md 4.2.1).
 type Outcome int
@@ -42,7 +44,7 @@ func NextRun(run int64, blocked bool) (run2 int64, warn bool) {
 	if !blocked {
 		return 0, false
 	}
-	if run == int64(^uint64(0)>>1) {
+	if run == math.MaxInt64 {
 		return run, false
 	}
 	run++

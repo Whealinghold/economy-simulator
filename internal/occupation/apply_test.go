@@ -47,6 +47,12 @@ func TestApplyOK_QueueDiscountAndFloor(t *testing.T) {
 		{"negative training cost", with(func(p *occupation.ApplyParams) { p.CTrain = -1 }), false},
 		{"negative return", with(func(p *occupation.ApplyParams) { p.CapitalReturn = -1 }), false},
 		{"negative wait", with(func(p *occupation.ApplyParams) { p.QWait = -1 }), false},
+		{"only a negative tool price", with(func(p *occupation.ApplyParams) { p.ToolPrice = -1; p.CTrain = 1 }), false},
+		{"only a negative training cost", with(func(p *occupation.ApplyParams) { p.ToolPrice = 1; p.CTrain = -1 }), false},
+		{"negative upkeep", with(func(p *occupation.ApplyParams) { p.Upkeep = -8; p.Year = -250 }), false},
+		{"negative year with positive product", with(func(p *occupation.ApplyParams) { p.Upkeep = -8; p.Year = 250 }), false},
+		{"signals shifted by the same amount", with(func(p *occupation.ApplyParams) { p.ED, p.EO = 7000, 2000 }), true},
+		{"shifted signals, one above equal", with(func(p *occupation.ApplyParams) { p.ED, p.EO = 7000, 2000; p.ToolPrice = 10_001 }), false},
 		{"upkeep times year overflows", with(func(p *occupation.ApplyParams) { p.Upkeep = math.MaxInt64; p.Year = 2 }), false},
 		{"capital overflows", with(func(p *occupation.ApplyParams) { p.ToolPrice = math.MaxInt64; p.CTrain = 1 }), false},
 		{"discount overflows", with(func(p *occupation.ApplyParams) { p.CapitalReturn = math.MaxInt64; p.QWait = math.MaxInt64 }), false},
@@ -98,6 +104,7 @@ func TestRefusals_OrderOfTests(t *testing.T) {
 		want occupation.Refusal
 	}{
 		{"apply passes", occupation.KindApply, ok, occupation.RefusalNone},
+		{"apply of weight 0 is not refused for its weight", occupation.KindApply, with(func(f *occupation.Facts) { f.Weight = 0 }), occupation.RefusalNone},
 		{"apply of a trainee", occupation.KindApply, with(func(f *occupation.Facts) { f.InTraineeship = true }), occupation.InTraineeship},
 		{"apply needs weight one", occupation.KindApply, with(func(f *occupation.Facts) { f.Weight = 2 }), occupation.NeedsWeightOne},
 		{"apply already queued", occupation.KindApply, with(func(f *occupation.Facts) { f.Queued = true }), occupation.AlreadyQueued},
@@ -126,6 +133,60 @@ func TestRefusals_OrderOfTests(t *testing.T) {
 				t.Errorf("Refuse(%d, %+v) = %d, want %d", tt.kind, tt.f, got, tt.want)
 			}
 		})
+	}
+}
+
+// exactApplyOK is the inequality of ApplyOK in math/big, for the inputs where
+// every step fits int64.
+func exactApplyOK(p occupation.ApplyParams) (want, valid bool) {
+	bi := big.NewInt
+	if p.ToolPrice < 0 || p.CTrain < 0 || p.CapitalReturn < 0 || p.QWait < 0 || p.ED < p.EO || p.Year <= 0 || p.Upkeep <= 0 {
+		return false, true
+	}
+	ut := new(big.Int).Mul(bi(p.Upkeep), bi(p.Year))
+	capital := new(big.Int).Add(bi(p.ToolPrice), bi(p.CTrain))
+	disc := new(big.Int).Quo(new(big.Int).Mul(bi(p.CapitalReturn), bi(p.QWait)), bi(p.Year))
+	if !ut.IsInt64() || !capital.IsInt64() || !disc.IsInt64() {
+		return false, true
+	}
+	bracket := new(big.Int).Sub(bi(10_000), disc)
+	if bracket.Sign() <= 0 {
+		return false, true
+	}
+	left := new(big.Int).Mul(new(big.Int).Sub(bi(p.ED), bi(p.EO)), ut)
+	left.Mul(left, bracket)
+	right := new(big.Int).Mul(capital, bi(p.CapitalReturn))
+	right.Mul(right, bi(10_000))
+	return left.Cmp(right) >= 0, true
+}
+
+// TestApplyOK_MatchesExactProductsAtTheExtremes verifies ApplyOK against the
+// exact inequality in math/big over a grid of extreme values, where the 192-bit
+// product has carries between its words.
+//
+// Requirement: FR-SKL-005
+func TestApplyOK_MatchesExactProductsAtTheExtremes(t *testing.T) {
+	t.Parallel()
+	signals := [][2]int64{{math.MaxInt64, math.MinInt64}, {math.MaxInt64, 0}, {1 << 62, -(1 << 62)}, {5000, 0}}
+	factors := []int64{1, 1 << 31, 1<<31 + 1, math.MaxInt32, 1 << 62}
+	capitals := []int64{0, 1, 1 << 40, 1<<62 + 12345, math.MaxInt64 - 1}
+	n := 0
+	for _, s := range signals {
+		for _, f := range factors {
+			for _, c := range capitals {
+				for _, cr := range []int64{1, 1000, 1<<62 + 3} {
+					p := occupation.ApplyParams{ED: s[0], EO: s[1], ToolPrice: c, CapitalReturn: cr, Upkeep: f, Year: min(f, 1<<31+7), QWait: 0}
+					want, _ := exactApplyOK(p)
+					if got := occupation.ApplyOK(p); got != want {
+						t.Errorf("ApplyOK(%+v) = %v, want %v", p, got, want)
+					}
+					n++
+				}
+			}
+		}
+	}
+	if n == 0 {
+		t.Fatal("empty grid")
 	}
 }
 

@@ -38,12 +38,12 @@ const (
 // Tolerance returns the tolerance of check D: the largest of the share of the
 // predicted excess, the floor, and cvx2, twice the observed coefficient of
 // variation of the premium across seeds (spec-skill-barriers.md 3, FR-SKL-024).
-// A negative excess counts as 0. The share is truncated toward zero.
+// A negative excess gives a negative share, so the floor applies. The share is
+// truncated toward zero.
 func Tolerance(excess, cvx2 int64) int64 {
-	excess = max(excess, 0)
-	share, ok := checked.MulDiv(excess, ToleranceShareBP, Basis)
-	if !ok {
-		share = int64(^uint64(0) >> 1)
-	}
+	// excess = q * 10 000 + r, so the share is exact without forming excess *
+	// 2 500, which could overflow: q * 2 500 + r * 2 500 / 10 000.
+	q, r := excess/Basis, excess%Basis
+	share := q*ToleranceShareBP + r*ToleranceShareBP/Basis
 	return max(share, ToleranceFloorBP, cvx2)
 }

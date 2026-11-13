@@ -446,6 +446,10 @@ func reliefOn(w *World) bool { return w.relief != nil }
 // module off has no pass, and the replay leaves the row out.
 func employmentOn(w *World) bool { return w.employment != nil }
 
+// skillsOn is the guard of the row of the teaching step: a world with no role that
+// trains has no state, and the replay leaves the row out.
+func skillsOn(w *World) bool { return w.skills != nil }
+
 // noErr adapts a position method with no error result.
 func noErr(f func(*World)) func(*World) error {
 	return func(w *World) error { f(w); return nil }
@@ -468,6 +472,7 @@ var replayRows = []replayRow{
 	{id: "P1.8", run: noErr((*World).p18Walk), on: externalOn},
 	{id: "P1.9", run: noErr((*World).p19Directives), on: externalAgentOn},
 	{id: "P2.1", run: noErr((*World).p21Complete)},
+	{id: "P2.2", run: noErr((*World).p22Teaching), on: skillsOn},
 	{id: "P2.3", run: noErr((*World).p23Snapshot), on: resourcesOn},
 	{id: "P2.4", run: noErr((*World).p24OwnUse), on: subsistenceOn},
 	{id: "P2.5", run: (*World).p25Work},

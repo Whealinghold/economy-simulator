@@ -1,6 +1,11 @@
 package skill
 
-import "github.com/Whealinghold/economy-sim/internal/checked"
+import (
+	"cmp"
+	"math"
+
+	"github.com/Whealinghold/economy-sim/internal/checked"
+)
 
 // Trainer is a trainer's row for Open: the trainees it holds and the most it
 // may hold, the lesser of its role's MaxTrainees and its body's when a body
@@ -14,13 +19,9 @@ type Trainer struct{ Held, Max int64 }
 func Open(trainers []Trainer) int64 {
 	var n int64
 	for _, t := range trainers {
-		free := t.Max - t.Held
-		if free <= 0 {
-			continue
-		}
-		s, ok := checked.Add(n, free)
+		s, ok := checked.Add(n, max(t.Max-t.Held, 0))
 		if !ok {
-			return int64(^uint64(0) >> 1)
+			return math.MaxInt64
 		}
 		n = s
 	}
@@ -37,10 +38,7 @@ type Applicant struct {
 // application tick first, then the lower agent (spec-skill-barriers.md 4.4,
 // FR-SKL-017). It is a total order over distinct agents.
 func Less(a, b Applicant) bool {
-	if a.Applied != b.Applied {
-		return a.Applied < b.Applied
-	}
-	return a.Agent < b.Agent
+	return cmp.Or(cmp.Compare(a.Applied, b.Applied), cmp.Compare(a.Agent, b.Agent)) < 0
 }
 
 // Requeue reports whether a is ahead of b when a trainer's trainees return to
@@ -48,10 +46,7 @@ func Less(a, b Applicant) bool {
 // the lower agent (spec-skill-barriers.md 4.6, ruling R5, FR-SKL-020). It is a
 // total order over distinct agents.
 func Requeue(a, b Applicant) bool {
-	if a.Served != b.Served {
-		return a.Served > b.Served
-	}
-	return Less(a, b)
+	return cmp.Or(cmp.Compare(b.Served, a.Served), cmp.Compare(a.Applied, b.Applied), cmp.Compare(a.Agent, b.Agent)) < 0
 }
 
 // Wait returns the expected wait q_w of spec-skill-barriers.md 4.5, the

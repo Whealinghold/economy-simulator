@@ -275,6 +275,11 @@ var stepSites = []site{
 		}
 	})},
 	{"P2.1", noError((*World).p21Complete)},
+	{"P2.2", noError(func(w *World) {
+		if w.skills != nil {
+			w.p22Teaching()
+		}
+	})},
 	{"P2.3", noError((*World).p23Snapshot)},
 	{"P2.4", noError(func(w *World) {
 		if w.sub != nil {

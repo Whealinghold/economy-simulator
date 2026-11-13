@@ -206,6 +206,9 @@ func TestLess_ApplicationTickThenID(t *testing.T) {
 			}
 		})
 	}
+	if skill.Requeue(a, a) {
+		t.Errorf("Requeue(a, a) = true, want false")
+	}
 	if skill.Less(a, a) {
 		t.Errorf("Less(a, a) = true, want false")
 	}
@@ -259,6 +262,8 @@ func TestWait_CeilingAndNoTrainer(t *testing.T) {
 		// 1 * 60 / 30 = 2; 1 * 61 / 30 = 2.03 rounds up to 3.
 		{"rounds up", 1, 61, 30, 3, true},
 		{"nobody ahead waits 0", 0, 60, 30, 0, true},
+		{"a course of 0 ticks waits 0", 5, 0, 30, 0, true},
+		{"one place", 3, 60, 1, 180, true},
 		{"no trainer", 3, 60, 0, 0, false},
 		{"negative places", 3, 60, -1, 0, false},
 		{"negative ahead", -1, 60, 30, 0, false},
@@ -295,6 +300,7 @@ func TestComplete_HeldDoneServing(t *testing.T) {
 		{"no limit overrides headroom", 120, 120, 0, 1, true, skill.Done},
 		{"served beyond ticks is still done", 121, 120, 1, 1, false, skill.Done},
 		{"serving ignores the limit", 5, 120, 0, 1, true, skill.Serving},
+		{"headroom above weight", 120, 120, 5, 1, false, skill.Done},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -354,6 +360,8 @@ func TestBreakEven_WorkedExample(t *testing.T) {
 		{"tool alone", 219_000, 0, 1000, 250, 2190, 10_400, true},
 		{"free", 0, 0, 1000, 250, 2190, 10_000, true},
 		{"no working days", 1, 1, 1000, 0, 2190, 0, false},
+		{"negative working days", 1, 1, 1000, -250, 2190, 0, false},
+		{"zero required return", 1, 1, 0, 250, 2190, 10_000, true},
 		{"negative price", -1, 1, 1000, 250, 2190, 0, false},
 		{"negative training", 1, -1, 1000, 250, 2190, 0, false},
 		{"negative return", 1, 1, -1, 250, 2190, 0, false},
@@ -390,7 +398,11 @@ func TestTolerance_ShareFloorAndCV(t *testing.T) {
 		{"floor for a tool-only chain", 400, 0, 200},
 		{"cv raises it", 2733, 900, 900},
 		{"cv below the share is ignored", 2733, 100, 683},
-		{"negative excess counts as 0", -50, 0, 200},
+		{"negative excess gives the floor", -50, 0, 200},
+		{"an excess of 800 is exactly the floor", 800, 0, 200},
+		{"an excess of 804 is above it", 804, 0, 201},
+		{"excess of one full 10 000", 10_000, 0, 2500},
+		{"excess of 10 003", 10_003, 0, 2500},
 		{"huge excess does not overflow", math.MaxInt64, 0, math.MaxInt64 / 4},
 	}
 	for _, tt := range tests {

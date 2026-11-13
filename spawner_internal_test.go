@@ -109,6 +109,7 @@ func TestRefusalReason_Total(t *testing.T) {
 	want := []Reason{
 		"", ReasonUnknownAgent, ReasonUnknownRole, ReasonExternalAgent,
 		ReasonSameRole, ReasonBadHouseholds, ReasonUnsupportedCause, ReasonOnJourney,
+		ReasonInTraineeship, ReasonNeedsWeightOne, ReasonNeedsTraineeship, ReasonAlreadyQueued,
 	}
 	if int(occupation.RefusalEnd) != len(want) {
 		t.Fatalf("RefusalEnd = %d, want %d: map the new refusal and extend want", occupation.RefusalEnd, len(want))

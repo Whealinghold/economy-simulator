@@ -10,15 +10,12 @@ const MaxAccumulator int64 = Basis - 1
 // subtracts 10 000 once and the tick is a teaching tick. A trainer teaches at
 // most every tick, so the load beyond one full tick a tick is not carried: the
 // result is cut to MaxAccumulator. acc2 is always in [0, MaxAccumulator]. A
-// negative acc or sumLoads (outside validation) counts as 0. The sum is not
-// formed when sumLoads alone is 20 000 or more, so it cannot overflow.
+// negative acc or sumLoads (outside validation) counts as 0. The loads are capped at
+// 20 000 before the sum, so it cannot overflow.
 func Teach(acc, sumLoads int64) (acc2 int64, teaching bool) {
-	acc = max(acc, 0)
-	sumLoads = max(sumLoads, 0)
-	if sumLoads >= 2*Basis {
-		return MaxAccumulator, true
-	}
-	total := acc + sumLoads
+	// Loads of 20 000 or more cut the result to MaxAccumulator whatever they are,
+	// so they are capped before the sum, which then cannot overflow.
+	total := max(acc, 0) + min(max(sumLoads, 0), 2*Basis)
 	if total < Basis {
 		return total, false
 	}

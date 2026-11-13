@@ -401,9 +401,9 @@ const (
 
 // The reasons of a spawner decision the world refuses, in the order it checks
 // them, then the two "entry dropped" Debug reasons (spec-spawner.md 4, 13.3).
-// ReasonUnknownAgent, above, is the first check. in_traineeship,
-// needs_weight_one and on_journey are appended with the skills and migration
-// modules.
+// ReasonUnknownAgent, above, is the first check. on_journey is appended with the
+// migration module, and in_traineeship, needs_weight_one, needs_traineeship and
+// already_queued with the skill barriers.
 const (
 	// ReasonUnknownRole is a decision that names a role that does not exist.
 	ReasonUnknownRole Reason = "unknown_role"
@@ -425,6 +425,32 @@ const (
 	// households that replace households lost and have no viable role to enter.
 	// Refused does not count it.
 	ReasonNoViableRole Reason = "no_viable_role"
+)
+
+// The reasons of a spawner decision that the skill barriers refuse, appended
+// after the others (spec-spawner.md 4, spec-skill-barriers.md 4.6.2), and the
+// reasons of TraineeshipEnded (spec-skill-barriers.md 8.1).
+const (
+	// ReasonInTraineeship is a switch or an apply of a trainee, or a switch of a
+	// trainer with trainees. It is also the name of the region_bound obligation
+	// of the skill barriers.
+	ReasonInTraineeship Reason = "in_traineeship"
+	// ReasonNeedsWeightOne is an apply for an agent of weight above 1.
+	ReasonNeedsWeightOne Reason = "needs_weight_one"
+	// ReasonNeedsTraineeship is a switch or an entry into a role with
+	// TrainingTicks above 0, which is entered only by an apply.
+	ReasonNeedsTraineeship Reason = "needs_traineeship"
+	// ReasonAlreadyQueued is an apply by an agent that is already in a queue.
+	ReasonAlreadyQueued Reason = "already_queued"
+	// ReasonTrainerLeft is a traineeship that ended because its trainer was
+	// removed.
+	ReasonTrainerLeft Reason = "trainer_left"
+	// ReasonAgentLeft is a traineeship that ended because the trainee was
+	// removed.
+	ReasonAgentLeft Reason = "agent_left"
+	// ReasonRoleRemoved is a traineeship that ended because its role was removed.
+	// No role can be removed at run time, so it is declared and not emitted.
+	ReasonRoleRemoved Reason = "role_removed"
 )
 
 // The reasons of a refused relocation, in the order of the checks (spec-regions.md
@@ -486,6 +512,8 @@ const (
 	// CauseBirths is households born through the population module, entering a
 	// role (spec-population.md 4.3).
 	CauseBirths Cause = "births"
+	// CauseTraineeship is a role change at the completion of a traineeship.
+	CauseTraineeship Cause = "traineeship"
 )
 
 // Kind is the kind of a boundary flow, a member of a closed set: a faucet
@@ -1777,3 +1805,55 @@ type PayrollPaid struct {
 }
 
 func (PayrollPaid) isEvent() {}
+
+// TraineeshipStarted is emitted when a place is filled from the queue and an
+// applicant becomes a trainee, in a region's entry step at P7.1(a), after the
+// completions of the step (spec-skill-barriers.md 4.7, 8.1; spec-observability.md
+// 4.4.8). It carries identifiers only. Region is the trainee's region at the
+// event.
+type TraineeshipStarted struct {
+	Tick int64
+	// Trainee is the agent that became a trainee, and Trainer the agent that
+	// teaches it.
+	Trainee, Trainer AgentID
+	// Role is the role the trainee is training for, the trainer's role.
+	Role RoleID
+	// Region is the region of the trainee.
+	Region RegionID
+}
+
+func (TraineeshipStarted) isEvent() {}
+
+// TraineeshipCompleted is emitted when a trainee completes its course and
+// changes role, after the RecipeAbandoned of its job if it had one and before the
+// RoleChanged it causes (spec-skill-barriers.md 4.2, 4.7; spec-observability.md
+// 4.4.8). Region is the agent's region at the event.
+type TraineeshipCompleted struct {
+	Tick int64
+	// Agent is the agent that completed.
+	Agent AgentID
+	// Region is the agent's region.
+	Region RegionID
+	// From is the role the agent held while it trained, and To the role it
+	// takes.
+	From, To RoleID
+}
+
+func (TraineeshipCompleted) isEvent() {}
+
+// TraineeshipEnded is emitted when a traineeship ends without completing: with
+// the removal of the trainer or of the trainee, before the events of the removal
+// (spec-skill-barriers.md 4.6, 8.1; spec-observability.md 4.4.8). Region is the
+// agent's region at the event. Reason is ReasonTrainerLeft, ReasonAgentLeft or
+// ReasonRoleRemoved.
+type TraineeshipEnded struct {
+	Tick int64
+	// Agent is the trainee whose traineeship ended.
+	Agent AgentID
+	// Region is the agent's region.
+	Region RegionID
+	// Reason is why it ended.
+	Reason Reason
+}
+
+func (TraineeshipEnded) isEvent() {}
