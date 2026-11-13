@@ -64,7 +64,7 @@ func (l *Ledger) relocatable(id, region int) (*account, error) {
 		return nil, ErrUnknownRegion
 	case region == a.region:
 		return nil, ErrSameRegion
-	case a.reserved != 0 || a.earmarked():
+	case a.reserved != 0 || a.earmarked() || a.roomReserved():
 		return nil, ErrOpenReservation
 	}
 	ok := true

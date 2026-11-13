@@ -71,7 +71,19 @@ func inTotal(lines []Line, c int) (n int64) {
 //     short one is refused with ErrBalanceOverflow;
 //  7. ErrBalanceOverflow, for the outputs (the holding, a flow total, then the
 //     boundary), one commodity at a time in the same way.
+//
+// An output credited to a limited account must also fit its room (room.go): the
+// outputs are checked after check 7, so a refusal of room is last.
 func (l *Ledger) Transform(id int, inputs, outputs []Line) error {
+	return l.TransformCredited(id, inputs, outputs, CreditFree)
+}
+
+// TransformCredited is Transform with the outputs credited in the given form
+// (room.go, spec-storage.md 4.1.3): the completion of a job is
+// TransformCredited(id, nil, outputs, CreditPledge). For a limited account the
+// outputs are tested against the room once the inputs are taken, as check 8,
+// after the checks of Transform: ErrReservationExceeds, then ErrNoRoom.
+func (l *Ledger) TransformCredited(id int, inputs, outputs []Line, form Credit) error {
 	if err := transformShape(inputs, outputs); err != nil {
 		return err
 	}
@@ -90,8 +102,45 @@ func (l *Ledger) Transform(id int, inputs, outputs []Line) error {
 	if err := l.checkTransformOutputs(a, flows, inputs, outputs); err != nil {
 		return err
 	}
+	om, ob, err := l.checkTransformRoom(a, inputs, outputs, form)
+	if err != nil {
+		return err
+	}
+	settleCredit(a, om, ob, form)
 	l.applyTransform(a, flows, inputs, outputs)
 	return nil
+}
+
+// checkTransformRoom is the room check of Transform: the outputs against the
+// free room (or the reserved room, or the pledge and the room left) after the
+// inputs have been freed. It returns the load of the outputs. An account that
+// is not limited returns 0.
+func (l *Ledger) checkTransformRoom(a *account, inputs, outputs []Line, form Credit) (om, ob int64, err error) {
+	if a.room == nil {
+		return 0, 0, checkRoomCredit(a, Size{}, Size{}, form)
+	}
+	im, ib, okIn := l.linesLoad(inputs)
+	om, ob, okOut := l.linesLoad(outputs)
+	if !okIn {
+		return 0, 0, ErrBalanceOverflow
+	}
+	if !okOut {
+		return 0, 0, ErrNoRoom
+	}
+	return om, ob, checkRoomCredit(a, Size{om, ob}, Size{im, ib}, form)
+}
+
+// linesLoad sums the load of the lines. ok is false on overflow.
+func (l *Ledger) linesLoad(lines []Line) (mass, bulk int64, ok bool) {
+	ok = true
+	for _, ln := range lines {
+		m, b, fits := l.unitLoad(ln.Commodity, ln.Quantity)
+		var okm, okb bool
+		mass, okm = checked.Add(mass, m)
+		bulk, okb = checked.Add(bulk, b)
+		ok = ok && fits && okm && okb
+	}
+	return mass, bulk, ok
 }
 
 // transformRefusal is checks 4 and 5 of Transform: the commodities, the
@@ -215,6 +264,9 @@ func (l *Ledger) checkTransformOutputs(a *account, flows []int64, inputs, output
 func (l *Ledger) applyTransform(a *account, flows []int64, inputs, outputs []Line) {
 	for _, ln := range inputs {
 		a.drain(ln.Commodity, ln.Quantity)
+		if a.room != nil {
+			l.loadSub(a, ln.Commodity, ln.Quantity)
+		}
 		flows[l.slot(a, RecipeInput, ln.Commodity)] += ln.Quantity
 		l.boundaryAt(RecipeInput, ln.Commodity).balance += ln.Quantity
 	}
@@ -312,6 +364,9 @@ func (l *Ledger) wearUnitsSlice() []int64 {
 func (l *Ledger) applyWorn(a *account) {
 	for _, s := range l.sel {
 		a.lots[s.lot].Quantity -= s.n
+		if a.room != nil {
+			l.loadSub(a, a.lots[s.lot].Commodity, s.n)
+		}
 	}
 	a.compact()
 	for _, s := range l.sel {

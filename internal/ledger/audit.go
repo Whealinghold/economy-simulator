@@ -40,6 +40,11 @@ const (
 	IdentitySectoral
 	// IdentityClaimTotals is the pair of CRD 3.6 item 1, with Awarded.
 	IdentityClaimTotals
+	// IdentityRoom is the room of a limited account (spec-storage.md 4.4 items
+	// 1 and 2): the load is the sum of the lots, and the load plus the reserved
+	// room is within the room. The identities that need the world (the pledge
+	// and a commitment) are the world's.
+	IdentityRoom
 )
 
 var identityNames = [...]string{
@@ -52,6 +57,7 @@ var identityNames = [...]string{
 	IdentityConservation: "conservation by reason",
 	IdentitySectoral:     "sectoral identity",
 	IdentityClaimTotals:  "claim totals",
+	IdentityRoom:         "room",
 }
 
 // String returns the name of the identity.
@@ -142,7 +148,7 @@ func invariantViolated(what string) {
 // (FR-LED-020).
 func (l *Ledger) HasReservation() bool {
 	for i := range l.accounts {
-		if a := &l.accounts[i]; a.reserved != 0 || a.earmarked() {
+		if a := &l.accounts[i]; a.reserved != 0 || a.earmarked() || a.roomReserved() {
 			return true
 		}
 	}
@@ -198,7 +204,40 @@ func (l *Ledger) auditAccount(id int, a *account) error {
 	if err := l.auditMoney(id, a); err != nil {
 		return err
 	}
-	return l.auditLots(id, a)
+	if err := l.auditLots(id, a); err != nil {
+		return err
+	}
+	return l.auditRoom(id, a)
+}
+
+// auditRoom checks the room of a limited account: only an agent account has
+// one, every figure is non-negative, the load is the sum over the lots of
+// quantity times size, and the load plus the reserved room is within the room
+// in both dimensions (spec-storage.md 4.4 items 1 and 2).
+func (l *Ledger) auditRoom(id int, a *account) error {
+	r := a.room
+	if r == nil {
+		return nil
+	}
+	if a.kind != KindAgent || !r.Limited {
+		return auditFail(IdentityRoom, id, None, "an account that is not a limited agent holds a room")
+	}
+	if r.negative() {
+		return auditFail(IdentityRoom, id, None, "a figure of the room is negative: %+v", *r)
+	}
+	mass, bulk, err := l.loadOfLots(a)
+	if err != nil || mass != r.LoadMass || bulk != r.LoadBulk {
+		return auditFail(IdentityRoom, id, None, "the load is (%d, %d) and the lots weigh (%d, %d)", r.LoadMass, r.LoadBulk, mass, bulk)
+	}
+	if r.LoadMass+r.ReservedMass > r.Mass || r.LoadBulk+r.ReservedBulk > r.Bulk {
+		return auditFail(IdentityRoom, id, None, "load (%d, %d) plus reserved (%d, %d) is above the room (%d, %d)", r.LoadMass, r.LoadBulk, r.ReservedMass, r.ReservedBulk, r.Mass, r.Bulk)
+	}
+	return nil
+}
+
+// negative reports whether any figure of the room is below 0.
+func (r *Room) negative() bool {
+	return min(r.Mass, r.Bulk, r.LoadMass, r.LoadBulk, r.PledgeMass, r.PledgeBulk, r.ReservedMass, r.ReservedBulk) < 0
 }
 
 // closedHoldsState reports whether a closed account is not wholly zeroed.

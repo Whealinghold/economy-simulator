@@ -121,6 +121,9 @@ func (l *Ledger) moveExpired(flows []int64) {
 				kept = append(kept, lt)
 				continue
 			}
+			if a.room != nil {
+				l.loadSub(a, lt.Commodity, lt.Quantity)
+			}
 			flows[a.region*l.stride+l.off[Spoilage][thingGoods]+lt.Commodity] += lt.Quantity
 			l.accounts[l.boundary[l.off[Spoilage][thingGoods]+lt.Commodity]].balance += lt.Quantity
 		}
