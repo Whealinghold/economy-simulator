@@ -58,6 +58,9 @@ func TestAuditRoom_LotsThatOverflowAreNamedAsSuch(t *testing.T) {
 // that is over says which dimension is over, so that a mass overrun is not read
 // as a bulk one.
 //
+// Fix: review of PR 1 (2a6ec96). The failure printed the two sums and not which
+// dimension was over, so a mass overrun read as a bulk one.
+//
 // Requirement: FR-STO-040
 func TestAuditRoom_OverRoomNamesTheDimension(t *testing.T) {
 	t.Parallel()
@@ -77,6 +80,9 @@ func TestAuditRoom_OverRoomNamesTheDimension(t *testing.T) {
 
 // TestAuditRoom_RoomOnUnlimitedAccountNamesKind verifies that the failure of a
 // room held by an account that cannot have one says the kind and the flag.
+//
+// Fix: review of PR 1 (2a6ec96). The failure named the account only, so the
+// reader could not tell a room on a boundary from a room with the flag off.
 //
 // Requirement: FR-STO-040
 func TestAuditRoom_RoomOnUnlimitedAccountNamesKind(t *testing.T) {

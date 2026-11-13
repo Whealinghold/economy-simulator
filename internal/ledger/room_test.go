@@ -872,6 +872,10 @@ func TestRoom_OverflowingTransformKeepsItsFormsRefusal(t *testing.T) {
 // of (10, 10) with load 5 and pledge 8 the free room is -3, so inputs of 5
 // free 2, and an output of 5 is ErrNoRoom while an output of 2 fits.
 //
+// Fix: review of PR 1 (d8ec0f7). The free room was floored at 0 before the
+// freed inputs were added, so a pledge above the room was forgiven by the load
+// a Transform frees and an output that did not fit was accepted.
+//
 // Requirement: FR-STO-005
 func TestRoom_TransformDoesNotForgiveAPledgeAboveTheRoom(t *testing.T) {
 	t.Parallel()
