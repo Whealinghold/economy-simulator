@@ -77,19 +77,8 @@ type Tables struct {
 // The work is O(J + n * depth) after the arrays are given; the sort of the
 // jurisdictions (the J log J) is the caller's (spec-polity.md 3.2.1, 4.4.2).
 func Build(parent, member []int32, maxDepth int) (Tables, error) {
-	j := len(parent)
-	if j > math.MaxInt32 || len(member) > math.MaxInt32 {
-		return Tables{}, &BuildError{Err: ErrSize}
-	}
-	for i, p := range parent {
-		if p < -1 || int(p) >= j {
-			return Tables{}, &BuildError{Err: ErrIndex, Index: i}
-		}
-	}
-	for r, m := range member {
-		if m < -1 || int(m) >= j {
-			return Tables{}, &BuildError{Err: ErrIndex, Index: r, Member: true}
-		}
+	if err := checkIndices(parent, member); err != nil {
+		return Tables{}, err
 	}
 	if i := firstCycle(parent); i >= 0 {
 		return Tables{}, &BuildError{Err: ErrCycle, Index: i}
@@ -100,15 +89,7 @@ func Build(parent, member []int32, maxDepth int) (Tables, error) {
 			return Tables{}, &BuildError{Err: ErrDepth, Index: i}
 		}
 	}
-	// The offsets of the flat stores are int32: refuse a chain store that does not
-	// fit before any of it is built.
-	var total int64
-	for _, m := range member {
-		if m >= 0 {
-			total += int64(depth[m]) + 1
-		}
-	}
-	if total > math.MaxInt32 {
+	if !chainStoreFits(depth, member) {
 		return Tables{}, &BuildError{Err: ErrSize}
 	}
 	t := Tables{parent: slices.Clone(parent), depth: depth, member: slices.Clone(member)}
@@ -116,6 +97,39 @@ func Build(parent, member []int32, maxDepth int) (Tables, error) {
 	t.buildChildren()
 	t.buildCovered()
 	return t, nil
+}
+
+// checkIndices reports ErrSize for arrays past int32 and ErrIndex for the lowest
+// parent, then the lowest member, that is out of range.
+func checkIndices(parent, member []int32) error {
+	j := len(parent)
+	if j > math.MaxInt32 || len(member) > math.MaxInt32 {
+		return &BuildError{Err: ErrSize}
+	}
+	for i, p := range parent {
+		if p < -1 || int(p) >= j {
+			return &BuildError{Err: ErrIndex, Index: i}
+		}
+	}
+	for r, m := range member {
+		if m < -1 || int(m) >= j {
+			return &BuildError{Err: ErrIndex, Index: r, Member: true}
+		}
+	}
+	return nil
+}
+
+// chainStoreFits reports whether the flat chain store fits the int32 offsets.
+// The offsets of the flat stores are int32: Build refuses a chain store that
+// does not fit before any of it is built.
+func chainStoreFits(depth, member []int32) bool {
+	var total int64
+	for _, m := range member {
+		if m >= 0 {
+			total += int64(depth[m]) + 1
+		}
+	}
+	return total <= math.MaxInt32
 }
 
 // firstCycle returns the lowest jurisdiction that lies on a cycle of the parent

@@ -54,7 +54,7 @@ D12. **Coverage row.** `internal/polity` gets the row `internal/polity 90` in `s
 Goal: the documents say what this plan builds; nothing is owed that the code would then contradict.
 
 | # | File and section | Edit or check |
-|---|------------------|---------------|
+| --- | --- | --- |
 | 1.1 | `doc.go` glossary (architecture.md 3.2, before use) | terms from N-017: jurisdiction, polity, root, chain, covers, common jurisdiction, crossing, exit, enter, border, border depth, seat, governed, grouping, treasury, treasury sector, combining mode (innermost, added, scaled), `JurisdictionID`, `NoJurisdiction`. Type names for `TestGlossary_DeclaredTypesNamed`: `Polity`, `Jurisdiction`, `Member`, `Crossing`, `JurisdictionRow`. **Name clash:** `Polity` is both the `Modules.Polity` configuration type (spec 8: scope `Polity`) and the query value of 4.2.1; the spec uses one name for two things. Resolve in this phase (R1), once Q2 is answered; until then this is the working choice, not a decision: the configuration type is `PolityConfig` (the scope alias `Polity` to `PolityConfig` in `registry_test.go`, as `Subsistence` is to `SubsistenceConfig`), the query value is `Polity`. |
 | 1.2 | `architecture.md` 2.6, `AGENTS.md` Layout, `observability-and-logging.md` 3.3.2 and 5.4.1 | text search: `polity.go`, `internal/polity/`, `jurisdictions`, `governed`, `treasury` present (D9). No edit expected; a missing one is edited with a fresh tag. |
 | 1.3 | `doc/roadmap-v1.md` Stage 3 table | the POL row gains a status column entry "plan written" (the table has no status column for Stage 3 today; the status values at the head of the file are used) and, at the end of PR B, "merged (PR #n)". |
@@ -134,7 +134,7 @@ The split itself is Q3, open; if the owner prefers one pull request, the order o
 ## Catalogue appends
 
 | File | Appends | Position or id | Fixed by |
-|------|---------|----------------|----------|
+| --- | --- | --- | --- |
 | `config.go` | `Modules.Polity *PolityConfig`; `PolityConfig`, `Jurisdiction`, `Member` | after `Employment` in the struct (declared in Go order); hash id 19 | CFG 3.1, 8.2.2; D2 |
 | `bounds.go` | `MaxJurisdictions` 1 000, `MaxPolityDepth` 8 | after the last bound | POL 8; CFG 4.1 |
 | `defaults.go` | none (a comment only) | | POL 8 |
