@@ -345,7 +345,7 @@ with the slice (`vision.md` section 4).
 |--------|-------|-------|
 | `skills.go`, `skills_queue.go`, `skills_report.go`, `internal/skill` (core data: no `Modules` pointer, no hash id; tag 10; plan 3-skl, status: PR A in development) | SKL | PRO, WEL |
 | `settlements.go`, `internal/settlement` | SET | REG, SCL |
-| `storage.go`, `internal/room` (and the `Losses` preset of `indicator/`, FR-IND-059, with RSK) | STO | LED, GDS |
+| `storage.go`, `internal/room` (and the `Losses` preset of `indicator/`, FR-IND-059, with RSK) | STO | LED, GDS, PRO, TRN, AGT, CLR, MON, REG, EST, INT, CHK |
 | `employment.go`, `internal/employment` (the hire form, sections 3 to 17, extending the payroll form of the Stage 2 table; and the presets `Unemployment`, `WageBill`, `Employment` of `indicator/`, FR-IND-056 to 058) | EMP | AGT, WEL, PRO |
 | `tenure.go`, `internal/tenure` | LND | RES, EST, MON |
 | `polity.go`, `internal/polity` | POL | REG, LED, EST |
