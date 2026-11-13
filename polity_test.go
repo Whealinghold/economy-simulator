@@ -388,7 +388,13 @@ func TestPolityHash(t *testing.T) {
 			p.Jurisdictions[3].ID = "highlands"
 			p.Members[3].Jurisdiction = "highlands"
 		},
-		"a row less": func(p *economysim.PolityConfig) { p.Members = p.Members[:5] },
+		"a row less":      func(p *economysim.PolityConfig) { p.Members = p.Members[:5] },
+		"a member region": func(p *economysim.PolityConfig) { p.Members[3].Region = "north"; p.Members[5].Region = "hills" },
+		"a seat removed":  func(p *economysim.PolityConfig) { p.Jurisdictions[2].Seat, p.Jurisdictions[2].StartMoney = "", 0 },
+		"a jurisdiction less": func(p *economysim.PolityConfig) {
+			p.Jurisdictions = p.Jurisdictions[:3]
+			p.Members[3].Jurisdiction = "inland"
+		},
 	} {
 		c := polityConfig()
 		mutate(c.Modules.Polity)
@@ -398,20 +404,147 @@ func TestPolityHash(t *testing.T) {
 	}
 }
 
-// FuzzPolityValidate verifies that Validate never panics on random jurisdiction
-// and member rows, and that the polity's warnings are produced for the same input
-// without a panic or a loop, whether or not the configuration is valid.
+// FuzzPolityValidate verifies, for random jurisdiction and member rows, that
+// Validate and Warnings never panic, that a configuration that validates builds
+// through NewPolity into a value whose chains are bounded, repeat nothing and name
+// only jurisdictions that exist, that NewPolity refuses what Validate refuses (the
+// rest of polityConfig is valid, so a polity rule is the only possible cause), and
+// that the warnings of one configuration are the same on every call.
 func FuzzPolityValidate(f *testing.F) {
 	f.Add("crown", "", "capital", "capital", "crown", int64(5))
 	f.Add("a", "a", "nowhere", "farm", "b", int64(-1))
 	f.Add("x", "y", "farm", "mill", "x", int64(1)<<62)
+	f.Add("a", "b", "", "farm", "a", int64(0))                       // a child of a parent that is defined, no seat
+	f.Add("b", "a", "mill", "mill", "b", int64(economysim.MaxMoney)) // seat covered through its own member row, money at the bound
+	f.Add("Bad ID", "", "", "", "", int64(0))                        // an ID that is not an ID, empty member row
+	f.Add("a", "", "", "capital", "a", int64(1))                     // money without a seat
 	f.Fuzz(func(t *testing.T, id, parent, seat, region, member string, money int64) {
 		c := polityConfig()
 		c.Modules.Polity = &economysim.PolityConfig{
 			Jurisdictions: []economysim.Jurisdiction{{ID: id, Parent: parent, Seat: seat, StartMoney: economysim.Money(money)}, {ID: parent, Parent: id}},
 			Members:       []economysim.Member{{Region: region, Jurisdiction: member}},
 		}
-		_ = c.Validate()
-		_ = c.Warnings()
+		verr := c.Validate()
+		w1, w2 := c.Warnings(), c.Warnings()
+		if !slices.EqualFunc(w1, w2, func(a, b economysim.Warning) bool { return a.Rule == b.Rule && slices.Equal(a.Path, b.Path) }) {
+			t.Fatalf("Warnings() differs between two calls on %+v: %v and %v", c.Modules.Polity, w1, w2)
+		}
+		p, nerr := economysim.NewPolity(c)
+		if (verr == nil) != (nerr == nil) {
+			t.Fatalf("Validate() = %v but NewPolity() = %v on %+v, want both to accept or both to refuse", verr, nerr, c.Modules.Polity)
+		}
+		if verr != nil {
+			return
+		}
+		if p.Len() != len(c.Modules.Polity.Jurisdictions) {
+			t.Fatalf("NewPolity().Len() = %d, want %d jurisdictions on %+v", p.Len(), len(c.Modules.Polity.Jurisdictions), c.Modules.Polity)
+		}
+		for r := range len(c.Regions) {
+			chain := p.Chain(economysim.RegionID(r))
+			if len(chain) > economysim.MaxPolityDepth {
+				t.Fatalf("Chain(%d) = %v, want at most MaxPolityDepth entries", r, chain)
+			}
+			seen := map[economysim.JurisdictionID]bool{}
+			for _, j := range chain {
+				if j < 0 || int(j) >= p.Len() || seen[j] {
+					t.Fatalf("Chain(%d) = %v, want distinct IDs below Len() = %d", r, chain, p.Len())
+				}
+				seen[j] = true
+			}
+		}
 	})
+}
+
+// TestValidatePolity_Boundaries verifies the exact edges of the bounds of
+// spec-polity.md 8: a configuration at the bound validates and has no polity error,
+// where the failing cases of TestValidatePolity_Errors sit one past it. It also
+// covers the valid shapes that a rule could wrongly refuse: the empty module, a seat
+// in a descendant's member row, a seat with no money, and money at the bound.
+//
+// Requirement: FR-POL-004, FR-POL-014, FR-POL-005
+func TestValidatePolity_Boundaries(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		build func(c *economysim.Config, p *economysim.PolityConfig)
+	}{
+		{"the empty module", func(c *economysim.Config, p *economysim.PolityConfig) {
+			*p = economysim.PolityConfig{}
+		}},
+		{"MaxJurisdictions jurisdictions", func(c *economysim.Config, p *economysim.PolityConfig) {
+			for i := len(p.Jurisdictions); i < economysim.MaxJurisdictions; i++ {
+				p.Jurisdictions = append(p.Jurisdictions, economysim.Jurisdiction{ID: "x" + strconv.Itoa(i)})
+			}
+		}},
+		// crown, inland and uplands are 3 levels; 5 more make the 8 entries of
+		// MaxPolityDepth, the deepest allowed.
+		{"a chain of exactly MaxPolityDepth entries", func(c *economysim.Config, p *economysim.PolityConfig) {
+			parent := "uplands"
+			for i := range 5 {
+				id := "deep" + strconv.Itoa(i)
+				p.Jurisdictions = append(p.Jurisdictions, economysim.Jurisdiction{ID: id, Parent: parent})
+				parent = id
+			}
+		}},
+		{"a seat in a descendant's member row", func(c *economysim.Config, p *economysim.PolityConfig) {
+			p.Jurisdictions[0].Seat = "hills" // crown covers hills through inland and uplands
+		}},
+		{"a seat with no money", func(c *economysim.Config, p *economysim.PolityConfig) {
+			p.Jurisdictions[0].StartMoney = 0
+		}},
+		{"StartMoney at MaxMoney", func(c *economysim.Config, p *economysim.PolityConfig) {
+			p.Jurisdictions[0].StartMoney, p.Jurisdictions[2].StartMoney = economysim.MaxMoney, 0
+		}},
+		{"a label of MaxLabelBytes", func(c *economysim.Config, p *economysim.PolityConfig) {
+			p.Jurisdictions[1].Label = strings.Repeat("x", economysim.MaxLabelBytes)
+		}},
+		{"a root with no parent among several roots", func(c *economysim.Config, p *economysim.PolityConfig) {
+			p.Jurisdictions[1].Parent = "" // coast becomes a second root
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := polityConfig()
+			tt.build(&c, c.Modules.Polity)
+			if err := c.Validate(); err != nil {
+				t.Errorf("Validate() = %v, want nil at the bound", err)
+			}
+			if _, err := economysim.NewPolity(c); err != nil {
+				t.Errorf("NewPolity() error = %v, want nil at the bound", err)
+			}
+		})
+	}
+}
+
+// TestPolity_WarningsOnInvalidMember verifies that Warnings does not count a member
+// row that names an undefined region as covering anything, and does not panic on a
+// configuration that does not validate: the jurisdiction whose only row names a
+// region that is not defined is reported empty.
+//
+// Requirement: FR-POL-026
+//
+// Guard: Warnings is callable on a configuration that failed Validate, so the walk
+// over the member rows must skip a region that is not in the table of regions.
+func TestPolity_WarningsOnInvalidMember(t *testing.T) {
+	t.Parallel()
+	c := polityConfig()
+	c.Modules.Polity.Members = []economysim.Member{{Region: "nowhere", Jurisdiction: "coast"}, {Region: "capital", Jurisdiction: "crown"}}
+	if err := c.Validate(); !errors.Is(err, economysim.ErrUnknownRegion) {
+		t.Fatalf("Validate() = %v, want ErrUnknownRegion", err)
+	}
+	var got []string
+	for _, w := range c.Warnings() {
+		if w.Rule == "jurisdiction_empty" {
+			got = append(got, w.Rule+"@"+strings.Join(w.Path, "."))
+		}
+	}
+	want := []string{
+		"jurisdiction_empty@modules.polity.jurisdiction.coast", // its only row names a region that is not defined
+		"jurisdiction_empty@modules.polity.jurisdiction.inland",
+		"jurisdiction_empty@modules.polity.jurisdiction.uplands",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("Warnings() jurisdiction_empty = %v, want %v", got, want)
+	}
 }
