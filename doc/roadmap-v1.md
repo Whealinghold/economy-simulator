@@ -320,7 +320,7 @@ stands today:
   go-ahead: the secret `CODACY_PROJECT_TOKEN` is set (untested until the first
   `full` run), branch protection on `main` requires `check` and `arm64` (not
   enforced for admins, no required reviews), and the fork-pull-request approval
-  setting is changed.
+  setting is set to require approval for all outside contributors.
 - (c) N-353: decided as D-O2, with no sharding and no runner: hosted CI proves
   `check` and `arm64`, and gates R and F stay dev-host gates (`testing.md` 9.1 now
   states that hosted CI does not run them). The gate F timeout is resolved: gate F
