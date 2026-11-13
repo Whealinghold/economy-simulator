@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"math/rand/v2"
+	"strings"
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/steady"
@@ -614,14 +615,84 @@ func TestPayrollSolve_BadInputs(t *testing.T) {
 			}
 		}
 	})
-	t.Run("a one group list", func(t *testing.T) {
+	t.Run("an unreferenced group is checked too", func(t *testing.T) {
 		t.Parallel()
-		defer func() {
-			if recover() == nil {
-				t.Errorf("PayrollSolve(one activity too few) did not panic")
+		// A third group that no activity names: only the check on the groups themselves can refuse it,
+		// and each bound is tested at the first value outside it and the last inside.
+		extra := func(g steady.PayrollGroup) steady.PayrollInput {
+			in := toyInput(2_500, 2)
+			in.Groups = append(in.Groups, g)
+			return in
+		}
+		for _, tt := range []struct {
+			name string
+			g    steady.PayrollGroup
+			want steady.PayrollReason
+		}{
+			{"region below 0", steady.PayrollGroup{Region: -1}, steady.PayrollUnsupported},
+			{"region equal to the count", steady.PayrollGroup{Region: 1}, steady.PayrollUnsupported},
+			{"negative share", steady.PayrollGroup{BP: -1}, steady.PayrollUnsupported},
+			{"share 10 001", steady.PayrollGroup{BP: 10_001}, steady.PayrollUnsupported},
+			{"payer and Hireable", steady.PayrollGroup{BP: 1, Hireable: true}, steady.PayrollUnsupported},
+			{"negative own consumption", steady.PayrollGroup{Own: []int64{0, -1}}, steady.PayrollUnsupported},
+			{"own consumption 0 is valid", steady.PayrollGroup{Own: []int64{0, 0, 0}}, steady.PayrollOK},
+			{"share 10 000 is valid", steady.PayrollGroup{BP: 10_000}, steady.PayrollOK},
+			{"share 1 is valid", steady.PayrollGroup{BP: 1}, steady.PayrollOK},
+		} {
+			if res := steady.PayrollSolve(m, base, extra(tt.g)); res.Reason != tt.want {
+				t.Errorf("PayrollSolve(unreferenced group, %s) reason = %v, want %v", tt.name, res.Reason, tt.want)
 			}
-		}()
-		steady.PayrollSolve(m, base, toyInput(2_500, 1))
+		}
+	})
+	t.Run("an activity of a group of another region, either group", func(t *testing.T) {
+		t.Parallel()
+		m2 := m
+		m2.Regions = append(slicesClone(m.Regions), steady.Region{Households: 10, Upkeep: []int64{0, 0, 0}})
+		for g := range 2 {
+			in := toyInput(2_500, 2)
+			in.Groups[g].Region = 1 // the activity of group g is in region 0
+			if res := steady.PayrollSolve(m2, base, in); res.Reason != steady.PayrollUnsupported {
+				t.Errorf("PayrollSolve(group %d in region 1 runs a recipe of region 0) reason = %v, want PayrollUnsupported", g, res.Reason)
+			}
+		}
+	})
+	t.Run("an outcome longer than the model", func(t *testing.T) {
+		t.Parallel()
+		// Longer Flow is read only up to the activities and is accepted; every other slice has to be exact,
+		// because the solver indexes them by activity, commodity row, region and resource.
+		for name, tt := range map[string]struct {
+			edit func(*steady.Outcome)
+			want steady.PayrollReason
+		}{
+			"flow":    {func(o *steady.Outcome) { o.Flow = append(o.Flow[:len(o.Flow):len(o.Flow)], o.Flow[0]) }, steady.PayrollOK},
+			"active":  {func(o *steady.Outcome) { o.Active = append(o.Active[:len(o.Active):len(o.Active)], true) }, steady.PayrollUnsupported},
+			"rent":    {func(o *steady.Outcome) { o.Rent = append(o.Rent[:len(o.Rent):len(o.Rent)], o.Rent[0]) }, steady.PayrollUnsupported},
+			"price":   {func(o *steady.Outcome) { o.Price = append(o.Price[:len(o.Price):len(o.Price)], o.Price[0]) }, steady.PayrollUnsupported},
+			"wage":    {func(o *steady.Outcome) { o.Wage = append(o.Wage[:len(o.Wage):len(o.Wage)], o.Wage[0]) }, steady.PayrollUnsupported},
+			"resrent": {func(o *steady.Outcome) { o.ResRent = append(o.ResRent[:len(o.ResRent):len(o.ResRent)], o.Wage[0]) }, steady.PayrollUnsupported},
+		} {
+			o := base
+			tt.edit(&o)
+			if res := steady.PayrollSolve(m, o, toyInput(2_500, 2)); res.Reason != tt.want {
+				t.Errorf("PayrollSolve(long %s) reason = %v, want %v", name, res.Reason, tt.want)
+			}
+		}
+	})
+	t.Run("a group list of the wrong length", func(t *testing.T) {
+		t.Parallel()
+		for _, n := range []int{1, 3} {
+			func() {
+				defer func() {
+					got, _ := recover().(string)
+					if !strings.Contains(got, "payroll group list does not match the activities") {
+						t.Errorf("PayrollSolve(%d groups for 2 activities) panic = %q, want the invariant message", n, got)
+					}
+				}()
+				in := toyInput(2_500, 2)
+				in.Group = make([]int, n)
+				steady.PayrollSolve(m, base, in)
+			}()
+		}
 	})
 }
 
