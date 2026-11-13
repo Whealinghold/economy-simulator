@@ -519,3 +519,63 @@ func Example_polityCrossing() {
 	fmt.Println("exit:", names(x.Exit), "enter:", names(x.Enter))
 	// Output: exit: [uplands inland] enter: [coast]
 }
+
+// TestPolity_WarningsAreLogged verifies that each configuration warning of the
+// polity module reaches the injected logger once, at Warn, with the constant
+// message and the rule and the dotted path of the warning, before "world created",
+// and that a configuration that draws none logs none of them.
+//
+// Guard: the two warnings are the only fault signal of a polity that is valid but
+// surprising (an empty jurisdiction, a region left out of the tree), and a
+// consumer with no Warnings() call sees them only here; without this test a change
+// to the construction line could drop them silently.
+//
+// Requirement: FR-POL-026
+func TestPolity_WarningsAreLogged(t *testing.T) {
+	t.Parallel()
+	c := polityWorldConfig()
+	c.Modules.Polity.Jurisdictions = append(c.Modules.Polity.Jurisdictions, economysim.Jurisdiction{ID: "annex"})
+	c.Modules.Polity.Members = c.Modules.Polity.Members[:len(c.Modules.Polity.Members)-1] // north has no row
+	h := newCaptureHandler()
+	if _, err := economysim.NewWorld(c, economysim.WithLogger(slog.New(h))); err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil (a warning never fails construction)", err)
+	}
+	want := []string{
+		"jurisdiction_empty@modules.polity.jurisdiction.annex",
+		"region_unassigned@modules.polity.member.north",
+	}
+	var got []string
+	created := -1
+	for i, l := range h.sink.lines {
+		if l.msg == "world created" {
+			created = i
+		}
+		if l.level != slog.LevelWarn {
+			continue
+		}
+		attrs := map[string]string{}
+		for _, a := range l.attrs {
+			attrs[a.Key] = a.Value.String()
+		}
+		if r := attrs["rule"]; r != "jurisdiction_empty" && r != "region_unassigned" {
+			continue // the reference chain's own warnings
+		}
+		if l.msg != "configuration warning" || created >= 0 {
+			t.Errorf("polity warning line %v (after \"world created\": %v), want message %q before the summary", l, created >= 0, "configuration warning")
+		}
+		got = append(got, attrs["rule"]+"@"+attrs["path"])
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("logged warnings = %v, want %v", got, want)
+	}
+
+	quiet := newCaptureHandler()
+	polityWorld(t, economysim.WithLogger(slog.New(quiet)))
+	for _, l := range quiet.sink.lines {
+		for _, a := range l.attrs {
+			if a.Key == "rule" && (a.Value.String() == "jurisdiction_empty" || a.Value.String() == "region_unassigned") {
+				t.Errorf("a clean polity logged %v, want no polity warning", l)
+			}
+		}
+	}
+}
