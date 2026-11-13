@@ -5,6 +5,7 @@ import (
 	"errors"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/codec"
@@ -430,6 +431,27 @@ func TestCheckpoint_SkillsRefusesCorrupt(t *testing.T) {
 		}
 		if err := fresh.skillsCross(); err != nil {
 			t.Errorf("skillsCross error = %v, want nil", err)
+		}
+	})
+	// Fix: iteration 1 of the PR A review. readApplicant accepted a queued agent that
+	// is also a trainer with trainees, a state no live world reaches. The agent here
+	// holds the role it is queued for, so the older check would also refuse it, but
+	// with the "already holds role" message: the message pins which check refused.
+	t.Run("queued trainer with trainees is refused as a trainer", func(t *testing.T) {
+		t.Parallel()
+		sec := with(func(s *skillSection) { s.queues = []queueRow{{0, 1, [][3]int64{{hw, 3, 0}}}} })
+		fresh := newMill(t, skillsConfig(), WithSeed(exitSeed))
+		step(t, fresh, 8)
+		r := codec.NewReader(sec.bytes())
+		err := fresh.loadSkills(&restoreCtx{tick: 8}, r)
+		if err == nil {
+			err = r.Done()
+		}
+		if err == nil {
+			t.Fatalf("loadSkills accepted a queued trainer, want a refusal")
+		}
+		if got := err.Error(); !strings.Contains(got, "trainer with trainees") {
+			t.Errorf("loadSkills error = %q, want it to name a trainer with trainees", got)
 		}
 	})
 	t.Run("rows in a world with no training role", func(t *testing.T) {
