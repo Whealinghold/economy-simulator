@@ -262,6 +262,11 @@ func TestPacks_OnlyD1ToD5AreNotViable(t *testing.T) {
 		if strings.HasPrefix(f, "overlay/merchants") {
 			continue
 		}
+		// The polity overlays name the five regions of the warm five, which pack one
+		// lacks; TestScenarioS112_Neutral loads and validates them over it.
+		if strings.HasPrefix(f, "overlay/polity") {
+			continue
+		}
 		cfg, err := config.LoadFS(fsys, "base.toml", "one.toml", "warm-one.toml", f)
 		if err != nil {
 			continue // names a module that is not built yet
