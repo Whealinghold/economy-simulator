@@ -315,6 +315,30 @@
 //     one account to another under a reason, refused whole or applied whole.
 //   - Trainee: an agent that learns a role under a trainer for a number of
 //     ticks; a recipe may be trainee-eligible.
+//   - Trainer: a living agent holding a role with TrainingTicks above 0 that
+//     takes trainees of that role, at most MaxTrainees at once.
+//   - Application: an agent's request to join the traineeship queue of a role
+//     in its region; one at a time. The default spawner makes it only for an
+//     agent of weight 1 when the return on the tool and the training beats the
+//     required return.
+//   - Queue (of applicants): the applicants for a role in a region, in the order
+//     of the tick they applied and then the agent ID; a trainee returned by a
+//     trainer's removal rejoins it ahead by ticks served.
+//   - Place: room for one trainee with a trainer; a place opens when a trainer
+//     holds fewer than MaxTrainees and the gain is not negative.
+//   - Teaching tick: a tick in which a trainer's teaching accumulator reaches
+//     10 000 and the trainer starts no skilled recipe; a job in progress goes on.
+//   - Teaching load: the share of a trainer's working time one trainee takes, in
+//     basis points (Role.TeachingLoad).
+//   - Expected wait: the ticks an applicant expects to queue, the applicants ahead
+//     times TrainingTicks over the places, rounded up.
+//   - Board: the upkeep a trainer supplies to its trainees in kind, consumed from
+//     the trainer's account; it is the trainee's whole income.
+//   - Held (completion): a trainee at TrainingTicks that stays a trainee, and keeps
+//     its trainer's place, while the target role has no headroom for it.
+//   - TraineeshipStarted, TraineeshipCompleted, TraineeshipEnded: the events of a
+//     place filled, a course completed (the agent changes role) and a course that
+//     ends without completing (the reason names why).
 //   - Upkeep: the goods one household must consume each tick to stay alive.
 //   - Warning: a configuration that is legal but probably a mistake; Warnings
 //     returns it as a value with a path and a rule and it never fails

@@ -365,7 +365,7 @@ basis-point value is `int64`, `Region` is a `RegionID`, an agent is an `AgentID`
 | `PopulationChanged` | POP 10.1 | P7.1, after `EntryLimited`, roles ascending | A | population | `Region`, `Role`, `Exposed`, `Unfed`, `NoRatio`, `BirthsDue`, `DeathsDue`, `DeathsCut`, `DeathsHeld`, `BirthsCapped`, `BirthsCeiling`+ (births cut by a role ceiling), `BirthsUnfunded`, `RateClamped`, `BirthsDone`, `DeathsDone` |
 | `TraineeshipStarted` | SKL 4.7 | P7.1(a) | E | skill barriers | `Trainee`, `Trainer`, `Role`, `Region`+ |
 | `TraineeshipCompleted` | SKL 4.7 | P7.1(a) | E | skill barriers | `Agent`, `Region`+, `From`, `To` (roles) |
-| `TraineeshipEnded` | SKL 4.7, 8.1 | with a removal (4.4.8) | E | skill barriers | `Agent`, `Region`+, `Reason` |
+| `TraineeshipEnded` | SKL 4.7, 8.1 | with a removal (4.4.8) | E | skill barriers | `Agent`, `Region`+, `Reason` (closed set `trainer_left`, `agent_left`, `role_removed`; `role_removed` is unreachable until a role can be removed, SKL 4.6.2) |
 | `StoreChanged` | STO 14.1 | a call (`AddStore`, `RemoveStore`); P7.1 after the `RoleChanged` that ended the store; P8.3b for a store facility | E | storage | `Agent`, `Region`, `Role`, `Class StoreClassID`, `Kind` (`added`, `removed`), `Cause` (`consumer`, `role_changed`, `facility`), `Stores` (the agent's stores of the class after), `Room`, `Load` (the account's, as pairs, after) |
 
 `GoodsListed` (`AgentBankrupted`, `EstateOpened`, `RoleChanged`) counts **lots**,
