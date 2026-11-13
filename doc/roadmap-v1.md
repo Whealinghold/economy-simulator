@@ -287,7 +287,7 @@ a documented limitation of the reference chain, and to move to Stage 3. Criterio
 is not reworded or lowered, it stays written as it is and stays **not met**, and no
 band is set. PR D of plan 24 (the bands, the stable-five test and
 `expected/five.scenarios.txt`) is deferred, not cancelled. The "Done when"
-paragraph above stays the criterion; it is not satisfied. **Signed off (2026-11-13), with this stated exception:** criterion 1, not met, as a documented limitation (criteria 2, 3 and 4 are met; criteria 5 and 6 are "met in part", as the table states, and are not signed off as met; Stage 2 is closed by the owner decision, not because every criterion holds).
+paragraph above stays the criterion; it is not satisfied. **Closed by the owner (2026-11-13), with this stated exception:** criterion 1, not met, as a documented limitation (criteria 2, 3 and 4 are met; criteria 5 and 6 are "met in part", as the table states, and are not counted as met; Stage 2 is closed by the owner decision, not because every criterion holds).
 
 The limitation, in plain words. The pack `payroll` keeps its household count within
 10% from tick 600 to 2 200 on seeds 101 to 104 and on 25 of 30 seeds, and only with
