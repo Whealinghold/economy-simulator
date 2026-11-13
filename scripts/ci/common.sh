@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Shared by the CI job scripts; sourced, not run. Every job is one script call from the workflow,
-# and each script also runs on a developer machine from any directory.
+# Shared by the gate scripts; sourced, not run. They run on the dev host from any directory
+# (there is no hosted CI workflow; testing.md 9.1).
 
 CI_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
 REPO_ROOT=$(cd "$CI_DIR/../.." && pwd -P)
@@ -18,7 +18,7 @@ modules() {
 	dirs=$(cd "$REPO_ROOT" && go list -m -f '{{.Dir}}') && [ -n "$dirs" ] || { echo "modules: go list -m failed or found no module" >&2; return 1; }
 	while IFS= read -r dir; do
 		if [ "$dir" = "$REPO_ROOT" ]; then dir=.; else dir=${dir#"$REPO_ROOT"/}; fi
-		# the job scripts word-split the list, so a relative path with whitespace would break them
+		# the gate scripts word-split the list, so a relative path with whitespace would break them
 		case $dir in *[[:space:]]*) echo "modules: directory with whitespace is not supported: $dir" >&2; return 1 ;; esac
 		echo "$dir"
 	done <<<"$dirs"

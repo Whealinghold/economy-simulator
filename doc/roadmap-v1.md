@@ -216,9 +216,9 @@ part of EST for the same reason. Plans 1 and 8 are rows of the table.
 
 **Owner rulings of 2026-10-23** (plan 2-1 Phase 5; the plans are written against
 them). CI: yes, with an arm64 job; the workflow (`.github/workflows/ci.yml`, three
-jobs: check, full, arm64) is not written by plan 2-1 and has its own row below.
+jobs: check, full, arm64) is not written by plan 2-1 and has its own row below (removed by the owner on 2026-11-13).
 The gate is two runs (`rules/testing.md` 9.1): R, `go test -race -timeout 60m ./...`
-with reduced seeds (a dev-host gate; PR CI runs `-short -race`, and the opt-in `full` job runs R on `FULL_RUNNER`, see testing.md 9.1), and F, the non-race set-mode coverage run with all seeds.
+with reduced seeds (a dev-host gate; since 2026-11-13 there is no hosted CI except the Codacy checks, see testing.md 9.1), and F, the non-race set-mode coverage run with all seeds.
 Answers to the questions asked at the start of Stage 2: (5) plan 8 E0: yes, the
 seasonal-crop feature C04 may move from the pack to an overlay; (6) plan 24 R2(a):
 the realm pack is `five` renamed, and R3: the reference machine for the SCL time is
@@ -258,7 +258,7 @@ all-on from it).
 | `internal/calibration` and `testdata/calibration/` | CLB | merged (PR #41: Phases 1 to 8; audited 2026-11-11) |
 | `otelobserver/` (and `go.work`, added with the second module) | OBS 6, observability-and-logging.md 5, 6 | merged (PR #43: Phases 1 to 10; audited 2026-11-11) |
 | `denomination/` (the ladder, the formatter and the RPG preset; an optional package, standard library only, imported by consumers and examples and never by the core: `spec-currency.md` 7, FR-CUR-002, 008 to 019, NFR-CUR-001; the change that adds it also adds it to architecture.md 2.6 and `AGENTS.md`, and its terms to `doc.go`) | CUR 4, 7 | merged (PR #33) |
-| `.github/workflows/ci.yml` (three jobs: check, full with the Codacy coverage upload, and arm64; owner decision of 2026-10-23) | testing.md 9.1; architecture.md 7.4; N-019 | merged (PRs #49, #51, #52); first run 2026-11-11 (run 43019781252): arm64 green in 16m50s on a native runner; hosted CI proves `check` (short race) and `arm64` only: gate R timed out at 1h0m on a 4-vCPU runner twice (runs 43019781252, 43038922592; `examples/realm` 597 s) and gate F is estimated, not measured, to be far beyond one; `full` is opt-in (dispatch or label `full`, runner `vars.FULL_RUNNER`, R and F separate steps) and gates R and F stay dev-host gates; owner decision N-353; pending: the F wall time, the Codacy figure; the owner's repository actions are open (secret `CODACY_PROJECT_TOKEN`, branch protection requiring `check` and `arm64`, fork-PR approval) |
+| `.github/workflows/ci.yml` (three jobs: check, full with the Codacy coverage upload, and arm64; owner decision of 2026-10-23) | testing.md 9.1; architecture.md 7.4; N-019 | merged (PRs #49, #51, #52); **removed 2026-11-13 by the owner** (no hosted CI except the Codacy checks; N-353); history: first run 2026-11-11 (run 43019781252): arm64 green in 16m50s on a native runner; hosted CI proves `check` (short race) and `arm64` only: gate R timed out at 1h0m on a 4-vCPU runner twice (runs 43019781252, 43038922592; `examples/realm` 597 s) and gate F is estimated, not measured, to be far beyond one; `full` is opt-in (dispatch or label `full`, runner `vars.FULL_RUNNER`, R and F separate steps) and gates R and F stay dev-host gates; owner decision N-353; the F wall time and the Codacy coverage figure were never taken, and the Codacy coverage upload no longer happens |
 | `examples/<first-consumer>/` (the RPG pack, the RPG preset of `denomination/` and a complete server) and `examples/<second-setting>/` | vision.md 5 items 3 and 5; architecture.md 1.3 | merged in part (PR A #44 the inspector, PR B #47 the colony and the realm pack and server, PR C #48 the cost record; audited 2026-11-11); PR D (`TestScenarioStable_FiveWarm`, bands, `expected/five.scenarios.txt`) not built, blocked on criterion 1 (N-352, N-344) |
 | `employment.go`, `internal/employment` (the payroll form of `spec-employment.md` 24; ADR 0011; default off; no checkpoint section, no draw, no state) | EMP | in progress (plan 2-28, owner decision D-O5): the spec amendment, the skeleton, the config and the hash, and the payroll step (P4.1b, the reason `wage_pay`, `PayrollPaid`, the module-alone golden `golden/employment/` on `one-demand` with `overlay/employment.toml`) are built; the pack tuning of phase 4 is not; built only if the pack-data redesign of criterion 1 exhausts its stop rule; merges on its own proof and makes **no claim on criterion 1** (a wage is necessary and not sufficient, N-352) |
 
@@ -302,7 +302,7 @@ stands today:
 | # | Criterion | State | How verified |
 | --- | --- | --- | --- |
 | 1 | The reference chain runs to a stable state from a warm start and passes the STY bands | **not met** | N-352: every reference pack except `payroll` goes extinct (`one`, `one-demand`, `five` warm and `all` reach 0 households by tick 1 100; `payroll` keeps its household count only with the payroll module on). Four routes did not give a healthy economy: four default-off engine levers, a nine-trial data ladder, a pack-data ladder with a solved census (T1 to T3) and a payroll (wage) module with its claim ladder (E1 to E5). Before the payroll route the best settings kept the household count but the discretionary roles stayed 50% to 70% unfed (bar 1%); under the pack `payroll` the non-cook households stay 36% to 39% unfed. No band is set (`testdata/chains/bands/five.toml` has no value for `x4.*` or `x3.ms_per_tick`), no existing pack, warm start or golden moved (the pack `payroll` is new). The levers and the claim harness are parked unmerged (`origin/stage-2-done-stability`, `origin/stage-2-done-employment-claim`); the payroll module itself is merged (#58). The payroll route (PRs #58 and #59) gave a partial result: a household-count claim for the pack `payroll`, not stability. The owner closed Stage 2 on 2026-11-13 with this criterion not met, as a documented limitation (see the status above). |
-| 2 | Invariant, determinism, golden and configuration-only chain tests pass on amd64 and arm64 | **met** (quick pattern on arm64; see below) | amd64: the `check` job (`go test -short -race`, every module) is green on PR #54 (run 43141053976), and gates R and F pass on the dev host (the lanes head `9c52695`: gate R exit 0, gate F exit 0, 33 of 33 coverage scopes at their minimums; gates R and F are not run by hosted CI, N-353). arm64: the `arm64` job (native `ubuntu-24.04-arm`, `scripts/ci/arm64.sh`) is green on the push to `main` of PR #53 (run 43103409906, 16m57s) and on PR #54 (run 43141053976). In the root module it runs `QUICK_PATTERN` of `scripts/ci/common.sh` (`TestScenario\|TestDeterminism\|TestGolden\|TestInvariants\|TestCheckpoint\|TestFork\|TestConfigOnly\|TestFixture\|TestPacks\|TestCensus\|TestExpected\|TestStylised\|TestCost\|TestStable`, all seeds, no race), and `go test -short` in every other module. It is the quick run of `testing.md` 9.1, not gates R or F, and the arm64 build is native. N-343 is closed. |
+| 2 | Invariant, determinism, golden and configuration-only chain tests pass on amd64 and arm64 | **met** (quick pattern on arm64; see below) | Historical (the hosted jobs were removed on 2026-11-13, so nothing hosted verifies this now): amd64: the `check` job (`go test -short -race`, every module) was green on PR #54 (run 43141053976), and gates R and F pass on the dev host (the lanes head `9c52695`: gate R exit 0, gate F exit 0, 33 of 33 coverage scopes at their minimums; gates R and F were never run by hosted CI, N-353). arm64: the `arm64` job (native `ubuntu-24.04-arm`, `scripts/ci/arm64.sh`) was green on the push to `main` of PR #53 (run 43103409906, 16m57s) and on PR #54 (run 43141053976); it is now verified only when someone runs `scripts/ci/arm64.sh` or the quick pattern on an arm64 machine. In the root module it runs `QUICK_PATTERN` of `scripts/ci/common.sh` (`TestScenario\|TestDeterminism\|TestGolden\|TestInvariants\|TestCheckpoint\|TestFork\|TestConfigOnly\|TestFixture\|TestPacks\|TestCensus\|TestExpected\|TestStylised\|TestCost\|TestStable`, all seeds, no race), and `go test -short` in every other module. It is the quick run of `testing.md` 9.1, not gates R or F, and the arm64 build is native. N-343 is closed. |
 | 3 | A new commodity or chain needs only a configuration file; a second, unrelated setting shows it | **met** | `examples/colony` is a second setting that is a pack of configuration files and `colony.go` (`TestColony_ExtraLayerNeedsOnlyConfiguration`); `TestConfigOnly_SecondRunsToTheStablePredicate` (`config_chain_test.go`) and `TestConfigOnly_AllPackHasNoGoSpecific` (`all_pack_test.go`) run the `second` and `all` packs with no Go change. That a chain runs is shown; that it is stable is criterion 1. |
 | 4 | A checkpoint taken mid-run and resumed gives the same result as an uninterrupted run | **met** | `TestFork_OneAtN` (`checkpoint_fork_test.go`, FR-CHK-050, 052, 053, 026) forks at several ticks on seeds 1 to 4 and compares with the uninterrupted run; the other `TestFork_*` tests cover observers, split runs, restore of a restore, directives and removed agents. The tests are in the quick pattern, so they also ran on arm64. |
 | 5 | A consumer example builds a complete server from the public API alone, and the RPG data pack runs | **met in part** | `examples/realm` is its own module that imports the core by its public path (PR #47: `server.go`, `game.go`, the `pack/` and the RPG preset of `denomination/`; `TestPack_StartupSolveIsWarmFive`, `serve_e2e_test.go`). The pack runs, but its economy collapses like every pack except `payroll`, and that one only keeps its household count with the payroll module on (N-352), and PR D of plan 24 (`TestScenarioStable_FiveWarm`, bands, `expected/five.scenarios.txt`) is not built: it waits on criterion 1 (N-344). |
@@ -317,18 +317,20 @@ stands today:
   parked unmerged (`origin/stage-2-done-stability`,
   `origin/stage-2-done-employment-claim`).
 - (b) The owner's repository actions were done on 2026-11-12 on the owner's
-  go-ahead: the secret `CODACY_PROJECT_TOKEN` is set (untested until the first
-  `full` run), branch protection on `main` requires `check` and `arm64` (not
-  enforced for admins, no required reviews), and the fork-pull-request approval
-  setting is set to require approval for all outside contributors.
-- (c) N-353: decided as D-O2, with no sharding and no runner: hosted CI proves
-  `check` and `arm64`, and gates R and F stay dev-host gates (`testing.md` 9.1 now
-  states that hosted CI does not run them). The gate F timeout is resolved: gate F
-  uses `-covermode=set`, which took 44.6 min on the 32-core dev host (9098 s with
-  `atomic`), so the rule's 120m holds with 2.7x headroom. Still open: the `[project]`
-  MUST sentence of `testing.md` 9.1 ("CI MUST run two commands") is not yet reworded to
-  match D-O2, and the repository variables `FULL_RUNNER` and `FULL_TIMEOUT_MIN` are
-  unset, because `full` stays opt-in.
+  go-ahead: the secret `CODACY_PROJECT_TOKEN` was set and the fork-pull-request
+  approval setting is set to require approval for all outside contributors.
+  Branch protection on `main` required `check` and `arm64` (not enforced for
+  admins, no required reviews) until 2026-11-13; it no longer requires status
+  checks (it still blocks force pushes and deletions), and the secret is unused
+  because the `full` job is deleted.
+- (c) N-353: decided as D-O2 (hosted CI proves `check` and `arm64`; gates R and F stay
+  dev-host gates), then superseded by the owner on 2026-11-13: there is no hosted CI
+  except the Codacy checks. The workflow is deleted, `testing.md` 9.1 is reworded (the
+  author runs the short race run, R and F on the dev host before a pull request is
+  opened and records the exit markers in the pull request description), and the
+  repository variables `FULL_RUNNER` and `FULL_TIMEOUT_MIN` stay unset and unused. The
+  gate F timeout is resolved: gate F uses `-covermode=set`, which took 44.6 min on the
+  32-core dev host (9098 s with `atomic`), so the rule's 120m holds with 2.7x headroom.
 - (d) The cost figure on a quiet host (criterion 6).
 - (e) The CI hardening backlog is kept in the supervisor's notes, not here.
 
@@ -378,8 +380,8 @@ the first two, and the deferred PR D of plan 24 waits on them.
   consumer asks with a measurement.
 - The not-in-version-1 list of note N-131.
 - Timed fuzz runs in CI (no fuzz time is decided) and the coverage threshold of
-  the `examples/` modules (reported, not gated). The CI workflow is merged
-  (PR #49) and runs `check` and `arm64` on GitHub; for gates R and F (N-353) and for the
+  the `examples/` modules (reported, not gated). The CI workflow was merged
+  (PR #49) and removed on 2026-11-13; for the gates (N-353) and for the
   timed fuzz runs, the commands of `AGENTS.md` are run by hand in each change.
 
 ## Updating this file

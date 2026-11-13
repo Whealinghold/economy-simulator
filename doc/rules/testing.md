@@ -342,7 +342,8 @@ entries and appends its guarded call.
 ticks and compares a canonical rendering of the result (prices, volumes,
 inventories, event counts) to a file in `testdata/golden/`. It exists to detect
 unintended behaviour change. The golden-file and determinism tests **SHOULD**
-run in CI on at least two architectures (architecture.md 7.4). **[project]**
+be run on at least two architectures (architecture.md 7.4); no hosted job does it since
+2026-11-13, so the author runs the quick run of 9.1 on an arm64 machine when it matters. **[project]**
 
 7.1.1. There are three sets of golden files, under `testdata/golden/`
 (architecture.md 2.10.6): **[project]**
@@ -385,7 +386,7 @@ why it failed. A PR that changes a golden file **MUST** explain, in the PR
 description, what behaviour changed and which requirement or fix it serves.
 This includes a change caused by a Go toolchain upgrade.
 
-7.3. Each module under `examples/` **MUST** build and run in CI, with a test or
+7.3. Each module under `examples/` **MUST** build and run (under the gates of 9.1), with a test or
 `Example` test that checks its output. They are the proof that the public API
 is sufficient for a consumer (architecture.md 1.3).
 
@@ -416,9 +417,11 @@ observability-and-logging.md 8.2), is enforced by an ordinary test using
 
 ## 9. Coverage
 
-9.1. CI **MUST** run two commands and fail the build when either fails or when
-coverage falls below the thresholds. **[project]** Hosted CI does not do this today: owner
-decision N-353 is open (see "What CI runs" below).
+9.1. There is no hosted CI except the Codacy checks (static analysis on pull requests; owner
+decision of 2026-11-13, N-353). The author **MUST** run the two commands below, and the short
+race run, on the dev host before a pull request is opened, and **MUST** record their exit
+markers in the pull request description (the `Testing` entry, section 11). The change is
+not ready while either command fails or while coverage falls below the thresholds. **[project]**
 
 - **R**, the race run: `go test -race -timeout 60m ./...`. Under `-race` the
   scenario and determinism tests run a reduced seed set (`raceSeeds`, one).
@@ -432,19 +435,17 @@ decision N-353 is open (see "What CI runs" below).
   coverage on the dev host, so 60m left no margin (owner ruling, stage 2-6).
   The stylised fact tests (`TestStylised`) are in this pattern and run seeds 1 to 10 without `-race`.
 
-**What CI runs.** Hosted CI proves two things: job `check` (`R_MODE=short` of `scripts/ci/check.sh`:
-gofmt, vet, staticcheck, tidy and `go test -short -race ./...` per module) and job `arm64`. It does
-**not** run gate R or gate F. On a hosted 4-vCPU runner the root package did not finish R in 60
-minutes (`panic: test timed out after 1h0m0s`, runs 43019781252 and 43038922592; `examples/realm`
-alone took 597 s), and F, which needs about 45 minutes in set mode on the 32-core dev host, is estimated (not measured) to
-need a multiple of that there, beyond the 330-minute job cap. So gate R and gate F remain
-dev-host gates of the delivery workflow. The job `full` exists but is opt-in (manual dispatch, or
-a pull request labelled `full`): it runs gate R (`R_MODE=race`, `R_TIMEOUT`, default 60m) and then
-gate F as two separate steps, each `if: !cancelled()`, so a failing R does not hide F and the job
-fails if either does. Its runner is the repository variable `FULL_RUNNER` (default `ubuntu-24.04`)
-and its timeout `FULL_TIMEOUT_MIN` (default 330), so a self-hosted or larger runner is one
-setting. Until the owner decides N-353 (a larger runner, sharding the root package, or amending
-the MUST above), hosted CI does not satisfy "CI MUST run F".
+**Where the gates run.** Nothing runs them in the hosted environment. The scripts of
+`scripts/ci/` are run by hand on the dev host: `check.sh` (`R_MODE=short`: gofmt, vet,
+staticcheck, tidy and `go test -short -race ./...` per module; `R_MODE=full` adds gate R),
+`full.sh` (gate F per module, then `coverage-check.sh` against `coverage-thresholds.txt`) and
+`arm64.sh` (the quick run on an arm64 machine). Why not a hosted runner: on a 4-vCPU runner the
+root package did not finish R in 60 minutes (`panic: test timed out after 1h0m0s`, runs
+43019781252 and 43038922592; `examples/realm` alone took 597 s), and F, which needs about 45
+minutes in set mode on the 32-core dev host, was estimated (not measured) to need a multiple of
+that. The GitHub workflow that ran `check` and `arm64` was removed on 2026-11-13. The amd64 and
+arm64 identity of the golden output (architecture.md 7.4) is therefore verified only when someone
+runs the quick run below on an arm64 machine.
 
 Coverage is not taken under `-race`: with atomic coverage of `-coverpkg=./...`
 the race run took 48 to 58 minutes, against 164 seconds without coverage and 15
@@ -458,15 +459,12 @@ it; `TestRaceSkips_HaveAnFPrefix` enforces it. `-update` is refused under `-race
 `-coverpkg=./...` counts a statement as covered when any test in the module
 executes it. Without it, `go test` counts only the package under test, so code
 in `internal/` that is exercised through the root package's tests is reported
-as uncovered. A CI script reads `coverage.out` (`scripts/ci/coverage-check.sh`) and
+as uncovered. A script reads `coverage.out` (`scripts/ci/coverage-check.sh`) and
 checks each scope against the table.
 
-CI (`.github/workflows/ci.yml`): the short race run and the quick run (on arm64 too) run on
-every pull request and push to `main`; R, F and the coverage check run in `full`, on demand
-and on a pull request that carries the label `full`, on the runner of `FULL_RUNNER`. A pull
-request that touches code or tests **SHOULD** run the gates on the dev host and report them in
-its `Testing` entry (item 8 of section 11); the label `full` answers it only where `FULL_RUNNER`
-is a runner that fits (N-353).
+The gates are run by the author before a pull request is opened: the short race run, R, F and
+the coverage check on the dev host, the quick run also on arm64 when a change could differ there.
+The pull request reports them in its `Testing` entry (item 8 of section 11).
 
 | Scope | Minimum statement coverage |
 |-------|----------------------------|
@@ -517,7 +515,7 @@ and `testdata/golden/all/`.
 
 10.5. All tests pass with `-race`. Integration and end-to-end tests begin with
 `if testing.Short() { t.Skip("integration test, skipped with -short") }` (or
-"end-to-end test"). CI runs `go test -short -race ./...` first, so the unit
+"end-to-end test"). Run `go test -short -race ./...` first, so the unit
 tests fail fast, and then the full suite with coverage (9.1). Under `-race` the
 scenario and determinism tests run a reduced seed set; the full set runs in F,
 without `-race` (9.1).
@@ -600,4 +598,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 89c3de8888cdbfc9684e8240
+RULE-TAG: 66af7645b01fef4e2796c367

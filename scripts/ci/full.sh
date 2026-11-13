@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Job `full`: gate F per module (all seeds, set-mode coverage, no race), then the coverage check.
+# Local gate F per module (all seeds, set-mode coverage, no race), then the coverage check.
 # F_TIMEOUT sets the go test timeout (default: the rule's 120m, testing.md 9.1). F_COVERMODE sets
 # -covermode (default set: atomic is needed only with -race, testing.md 9.1). FULL_MODULES
 # restricts the modules (space-separated, relative to the repository root; for a smoke test).

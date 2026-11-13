@@ -2057,7 +2057,7 @@ Table-driven (`testing.md` 3.1), each with the arithmetic of its expectation
 | the confirm | the confirm plan is the chosen configuration and the base as a control, on the confirm seeds with the measures and windows of the search | FR-CLB-025 |
 | the choice | the feasible set; the base chosen when feasible; the least grid distance; the tie order; no choice when empty; the Pareto set; **no weighted sum is computed**; the seed threshold `R - floor(R / 10)` | FR-CLB-030, FR-CLB-031, FR-CLB-032, FR-CLB-033, FR-CLB-034, FR-CLB-106 |
 | the alias test | collinear vectors, independent vectors, one measure, a zero vector, the 128-bit comparison at its largest inputs, a reading above `2^26` excluded | FR-CLB-061 |
-| the record | render, parse, render again; the order of lines; no float and no map order; the `stability` and `claim` lines; the digest of a document and of a `Render` text; the same bytes on `amd64` and `arm64` in the nightly (testing.md 7.1) | FR-CLB-041, FR-CLB-043, FR-CLB-039, FR-CLB-100, NFR-CLB-002 |
+| the record | render, parse, render again; the order of lines; no float and no map order; the `stability` and `claim` lines; the digest of a document and of a `Render` text; the same bytes on `amd64` and `arm64` in the nightly (testing.md 7.1; no hosted job verifies this since 2026-11-13; it is verified only when someone runs the quick run of testing.md 9.1 on an arm64 machine) | FR-CLB-041, FR-CLB-043, FR-CLB-039, FR-CLB-100, NFR-CLB-002 |
 | the process rules | a pure check over a sequence of records: a stage order with the re-entry rule, a stage of more than 16 knobs split by owner (`MaxFactors`), three failed attempts, a stage with an open X failure, a seven-condition stop | FR-CLB-027, FR-CLB-035, FR-CLB-036, FR-CLB-038 |
 | the overlay | a choice renders to a document of the form of EXP 3.3.4 (a table header and a key line each, the keys grouped by table, under the header comment of 9.1), each key line byte for byte as the function of `internal/design` writes it; a key of class S or P is refused | FR-CLB-050 |
 | the fuzz tests | the grid and neighbour function (any base, bound and step: levels ascending, unique, in bounds, containing the base, no panic), the choose function (any result set: the chosen point is feasible, the Pareto set is non-dominated, no panic) and the record parser | NFR-CLB-004 |
@@ -2159,7 +2159,7 @@ Every requirement of 21 is in one row; a requirement with no test says so and is
 | FR-CLB-090 | the `-short` marker of the tests of 11.1 to 11.3 (review) |
 | FR-CLB-091 | the dry run is skipped with `-short` (11.4) |
 | NFR-CLB-001 | the registry test imports only the standard library (lint) |
-| NFR-CLB-002 | the record test on two architectures in the nightly (11.3) |
+| NFR-CLB-002 | the record test on two architectures in the nightly (11.3; no hosted job verifies this since 2026-11-13; it is verified only when someone runs the quick run of testing.md 9.1 on an arm64 machine) |
 | NFR-CLB-003 | `go vet` and the import check of architecture.md 2.9 (lint) |
 | NFR-CLB-004 | the fuzz tests of the parser, the grid and the choose function (11.3) |
 | NFR-CLB-005 | the coverage run of `testing.md` 9.1 |
