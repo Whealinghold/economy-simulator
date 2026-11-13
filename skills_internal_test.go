@@ -37,7 +37,7 @@ type skillCast struct {
 
 // castOf reads the agents of a skillsConfig world, failing if one is gone or has
 // a weight other than 1.
-func castOf(t *testing.T, w *World) skillCast {
+func castOf(t testing.TB, w *World) skillCast {
 	t.Helper()
 	var c skillCast
 	w.eachLive(func(a *agent) {
@@ -63,7 +63,7 @@ func castOf(t *testing.T, w *World) skillCast {
 
 // skillsWorld builds the world of skillsConfig and steps it for ticks, so that
 // application ticks and runs up to ticks are legal in a section.
-func skillsWorld(t *testing.T, ticks int) (*World, skillCast) {
+func skillsWorld(t testing.TB, ticks int) (*World, skillCast) {
 	t.Helper()
 	w := newMill(t, skillsConfig(), WithSeed(exitSeed), WithAudit())
 	step(t, w, ticks)
@@ -85,7 +85,7 @@ func plantSkills(w *World, c skillCast) {
 }
 
 // section10 returns the body tag 10 saves for w.
-func section10(t *testing.T, w *World) []byte {
+func section10(t testing.TB, w *World) []byte {
 	t.Helper()
 	cw := codec.NewWriter(nil)
 	if err := w.saveSkills(cw); err != nil {
@@ -495,4 +495,53 @@ func TestPositions_P22Listed(t *testing.T) {
 	if slices.Contains(notBuiltPositions[:], "P2.2") {
 		t.Errorf("notBuiltPositions lists P2.2, which has a call")
 	}
+}
+
+// FuzzLoadSkillsSection verifies that the decoder of tag 10 and the cross-check of
+// F7 never panic on an arbitrary body, and that a body they accept is a fixed
+// point: saving the restored state gives the same bytes.
+//
+// The seeds are the empty section, the planted state of TestCheckpoint_SkillsRoundTrip
+// and one case of each refusal of TestCheckpoint_SkillsRefusesCorrupt.
+//
+// Requirement: FR-SKL-027, FR-CHK-016
+func FuzzLoadSkillsSection(f *testing.F) {
+	probe := newMill(f, skillsConfig(), WithSeed(exitSeed))
+	step(f, probe, 8)
+	c := castOf(f, probe)
+	a := func(id AgentID) int64 { return int64(id) }
+	hm, hw, ym, yw := c.homeMillers, a(c.homeWeaver), c.yonderMillers, a(c.yonderWeaver)
+	good := skillSection{
+		trainees: [][5]int64{{a(hm[0]), hw, 1, 2, 3}},
+		trainers: []trainerRow{{hw, 4_500, []int64{a(hm[0])}}},
+		queues:   []queueRow{{0, 1, [][3]int64{{a(hm[1]), 4, 1}, {a(hm[2]), 4, 0}}}, {1, 1, [][3]int64{{a(ym[0]), 2, 3}}}},
+		warns:    [][3]int64{{1, 1, 7}},
+	}
+	f.Add([]byte{0, 0, 0, 0})
+	f.Add(good.bytes())
+	f.Add(skillSection{trainees: [][5]int64{{a(hm[0]), hw, 9, 2, 3}}}.bytes())                         // role out of range
+	f.Add(skillSection{trainees: [][5]int64{{a(hm[0]), hw, 1, 5, 3}}}.bytes())                         // served above the course
+	f.Add(skillSection{trainers: []trainerRow{{hw, 10_000, nil}}}.bytes())                             // accumulator out of range
+	f.Add(skillSection{queues: []queueRow{{0, 1, [][3]int64{{hw, 3, 0}}}}}.bytes())                    // queued trainer
+	f.Add(skillSection{trainees: [][5]int64{{a(hm[0]), yw, 1, 0, 0}}}.bytes())                         // other region
+	f.Add(skillSection{warns: [][3]int64{{0, 0, 1}}}.bytes())                                          // run of a role with no training
+	f.Add(skillSection{queues: []queueRow{{0, 1, [][3]int64{{a(hm[1]), 1, 0}}}, {0, 1, nil}}}.bytes()) // cell not above the previous
+	f.Fuzz(func(t *testing.T, body []byte) {
+		w := newMill(t, skillsConfig(), WithSeed(exitSeed))
+		step(t, w, 8)
+		r := codec.NewReader(body)
+		err := w.loadSkills(&restoreCtx{tick: 8}, r)
+		if err == nil {
+			err = r.Done()
+		}
+		if err == nil {
+			err = w.skillsCross()
+		}
+		if err != nil {
+			return
+		}
+		if got := section10(t, w); !bytes.Equal(got, body) {
+			t.Errorf("accepted tag 10 body %v saves as %v, want the same bytes", body, got)
+		}
+	})
 }
