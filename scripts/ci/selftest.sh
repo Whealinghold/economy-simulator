@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Self-test of the CI scripts: fixture profiles through coverage-check.sh, the guard that
-# the quick pattern equals doc/rules/testing.md 9.1, and the Codacy script's refusals.
+# Self-test of the gate scripts: fixture profiles through coverage-check.sh, the guard that
+# the quick pattern equals doc/rules/testing.md 9.1, and the R_MODE and F_COVERMODE guards.
 # Run from anywhere; set CHECKER to test another copy of the checker.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
@@ -55,21 +55,11 @@ if [ -r "$here/common.sh" ]; then
 	for m in . otelobserver; do expect "threshold-rows-of-$m" 0 "" gated_rows_present "$m"; done
 fi
 
-# The quick pattern of the arm64 job equals the one in doc/rules/testing.md 9.1.
+# The quick pattern of arm64.sh equals the one in doc/rules/testing.md 9.1.
 if [ -r "$here/common.sh" ]; then
 	# shellcheck source=common.sh
 	. "$here/common.sh"
 	expect quick-pattern-equals-testing-md 0 "" grep -qF -- "-run '$QUICK_PATTERN' ./..." "$root/doc/rules/testing.md"
-fi
-
-# The Codacy upload refuses to run without a token.
-if [ -x "$here/codacy-upload.sh" ]; then
-	expect codacy-empty-token 1 "CODACY_PROJECT_TOKEN is empty" env -u CODACY_PROJECT_TOKEN "$here/codacy-upload.sh" "$td/pass.out"
-	expect codacy-blank-token 1 "CODACY_PROJECT_TOKEN is empty" env CODACY_PROJECT_TOKEN= "$here/codacy-upload.sh" "$td/pass.out"
-	expect codacy-comma-path 1 "contains a comma" env CODACY_PROJECT_TOKEN=x "$here/codacy-upload.sh" "$td/a,b.out"
-	expect codacy-bad-commit 1 "not a 40-character" env CODACY_PROJECT_TOKEN=x CODACY_COMMIT_UUID='abc; id' "$here/codacy-upload.sh" "$td/pass.out"
-	expect codacy-short-commit 1 "not a 40-character" env CODACY_PROJECT_TOKEN=x CODACY_COMMIT_UUID=abc123 "$here/codacy-upload.sh" "$td/pass.out"
-	expect codacy-long-commit 1 "not a 40-character" env CODACY_PROJECT_TOKEN=x CODACY_COMMIT_UUID=0123456789abcdef0123456789abcdef012345678 "$here/codacy-upload.sh" "$td/pass.out"
 fi
 
 # R_MODE is validated before anything runs.

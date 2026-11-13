@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Job `arm64`: build and vet every module, then the quick run in the core and go test -short
+# Quick arm64 run: build and vet every module, then the quick run in the core and go test -short
 # elsewhere. Runs natively on an arm64 host. ARM_EMULATE=1 is the fallback for an amd64 host:
-# GOARCH=arm64 with the tests run under qemu-user (slow; the native runner is the decision, D1).
+# GOARCH=arm64 with the tests run under qemu-user (slow; a native arm64 machine is preferred).
 set -uo pipefail
 # shellcheck source=common.sh
 . "$(dirname "${BASH_SOURCE[0]}")/common.sh"

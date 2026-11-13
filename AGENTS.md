@@ -187,11 +187,10 @@ economy-sim/
 │                           #   checkpoints/ (one fixture of pack one and one
 │                           #   all-modules-on fixture per format version), calibration/ (records per pack); fuzz
 │                           #   corpora live in each package's testdata/fuzz/
-├── .github/                # workflows/ci.yml (jobs check, arm64, full: thin calls to
-│                           #   scripts/ci/) and dependabot.yml (github-actions)
-├── scripts/ci/             # the CI logic, runnable by hand: common.sh check.sh arm64.sh
-│                           #   full.sh coverage-check.sh coverage-thresholds.txt
-│                           #   codacy-upload.sh selftest.sh testdata/
+├── .github/                # dependabot.yml (github-actions); no workflow (no hosted CI)
+├── scripts/ci/             # the gate scripts, run by hand on the dev host: common.sh
+│                           #   check.sh arm64.sh full.sh coverage-check.sh
+│                           #   coverage-thresholds.txt selftest.sh testdata/
 ├── doc/specs/              # design specs, one area per file (README.md indexes
 │                           #   them and assigns area codes; evidence.md holds
 │                           #   the sources); each spec's Requirements section
@@ -230,18 +229,19 @@ gofmt -l .                     # must print nothing
 go vet ./...
 staticcheck ./...
 go test -short -race ./...     # unit tests only, fails fast
-go test -race -timeout 60m ./...   # gate R: reduced seeds under -race (dev host; PR CI runs only the -short -race line above; the opt-in `full` job runs it on `FULL_RUNNER`)
+go test -race -timeout 60m ./...   # gate R: reduced seeds under -race (dev host)
 go test -covermode=set -coverpkg=./... -coverprofile=coverage.out -timeout 120m ./...   # gate F (set mode: about 45 min on a 32-core dev host)
 go mod tidy                    # must produce no diff
 ```
 
-CI runs these gates through `scripts/ci/check.sh` (every command above except gate F,
-per module of `go.work`; `R_MODE=short`, which PR CI sets, skips gate R, `R_MODE=full` (the default) adds it,
-and `R_MODE=race`, which the `full` job sets, runs gate R alone), `scripts/ci/arm64.sh` (build, vet and the quick
-run on a native arm64 runner) and `scripts/ci/full.sh` (gate F per module, then
-`scripts/ci/coverage-check.sh` against `scripts/ci/coverage-thresholds.txt`). Hosted CI proves `check` (short
-race) and `arm64`; gate R and gate F stay dev-host gates, and `full` (manual dispatch or label `full`, runner
-`vars.FULL_RUNNER`) is opt-in (N-353). The scripts run on a developer machine too, and `scripts/ci/selftest.sh` tests the checker.
+There is no hosted CI except the Codacy checks (static analysis on pull requests; owner
+decision of 2026-11-13, N-353). The author runs the gates on the dev host before a pull request
+is opened and records their exit markers in the pull request description. The scripts of
+`scripts/ci/` run them: `check.sh` (every command above except gate F, per module of `go.work`;
+`R_MODE=short` skips gate R, `R_MODE=full`, the default, adds it, and `R_MODE=race` runs gate R
+alone), `arm64.sh` (build, vet and the quick run on an arm64 machine, not verified by any hosted
+job) and `full.sh` (gate F per module, then `scripts/ci/coverage-check.sh` against
+`scripts/ci/coverage-thresholds.txt`). `scripts/ci/selftest.sh` tests the checker.
 
 Coverage thresholds and the use of mutation testing (`gomu` runs only inside
 Docker with a CPU cap) are in `doc/rules/testing.md` section 9.

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Job `check`: per module gofmt, vet, staticcheck, short race tests, go mod tidy and, in R_MODE=full or race, gate R.
+# Local gate `check`: per module gofmt, vet, staticcheck, short race tests, go mod tidy and, in R_MODE=full or race, gate R.
 # Runs the fast stage on every module, then gate R only if all passed (fail fast, testing.md 10.5);
 # exits non-zero naming the modules that failed.
-# R_MODE=short (pull-request CI): the fast stage's `go test -short -race` is the race run; gate R is not run,
-# because the root package does not finish it in 60m on a 4-vCPU hosted runner (testing.md 9.1).
+# R_MODE=short (the short race run before a pull request): the fast stage's `go test -short -race` is the race run; gate R is not run
+# (it needs far longer, testing.md 9.1).
 # R_MODE=full (default, a developer host): the fast stage, then gate R, `go test -race -timeout $R_TIMEOUT`.
-# R_MODE=race (the `full` job): gate R only, no fast stage (`check` already ran it), so R and F are separate steps.
+# R_MODE=race: gate R only, no fast stage (an earlier short or full run did it).
 set -uo pipefail
 # shellcheck source=common.sh
 . "$(dirname "${BASH_SOURCE[0]}")/common.sh"

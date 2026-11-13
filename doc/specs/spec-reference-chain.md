@@ -1170,7 +1170,7 @@ holds its `expects`. A key with a `value` has a `set_by` of the form
 `commit=<id>;config=<hash>;seeds=<a>-<b>`: the run that set it, reviewed by a human
 (FR-STB-015 asks that each pack be run and recorded; the review is STY 8.4). A
 scenario asserts a band only when its key has a value. A key with no value makes the
-test **report** the measure (a `t.Logf` line the CI keeps) and assert the exact checks
+test **report** the measure (a `t.Logf` line in the test log) and assert the exact checks
 and the O checks (a sign, an order or a derived bound, STY 3.2) only. This is how the
 suite runs before STY has data, and it is the only use of a missing band; a band is
 never set from fewer than the seeds of 8.2 and never from the run of the code under
@@ -1963,7 +1963,8 @@ testing.md 7.2: which behaviour changed and which requirement or fix it serves
 
 ### 8.6 Determinism on two architectures
 
-The golden-file and determinism tests run in CI on amd64 and arm64 (architecture.md 7.4)
+The golden-file and determinism tests are to be run on amd64 and arm64 (architecture.md 7.4;
+no hosted job verifies this since 2026-11-13; it is verified only when someone runs the quick run of testing.md 9.1 on an arm64 machine)
 with the same file: the rendering of `one` and of `five` must be byte-identical on both,
 so the file is checked in once and compared on both. The solver's tables are compared the
 same way (A9). The scenario tests with bands run on one architecture; an architecture
