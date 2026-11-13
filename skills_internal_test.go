@@ -79,8 +79,9 @@ func plantSkills(w *World, c skillCast) {
 	s := w.skills
 	s.start(c.homeMillers[0], c.homeWeaver, 1, 2, 3)
 	s.trainer[c.homeWeaver].acc = 4_500
-	s.queue[s.cell(0, 1)] = []applicant{{c.homeMillers[1], 4, 1}, {c.homeMillers[2], 4, 0}}
-	s.queue[s.cell(1, 1)] = []applicant{{c.yonderMillers[0], 2, 3}}
+	s.enqueue(s.cell(0, 1), applicant{c.homeMillers[1], 4, 1})
+	s.enqueue(s.cell(0, 1), applicant{c.homeMillers[2], 4, 0})
+	s.enqueue(s.cell(1, 1), applicant{c.yonderMillers[0], 2, 3})
 	s.warnRun[s.cell(1, 1)] = 7
 }
 
@@ -547,10 +548,10 @@ func FuzzLoadSkillsSection(f *testing.F) {
 }
 
 // TestSkills_PlantedStateSurvivesTicksAndFork verifies, with real components, that
-// a world holding a traineeship, two queues and a Warn run keeps them untouched
-// through further steps (PR A adds no behaviour, so nothing may move them), passes
-// its audit, and that a world restored from a checkpoint taken then stays equal to
-// the original, checkpoint byte for byte, after the same further steps.
+// a world holding a traineeship, two queues and a Warn run passes its audit through
+// further steps (the traineeships now move: places fill, ticks are served), and that
+// a world restored from a checkpoint taken then stays equal to the original,
+// checkpoint byte for byte, after the same further steps.
 //
 // Guard: the state is carried by tag 10 only, and the fork of a world with skills
 // must replay the original; a field of the state that the codec drops, or a hook
@@ -564,15 +565,11 @@ func TestSkills_PlantedStateSurvivesTicksAndFork(t *testing.T) {
 	}
 	w, c := skillsWorld(t, 8)
 	plantSkills(w, c)
-	before := section10(t, w)
 	fork := restoreWith(t, w, skillsConfig())
 	step(t, w, 6)
 	step(t, fork, 6)
-	if got := section10(t, w); !bytes.Equal(got, before) {
-		t.Errorf("tag 10 after 6 steps = %v, want the planted %v", got, before)
-	}
-	if got := section10(t, fork); !bytes.Equal(got, before) {
-		t.Errorf("tag 10 of the fork after 6 steps = %v, want the planted %v", got, before)
+	if got, want := section10(t, fork), section10(t, w); !bytes.Equal(got, want) {
+		t.Errorf("tag 10 of the fork after 6 steps = %v, want that of the original %v", got, want)
 	}
 	a, err := w.Checkpoint()
 	if err != nil {
