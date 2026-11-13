@@ -83,9 +83,13 @@ type remainder struct {
 }
 
 // remainderOf returns R = D*free - s, with free the free room less the upkeep
-// room and s the residue term.
-func remainderOf(free, s int64) remainder {
-	return remainder{f2: free - s/Denominator - 1, add: Denominator - s%Denominator, s0: s % Denominator}
+// room and s the residue term. ok is false if f2 does not fit int64.
+func remainderOf(free, s int64) (r remainder, ok bool) {
+	f2, ok := checked.Sub(free, s/Denominator)
+	if ok {
+		f2, ok = checked.Sub(f2, 1)
+	}
+	return remainder{f2: f2, add: Denominator - s%Denominator, s0: s % Denominator}, ok
 }
 
 // negative reports R < 0.
@@ -101,7 +105,10 @@ func (rc recipe) bound(dim func(Pair) int64, free int64) (lo, hi int64, ok bool)
 	if !ok {
 		return 0, 0, false
 	}
-	r := remainderOf(free, s)
+	r, ok := remainderOf(free, s)
+	if !ok {
+		return 0, 0, false
+	}
 	if c >= 0 {
 		hi, ok = r.upper(c)
 		return 0, hi, ok

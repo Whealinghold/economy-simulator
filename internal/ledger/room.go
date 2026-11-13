@@ -111,9 +111,10 @@ func (l *Ledger) RoomOf(id int) (Room, error) {
 // the load from the lots. The room must hold what is there: if the load plus
 // the reserved room exceeds mass or bulk it is ErrNoRoom, and nothing changes.
 // Setting the room of an account that is already limited resizes it: the load,
-// the reserved room and the pledge stay as they are. The pledge is not tested, because a cut of the room may leave it above what
-// the room can hold (spec-storage.md 3.4.4, 4.1.2). A mass or bulk below 0 is
-// ErrInvalidAmount, an account that is not an agent's is ErrInvalidKind, and a
+// the reserved room and the pledge stay as they are. The pledge is not tested,
+// because a cut of the room may leave it above what the room can hold
+// (spec-storage.md 3.4.4, 4.1.2). A mass or bulk below 0 is ErrInvalidAmount,
+// an account that is not an agent's is ErrInvalidKind, and a
 // load that does not fit int64 is ErrBalanceOverflow.
 func (l *Ledger) SetRoom(id int, limited bool, mass, bulk int64) error {
 	a, err := l.open(id)

@@ -828,3 +828,21 @@ func TestRoom_SetRoomResizeKeepsPledgeAndReserved(t *testing.T) {
 	}
 	f.checkLoad(t)
 }
+
+// TestRoom_OverflowingCreditKeepsItsFormsRefusal verifies a credit whose load
+// does not fit int64 is refused as its form says (4.1.3): a reserved credit is
+// ErrReservationExceeds, an unmarked one ErrNoRoom.
+//
+// Requirement: FR-STO-007
+func TestRoom_OverflowingCreditKeepsItsFormsRefusal(t *testing.T) {
+	t.Parallel()
+	const maxQty = int64(1e12)
+	sizes := []ledger.Size{{Mass: 1e7, Bulk: 1}, {}, {}, {}, {}}
+	f := newRoomFix(t, maxQty, sizes, true)
+	f.limit(t, f.a0, 1<<62, 1<<62)
+	for form, want := range map[ledger.Credit]error{ledger.CreditReserved: ledger.ErrReservationExceeds, ledger.CreditFree: ledger.ErrNoRoom} {
+		if err := f.l.MoveCredited(f.initial[0], f.a0, 0, maxQty, ledger.Initial, false, form); !errors.Is(err, want) {
+			t.Errorf("form %d = %v, want %v", form, err, want)
+		}
+	}
+}
