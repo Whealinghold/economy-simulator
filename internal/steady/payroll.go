@@ -95,7 +95,7 @@ func PayrollSolve(m Model, o Outcome, in PayrollInput) PayrollResult {
 	if len(in.Group) != len(m.Activities) {
 		panic("steady: invariant violated: payroll group list does not match the activities")
 	}
-	if len(m.Lanes) > 0 || badGroups(m, in) {
+	if len(m.Lanes) > 0 || badGroups(m, in) || badShape(m, o) {
 		res.Reason = PayrollUnsupported
 		return res
 	}
@@ -141,20 +141,37 @@ func zeros(n int) []Frac {
 }
 
 // badGroups reports a group both payer and Hireable, a region out of range, a
-// negative or too large share, or an activity assigned to a group of another
-// region.
+// negative or too large share, a negative own consumption, an activity assigned
+// to a group that does not exist or is of another region, or an activity of no
+// duration.
 func badGroups(m Model, in PayrollInput) bool {
 	for _, g := range in.Groups {
 		if g.Region < 0 || g.Region >= len(m.Regions) || g.BP < 0 || g.BP > 10_000 || (g.BP > 0 && g.Hireable) {
 			return true
 		}
+		for _, own := range g.Own {
+			if own < 0 {
+				return true
+			}
+		}
 	}
 	for k, g := range in.Group {
-		if g >= len(in.Groups) || (g >= 0 && in.Groups[g].Region != m.Activities[k].Region) {
+		if g < -1 || g >= len(in.Groups) || (g >= 0 && in.Groups[g].Region != m.Activities[k].Region) {
+			return true
+		}
+		if m.Activities[k].Duration < 1 {
 			return true
 		}
 	}
 	return false
+}
+
+// badShape reports an outcome whose slices do not match the model (it was solved
+// for another one): the solver would index past them.
+func badShape(m Model, o Outcome) bool {
+	return len(o.Flow) < len(m.Activities) || len(o.Active) != len(m.Activities) ||
+		len(o.Rent) != len(m.Activities) || len(o.Price) != m.goodsRows() ||
+		len(o.Wage) != len(m.Regions) || len(o.ResRent) != len(m.Resources)
 }
 
 // prepare computes the flows, labour, net vectors, sales and pools, and numbers

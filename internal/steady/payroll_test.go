@@ -557,6 +557,8 @@ func TestPayrollSolve_BadInputs(t *testing.T) {
 		{"region below 0", func(in *steady.PayrollInput) { in.Groups[0].Region = -1 }, steady.PayrollUnsupported},
 		{"region past the end", func(in *steady.PayrollInput) { in.Groups[0].Region = 1 }, steady.PayrollUnsupported},
 		{"negative share", func(in *steady.PayrollInput) { in.Groups[0].BP = -1 }, steady.PayrollUnsupported},
+		{"activity group below -1", func(in *steady.PayrollInput) { in.Group[0] = -2 }, steady.PayrollUnsupported},
+		{"negative own consumption", func(in *steady.PayrollInput) { in.Groups[0].Own = []int64{-1} }, steady.PayrollUnsupported},
 		{"share of 10 000 is valid", func(in *steady.PayrollInput) { in.Groups[0].BP = 10_000 }, steady.PayrollNegativeDual},
 		{"activity group past the end", func(in *steady.PayrollInput) { in.Group[0] = 2 }, steady.PayrollUnsupported},
 		{"activity group in another region", func(in *steady.PayrollInput) {
@@ -584,6 +586,32 @@ func TestPayrollSolve_BadInputs(t *testing.T) {
 		in.Groups[1].Region = 1 // its activity (mill) is in region 0
 		if res := steady.PayrollSolve(m2, base, in); res.Reason != steady.PayrollUnsupported {
 			t.Errorf("PayrollSolve(group of region 1 runs a recipe of region 0) reason = %v, want PayrollUnsupported", res.Reason)
+		}
+	})
+	t.Run("an activity of no duration", func(t *testing.T) {
+		t.Parallel()
+		m2 := toyModel()
+		m2.Activities = append([]steady.Activity(nil), m2.Activities...)
+		m2.Activities[1].Duration = 0
+		if res := steady.PayrollSolve(m2, base, toyInput(2_500, 2)); res.Reason != steady.PayrollUnsupported || res.Applied {
+			t.Errorf("PayrollSolve(duration 0) = reason %v applied %v, want PayrollUnsupported, false", res.Reason, res.Applied)
+		}
+	})
+	t.Run("an outcome of another model", func(t *testing.T) {
+		t.Parallel()
+		for name, edit := range map[string]func(*steady.Outcome){
+			"price":   func(o *steady.Outcome) { o.Price = o.Price[:1] },
+			"wage":    func(o *steady.Outcome) { o.Wage = nil },
+			"rent":    func(o *steady.Outcome) { o.Rent = o.Rent[:1] },
+			"active":  func(o *steady.Outcome) { o.Active = o.Active[:1] },
+			"flow":    func(o *steady.Outcome) { o.Flow = o.Flow[:1] },
+			"resrent": func(o *steady.Outcome) { o.ResRent = make([]steady.Frac, 1) },
+		} {
+			o := base
+			edit(&o)
+			if res := steady.PayrollSolve(m, o, toyInput(2_500, 2)); res.Reason != steady.PayrollUnsupported || res.Applied {
+				t.Errorf("PayrollSolve(short %s) = reason %v applied %v, want PayrollUnsupported, false", name, res.Reason, res.Applied)
+			}
 		}
 	})
 	t.Run("a one group list", func(t *testing.T) {
