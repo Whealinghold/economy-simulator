@@ -13,7 +13,8 @@ const (
 )
 
 // Refusal is the first check of spec-spawner.md 4 that a decision fails. The
-// values are in the order of the checks; the root maps each to a Reason.
+// values are appended in module order, so they are not the order of the checks
+// (the functions below fix that order); the root maps each to a Reason.
 // on_journey is appended, with its Facts field, by the migration module, and
 // in_traineeship, needs_weight_one, needs_traineeship and already_queued by the
 // skill barriers.
