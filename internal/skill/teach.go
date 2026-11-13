@@ -15,7 +15,7 @@ const MaxAccumulator int64 = Basis - 1
 func Teach(acc, sumLoads int64) (acc2 int64, teaching bool) {
 	// Loads of 20 000 or more cut the result to MaxAccumulator whatever they are,
 	// so they are capped before the sum, which then cannot overflow.
-	total := max(acc, 0) + min(max(sumLoads, 0), 2*Basis)
+	total := min(max(acc, 0), MaxAccumulator) + min(max(sumLoads, 0), 2*Basis)
 	if total < Basis {
 		return total, false
 	}

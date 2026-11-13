@@ -268,8 +268,8 @@ func (w *World) readApplicant(rs *restoreCtx, r *codec.Reader, seen []bool, regi
 	switch {
 	case a == nil:
 		return applicant{}, false
-	case seen[id] || w.skills.isTrainee(AgentID(id)):
-		r.Failf("applicant %d is queued twice or is a trainee", id)
+	case seen[id] || w.skills.isTrainee(AgentID(id)) || w.skills.isTrainer(AgentID(id)):
+		r.Failf("applicant %d is queued twice, is a trainee or is a trainer with trainees", id)
 		return applicant{}, false
 	case w.regionOf(a) != region || a.role == role:
 		r.Failf("applicant %d is not in region %d or already holds role %d", id, region, role)
