@@ -126,7 +126,7 @@ func TestConfig_HoldsNoWageOrPremiumSetting(t *testing.T) {
 // constructor, so that a change to a default is a visible, explained change
 // (architecture.md 9.8).
 //
-// Requirement: FR-CFG-007, FR-CFG-049, FR-CFG-050, FR-CFG-057, FR-WEL-016, FR-WEL-032
+// Requirement: FR-CFG-007, FR-CFG-049, FR-CFG-050, FR-CFG-057, FR-WEL-016, FR-WEL-032, FR-SKL-006, FR-SKL-026
 func TestDefaults_Values(t *testing.T) {
 	t.Parallel()
 	w := economysim.DefaultWorldParams()
@@ -149,6 +149,9 @@ func TestDefaults_Values(t *testing.T) {
 		{"commodity reference price is required", economysim.DefaultCommodity().ReferencePrice, economysim.Price(0)},
 		{"recipe duration", economysim.DefaultRecipe().Duration, int64(1)},
 		{"recipe trainee yield", economysim.DefaultRecipe().TraineeYield, int64(5_000)},
+		{"role training ticks (no traineeship)", r.TrainingTicks, int64(0)},
+		{"role max trainees", r.MaxTrainees, int64(3)},
+		{"role teaching load", r.TeachingLoad, int64(1_000)},
 		{"role start money", r.StartMoney, economysim.Money(10_000)},
 		{"role strategy", r.Strategy, "default"},
 		{"role target ratio", r.TargetRatio, int64(15_000)},

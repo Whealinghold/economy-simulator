@@ -227,6 +227,13 @@ type RoleRow struct {
 	// toward zero; BirthCarry is the role's birth carry. All 0 while the population
 	// module is off (spec-population.md 10.4).
 	BirthRateBP, DeathRateBP, NaturalIncreaseBP, BirthCarry int64
+	// Places is the places open to the queue of a role with training: the sum over
+	// its trainers of the most trainees each may take less the trainees it holds.
+	// PlacesTaken is the trainees in training for the role, Queue the applicants
+	// queued for it, Trainers the trainers that can take a trainee, and Held the
+	// trainees at TrainingTicks held for want of headroom. All 0 for a role with no
+	// training (spec-skill-barriers.md 8.2).
+	Places, PlacesTaken, Queue, Trainers, Held int64
 }
 
 // MarketState is the report of one market and its price window: the type the

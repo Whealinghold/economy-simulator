@@ -133,7 +133,7 @@ const (
 
 // newMill builds a world of c with the observer and options, failing the test
 // on an error.
-func newMill(t *testing.T, c Config, opts ...Option) *World {
+func newMill(t testing.TB, c Config, opts ...Option) *World {
 	t.Helper()
 	w, err := NewWorld(c, opts...)
 	if err != nil {
@@ -246,7 +246,7 @@ func TestTickInspecting_ReplayEqualsStep(t *testing.T) {
 }
 
 // step runs n steps of w and fails the test on an error.
-func step(t *testing.T, w *World, n int) {
+func step(t testing.TB, w *World, n int) {
 	t.Helper()
 	for range n {
 		if err := w.Step(); err != nil {

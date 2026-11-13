@@ -78,6 +78,9 @@ var declaredEvents = []economysim.Event{
 	economysim.OutsideEnded{},
 	economysim.OutsideShocked{},
 	economysim.YieldShocked{},
+	economysim.TraineeshipStarted{},
+	economysim.TraineeshipCompleted{},
+	economysim.TraineeshipEnded{},
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -86,8 +89,7 @@ var declaredEvents = []economysim.Event{
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
 	"RoomLimited",
-	"TraineeshipStarted", "TraineeshipCompleted",
-	"TraineeshipEnded", "StoreChanged", "StoreLoss",
+	"StoreChanged", "StoreLoss",
 	"RouteRiskScaled", "StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound", "LoanFormed", "LoanEnded",
 	"LoanPassed", "CreditRound", "CreditSettled", "CreditRateScaled",
@@ -681,6 +683,21 @@ func TestConstants_Values(t *testing.T) {
 		{economysim.ReasonInCap, "in_cap"},
 		{economysim.ReasonEnded, "ended"},
 	}
+	// The reasons of the skill barriers (spec-skill-barriers.md 4.6.2, 8.1): the
+	// refusals of an Apply and of a switch into a training role, and the reasons
+	// of TraineeshipEnded.
+	skillReasons := []struct {
+		got  economysim.Reason
+		want string
+	}{
+		{economysim.ReasonInTraineeship, "in_traineeship"},
+		{economysim.ReasonNeedsWeightOne, "needs_weight_one"},
+		{economysim.ReasonNeedsTraineeship, "needs_traineeship"},
+		{economysim.ReasonAlreadyQueued, "already_queued"},
+		{economysim.ReasonTrainerLeft, "trainer_left"},
+		{economysim.ReasonAgentLeft, "agent_left"},
+		{economysim.ReasonRoleRemoved, "role_removed"},
+	}
 	spawnerReasons := []struct {
 		got  economysim.Reason
 		want string
@@ -703,6 +720,7 @@ func TestConstants_Values(t *testing.T) {
 		{economysim.CauseDistress, "distress"},
 		{economysim.CauseReview, "review"},
 		{economysim.CauseRenewal, "renewal"},
+		{economysim.CauseTraineeship, "traineeship"},
 	}
 	kinds := []struct {
 		got  economysim.Kind
@@ -741,6 +759,9 @@ func TestConstants_Values(t *testing.T) {
 	}
 	for _, r := range migrationReasons {
 		owner[string(r.got)] = "doc/specs/spec-migration.md"
+	}
+	for _, r := range skillReasons {
+		owner[string(r.got)] = "doc/specs/spec-skill-barriers.md"
 	}
 	// The two refusals the external module declares (D533): a relocation into an outside
 	// node (REG 6.1.3 row 5a, with the sentinel ErrOutsideNode) and a shipment request
@@ -869,6 +890,9 @@ func TestConstants_Values(t *testing.T) {
 		check("Reason", string(r.got), r.want)
 	}
 	for _, r := range migrationReasons {
+		check("Reason", string(r.got), r.want)
+	}
+	for _, r := range skillReasons {
 		check("Reason", string(r.got), r.want)
 	}
 	for _, c := range causes {

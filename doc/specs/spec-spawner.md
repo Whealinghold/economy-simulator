@@ -176,6 +176,8 @@ changes nothing, is counted in `EntryLimited` (13.1) and logged at `Debug` with 
 | `in_traineeship` | a switch or apply of a trainee, or a switch of a trainer with trainees. A removal is never refused for this: removing a trainee ends its traineeship (`spec-agents.md` 3.6 step 2) and removing a trainer returns its trainees to their own role (`spec-skill-barriers.md` 4.6) |
 | `on_journey` | a `Switch` or `Apply` of an agent on a migration journey (`spec-migration.md` 8.3). A removal or a reduction is never refused for this. The constant is also the name of the `region_bound` refusal that the migration module registers (`spec-migration.md` 7.2.2), which is a different table (`spec-regions.md` 6.5.2) |
 | `needs_weight_one` | an `Apply` for an agent of weight above 1 (N-064, `spec-skill-barriers.md` 4.1.1) |
+| `needs_traineeship` | a `Switch` or an `Enter` into a role with `TrainingTicks` above 0, which is entered only by `Apply` (`spec-skill-barriers.md` 4.6.2) |
+| `already_queued` | an `Apply` by an agent that is already in a traineeship queue (`spec-skill-barriers.md` 4.6.2) |
 | `bad_households` | `Reduce` by 0 or by more than the weight; `Enter` of fewer than 1 household |
 | `unsupported_cause` | a `DecideReduce` whose cause is neither `starved` nor `insolvent`: in Stage 1 these are the only causes allowed for a reduction. A later module extends the set with its cause and its ledger reason together (POP adds `population` with `deaths`) |
 | `unfunded` | an `Enter` or a weight rise whose money the pool cannot fund (see 4.3): the part that is funded proceeds |
@@ -186,8 +188,10 @@ The world checks a decision in the order of the table: `unknown_agent`, `unknown
 the `reason`. `unfunded` is not a refusal but a partial result: the funded part proceeds and the
 rest is counted in `Unfunded`, not in `Refused`. The Stage 1 slice declares the `Refusal`
 values and `Reason` constants of `unknown_agent`, `unknown_role`, `external_agent`,
-`same_role`, `bad_households` and `unsupported_cause`; those of `in_traineeship` and
-`needs_weight_one` are appended with SKL and `on_journey` with MIG.
+`same_role`, `bad_households` and `unsupported_cause`; those of `in_traineeship`,
+`needs_weight_one`, `needs_traineeship` and `already_queued` are appended with SKL, in that
+order after the existing values, and `on_journey` with MIG. The checks of `needs_traineeship`
+and `already_queued` come after `needs_weight_one`.
 
 ### 4.1 Remove and reduce
 
@@ -412,6 +416,18 @@ is entered only by `Apply`, and only by an agent of weight 1 (N-064); an agent o
 above 1 is never offered it. Until the traineeship module exists (`DecideApply` is not declared
 before it, 3.3) the default never enters a role with `TrainingTicks` above 0, by review, rung 1 or
 replacement. The tool half of SKL 2.5 is built with the slice.
+
+**With the traineeship (plan 3-skl, E5).** When the skill barriers are built, the default
+`Decide` emits `DecideApply` for an agent of weight 1 that is not external, not a trainee, not
+on a journey and not already queued, when the queue-discounted inequality of
+`spec-skill-barriers.md` 4.5 holds for a role with `TrainingTicks` above 0; a `Switch` or
+`Enter` into such a role is still never decided (and is refused `needs_traineeship` if a consumer
+directs it). An `Apply` is not a role change: it counts toward none of `RegionCap`, `RoleCap`,
+`Cooldown`, `Hysteresis` or `ExitCap` of 6.3.0, which count households that change role, and the role change
+at the completion of the traineeship is made by the world (cause `traineeship`) and is not an
+admission. A queued applicant goes on working in its own role and stays a candidate of the review
+for a `Switch` to another role (the switch ends nothing: it is refused with `in_traineeship` only
+for a trainee, and the applicant is dropped from the queue when it changes role).
 
 ### 6.3 The caps
 

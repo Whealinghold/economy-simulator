@@ -119,7 +119,10 @@ economy-sim/
 │   snapshot.go regions.go scale.go checkpoint.go integration.go moneyflow.go
 │   viability.go           # CORE concept files, one per concept; the five fan-ins
 │                           #   and the two agent-lifecycle fan-ins
-│                           #   (architecture.md 2.10.4) are in fanin.go
+│                           #   (architecture.md 2.10.4) are in fanin.go;
+│                           #   skills.go is core data (no Modules pointer,
+│                           #   spec-config.md 3.7.2) in the module-file order of
+│                           #   2.10.1 with a nil pointer, w.skills
 ├── strategy_default.go strategy_work.go strategy_view.go (AGT)
 │   spawner_report.go (SPN)  production_report.go (PRO)
 │   viability_check.go viability_table.go viability_report.go viability_lanes.go
@@ -136,6 +139,7 @@ economy-sim/
 │   migration_pass.go migration_report.go (MIG)
 │   contract_settle.go (MER)  external_state.go (EXT)
 │   integration_estate.go integration_directive.go integration_slots.go (INT)
+│   skills_queue.go skills_report.go (SKL)
 │                           # CONTINUATION files: a concept past the Lizard limits
 │                           #   of N-243 is split; each maps to the area code of
 │                           #   its concept, and its _test.go carries that area's
@@ -173,7 +177,7 @@ economy-sim/
 │   ├── moneyflow/ population/ transit/ endowment/ rumour/ outside/ ownuse/
 │   │   migration/ merchant/ room/ employment/ settlement/ tenure/ polity/
 │   │   credit/ facility/ risk/ fiscal/ institution/ saving/ technology/
-│   │   policy/ insure/     # one package per module with arithmetic or matching
+│   │   policy/ insure/ skill/     # one package per module with arithmetic or matching
 │   └── measure/ verdict/ design/ reduce/ calibration/   # the platform
 ├── otelobserver/           # separate module: Observer backed by OpenTelemetry
 ├── examples/<name>/        # each example is its own module: inspector (a

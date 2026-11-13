@@ -320,17 +320,6 @@ func (w *World) loadLedger(rs *restoreCtx, r *codec.Reader) error {
 	return nil
 }
 
-// loadSkills is tag 10, a zero-row skeleton: four counts that must be 0 until the
-// skills module is built (plan 2-2 D244).
-func (w *World) loadSkills(_ *restoreCtx, r *codec.Reader) error {
-	for range 4 {
-		if r.Count(1) != 0 {
-			r.Failf("rows in the skills section, whose module is not built")
-		}
-	}
-	return nil
-}
-
 // checkpointCross is step 7, the checks that need two sections. Modules append
 // theirs here in the order of spec-checkpoint.md 6.2: every account after the
 // estates is an Agent account, and an open one is the account of the live agent
@@ -352,6 +341,11 @@ func (w *World) checkpointCross() error {
 	}
 	if w.sub != nil {
 		if err := w.subsistenceCross(); err != nil {
+			return err
+		}
+	}
+	if w.skills != nil {
+		if err := w.skillsCross(); err != nil {
 			return err
 		}
 	}
