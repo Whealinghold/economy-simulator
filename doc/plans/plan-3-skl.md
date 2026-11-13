@@ -26,6 +26,7 @@ Decision block: this plan numbers its decisions SK1 to SK15; the supervisor maps
 ## Scope
 
 **Builds.**
+
 - `internal/skill` (new package; stdlib, `internal/checked` and `internal/ordering` only; primitives only): the trainer's gain, the teaching accumulator step, the queue order and the requeue order, the open places of a region and role, the ticks-served advance and the completion test (complete, held, wait), `C_train`, the break-even premium of check D and its tolerance, and the run counter of the `Warn`. Question 2 asks whether the package is wanted; the alternative is `internal/occupation` for all of it.
 - `internal/occupation` appends: `ApplyOK` (the queue-discounted inequality of FR-SKL-005, with `C_train` and the expected wait `q_w` of FR-SKL-019, both sides as exact 128-bit products and the bracket floored at 0), the refusals `InTraineeship` and `NeedsWeightOne` (with `Facts` fields), and the default `Decide`'s `Apply` emission for a weight-1 agent (N-264, N-305).
 - Root: `skills.go` (the module-file order of architecture.md 2.10.1: state, `newSkills`, the `region_bound` obligation `in_traineeship`, the step of a removal, `p22Teaching`, the view fillers, the spawner's `Apply` executor and its checks), `skills_queue.go` (continuation, SKL: P7.1(a) completions, placement and ticks served; applications and the queue; the trainer's gain test) and `skills_report.go` (continuation, SKL: events, logs, snapshot rows, the checkpoint encoder and decoder, the `Warn` counter). The split is for the Lizard limits of N-243; both continuation files map to SKL and their tests carry its `Requirement:` lines (architecture.md 2.6; the two names are added to 2.6 and to the AGENTS.md layout in Phase 1).
@@ -124,6 +125,7 @@ Exit check: E1 to E9 applied or logged with an owner; `go test ./...` unchanged;
 ### Phase 2: `internal/skill` and the rule in `internal/occupation` (pure)
 
 Goal: every number of SKL 4 as a function over primitives, no world. Files: `internal/skill/{doc,gain,teach,queue,complete,premium}.go`, `internal/occupation/{apply,refuse}.go` and tests.
+
 - `Gain(output, upkeep, load, wTrainer int64) (g int64, ok bool)` (FR-SKL-016, checked); `Teach(acc, sumLoads int64) (acc2 int64, teaching bool)` (FR-SKL-015; one subtraction of 10 000 per tick per the ruling E4); `Open(trainers []Trainer{Held, Max}) int64`; `Less(a, b Applicant)` and `Requeue(a, b)` (FR-SKL-017, 020); `Wait(ahead, ticks, nmax int64) (q int64, ok bool)` (ceiling, no trainer gives not ok; FR-SKL-019); `CTrain(ticks, surplus int64) (int64, bool)` (FR-SKL-018); `Complete(served, ticks, headroom, weight int64, noLimit bool) Outcome` with `Done`, `Held`, `Serving`; `NextRun(run int64, blocked bool) (run2 int64, warn bool)` (FR-SKL-022: the tenth tick and every tenth after); `BreakEven(price, ctrain, capReturn, dwork, wUnskilled int64) (bp int64, ok bool)` and `Tolerance(excess, cvx2 int64) int64` (FR-SKL-024).
 - `occupation.ApplyOK(p ApplyParams) (ok bool)` (FR-SKL-005): `p_d * D_work * (10 000 - CapitalReturn * q_w / TicksPerYear) >= (P + C_train) * CapitalReturn`, bracket floored at 0, no application when it is 0, both sides as exact 128-bit products (`internal/checked`); the refusals `InTraineeship` and `NeedsWeightOne` appended after the existing values with their `Facts` fields, each checked in the switch where `OnJourney` is.
 - Tests (table-driven, got/want, with the arithmetic of the spec in the comment): `TestGain_*` (4.3 sign boundary, zero load, overflow), `TestTeach_*` (loads 1 000 x 3 over ten ticks gives three teaching ticks; accumulator never outside `[0, 9 999]`; the sum above 10 000), `TestOpen_*`, `TestLess_ApplicationTickThenID`, `TestRequeue_*`, `TestWait_*` (example of 4.9: 10 trainers, 3 places, 30 places, 60 ticks), `TestCTrain_*` (4.8: 2 555 x 500 = 1 277 500), `TestComplete_*` (held, done, serving, exact boundary), `TestNextRun_*`, `TestBreakEven_WorkedExample` (4.8: 12 733), `TestTolerance_*` (2.8, 3: 25% of the excess, 200 floor, twice the CV), `TestApplyOK_*` (FR-SKL-005 both forms, floor at 0, equal sides), `TestRefusals_OrderOfTests`, `TestPackage_NoFloatNoRoot` (FR-SKL-028), `FuzzApplyOK`, `FuzzTeach`.
@@ -132,6 +134,7 @@ Goal: every number of SKL 4 as a function over primitives, no world. Files: `int
 ### Phase 3: the surface: state, construction, guard, types, checkpoint tag 10
 
 Goal: a traineeship can exist (planted through an internal seam), block a relocation, be saved and restored, and the world does nothing else new. **First pull request ends here with Phases 1 and 2.** Files: `skills.go`, `skills_report.go` (the codec only, replacing `saveSkills` and `loadSkills` as SK8 says), `world.go` (`skills *skills`), `construct.go` (`newSkills`, `bounds.add(inTraineeship, w.skills.holds)`), `fanin.go` (`dropAgent` call), `tick.go` (the P2.2 entry, an empty `p22Teaching`; the CCN note O7 of plan 2-14 applies), `event.go` (three events, `DecideApply`, `CauseTraineeship`, reasons), `spawner.go` (types only, appended), `snapshot.go` (`RoleRow` columns), `checkpoint_sections.go` (the F7 cross-check and the owner of tag 10), `poshash_internal_test.go`, `observe_internal_test.go`, `event_test.go`.
+
 - `holds(a, skip)` is true for a trainer with trainees and for a trainee; the textual key is `in_traineeship:<agent>`; the obligation is registered only when `w.skills != nil` (FR-REG-060: "exactly those of the modules that are on").
 - Tests: `TestRefusal_InTraineeshipBlocksRelocate` (FR-SKL guard of 4.6.1, FR-REG-060, FR-MIG-031's skip), `TestCheckpoint_SkillsRoundTrip` (a planted trainee, trainer, two queues, a warn run: bytes equal after restore; a world with none writes the four zero counts of the skeleton, byte for byte; a world with rows writes count-then-rows four times, as spec-checkpoint.md 4.2 row 10), `TestCheckpoint_SkillsRefusesCorrupt` (each refusal of SK8; F7), `TestWorld_SkillsNilWithoutTrainingRole`, `TestPositions_P22Listed` (the position table test), event catalogue and `TestConstants_Values` rows, `notBuiltEvents` loses three entries.
 - Exit check: `gofmt`, `go vet`, `staticcheck`, `go test -short -race ./...`; `testdata/golden/off/`, `testdata/checkpoints/` digests and the pinned hash **unchanged**.
@@ -139,6 +142,7 @@ Goal: a traineeship can exist (planted through an internal seam), block a reloca
 ### Phase 4: the entry side: view, `Apply`, queue, places
 
 Goal: the default spawner applies and a trainer takes a trainee. Files: `skills_queue.go`, `spawner.go` (`fillView` calls, the `Apply` executor in `phase_exit.go`), `internal/occupation`.
+
 - The filler sets `QueueAhead`, `Trainers`, `MaxTrainees` per role and `Surplus` and `InTraineeship` per agent (the effective figures; the institutions amendments are ORG's). The default `Decide` emits `Apply` for a weight-1, non-trainee, non-external agent when `ApplyOK` holds; the executor refuses with `in_traineeship`, `needs_weight_one`, `on_journey` and the existing refusals, and rejects a `Switch` or `Enter` into a role with `TrainingTicks` above 0 (ruling E4). P7.1(a) step 2 fills places in queue order where a trainer has fewer than `MaxTrainees` and the gain test passes (4.3.1: it decides a new place only); the trainee is recorded, the trainer's list updated.
 - Tests: `TestApply_QueueOrderApplicationTickThenID` (FR-SKL-017), `TestApply_RefusedNeedsWeightOne` (FR-SKL-012, FR-SPN-009), `TestApply_RefusedInTraineeship` (FR-SPN-011), `TestApply_OnlyWayIntoTrainingRole` (FR-SKL-010, FR-SPN-020), `TestPlaceOpening_NegativeGainKeepsStarted` (FR-SKL-016), `TestPlaces_NeverAboveMaxTrainees`, `TestDecide_AppliesWhenReturnClears` and the three negative cases (queue too long, no trainer, gain 0 bracket) (FR-SKL-005, 019), `TestDecide_ExternalNeverApplies` (SPN 5.2.3), `TestView_SkillFields` (SPN 3.2.2), `TestApply_AlreadyQueued` (SK15, proposed: refused, queue length unchanged, and a consumer's repeated `Apply` for an external agent adds no entry).
 - Exit check: S06 smoke on the overlay for 200 ticks with `WithAudit`; every identity holds; `off/` unchanged.
@@ -146,24 +150,28 @@ Goal: the default spawner applies and a trainer takes a trainee. Files: `skills_
 ### Phase 5: the living traineeship: board, work, teaching, completion
 
 Goal: a trainee is boarded, works as the trainer's executor, the trainer teaches, and the course completes or is held. Files: `skills.go` (`p22Teaching`), `skills_queue.go` (the completion and the advance), and all the logic named here sits in `skills*.go` as methods. The other files hold one guarded call each (SK4; architecture.md 2.10.1, 2.10.2) and no branch on module data: `agent.go` (the `consume` call takes the account the module names), `welfare.go` (calls for the in-kind receipt, the trainer's netting, the trainee excluded from the target role), `strategy_work.go`, `phase_production.go` (a call for the "not teaching" test and one for the trainee request), `phase_exit.go` (`takeRole` with `CauseTraineeship`).
+
 - Tests: `TestBoard_ConsumedFromTrainerAccount` (FR-SKL-013, FR-AGT-068: the reason `consumption`, the trainer's use includes it), `TestBoard_WelfareRatioTenThousand` and `TestBoard_NettedFromTrainerIncome` (FR-WEL-030), `TestTraineeWork_EligibleOnlyExecutorPrincipal` (FR-SKL-014, FR-PRO-008, 033, 034: inputs from the trainer, outputs into it, yield `TraineeYield`, inputs not reduced), `TestTrainee_KeepsRoleAndRunsNoOwnRecipe` (FR-SKL-011), `TestTeaching_BarsStartNotJob` (FR-SKL-015: a job in progress continues, P2.1 first), `TestEntryStep_OrderCompleteFillAdvance` (SKL 4.2.1: a place filled at `s` serves ticks `s + 1` to `s + TrainingTicks` and completes at `s + TrainingTicks`), `TestCompletion_KeepsMoneyAndGoods` (FR-SKL-011; goods outside the new role's tradable set to the estate), `TestCompletion_HeldWithoutHeadroom` (planted limit; SK9), `TestCompletion_AbandonsJobRoleChanged` (the order of OBS 4.4.8), `TestObservedPremium_ExcludesTrainees` (WEL 4.3).
 - Exit check: `TestInvariants` with the overlay (goods and money conservation, no negative balance) over `scenarioSeedCount()` seeds; `off/` unchanged.
 
 ### Phase 6: interruptions, removal, relocation, weight
 
 Goal: every way a traineeship ends or is refused. Files: `skills.go` (`dropAgent` step), `fanin.go`, `phase_exit.go`.
+
 - Tests: `TestTrainerRemoved_TraineesRequeue` (FR-SKL-020: ticks served kept, role kept, queue order, events in ascending trainee ID, `RecipeAbandoned` then `TraineeshipEnded`), `TestTraineeRemoved_EndsAndGoesToEstate` (AGT 3.6 step 2; `agent_left`), `TestTrainerSwitchRefused` (`in_traineeship`), `TestRemovalNeverRefusedForTraineeship` (FR-SPN-011 second half), `TestRelocate_RefusedWhileTraineeship` and `TestRelocate_AllowedAfterEnd` (FR-REG-060, FR-REG-048: state unchanged by a relocation), `TestMigration_SkipsTrainee` (FR-MIG, already built: re-check), `TestExternalTrainee_Directed` (SPN 5.2.3, INT 4.6: a consumer `Apply`; exempt from the ladder).
 - Exit check: `TestCheckpoint_*`/`TestFork_*` suites still pass; `off/` unchanged.
 
 ### Phase 7: events, logs, snapshot, the allocation limits and the fork test
 
 Goal: observability and the checkpoint proof. **Second pull request holds Phases 4 to 9** (or splits at this phase if reviewers want, Question 3). Files: `skills_report.go`, `snapshot.go`, `observe_events_test.go`, `allocation_test.go`.
+
 - Tests: `TestEvents_TraineeshipFields` (FR-SKL-021, FR-OBS-018: identifiers and reason only, no map, region of the agent, after the transition), `TestEvents_OrderInEntryStepAndRemoval` (FR-OBS-020, 021), `TestWarn_NoPlacesOpenTenthTick` (FR-SKL-022: per region and role, never per agent, the tenth tick and every tenth after, counterpart in the snapshot), `TestLogs_SkillsDebugOnly` (no `Info` in the tick; the `not_member` line is ORG's and absent, constant messages, `Enabled` guards), `TestSnapshot_SkillRows` (SKL 8.2: places, taken, queue, trainers, held), `TestCardinality_*` (reason sets closed), `TestAlloc_SkillsNoOp` (NFR-SKL-001: entry decision, accumulator and queue operations allocate nothing beyond world scratch with the default logger and observer), `TestSkills_WorkIsCounted` (NFR-SKL-002: operations proportional to applicants and trainers, not weights), `TestNonInterference_Skills` (FR-OBS-023), `TestFork_Skills` (FR-SKL-027, FR-CHK-050: fork at several ticks during a course, a queue, a held completion; same traineeships, queues and teaching ticks as an uninterrupted run), `BenchmarkTeachingAndQueue`.
 - Exit check: the staged catalogue and cardinality tests pass with the entries deleted; `TestEvents_CatalogueStaged`, `TestConstants_Values` rows for the new reasons and cause.
 
 ### Phase 8: overlay, golden, scenarios, premium checks
 
 Goal: the module is proved end to end, tool and training together.
+
 - Pack: chosen by a probe over seeds 1 to 4 (Question 5): the first of `one`, `five`, `payroll`, `two` with `overlay/skill.toml` (and, for S06, `overlay/imbalance-cook.toml`) in which at least one traineeship completes by tick 600; the probe is a test that fails if the golden would record no completion, so the golden exercises the module. `overlay/skill.toml` edits, if any, carry a reason (testing.md 7.2).
 - Golden: `testdata/golden/skills/` (counts, events, positions, the per-position state hash with P2.2 and the entry step) and the proof that `testdata/golden/off/` and `TestHashConfig_ReferencePinned` are unchanged. `testdata/golden/all/` moves only if the all-on pack takes the overlay; if it does, the PR explains it (testing.md 7.2), if not it is untouched.
 - Scenarios: S06 and its four combinations (`overlay/skill` with and without `overlay/notool`, the baseline of FR-SKL-023), `five` + skill for the second eligible recipe (C13: `prepare_basic` pays, `finish_a_basic` does not, so no places open for it and the `Warn` fires), the throttle visible at `TrainingTicks > n_max / a` (4.9), the tool-holder death scenario (FR-SKL-008, 009, 007). Outcomes are recorded in `testdata/chains/expected/<pack>.scenarios.txt`, pass or not. That file exists today only for `famine`, `one`, `one-demand`, `subsistence`, `three` and `two`; `five` and `payroll` have `expected/<pack>.toml` only, so if the probe chooses one of them Phase 8 creates its `.scenarios.txt`, copying the form of an existing one. It has no S06 row yet in any file (the Stage 1 "Done when" form), because criterion 1 is unmet.
@@ -178,6 +186,7 @@ Gates run by hand on the dev host (testing.md 9.1) and recorded in the PR descri
 ## Pull request split
 
 Two pull requests, in order, each leaving `off/` and the pinned hash untouched:
+
 - **PR A (Phases 1 to 3): edits, `internal/skill`, `internal/occupation` additions, state, guard, types, checkpoint tag 10.** It adds no behaviour: the default spawner emits no `Apply` yet, so no world changes. It lands the catalogue appends early, which is where Stage 3 modules collide (see below). Size estimate: 2 500 lines including tests.
 - **PR B (Phases 4 to 9): the behaviour, the reports, the proof.** Size estimate: 5 000 lines of code and tests and one golden of tens of thousands of lines (migration's was 22 000). If review wants it, split after Phase 6 (the traineeship works; the reports and the proof follow). A single PR for the whole row, as plan 2-14 did, is the alternative (Question 3).
 
@@ -211,6 +220,7 @@ Other Stage 3 modules append to the same files. Appends are in module order and 
 ## Cross-plan contract
 
 Consumes (identifiers as the tree has them at f556398; re-check at implementation):
+
 - `internal/occupation` (`CapitalOK`, `Facts`, `Refusal` values, the `Decide` entry), `DecisionKind`, `Decision`, `RegionAgent`, `RoleView` (`spawner.go`) <- Stage 1 and plan 2-14
 - `regionBounds.add(name, held)`, `relocationRefusal`, `RegionBoundError` <- plan 2-3
 - `removeAgent`, `dropAgent`, `agentRoleChanged`, `takeRole`, `moveAgent` <- Stage 1 and 2-3
@@ -223,6 +233,7 @@ Consumes (identifiers as the tree has them at f556398; re-check at implementatio
 - `testdata/chains/overlay/skill.toml`, `lines.toml` and `five.toml` eligible recipes, the module-alone golden form <- plans 2-5 and 2-8
 
 Provides:
+
 - `skills` state, `p22Teaching`, the `in_traineeship` obligation, `(*skills).isTrainee(a)`, `(*skills).trainerOf(a)` -> EMP (`Hireable` excludes a trainee, AGT 7.x), MIG (re-check), INT
 - `placesOf(region, role)` and `trainersOf(region, role)` as unexported hooks with the institutions amendment slot -> ORG (`train` right, body `MaxTrainees`, `not_member`)
 - `completionHeadroom(region, role)` hook returning "no limit" -> SET (`Headroom`), ORG
@@ -241,6 +252,7 @@ Testing entry (testing.md 11) for the PRs: the requirements and tests are in the
 ## Observability
 
 Observability entry (observability-and-logging.md 9).
+
 - **Events:** `TraineeshipStarted`, `TraineeshipCompleted`, `TraineeshipEnded`, per entity transition, plain data, no map, constructed only under `w.obs.supplied`, after the transition, in the order of SK6 (rules 4.1, 4.3, 4.5).
 - **Warn:** one, "no places open", per (region, role), at the tenth consecutive tick with applicants and no place because the gain is negative and every tenth after; bounded by the configuration (rule 3.2.2); counterpart in the snapshot (`Queue`, `Places`); keys `region`, `role`, `reason`. No `Info`, no `Error`.
 - **Debug:** "traineeship refused" (`agent`, `role`, `reason` in `weight`, `no_trainer`, `gain_negative`, `queue_too_long`), guarded by `Enabled`; `not_member` ("place not open", spec 8.3) is ORG's and not emitted here; `already_queued` (SK15) is added to the reasons.
