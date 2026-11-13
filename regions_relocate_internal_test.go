@@ -222,8 +222,10 @@ func TestSkipHas(t *testing.T) {
 func TestRelocationRegistry_AddTwiceIsAnInvariant(t *testing.T) {
 	t.Parallel()
 	w := relocWorld(t)
-	if n := len(w.bounds.rows); n != 0 {
-		t.Fatalf("obligations of a world with no module = %d, want 0", n)
+	// removalConfig has a role with training, so the skill barriers register their
+	// obligation; no module is on.
+	if n := len(w.bounds.rows); n != 1 || w.bounds.rows[0].err.Obligation != "in_traineeship" {
+		t.Fatalf("obligations of a world with no module = %d, want only in_traineeship", n)
 	}
 	holdsShipment(w)
 	if msg := invariantMessage(func() { holdsShipment(w) }); msg == "" {
@@ -256,8 +258,8 @@ func TestRelocationRegistry_MalformedIsAnInvariant(t *testing.T) {
 			if msg := invariantMessage(func() { w.bounds.add(tc.reg, tc.held) }); msg == "" {
 				t.Errorf("add(%q) did not panic, want a violated invariant", tc.reg)
 			}
-			if n := len(w.bounds.rows); n != 0 {
-				t.Errorf("obligations after the refused add = %d, want 0", n)
+			if n := len(w.bounds.rows); n != 1 { // in_traineeship, registered by the skill barriers
+				t.Errorf("obligations after the refused add = %d, want 1", n)
 			}
 		})
 	}

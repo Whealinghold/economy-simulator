@@ -429,6 +429,7 @@ PR description.
 - **Update (2026-10-10, RES):** with RES the abundance is a factor of the effective yield, so a thin stock raises `UnitCost` (`spec-production.md` 9.1 divides by `E`) and with it the cost band of beliefs (`spec-resources.md` 4.7.5, RES-A6, L91). A cost floor above what buyers pay can freeze a market whose stock is thin; scenario RES-S3 (S43) with perishables is the test.
 - **Update (2026-10-16, plan 1-5 Phase 1):** read for the production row; left open. The cost floor is BEL's rule and STB's scenario S07. The row makes `UnitCost` count labour (9.1), which is what moves the floor, and passes `abundance` 10 000 until RES.
 - **Update (2026-10-21, anchor fix):** learned: the floor is only as hard as the anchor it reads, and the anchor was 0 (so the floor fell to the reference band's 10%) for a seasonal crop outside its season and fell with the observed wage in a price crash. Both are fixed (`spec-production.md` 9.3, FR-PRO-054, FR-PRO-055): on `one` the staple floor now holds at about 40 instead of 10 and the fuel floor at about 65 instead of 16. The perishables-glut scenario S07 has not been re-run with the hold on. Left open.
+- **Update (2026-11-13, plan 3-skl Phase 1):** read; left open. The cost floor is BEL's rule; `spec-skill-barriers.md` 2.4 is already reworded.
 
 ### N-042 The evidence rule may offset the price
 
@@ -512,6 +513,7 @@ PR description.
 - **Raised:** 2026-10-10, `spec-viability.md` open question 12.
 - **Note:** One wage per region costs a skilled recipe at the common wage. Decide whether the solver reports a wage per recipe class.
 - **Update (2026-10-18, plan 1-10 Phase 1):** left open for SKL. The solver reports one wage per region (`spec-viability.md` 8.2.5); no per-class wage is built. Learned: `Report` appends a per-class field if SKL decides.
+- **Update (2026-11-13, plan 3-skl Phase 1):** read; left open for VIA. The premium uses each role's own observed wage, so no per-class wage is needed by SKL.
 
 ### N-075 Mapping the ledger's sentinels
 
@@ -605,6 +607,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 1):** read for the production row; left open. The abandon function takes a reason and `region_changed` is appended with MIG, never inserted. A job of a self-carried trip cannot start (TRN).
 - **Update (2026-10-16, plan 1-5 Phase 8):** nothing further applied. the reason is an argument of `recipeAbandoned`, the value builder of the event, and not of `job.abandon`, so MIG's `region_changed` is appended to the reasons with MIG and changes no function of the row. Still open for MIG (the call at departure), SKL (`in_traineeship`) and INT.
 - **Update (2026-10-25, plan 2-3, REG):** the registry of obligations is built here (D270): a table `w.bounds` made at construction by the modules that are on, one `*RegionBoundError` per name, so the refusal path allocates nothing; Stage 2 registers none (`relocationRefusal` is an empty fixed-order sequence). Each module appends its name in its own plan: TRN `open_shipment`, MIG `on_journey`, MER `open_contract`. `has_store`, `open_hire` and `in_traineeship` belong to Stage 3. The textual form of an instance key in `skip` is `<obligation>:<number>`; a bare name matches every instance (`spec-regions.md` 6.1.6). Left open.
+- **Update (2026-11-13, plan 3-skl Phase 1):** applied for SKL: the `in_traineeship` obligation is registered with the surface (plan 3-skl Phase 3), only when some role has `TrainingTicks` above 0. Remove the SKL leg at the gate.
 
 ### N-092 Overlays and scenarios that the wave 2 specs hand to REF
 
@@ -739,6 +742,7 @@ PR description.
 - **Raised:** 2026-10-10, `spec-information.md` 17 (open question 4).
 - **Note:** MIG's rumoured welfare ratio (`spec-welfare-and-wages.md` 5.1) and SKL's rumoured premium (`spec-skill-barriers.md` 2.5) have no source: they are regional aggregates, so whether an agent may react to one is a question for "macro is measured, never set" (roadmap). Decide in `spec-migration.md`.
 - **Update (2026-10-10, MIG):** decided for MIG in `spec-migration.md` 4: a household does not react to a regional mean welfare ratio (an indicator, a controller input in disguise); it reads its own state, the structure of the world (graph, recipes, yield table, upkeep lists) and rumoured PRICES, from which it derives a destination's income (6.3). INF 17.4 is answered. The same decision applies to SKL's rumoured premium (`spec-skill-barriers.md` 2.5), which stays open for SKL.
+- **Update (2026-11-13, plan 3-skl Phase 1):** applied for SKL: version 1 builds no rumoured premium (plan 3-skl SK10); the entry rule uses the region's own observed values. Remove the SKL leg at the gate.
 
 ### N-111 A view takes draws
 
@@ -992,6 +996,7 @@ PR description.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the SPN 4.2 edit is the welfare-history clause only and leaves the `estate_goods` rule as written; the ring resize and the move of goods are independent steps of the same role change, in either order. Left open for STO.
 - **Update (2026-10-17, spawner edits):** read; the role-change goods rule is as before. Left open.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Waits for STO; the estate_goods rule of SPN 4.2 is the executor's.
+- **Update (2026-11-13, plan 3-skl Phase 1):** read; left open for STO.
 
 ### N-139 The default strategy discards, for upkeep only, when the module is on
 
@@ -1065,6 +1070,7 @@ PR description.
 - **Areas:** SKL
 - **Raised:** 2026-10-13, `spec-employment.md` 3.3.1 and open question 9.
 - **Note:** One `HireYieldBP` per employer block, not a function of the worker's skill.
+- **Update (2026-11-13, plan 3-skl Phase 1):** read; left open for EMP.
 
 ### N-150 A hire is within one region
 
@@ -1353,6 +1359,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-institutions.md` 4.5.2.
 - **Note:** A trainee stays a trainee, and holds its trainer's place, until the target role has headroom of 1; counted `Held`.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Waits for SKL; no traineeship exists in the slice (D111).
+- **Update (2026-11-13, plan 3-skl Phase 1):** read; left open until SET supplies headroom. The held path is built with a no-limit hook and unit-tested (plan 3-skl SK9).
 
 ### N-194 Reserved, not offered: a charter over carriage, a store or a facility; a wage control; a named holder; a call that admits or expels
 
@@ -1726,6 +1733,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Read. The world holds no per-agent field of a module; row 7 builds the unexported agent with the fields no module owns, and the checkpoint writes the rest (Stage 2). Left open.
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: the checkpoint row writes the hosted fields in the agent record and adds none to the agent type. Left open as a standing rule.
 - **Update (2026-11-11, plan 2-11, plan 2-14 audit):** POP keeps the death carry in the module's slice (plan 2-11 D423). The frozen own-use flag of an agent on a journey now has a behavioural test, `TestJourney_SkippedByOwnUseFlagStep` (FR-SUB-010); plan 2-24 need not build it. Left open.
+- **Update (2026-11-13, plan 3-skl Phase 1):** read: the traineeship state is in the module's slices (`w.skills`), the agent type gets no field. Left open as a standing rule.
 
 ### N-245 A tunable a module's default rule reads joins the view's Tunables group
 
@@ -1849,6 +1857,7 @@ PR description.
 - **Note:** The slice builds only the tool half of SKL: the inequality of `spec-skill-barriers.md` 2.5 (`ToolPrice`, `CapitalReturn` in the view) is in `internal/occupation`. `DecideApply` is not declared in the slice (SPN 3.3, plan 1-9 O10); a role with `TrainingTicks` above 0 is never entered by review, rung 1 or replacement, which is what SPN 6.2 says when no queue exists. `skills.go` (Stage 3) appends the queue-discounted rule of SKL 4.5 (`C_train`, `q_w`), the view fields `Surplus`, `QueueAhead`, `Trainers`, `MaxTrainees`, `InTraineeship`, the `Apply` emission for a weight-1 agent, the refusals `in_traineeship` and `needs_weight_one`, and the cause `traineeship`, all appended in module order.
 - **Update (2026-10-17, spawner edits):** the tool half is written in `spec-spawner.md` and `spec-skill-barriers.md`; `DecideApply` is not declared in the slice, and SKL appends it with the `Apply` emission (O10, ruled (a)). Left open for Stage 3 `skills.go`.
 - **Update (2026-10-18, plan 1-9 exit gate):** built as planned: `internal/occupation.CapitalOK` is the tool half, `DecideApply` is not declared, a role with `TrainingTicks` above 0 is never entered. Left open for Stage 3 `skills.go`.
+- **Update (2026-11-13, plan 3-skl Phase 1):** applied by plan 3-skl: `internal/occupation.ApplyOK` and the refusals in Phase 2, `DecideApply` and the types in Phase 3, the `Apply` emission in Phase 4. Remove at the gate.
 
 ### N-265 The renewal carry and the three runs are the world's state
 
@@ -1875,12 +1884,14 @@ PR description.
 - **Update (2026-10-18, plan 1-9 exit gate):** the slice view, decision, `Refusal` and `Facts` carry only slice fields; module fields are appended with their module. Left open.
 - **Update (2026-11-09, plan 2-14 Phase 1):** MIG: `on_journey` (a `Refusal` after the existing values, a `region_bound` obligation) and the `RoleSince` of an arrival are built in plan 2-14 Phase 5; the tree has `offStage`, `regionBounds.add` and `reseedAtArrival` for it. Left open for SET, SUB, POP, SKL.
 - **Update (2026-11-11, plan 2-11):** POP fields `PopBirths`, `PopDeaths` and the effective `Renewal` 0 are appended in plan 2-11. Left open.
+- **Update (2026-11-13, plan 3-skl Phase 1):** applied for SKL (the refusals `in_traineeship`, `needs_weight_one`, `needs_traineeship`, `already_queued` and the cause `traineeship`, appended in module order, plan 3-skl); keep for SET.
 
 ### N-305 When SKL appends `DecideApply`, SPN 6.2 and 6.3.0 must be re-read
 
 - **Areas:** SPN, SKL
 - **Raised:** 2026-10-17, WP5 report of the owed-edits job.
 - **Note:** `spec-spawner.md` 6.2's training rule (a role with `TrainingTicks` above 0 is never entered) and the counts of 6.3.0 hold only while no queue exists. The change that appends `DecideApply` (N-264) re-reads both and edits them in the same change.
+- **Update (2026-11-13, plan 3-skl Phase 1):** applied: `spec-spawner.md` 6.2 and 4 re-read and edited (E5, plan 3-skl): an `Apply` counts toward no cap. Remove with Phase 4.
 
 ### N-306 The census formula is pinned against `one`: the work share cancels
 
@@ -1967,6 +1978,7 @@ PR description.
 - **Raised:** 2026-10-23, plan 2-2 D244.
 - **Note:** The checkpoint change writes tag 10 as four counts of 0 (trainees, trainers, queued rows, warn-run rows) and tag 11 as one count of 0 (CHK 4.2.8, applied). The owner (SKL, REG) replaces the writer and the reader and keeps the skeleton as the prefix of its layout, so a world with no row keeps its bytes and the digest does not move when the owner lands.
 - **Update (2026-10-25, plan 2-3 Phase 8):** REG's half is done and settled: `saveRegions` and `loadRegions` (`regions_status.go`) replace the tag 11 skeleton with the real layout (count, then `From`, `To`, `Closed`, `FactorBP` in ascending `EdgeID`), the count 0 being its prefix, so no fixture and no digest moved. The decoder refuses an unknown edge, a row not above the one before, a default row and a factor outside `[1, MaxEdgeFactorBP]`. Tag 10 (SKL) stays open.
+- **Update (2026-11-13, plan 3-skl Phase 1):** the tag-10 half is built in plan 3-skl Phase 3 with the layout of `spec-checkpoint.md` 4.2 row 10 (count then rows, four times). The zero-row skeleton equals that layout only when all four counts are 0, so the skeleton is not a prefix of it (only the first count is); a world with no row writes the same bytes. Remove the tag-10 leg at the gate.
 
 ### N-318 The golden digest moves with every rebalance of a pack
 
@@ -2272,4 +2284,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: ffa06a0b8159c72f08471dca
+NOTES-TAG: 693d76a17147b942d58173e8

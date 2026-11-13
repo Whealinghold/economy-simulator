@@ -92,7 +92,14 @@ func TestRefusal_UnsupportedCauseIsLast(t *testing.T) {
 			t.Errorf("Refusal %d = %d, want %d", i, r, i+1)
 		}
 	}
-	if occupation.OnJourney != occupation.UnsupportedCause+1 || occupation.RefusalEnd != occupation.OnJourney+1 {
-		t.Errorf("OnJourney = %d, RefusalEnd = %d, want %d and %d", occupation.OnJourney, occupation.RefusalEnd, occupation.UnsupportedCause+1, occupation.UnsupportedCause+2)
+	appended := []occupation.Refusal{occupation.OnJourney, occupation.InTraineeship, occupation.NeedsWeightOne,
+		occupation.NeedsTraineeship, occupation.AlreadyQueued}
+	for i, r := range appended {
+		if r != occupation.UnsupportedCause+occupation.Refusal(i+1) {
+			t.Errorf("appended refusal %d = %d, want %d", i, r, occupation.UnsupportedCause+occupation.Refusal(i+1))
+		}
+	}
+	if occupation.RefusalEnd != occupation.AlreadyQueued+1 {
+		t.Errorf("RefusalEnd = %d, want %d", occupation.RefusalEnd, occupation.AlreadyQueued+1)
 	}
 }

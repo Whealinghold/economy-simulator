@@ -13,7 +13,7 @@ their numbers.
 tool prices and durabilities of 2.9, the defaults of section 5, the tolerance of 3 and
 the magnitudes of 2.8 and 4.8 (N-015, N-027). No default is claimed to be stable.
 
-Layer: module ([ADR 0001](../adr/0001-macro-economy-as-replaceable-layers.md)). The barriers apply only to a role that declares a required tool or a traineeship.
+Layer: core data, not an optional module: there is no `Modules` pointer, no hash field and no `modulesOn` name for it (`spec-config.md` 3.7.2), and `TrainingTicks` 0 is "no traineeship" ([ADR 0001](../adr/0001-macro-economy-as-replaceable-layers.md)). The barriers apply only to a role that declares a required tool or a traineeship; the traineeship state exists only when some role has `TrainingTicks` above 0.
 
 Terms in **bold** on first use are new domain terms. They must be added to the
 glossary in `doc.go` before any code uses them (architecture.md 3.2).
@@ -360,6 +360,15 @@ the limit is an open question (section 11).
   progress continues, because the continuations of P2.1 come first. No randomness is
   used.
 
+4.2.2. **Rulings on the accumulator (plan 3-skl, R3 and R4).** (a) The accumulator is
+stepped once a tick: it adds the sum of the loads of the trainer's trainees, and if it
+then reaches 10 000 it subtracts 10 000 **once** and the tick is a teaching tick. A trainer
+teaches at most every tick, so when the sum of the loads is above 10 000 the load beyond
+one full tick is not carried: after the subtraction the accumulator is cut to 9 999. The
+accumulator is therefore always in `[0, 9 999]`. (b) A trainer's accumulator is 0 when it
+takes its first trainee, is kept while any trainee remains, and is reset to 0 when its
+last trainee leaves (completion, removal or return to the queue).
+
 4.2.1. **Ticks served.** The completion, the filling of places from the queue and the
 advance of ticks served are at P7.1(a) of each region's entry step (`spec-world.md`
 ruling C5), in this order: (1) every trainee whose ticks served has reached
@@ -448,7 +457,10 @@ earlier version of this rule lacked. It adds no parameter.
 
 4.6. **Interruptions.** If a trainer dies, its trainees keep the ticks
 they have served, return to their own role, and rejoin the queue in order of
-ticks served, then application tick. The removal of a trainer emits, first, for each
+ticks served, then application tick. **Ruling (plan 3-skl, R5):** the order is ticks served
+descending (the most advanced first), then application tick ascending, then agent ID
+ascending, and a returned trainee is queued ahead of an applicant that has served none
+when their keys compare so. The removal of a trainer emits, first, for each
 trainee in ascending agent ID, the `RecipeAbandoned` of its job (`principal_left`) and then
 its `TraineeshipEnded` (`trainer_left`), and then the trainer's own events
 (`spec-observability.md` 4.4.8; `spec-world.md` 6.11 item 8). A trainee that dies goes to the estate
@@ -457,6 +469,15 @@ the trainer's death: voluntary early termination, which was common in the
 historical record, is not modelled.
 
 4.6.1. **Region.** A trainer and its trainees are in one region, and a relocation of either would break the traineeship. A trainer with trainees, and a trainee, are to be registered as the `region_bound` refusal `in_traineeship` of the relocation of `spec-regions.md` 6.1.3 and 6.5.2, so that the account is refused with `ErrRegionBound` while the traineeship lasts. `in_traineeship` is a registered `region_bound` name, one of the four foreseen in `spec-regions.md` 6.5.2 (`open_shipment` TRN, `on_journey` MIG, `open_contract` MER, `in_traineeship` SKL), and this module registers it when the skill module is on (a module that is off registers nothing). The migration module, which now exists, tests every registered refusal: a trainer with trainees, and a trainee, are never moved by it, because the guard refuses the departure at admission and holds the arrival if the obligation was opened on the way (`spec-migration.md` 7.2, 8.4); a forced move through the guarded `relocate` meets the same refusal (`spec-regions.md` 6.6).
+
+4.6.2. **Rulings on the gaps (plan 3-skl, R6, R7, SK15).** (a) `role_removed`, a reason
+of `TraineeshipEnded` (8.1), is declared and unreachable: roles are data and none can be removed
+at run time; a later module that can remove a role uses it. (b) A `Switch` or an `Enter`
+into a role with `TrainingTicks` above 0 is refused with the new reason `needs_traineeship`
+(`spec-spawner.md` 4), because such a role is entered only by `Apply` (4.1; FR-SKL-010).
+(c) An agent is in at most one queue and holds at most one application: an `Apply` by an
+agent that is already queued is refused with the new reason `already_queued`, so the
+queue of a (region, role) is bounded by the number of agents (NFR-SKL-002).
 
 4.7. **Events.** `TraineeshipStarted` (trainee, trainer, role, region),
 `TraineeshipCompleted` (agent, region, from role, to role) and `TraineeshipEnded`

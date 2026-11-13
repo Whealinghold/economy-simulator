@@ -140,6 +140,7 @@ func (w *World) allocate() {
 	w.mer = newMerchants(&w.cfg, &w.roles, w.transport)
 	w.employment = newEmployment(&w.cfg)
 	w.polity = newPolity(&w.cfg)
+	w.skills = newSkills(&w.cfg)
 	if w.transport != nil {
 		w.bounds.add(openShipment, w.transport.holds)
 	}
@@ -148,6 +149,9 @@ func (w *World) allocate() {
 	}
 	if w.mer != nil && w.mer.on {
 		w.bounds.add(openContract, w.mer.holds)
+	}
+	if w.skills != nil {
+		w.bounds.add(inTraineeshipName, w.skills.holds)
 	}
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)

@@ -9,12 +9,15 @@ const (
 	KindReduce
 	KindSwitch
 	KindEnter
+	KindApply // appended with SKL: join a role's traineeship queue
 )
 
 // Refusal is the first check of spec-spawner.md 4 that a decision fails. The
-// values are in the order of the checks; the root maps each to a Reason.
-// in_traineeship, needs_weight_one and on_journey are appended, with their Facts
-// field, by the skills and migration modules.
+// values are appended in module order, so they are not the order of the checks
+// (the functions below fix that order); the root maps each to a Reason.
+// on_journey is appended, with its Facts field, by the migration module, and
+// in_traineeship, needs_weight_one, needs_traineeship and already_queued by the
+// skill barriers.
 type Refusal int
 
 // The slice's refusals. RefusalNone means the decision passes every check.
@@ -28,6 +31,15 @@ const (
 	UnsupportedCause // appended last (spec-spawner.md 4)
 	OnJourney        // appended with MIG; checked after SameRole for a switch
 
+	// Appended with SKL (spec-spawner.md 4). They are checked in the order of the
+	// table: in_traineeship after same_role and before on_journey, then
+	// needs_weight_one, needs_traineeship and already_queued, before
+	// bad_households.
+	InTraineeship
+	NeedsWeightOne
+	NeedsTraineeship
+	AlreadyQueued
+
 	// RefusalEnd is one past the last refusal, for a test that enumerates them.
 	RefusalEnd
 )
@@ -39,8 +51,14 @@ const (
 type Facts struct {
 	AgentKnown, RoleKnown, External, SameRole, CauseSupported bool
 	// OnJourney is true for an agent on a migration journey; only a switch reads it.
-	OnJourney          bool
-	Households, Weight int64
+	OnJourney bool
+	// InTraineeship is true for a trainee (a switch or an apply) or a trainer with
+	// trainees (a switch); the root decides which per kind.
+	InTraineeship bool
+	// TrainingRole is true when the role a switch, an enter or an apply names has
+	// TrainingTicks above 0. Queued is true for an agent already in a queue.
+	TrainingRole, Queued bool
+	Households, Weight   int64
 }
 
 // Refuse returns the first failing check for a decision of kind k in the order
@@ -54,22 +72,66 @@ func Refuse(k Kind, f Facts) Refusal {
 	case KindReduce:
 		return refuseReduce(f)
 	case KindSwitch:
-		if r := refuseAgent(f, true); r != RefusalNone {
-			return r
-		}
-		if f.SameRole {
-			return SameRole
-		}
-		if f.OnJourney {
-			return OnJourney
-		}
+		return refuseSwitch(f)
 	case KindEnter:
-		if !f.RoleKnown {
-			return UnknownRole
-		}
-		if f.Households < 1 {
-			return BadHouseholds
-		}
+		return refuseEnter(f)
+	case KindApply:
+		return refuseApply(f)
+	}
+	return RefusalNone
+}
+
+// refuseSwitch runs the checks of a switch in the order of spec-spawner.md 4:
+// the agent and the role, same_role, in_traineeship, on_journey, then
+// needs_traineeship for a role that is entered only by Apply.
+func refuseSwitch(f Facts) Refusal {
+	if r := refuseAgent(f, true); r != RefusalNone {
+		return r
+	}
+	switch {
+	case f.SameRole:
+		return SameRole
+	case f.InTraineeship:
+		return InTraineeship
+	case f.OnJourney:
+		return OnJourney
+	case f.TrainingRole:
+		return NeedsTraineeship
+	}
+	return RefusalNone
+}
+
+// refuseEnter runs the checks of an entry: the role, needs_traineeship, then the
+// count.
+func refuseEnter(f Facts) Refusal {
+	switch {
+	case !f.RoleKnown:
+		return UnknownRole
+	case f.TrainingRole:
+		return NeedsTraineeship
+	case f.Households < 1:
+		return BadHouseholds
+	}
+	return RefusalNone
+}
+
+// refuseApply runs the checks of an Apply in the order of spec-spawner.md 4:
+// the agent, the role and the external check, then in_traineeship, on_journey,
+// needs_weight_one and already_queued. An apply to the agent's own role is not
+// a same_role case: the table names a switch only.
+func refuseApply(f Facts) Refusal {
+	if r := refuseAgent(f, true); r != RefusalNone {
+		return r
+	}
+	switch {
+	case f.InTraineeship:
+		return InTraineeship
+	case f.OnJourney:
+		return OnJourney
+	case f.Weight > 1:
+		return NeedsWeightOne
+	case f.Queued:
+		return AlreadyQueued
 	}
 	return RefusalNone
 }

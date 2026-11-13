@@ -20,17 +20,6 @@ func (w *World) saveLedger(cw *codec.Writer) error {
 	return nil
 }
 
-// saveSkills is tag 10 as a zero-row skeleton: four counts of 0, for the trainees,
-// the trainers, the rows of the queue and the rows of the Warn run, in the order
-// of spec-checkpoint.md 4.2.8. The skills module keeps this as the prefix of its
-// layout, so a world with no row keeps its bytes (plan 2-2 D244).
-func (w *World) saveSkills(cw *codec.Writer) error {
-	for range 4 {
-		cw.Count(0)
-	}
-	return nil
-}
-
 // eachLive calls f for every live agent in ascending ID: the household agents
 // whose slot is not the zero agent of an estate or of a removed agent.
 func (w *World) eachLive(f func(a *agent)) {

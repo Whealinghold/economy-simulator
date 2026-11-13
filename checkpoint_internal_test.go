@@ -671,6 +671,7 @@ var savedOrDerived = map[string]string{
 	"World.pop":            "saved 3 and 14: the death carry of each agent in the agent record, once, and the birth carries, the scales and the three runs in section 14 (plan 2-11 Phase 6); the rule tables and the scratch are derived or cleared (population.go)",
 	"World.migration":      "the journey of an agent is hosted in its record of section 3 and the two runs and the pending ends in section 20 (migration_report.go); the kset, the shares and the scratch are derived (migration.go)",
 	"World.polity":         "derived from the configuration at construction and saved nowhere: the tree and the membership are in the configuration, which the header hash covers, and the module adds no section (spec-polity.md 11, FR-POL-030)",
+	"World.skills":         "tag 10, Skills (saveSkills, loadSkills): the trainees, the trainers, the queues and the Warn runs; nil unless some role has TrainingTicks above 0",
 	"World.employment":     "derived from the configuration at construction and saved nowhere: the payroll form keeps no state (spec-employment.md 24.1.7, FR-EMP-074)",
 	"World.mer":            "the per-role view tables and the per-region tally of the plan notes are derived and cleared at P3.3a (contract.go); the contracts in flight and the next contract ID are saved in section 21; the free list of Escrow accounts is derived (contract_settle.go)",
 	"World.info":           "saved in section 16 (the price record of every source); the sources, the lag, the informed roles and the scratch are derived (information.go)",
