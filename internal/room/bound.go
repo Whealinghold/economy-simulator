@@ -50,7 +50,11 @@ func KRoom(inputs []Item, outputs []Output, yieldBP int64, free, upkeep Pair, k0
 	rc := recipe{in: inputs, out: outputs, yieldBP: yieldBP}
 	lo, hi := int64(0), k0
 	for _, d := range [2]func(Pair) int64{pairMass, pairBulk} {
-		l, h, ok := rc.bound(d, d(free)-d(upkeep))
+		left, ok := checked.Sub(d(free), d(upkeep))
+		if !ok {
+			return 0
+		}
+		l, h, ok := rc.bound(d, left)
 		if !ok {
 			return 0
 		}

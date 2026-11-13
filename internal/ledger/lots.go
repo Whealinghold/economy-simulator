@@ -373,7 +373,7 @@ func (l *Ledger) creditCheck(t *account, m goodsMove) (newTo int64, err error) {
 		if !ok {
 			return 0, ErrBalanceOverflow
 		}
-		return n, nil
+		return n, checkRoomCredit(t, Size{}, Size{}, m.credit)
 	}
 	if n, ok := checked.Add(t.held(m.commodity), m.qty); !ok || n > l.maxQty {
 		return 0, ErrBalanceOverflow

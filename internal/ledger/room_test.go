@@ -27,6 +27,7 @@ type rfix struct {
 	l          *ledger.Ledger
 	a0, a1, e0 int
 	initial    [rNumber]int
+	disposal   [rNumber]int
 }
 
 // newRoomFix builds the fixture in its construction phase and ends it if end.
@@ -54,6 +55,9 @@ func newRoomFix(t *testing.T, maxQty int64, sizes []ledger.Size, end bool) *rfix
 			}
 			if r == ledger.Initial {
 				f.initial[c] = id
+			}
+			if r == ledger.Disposal {
+				f.disposal[c] = id
 			}
 		}
 	}
@@ -783,4 +787,44 @@ func BenchmarkMoveLimited(b *testing.B) {
 			}
 		})
 	}
+}
+
+// TestRoom_BoundaryDestinationRefusesRoomForms verifies a destination that is a
+// boundary has no room, so the forms that draw on one are ErrNotLimited there
+// as they are for an agent that is not limited (4.1.3), and nothing changes.
+//
+// Requirement: FR-STO-007
+func TestRoom_BoundaryDestinationRefusesRoomForms(t *testing.T) {
+	t.Parallel()
+	f := newRoomFix(t, 1000, rSizes, true)
+	f.give(t, f.a0, rPlain, 5)
+	for _, form := range []ledger.Credit{ledger.CreditReserved, ledger.CreditPledge} {
+		if err := f.l.MoveCredited(f.a0, f.disposal[rPlain], rPlain, 1, ledger.Disposal, false, form); !errors.Is(err, ledger.ErrNotLimited) {
+			t.Errorf("form %d into a boundary = %v, want ErrNotLimited", form, err)
+		}
+	}
+	if err := f.l.MoveCredited(f.a0, f.disposal[rPlain], rPlain, 1, ledger.Disposal, false, ledger.CreditFree); err != nil {
+		t.Errorf("free form into a boundary = %v, want nil", err)
+	}
+	f.checkLoad(t)
+}
+
+// TestRoom_SetRoomResizeKeepsPledgeAndReserved pins that SetRoom on a limited
+// account changes the size only.
+//
+// Requirement: FR-STO-004
+func TestRoom_SetRoomResizeKeepsPledgeAndReserved(t *testing.T) {
+	t.Parallel()
+	f := newRoomFix(t, 1000, rSizes, true)
+	f.limit(t, f.a0, 100, 100)
+	if err := f.l.SetPledge(f.a0, 7, 8); err != nil {
+		t.Fatalf("setup: SetPledge: %v", err)
+	}
+	f.give(t, f.a0, rPlain, 3)
+	f.limit(t, f.a0, 200, 150)
+	r := f.room(t, f.a0)
+	if r.Mass != 200 || r.Bulk != 150 || r.PledgeMass != 7 || r.PledgeBulk != 8 || r.LoadMass != 6 || r.LoadBulk != 3 {
+		t.Errorf("room after resize = %+v, want size (200, 150), pledge (7, 8), load (6, 3)", r)
+	}
+	f.checkLoad(t)
 }

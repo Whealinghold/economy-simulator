@@ -2,6 +2,7 @@ package ledger
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 )
@@ -109,7 +110,8 @@ func (l *Ledger) RoomOf(id int) (Room, error) {
 // (the pledge and the reserved room go with it). Turning a room on computes
 // the load from the lots. The room must hold what is there: if the load plus
 // the reserved room exceeds mass or bulk it is ErrNoRoom, and nothing changes.
-// The pledge is not tested, because a cut of the room may leave it above what
+// Setting the room of an account that is already limited resizes it: the load,
+// the reserved room and the pledge stay as they are. The pledge is not tested, because a cut of the room may leave it above what
 // the room can hold (spec-storage.md 3.4.4, 4.1.2). A mass or bulk below 0 is
 // ErrInvalidAmount, an account that is not an agent's is ErrInvalidKind, and a
 // load that does not fit int64 is ErrBalanceOverflow.
@@ -319,10 +321,19 @@ func checkRoomCredit(a *account, d, freed Size, form Credit) error {
 			return err
 		}
 		lm, lb := r.left()
-		return above(d, Size{lm + freed.Mass, lb + freed.Bulk}, ErrNoRoom)
+		return above(d, Size{plus(lm, freed.Mass), plus(lb, freed.Bulk)}, ErrNoRoom)
 	}
 	fm, fb := r.free()
-	return above(d, Size{fm + freed.Mass, fb + freed.Bulk}, ErrNoRoom)
+	return above(d, Size{plus(fm, freed.Mass), plus(fb, freed.Bulk)}, ErrNoRoom)
+}
+
+// plus is a + b for two non-negative values, saturating at the largest int64
+// so that a limit never wraps below the credit it is tested against.
+func plus(a, b int64) int64 {
+	if v, ok := checked.Add(a, b); ok {
+		return v
+	}
+	return math.MaxInt64
 }
 
 // above returns err if d exceeds limit in either dimension, else nil.

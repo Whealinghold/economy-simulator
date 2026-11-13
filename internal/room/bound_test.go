@@ -257,6 +257,7 @@ func TestKRoom_Edges(t *testing.T) {
 		{"input overflows", []room.Item{{Qty: math.MaxInt64, Size: room.Pair{Mass: 2, Bulk: 2}}}, out(1), 10_000, room.Pair{Mass: 9, Bulk: 9}, room.Pair{}, 5, 0, ""},
 		{"no output room left exactly", nil, out(1), 10_000, room.Pair{Mass: 1, Bulk: 1}, room.Pair{Mass: 1, Bulk: 1}, 5, 0, ""},
 		{"zero load fits any k", nil, []room.Output{{Item: room.Item{Qty: 1}}}, 10_000, room.Pair{}, room.Pair{}, 7, 7, ""},
+		{"free less upkeep wraps", nil, []room.Output{{Item: room.Item{Qty: 1}}}, 10_000, room.Pair{Mass: math.MinInt64}, room.Pair{Mass: 1}, 7, 0, ""},
 		{"c zero R zero", []room.Item{{Qty: 1, Size: one}}, out(1), 10_000, room.Pair{}, room.Pair{}, 4, 4, ""},
 		{"c zero R negative", []room.Item{{Qty: 1, Size: one}}, out(1), 10_000, room.Pair{Mass: -1}, room.Pair{}, 4, 0, ""},
 		{"huge lower bound saturates", []room.Item{{Qty: 1, Size: room.Pair{Mass: math.MaxInt64 / 10_000}}}, out(0), 10_000, room.Pair{Mass: math.MinInt64 / 2}, room.Pair{}, 4, 0, ""},
