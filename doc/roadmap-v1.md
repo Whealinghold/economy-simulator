@@ -242,7 +242,7 @@ all-on from it).
 | `demand.go` (the first module file: it proves the template of 2.10.1) | DEM | merged (PRs #20, #21 and #23; ADR 0010 accepted in #22) |
 | `moneyflow.go` and `internal/moneyflow` (core identities; the flows as a module) | MON | merged (PR #24) |
 | `estates.go` (the `Estates` module part, appended: relief and the pool as a money-flow target; `ReliefPaid`, `Region.PoolRelease` and `Region.ReliefBelow`) | EST 2.6; CFG 6.2.4; MON 4.3.2 | merged (PR #25) |
-| Rebalance of the reference pack once demand, money flows and relief exist (pack data, warm start, goldens moved once) | REF, VIA, STB | instrumentation merged (PR A #26); the ladder result merged (PR B #27); the ladder stopped without an accepted rung (D369, N-325), ruling E1 applied; a second attempt (plan 2-25) also stopped: criterion 1 is not met, the record is N-352 (the survival-screen harness is merged, PR #50; the four default-off levers are parked unmerged on `origin/stage-2-done-stability`); no pack or golden moved |
+| Rebalance of the reference pack once demand, money flows and relief exist (pack data, warm start, goldens moved once) | REF, VIA, STB | instrumentation merged (PR A #26); the ladder result merged (PR B #27); the ladder stopped without an accepted rung (D369, N-325), ruling E1 applied; a second attempt (plan 2-25) also stopped: criterion 1 is not met, the record is N-352 (the survival-screen harness is merged, PR #50; the four default-off levers are parked unmerged on `origin/stage-2-done-stability`); no pack or golden moved before the payroll route; the payroll route then added the pack `payroll` (PR #59), and the owner closed Stage 2 with criterion 1 not met on 2026-11-13 |
 | `resources.go` and `internal/endowment`, `internal/curve` | RES | merged (PRs #28, #29, #30) |
 | `subsistence.go` and `internal/ownuse` | SUB | merged (PR #31) |
 | `population.go` and `internal/population` | POP | merged (PR #32) |
@@ -287,7 +287,7 @@ a documented limitation of the reference chain, and to move to Stage 3. Criterio
 is not reworded or lowered, it stays written as it is and stays **not met**, and no
 band is set. PR D of plan 24 (the bands, the stable-five test and
 `expected/five.scenarios.txt`) is deferred, not cancelled. The "Done when"
-paragraph above stays the criterion; it is not satisfied.
+paragraph above stays the criterion; it is not satisfied. **Signed off (2026-11-13), with this stated exception:** criterion 1, not met, as a documented limitation.
 
 The limitation, in plain words. The pack `payroll` keeps its household count within
 10% from tick 600 to 2 200 on seeds 101 to 104 and on 25 of 30 seeds, and only with
@@ -301,14 +301,14 @@ stands today:
 
 | # | Criterion | State | How verified |
 | --- | --- | --- | --- |
-| 1 | The reference chain runs to a stable state from a warm start and passes the STY bands | **not met** | N-352: every reference pack goes extinct (`one`, `one-demand`, `five` warm and `all` reach 0 households by tick 1 100). Four routes did not give a healthy economy: four default-off engine levers, a nine-trial data ladder, a pack-data ladder with a solved census (T1 to T3) and a payroll (wage) module with its claim ladder (E1 to E5). The best settings keep the household count but the discretionary roles stay 50% to 70% unfed (bar 1%). No band is set (`testdata/chains/bands/five.toml` has no value for `x4.*` or `x3.ms_per_tick`), no pack, warm start or golden moved. The levers and the payroll module are parked unmerged (`origin/stage-2-done-stability`, `origin/stage-2-done-employment`, `origin/stage-2-done-employment-claim`). The payroll route (PRs #58 and #59) gave a partial result: a household-count claim for the pack `payroll`, not stability. The owner closed Stage 2 on 2026-11-13 with this criterion not met, as a documented limitation (see the status above). |
+| 1 | The reference chain runs to a stable state from a warm start and passes the STY bands | **not met** | N-352: every reference pack goes extinct (`one`, `one-demand`, `five` warm and `all` reach 0 households by tick 1 100). Four routes did not give a healthy economy: four default-off engine levers, a nine-trial data ladder, a pack-data ladder with a solved census (T1 to T3) and a payroll (wage) module with its claim ladder (E1 to E5). The best settings keep the household count but the discretionary roles stay 50% to 70% unfed (bar 1%). No band is set (`testdata/chains/bands/five.toml` has no value for `x4.*` or `x3.ms_per_tick`), no pack, warm start or golden moved. The levers and the claim harness are parked unmerged (`origin/stage-2-done-stability`, `origin/stage-2-done-employment-claim`); the payroll module itself is merged (#58). The payroll route (PRs #58 and #59) gave a partial result: a household-count claim for the pack `payroll`, not stability. The owner closed Stage 2 on 2026-11-13 with this criterion not met, as a documented limitation (see the status above). |
 | 2 | Invariant, determinism, golden and configuration-only chain tests pass on amd64 and arm64 | **met** (quick pattern on arm64; see below) | amd64: the `check` job (`go test -short -race`, every module) is green on PR #54 (run 43141053976), and gates R and F pass on the dev host (the lanes head `9c52695`: gate R exit 0, gate F exit 0, 33 of 33 coverage scopes at their minimums; gates R and F are not run by hosted CI, N-353). arm64: the `arm64` job (native `ubuntu-24.04-arm`, `scripts/ci/arm64.sh`) is green on the push to `main` of PR #53 (run 43103409906, 16m57s) and on PR #54 (run 43141053976). In the root module it runs `QUICK_PATTERN` of `scripts/ci/common.sh` (`TestScenario\|TestDeterminism\|TestGolden\|TestInvariants\|TestCheckpoint\|TestFork\|TestConfigOnly\|TestFixture\|TestPacks\|TestCensus\|TestExpected\|TestStylised\|TestCost\|TestStable`, all seeds, no race), and `go test -short` in every other module. It is the quick run of `testing.md` 9.1, not gates R or F, and the arm64 build is native. N-343 is closed. |
 | 3 | A new commodity or chain needs only a configuration file; a second, unrelated setting shows it | **met** | `examples/colony` is a second setting that is a pack of configuration files and `colony.go` (`TestColony_ExtraLayerNeedsOnlyConfiguration`); `TestConfigOnly_SecondRunsToTheStablePredicate` (`config_chain_test.go`) and `TestConfigOnly_AllPackHasNoGoSpecific` (`all_pack_test.go`) run the `second` and `all` packs with no Go change. That a chain runs is shown; that it is stable is criterion 1. |
 | 4 | A checkpoint taken mid-run and resumed gives the same result as an uninterrupted run | **met** | `TestFork_OneAtN` (`checkpoint_fork_test.go`, FR-CHK-050, 052, 053, 026) forks at several ticks on seeds 1 to 4 and compares with the uninterrupted run; the other `TestFork_*` tests cover observers, split runs, restore of a restore, directives and removed agents. The tests are in the quick pattern, so they also ran on arm64. |
 | 5 | A consumer example builds a complete server from the public API alone, and the RPG data pack runs | **met in part** | `examples/realm` is its own module that imports the core by its public path (PR #47: `server.go`, `game.go`, the `pack/` and the RPG preset of `denomination/`; `TestPack_StartupSolveIsWarmFive`, `serve_e2e_test.go`). The pack runs, but its economy collapses like every pack (N-352), and PR D of plan 24 (`TestScenarioStable_FiveWarm`, bands, `expected/five.scenarios.txt`) is not built: it waits on criterion 1 (N-344). |
 | 6 | The cost budget of SCL holds for the first consumer's world size | **met in part** | `cost_five_test.go` and `spec-scale.md` 12.1 record a measurement and assert nothing (`testing.md` 8.2): `five` with every module off 50.2 ms a tick against the 53 ms budget, the all-on world 106.9 ms in the first run and 70.0 ms in a later one, `examples/realm` 68.7 ms. They were taken on a shared host under load 30 to 44 (i9-14900KF, GOMAXPROCS 4). Not shown: a quiet-host figure (the all-on gap to the budget was not isolated from load), and `x3.ms_per_tick` is unset in `bands/five.toml`, so no number is compared with a bound; the owner reads it against the consumer's tick rate. `spec-scale.md` 12.1 still says criterion 2 is not shown, which is now false. |
 
-**Remains for Stage 2:**
+**Stage 2 closing record (what was decided, done or deferred):**
 
 - (a) The decision is taken (2026-11-13, the owner): accept the partial result and
   move to Stage 3 with the reference chain as a documented limitation. Criterion 1
@@ -357,14 +357,15 @@ with the slice (`vision.md` section 4).
 | `saving.go`, `internal/saving` | SAV | CAP, WEL |
 | `technology.go`, `internal/technology` | TEC | PRO, REG, CAL |
 
-Inherited from Stage 2, as input to Stage 3 planning and no commitment: the
-reference chain keeps the limitation above. The unfed share of the non-cook
-households and the price deflation (the symptoms of criterion 4) were moved by no
-route of N-352, and the deferred PR D of plan 24 waits on them.
-
 Each ships as a stage 2 module does. The checkpoint tag of each is appended
 (`spec-checkpoint.md` 4.2); `testdata/golden/all/` moves once per module, with
 the explanation testing.md 7.2 requires.
+
+Inherited from Stage 2, as input to Stage 3 planning and no commitment: the
+reference chain keeps the limitation above. Still open (N-352): the unfed share of
+the non-cook households, the price deflation, the late step loss, the hire form
+and the data-only redesign of the discretionary sub-chain. No route of N-352 moved
+the first two, and the deferred PR D of plan 24 waits on them.
 
 ## What is deliberately not built
 
