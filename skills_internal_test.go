@@ -16,7 +16,7 @@ import (
 // weaver. The weaver role trains (4 ticks), so the state exists; the millers do
 // not.
 func skillsConfig() Config {
-	c := exitConfig()
+	c := exitTrainingConfig()
 	r := DefaultRegion()
 	r.ID = "yonder"
 	c.Regions = append(c.Regions, r)

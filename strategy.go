@@ -429,6 +429,11 @@ type AgentView struct {
 	MinWorkShare int64
 	// Upkeep is the effective upkeep of one household (5.2).
 	Upkeep []UpkeepRow
+	// Board is the upkeep of the agent's trainees, in the units of one tick summed
+	// over its trainees and in commodity order: a trainer buys it with its own
+	// upkeep and its trainees eat it from its account (spec-agents.md 5.7,
+	// spec-skill-barriers.md 4.2). It is empty for an agent with no trainee.
+	Board []UpkeepRow
 	// HasJob says a job is in progress, of Recipe, with Remaining ticks and
 	// Executions.
 	HasJob                bool

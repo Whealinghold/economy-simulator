@@ -187,8 +187,10 @@ func (w *World) traineeRowOK(r *codec.Reader, id, trainer uint64, role RoleID, t
 }
 
 // readTrainers reads the second count of tag 10: each trainer with at least one
-// trainee, its accumulator in [0, 9 999] and its trainees strictly ascending. The
-// trainer is not itself a trainee.
+// trainee, at most its role's MaxTrainees (an institution may lower a body's
+// maximum under a traineeship, never raise the role's), its accumulator in
+// [0, 9 999] and its trainees strictly ascending. The trainer is not itself a
+// trainee.
 func (w *World) readTrainers(r *codec.Reader) {
 	s := w.skills
 	n := r.Count(3)
@@ -201,11 +203,16 @@ func (w *World) readTrainers(r *codec.Reader) {
 			return
 		}
 		prev = id
-		if w.skillAgent(r, id, "trainer") == nil {
+		t := w.skillAgent(r, id, "trainer")
+		if t == nil {
 			return
 		}
 		if m == 0 || s.isTrainee(AgentID(id)) {
 			r.Failf("trainer %d has no trainee or is a trainee", id)
+			return
+		}
+		if int64(m) > w.cfg.Roles[t.role].MaxTrainees {
+			r.Failf("trainer %d holds %d trainees, above MaxTrainees %d of its role", id, m, w.cfg.Roles[t.role].MaxTrainees)
 			return
 		}
 		list := make([]AgentID, 0, m)
@@ -255,6 +262,8 @@ func (w *World) readQueues(rs *restoreCtx, r *codec.Reader) {
 				return
 			}
 			s.queue[key] = append(s.queue[key], ap)
+			s.grow(ap.agent)
+			s.queuedIn[ap.agent] = int32(key) + 1
 		}
 	}
 }

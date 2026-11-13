@@ -955,3 +955,117 @@ func TestDecide_GapOfBestViable(t *testing.T) {
 		t.Errorf("Decide plan = %+v, want %+v", got, want)
 	}
 }
+
+// trainView is a region of two roles, an own role 0 at wage wLow and a role 1 with
+// a traineeship of 10 ticks at wage w1300, with two trainers of 3 places each and
+// one agent of the own role: the weight-1 agent 1 with a surplus of 200 000.
+//
+// Arithmetic of the apply rule (spec-skill-barriers.md 4.5, upkeep 1 000, 365 ticks
+// a year, CapitalReturn 1 000): E = 2 739 for the own role and 8 904 for the
+// destination, so diff = 6 165 and diff * ut = 6 165 * 365 000. C_train = 10 *
+// 200 000 = 2 000 000, so the right side is 2 000 000 * 1 000 and the rule is
+// 6 165 * 365 000 * bracket >= 2 000 000 * 1 000 * 10 000. Without a queue the
+// bracket is 10 000 and 2.25e13 >= 2e13 holds. With 1 000 applicants ahead the wait
+// is ceil(1 000 * 10 / 6) = 1 667 ticks and the bracket 10 000 - 1 000 * 1 667 /
+// 365 = 5 433, so 1.22e13 < 2e13 and the agent does not apply.
+func trainView(ahead int64) *RegionView {
+	v := spwView()
+	train := spwRole(1, w1300, 2)
+	train.TrainingTicks, train.CapitalReturn, train.Trainers, train.MaxTrainees, train.QueueAhead = 10, 1000, 2, 3, ahead
+	own := spwRole(0, wLow, 4)
+	own.CapitalReturn = 1000
+	v.Roles = []RoleView{own, train}
+	a := spwAgent(1, 0, 1)
+	a.Surplus = 200_000
+	v.Agents = []RegionAgent{a}
+	return v
+}
+
+// applyOf returns the Apply decisions of a plan.
+func applyOf(d *Decisions) []Decision {
+	var out []Decision
+	for _, x := range d.List {
+		if x.Kind == DecideApply {
+			out = append(out, x)
+		}
+	}
+	return out
+}
+
+// TestDecide_AppliesWhenReturnClears verifies that the default spawner applies for
+// an agent of weight 1 to a role with a traineeship when the queue-discounted
+// inequality of spec-skill-barriers.md 4.5 holds, and not when a long queue lowers
+// its appeal, when no trainer exists, when the role is closed or is the agent's
+// own, and that an Apply uses none of the caps of a change of role.
+//
+// Requirement: FR-SKL-005, FR-SKL-019, FR-SPN-020
+func TestDecide_AppliesWhenReturnClears(t *testing.T) {
+	t.Parallel()
+	want := []Decision{{Kind: DecideApply, Agent: 1, Role: 1, Cause: CauseReview}}
+	tests := []struct {
+		name string
+		edit func(*RegionView)
+		want []Decision
+	}{
+		{"the inequality holds with no queue", func(*RegionView) {}, want},
+		{"a queue of 1 000 lowers the appeal", func(v *RegionView) { v.Roles[1].QueueAhead = 1000 }, nil},
+		{"a shorter queue still clears", func(v *RegionView) { v.Roles[1].QueueAhead = 10 }, want},
+		{"no trainer", func(v *RegionView) { v.Roles[1].Trainers = 0 }, nil},
+		{"role closed", func(v *RegionView) { v.Roles[1].Closed = true }, nil},
+		{"role with no signal", func(v *RegionView) { v.Roles[1].HasWage = false }, nil},
+		{"a surplus too high for the return", func(v *RegionView) { v.Agents[0].Surplus = 300_000 }, nil},
+		{"agent of weight 2", func(v *RegionView) { v.Agents[0].Weight = 2 }, nil},
+		{"external agent", func(v *RegionView) { v.Agents[0].External = true }, nil},
+		{"a trainee or a trainer with trainees", func(v *RegionView) { v.Agents[0].InTraineeship = true }, nil},
+		{"already queued", func(v *RegionView) { v.Agents[0].Queued = true }, nil},
+		{"the role of the agent", func(v *RegionView) { v.Agents[0].Role = 1 }, nil},
+		{"not due for a review", func(v *RegionView) { v.ReviewTicks = 7 }, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			v := trainView(0)
+			tt.edit(v)
+			plan := spwDecide(v)
+			if got := applyOf(plan); !slices.Equal(got, tt.want) {
+				t.Errorf("Decide applies = %+v, want %+v", got, tt.want)
+			}
+			if plan.regionCap != 0 || plan.roleCap != 0 || plan.cooldown != 0 || plan.hysteresis != 0 || plan.exitCap != 0 {
+				t.Errorf("caps counted = %d, %d, %d, %d, %d, want none: an Apply is no change of role", plan.regionCap, plan.roleCap, plan.cooldown, plan.hysteresis, plan.exitCap)
+			}
+		})
+	}
+	t.Run("the queue ahead counts the applications of the plan", func(t *testing.T) {
+		t.Parallel()
+		// The rule holds while bracket >= 2e13 / (6 165 * 365 000) = 8 887.9, that is 8 888:
+		// 1 000 * q_w / 365 truncated at most 1 112, q_w at most 405, and q_w = ceil(n * 10
+		// / 6) is 405 for n = 243 and 407 for n = 244. With 243 ahead agent 1 applies;
+		// agent 2 then has 244 ahead (the application of agent 1 counts) and does not.
+		v := trainView(243)
+		v.Agents = append(v.Agents, spwAgent(2, 0, 1))
+		v.Agents[1].Surplus = 200_000
+		if got := applyOf(spwDecide(v)); len(got) != 1 || got[0].Agent != 1 {
+			t.Errorf("applies = %+v, want agent 1 only", got)
+		}
+		v = trainView(242)
+		v.Agents = append(v.Agents, spwAgent(2, 0, 1))
+		v.Agents[1].Surplus = 200_000
+		if got := applyOf(spwDecide(v)); len(got) != 2 {
+			t.Errorf("applies with 242 ahead = %+v, want agents 1 and 2 (243 ahead the second)", got)
+		}
+	})
+	t.Run("an agent that switches does not also apply", func(t *testing.T) {
+		t.Parallel()
+		// A third open role beats the own role, so agent 1 switches to it and does not apply.
+		v := trainView(0)
+		v.Roles = append(v.Roles, spwRole(2, w1320, 3))
+		v.Roles[2].CapitalReturn = 1000
+		plan := spwDecide(v)
+		if got := applyOf(plan); len(got) != 0 {
+			t.Errorf("applies = %+v after a switch, want none", got)
+		}
+		if !slices.ContainsFunc(plan.List, func(d Decision) bool { return d.Kind == DecideSwitch && d.Agent == 1 }) {
+			t.Errorf("plan = %+v, want a switch of agent 1", plan.List)
+		}
+	})
+}

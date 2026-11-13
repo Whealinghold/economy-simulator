@@ -9,6 +9,7 @@ import (
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/occupation"
+	"github.com/Whealinghold/economy-sim/internal/skill"
 )
 
 // This file declares the surface of the spawner (spec-spawner.md 3): the
@@ -163,6 +164,13 @@ type RegionAgent struct {
 	// applied, and for a trainer with trainees, which may not be switched
 	// (spec-skill-barriers.md 4.6.1).
 	InTraineeship bool
+	// Trainee is true for a trainee: its board comes from its trainer, so the
+	// failure ladder never reaches it (spec-spawner.md 5.2.3). A trainer is not
+	// one, and is subject to the ladder like any agent.
+	Trainee bool
+	// Queued is true for an agent that waits in a traineeship queue; it may not
+	// apply again (spec-skill-barriers.md 4.6.2).
+	Queued bool
 	// Surplus is the agent's observed income per tick above its own upkeep,
 	// floored at 0, the surplus it gives up while in training
 	// (spec-skill-barriers.md 4.5).
@@ -248,6 +256,7 @@ func (DefaultSpawner) Decide(v *RegionView, _ *rand.Rand, d *Decisions) {
 	c.exits()
 	c.popDeaths()
 	c.switches()
+	c.applies()
 	c.renewals()
 	c.popBirths()
 }
@@ -274,6 +283,8 @@ type decideScratch struct {
 	dests      []occupation.Dest
 	adm        []occupation.Admission
 	dc         []occupation.DestCount
+	train      []int
+	ahead      []int64
 	used       []int64
 	roleCap    []int64
 	regionUsed int64
@@ -381,7 +392,7 @@ func (c *decider) exits() {
 	s.leavers = s.leavers[:0]
 	for i := range v.Agents {
 		a := &v.Agents[i]
-		if !a.External && a.Unfed > 0 && occupation.Rung3(a.Privation, v.Tick, a.RoleSince, v.RemovePrivation) {
+		if !a.External && !a.Trainee && a.Unfed > 0 && occupation.Rung3(a.Privation, v.Tick, a.RoleSince, v.RemovePrivation) {
 			s.leavers = append(s.leavers, occupation.Leaver{
 				Ref: int(a.Agent), Privation: a.Privation, Weight: a.Weight,
 				Unfed: a.Unfed, Money: int64(a.Money), Upkeep: int64(a.Upkeep),
@@ -442,7 +453,72 @@ func (c *decider) switches() {
 			cause = CauseDistress
 		}
 		c.d.List = append(c.d.List, Decision{Kind: DecideSwitch, Agent: ag.Agent, Role: v.Roles[a.Admitted[0].Dest].Role, Cause: cause})
+		s.acted[a.Ref] = true // an agent that switches does not also apply
 	}
+}
+
+// applies appends the Apply decisions of the review (spec-spawner.md 6.2 with the
+// traineeship, spec-skill-barriers.md 4.5): an agent of weight 1 that is not
+// external, a trainee or a trainer with trainees, not queued, not acted on and
+// due for a review applies to the best role with a traineeship, by signal E and
+// then role order, for which the queue-discounted inequality holds. A role with
+// no trainer is never applied to. An Apply is no change of role, so it uses no
+// cap (6.3.0). The queue ahead counts the applications of this plan.
+func (c *decider) applies() {
+	v, s := c.v, c.s
+	s.train = s.train[:0]
+	for i := range v.Roles {
+		if r := &v.Roles[i]; !r.Closed && r.TrainingTicks > 0 && r.Trainers > 0 && s.sig[i].has {
+			s.train = append(s.train, i)
+		}
+	}
+	if len(s.train) == 0 {
+		return
+	}
+	slices.SortFunc(s.train, func(a, b int) int {
+		return cmp.Or(cmp.Compare(s.sig[b].e, s.sig[a].e), cmp.Compare(v.Roles[a].Role, v.Roles[b].Role), cmp.Compare(a, b))
+	})
+	s.ahead = regrow(s.ahead, len(v.Roles))
+	for i := range v.Roles {
+		s.ahead[i] = v.Roles[i].QueueAhead
+	}
+	for i := range v.Agents {
+		a := &v.Agents[i]
+		if a.External || s.acted[i] || a.Weight != 1 || a.InTraineeship || a.Queued || !occupation.ReviewDue(int64(a.Agent), v.Tick, v.ReviewTicks) {
+			continue
+		}
+		var eo int64
+		ri := c.roleIdx(a.Role)
+		if ri >= 0 && s.sig[ri].has {
+			eo = s.sig[ri].e
+		}
+		for _, d := range s.train {
+			if d != ri && c.applyOK(a, d, eo) {
+				c.d.List = append(c.d.List, Decision{Kind: DecideApply, Agent: a.Agent, Role: v.Roles[d].Role, Cause: CauseReview})
+				s.ahead[d]++
+				break
+			}
+		}
+	}
+}
+
+// applyOK is the queue-discounted capital test of role index d for agent a, whose
+// own signal is eo (spec-skill-barriers.md 4.5, FR-SKL-005, 018, 019).
+func (c *decider) applyOK(a *RegionAgent, d int, eo int64) bool {
+	v := c.v
+	r := &v.Roles[d]
+	wait, ok := skill.Wait(c.s.ahead[d], r.TrainingTicks, places(r))
+	if !ok {
+		return false
+	}
+	ctrain, ok := skill.CTrain(r.TrainingTicks, int64(a.Surplus))
+	if !ok {
+		return false
+	}
+	return occupation.ApplyOK(occupation.ApplyParams{
+		ED: c.s.sig[d].e, EO: eo, ToolPrice: int64(r.ToolPrice), CTrain: ctrain,
+		CapitalReturn: r.CapitalReturn, Upkeep: int64(a.Upkeep), Year: v.TicksPerYear, QWait: wait,
+	})
 }
 
 // admit runs Admit on the candidates and adds its counts.
@@ -460,8 +536,8 @@ func (c *decider) admit() {
 func (c *decider) eligible(i int) (ri int, ok bool) {
 	v := c.v
 	a := &v.Agents[i]
-	if a.External || c.s.acted[i] || a.Weight <= 0 {
-		return 0, false
+	if a.External || a.InTraineeship || c.s.acted[i] || a.Weight <= 0 {
+		return 0, false // a trainee, and a trainer with trainees, may not be switched (spec-spawner.md 4)
 	}
 	if a.Privation < v.ChangePrivation && !occupation.ReviewDue(int64(a.Agent), v.Tick, v.ReviewTicks) {
 		return 0, false
@@ -707,4 +783,15 @@ func (w *World) loadSpawner(rs *restoreCtx, r *codec.Reader) error {
 	readSparse(r, w.state.extinctRun, regions, roles, rs.tick)
 	readSparse(r, w.state.belowFloorRun, regions, roles, rs.tick)
 	return nil
+}
+
+// places is the places a region has for a role with a traineeship, the trainers
+// times the most trainees one may hold, n_max of spec-skill-barriers.md 4.9,
+// saturating.
+func places(r *RoleView) int64 {
+	n, ok := checked.Mul(r.Trainers, r.MaxTrainees)
+	if !ok {
+		return math.MaxInt64
+	}
+	return n
 }

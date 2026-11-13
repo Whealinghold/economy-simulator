@@ -35,6 +35,9 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if w.sub != nil {
 		return w.sub.fillView(w, v, a, &w.tk.vctx)
 	}
+	if w.skills != nil {
+		w.fillBoard(v, a)
+	}
 	return nil
 }
 
@@ -78,6 +81,9 @@ func (w *World) checkTradePlan(a *agent, p *TradePlan) {
 // A module's step is appended below its slot, and the events stay last.
 func (w *World) removeAgent(a *agent, cause Cause) error {
 	tick, region := w.Tick(), w.regionOf(a)
+	if w.skills != nil {
+		w.dropAgent(a) // step 2: its queue entry goes (a trainer's trainees return before its own events)
+	}
 	if a.hasJob() {
 		w.abandonJob(a, region, ReasonAgentRemoved)
 	}
@@ -137,6 +143,9 @@ func (w *World) agentRoleChanged(a *agent, from RoleID, region RegionID) {
 	}
 	if w.sub != nil {
 		w.sub.roleChanged(a)
+	}
+	if w.skills != nil {
+		w.skills.dequeue(a.id) // a queued applicant that changes role leaves its queue (spec-spawner.md 6.2)
 	}
 	if a.external {
 		w.externalRoleChanged(a)
