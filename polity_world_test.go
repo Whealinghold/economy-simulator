@@ -157,12 +157,13 @@ func TestPolity_Queries(t *testing.T) {
 	}
 }
 
-// TestPolity_Between verifies Between on example A: the edges harbour>mill [4] and
-// mill>harbour [8] between the coast and the inland province, none between nested
-// or equal jurisdictions, a closed edge still listed, and the chains and crossings
-// unchanged by closing edges 4 and 8 (an embargo of the coast, spec-polity.md 12.1).
+// TestPolity_HugeIDsAreNone verifies that a region or jurisdiction ID that does not
+// fit the int32 tables answers none instead of aliasing a low index.
 //
-// Requirement: FR-POL-006, FR-POL-007, FR-POL-008
+// Requirement: FR-POL-012
+//
+// Guard: a query that truncated 2^32 to int32 would read index 0 and report the
+// jurisdiction of the first region for an ID that is not one.
 func TestPolity_HugeIDsAreNone(t *testing.T) {
 	t.Parallel()
 	p := polityWorld(t).Polity()
@@ -192,6 +193,11 @@ func TestPolity_HugeIDsAreNone(t *testing.T) {
 	}
 }
 
+// TestPolity_Between verifies Between on example A: the edges harbour>mill [4] and
+// mill>harbour [8] between the coast and the inland province, none between nested
+// or equal jurisdictions, a closed edge still listed, and the chains and crossings
+// unchanged by closing edges 4 and 8 (an embargo of the coast, spec-polity.md 12.1).
+//
 // Requirement: FR-POL-011, FR-POL-033
 func TestPolity_Between(t *testing.T) {
 	t.Parallel()
