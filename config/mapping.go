@@ -322,6 +322,47 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Storage = l.storage(ss)
 		ss.finish()
 	}
+	if cs := m.sub("credit"); cs != nil {
+		cfg.Modules.Credit = creditModule(cs)
+		cs.finish()
+	}
+}
+
+// creditModule reads [modules.credit] (spec-config.md 6.2, spec-credit.md 4.1): the
+// four keys of the module. A key-less table switches the module on, and every key is
+// optional here: the bounds of Validate say MinPrincipal and MaxClaims must be set.
+func creditModule(t *tbl) *economysim.Credit {
+	var m economysim.Credit
+	readInts(t, []intField{
+		{"min_principal", &m.MinPrincipal}, {"shield_ticks", &m.ShieldTicks},
+		{"write_off_ticks", &m.WriteOffTicks}, {"max_claims", &m.MaxClaims},
+	})
+	return &m
+}
+
+// creditTerms reads the table [role.<id>.credit] (spec-credit.md 4.2): the sub-tables
+// lend and borrow, each a block of its own, so that layers merge by key. A rate is
+// required in a block that is written: a file that omits rate_bp or max_rate_bp is
+// ErrMissingField, since a missing rate must never be a silent interest-free loan
+// (FR-CRD-011). A table with neither sub-table is an empty block, which Validate
+// refuses with ErrCreditShape.
+func creditTerms(t *tbl) *economysim.CreditTerms {
+	var c economysim.CreditTerms
+	if ls := t.sub("lend"); ls != nil {
+		var l economysim.LendTerms
+		ls.need("rate_bp", integer(ls, "rate_bp", &l.RateBP))
+		readInts(ls, []intField{{"max_term_ticks", &l.MaxTermTicks}, {"keep_ticks", &l.KeepTicks}, {"share_bp", &l.ShareBP}})
+		ls.finish()
+		c.Lend = &l
+	}
+	if bs := t.sub("borrow"); bs != nil {
+		var b economysim.BorrowTerms
+		bs.need("max_rate_bp", integer(bs, "max_rate_bp", &b.MaxRateBP))
+		readInts(bs, []intField{{"max_debt_ticks", &b.MaxDebtTicks}, {"slack_ticks", &b.SlackTicks}})
+		bs.finish()
+		c.Borrow = &b
+	}
+	return &c
 }
 
 // storage reads [modules.storage] (spec-config.md 6.2.1, spec-storage.md 12.5): the
@@ -564,6 +605,10 @@ func (l *loader) role(id string, t *tbl) economysim.Role {
 		integer(es, "payroll_bp", &e.PayrollBP)
 		es.finish()
 		r.Employer = &e
+	}
+	if cs := t.sub("credit"); cs != nil {
+		r.Credit = creditTerms(cs)
+		cs.finish()
 	}
 	t.text("label", &r.Label)
 	return r
