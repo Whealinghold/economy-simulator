@@ -38,11 +38,10 @@ func interestProblem(x, rate, term int64) string {
 	if fits := want.IsInt64(); ok != fits || (fits && got != want.Int64()) || (!fits && got != 0) {
 		return fmt.Sprintf("= %d, %v, want %s (fits int64: %v)", got, ok, want, fits)
 	}
-	if zero, _ := credit.Interest(x, 0, term, ticksYear); zero != 0 {
-		return fmt.Sprintf("with a rate of 0 = %d, want 0 (interest-free)", zero)
-	}
-	if zero, _ := credit.Interest(x, rate, 0, ticksYear); zero != 0 {
-		return fmt.Sprintf("with a term of 0 = %d, want 0", zero)
+	for name, in := range map[string][2]int64{"a rate of 0": {0, term}, "a term of 0": {rate, 0}} {
+		if zero, _ := credit.Interest(x, in[0], in[1], ticksYear); zero != 0 {
+			return fmt.Sprintf("with %s = %d, want 0", name, zero)
+		}
 	}
 	for name, up := range map[string][3]int64{"principal": {x + 1, rate, term}, "rate": {x, rate + 1, term}, "term": {x, rate, term + 1}} {
 		if more, ok := credit.Interest(up[0], up[1], up[2], ticksYear); ok && more < got {
