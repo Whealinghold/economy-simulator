@@ -23,7 +23,10 @@ import (
 
 // The target kinds that are recognised but not built (plan 2-6 D320): a flow
 // naming one is ErrModuleDependency until its module is built. The pool is built
-// with the estates module (plan 2-7 D353).
+// with the estates module (plan 2-7 D353). The stores kind has its configuration
+// and its validation with the storage module (plan 3-sto Phase 3, storesTarget in
+// storage_validate.go), but its step is not built: a flow that passes every rule is
+// still ErrModuleDependency until Phase 6.
 const (
 	targetStores   = "stores"
 	targetTreasury = "treasury"
@@ -179,6 +182,7 @@ func levyShape(f MoneyFlow, bad func(field string)) {
 func (v *validator) flowTarget(base []string, f MoneyFlow) {
 	t := f.Target
 	tp := path(base, "target")
+	v.storeKeyKind(tp, t)
 	switch t.Kind {
 	case TargetHouseholds:
 		switch {
@@ -193,7 +197,7 @@ func (v *validator) flowTarget(base []string, f MoneyFlow) {
 	case TargetPool:
 		v.poolTarget(tp, t)
 	case targetStores, targetTreasury:
-		v.rep.add(ErrModuleDependency, path(tp, "kind"), t.Kind, "")
+		v.unbuiltTarget(tp, f, base)
 	default:
 		v.rep.add(ErrOutOfBounds, path(tp, "kind"), t.Kind, "")
 	}

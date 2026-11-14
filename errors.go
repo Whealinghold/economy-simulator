@@ -545,3 +545,35 @@ var (
 	// ErrStartWithoutSeat is a StartMoney above 0 on a jurisdiction with no seat.
 	ErrStartWithoutSeat = errors.New("start money without a seat")
 )
+
+// The sentinels of the storage module (spec-storage.md 3.6.2, 13.1). They are root
+// sentinels matched with errors.Is; the module reuses ErrDuplicateID,
+// ErrUnknownRole, ErrOutOfBounds, ErrModuleDependency, ErrUnknownAgent and
+// ErrAgentRemoved. ErrNoRoom is the root form of the ledger's refusal, mapped at
+// the call (N-075).
+var (
+	// ErrStoreShape is a store class with both capacities 0 or a capacity outside
+	// 0 to MaxRoom.
+	ErrStoreShape = errors.New("store class has the wrong shape")
+	// ErrRoomShape is a room too small for what a role needs to hold: below one
+	// tick's upkeep, below its start stock or, at construction, below its warm job.
+	ErrRoomShape = errors.New("room is too small for the role")
+	// ErrNotLimited is a store given to a role whose base room is nil: a store on an
+	// unlimited account adds nothing.
+	ErrNotLimited = errors.New("role is not limited")
+	// ErrUnknownStoreClass is a store class that is not configured, named by a role
+	// row, a stores target or a call.
+	ErrUnknownStoreClass = errors.New("unknown store class")
+	// ErrStoreLocked is AddStore of a class whose Needs flag the agent's region lacks.
+	ErrStoreLocked = errors.New("store class is locked in the region")
+	// ErrAgentAway is AddStore for an agent that is away on a self-carried trip or on
+	// a migration journey.
+	ErrAgentAway = errors.New("agent is away")
+	// ErrStoreInUse is RemoveStore of a store that is the installed store of a
+	// facility.
+	ErrStoreInUse = errors.New("store is in use by a facility")
+	// ErrNoRoom is goods that do not fit the free room of a limited account: a
+	// removal that would leave the load above the room, or goods an agent is added
+	// with that do not fit.
+	ErrNoRoom = errors.New("no room")
+)

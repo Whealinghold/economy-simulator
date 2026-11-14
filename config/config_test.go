@@ -109,7 +109,7 @@ func TestParse_Rejections(t *testing.T) {
 		{"unknown key in an item", []string{minimal + "[world]\nupkeep = [ { commodity = \"g\", quantity = 1, extra = 2 } ]\n"}, economysim.ErrUnknownKey, []string{"world", "upkeep", "[0]", "extra"}},
 		{"unknown key in a yield", []string{minimal + "[region.n.yield.r]\nhas_all = true\n"}, economysim.ErrUnknownKey, []string{"region", "n", "yield", "r", "has_all"}},
 		{"unknown key in a warm job", []string{minimal + "[warm_start.region.n.group.g]\nmoney = 1\njobs = [ { recipe = \"r\", in_progress_bp = 3 } ]\n"}, economysim.ErrUnknownKey, []string{"warm_start", "region", "n", "group", "g", "jobs", "[0]", "in_progress_bp"}},
-		{"module table of a module not built", []string{minimal + "[modules.storage]\n"}, economysim.ErrUnknownKey, []string{"modules", "storage"}},
+		{"module table of a module not built", []string{minimal + "[modules.settlements]\n"}, economysim.ErrUnknownKey, []string{"modules", "settlements"}},
 		{"module sub-table makes the module unknown", []string{minimal + "[modules.credit.loan.stipend]\nlabel = \"x\"\n"}, economysim.ErrUnknownKey, []string{"modules", "credit"}},
 		{"old singular prefix", []string{minimal + "[module.storage]\n"}, economysim.ErrUnknownKey, []string{"module"}},
 		{"bare module table", []string{minimal + "[demand]\n"}, economysim.ErrUnknownKey, []string{"demand"}},
