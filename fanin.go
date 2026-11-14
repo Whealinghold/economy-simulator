@@ -25,12 +25,8 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if w.transport != nil {
 		w.fillTransport(v, a)
 	}
-	if w.info != nil && kind == viewTrade {
-		w.fillRumours(v, a)
-		w.recordRumours(v, a)
-	}
-	if w.mer != nil && kind == viewTrade {
-		w.fillMerchantView(v, a)
+	if kind == viewTrade {
+		w.fillTradeOnly(v, a)
 	}
 	if w.sub != nil {
 		if err := w.sub.fillView(w, v, a, &w.tk.vctx); err != nil {
@@ -39,6 +35,18 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	}
 	w.fillBoard(v, a)
 	return nil
+}
+
+// fillTradeOnly is the module fillers that are an input to Trade only: the
+// rumours of the information module and the merchant view.
+func (w *World) fillTradeOnly(v *AgentView, a *agent) {
+	if w.info != nil {
+		w.fillRumours(v, a)
+		w.recordRumours(v, a)
+	}
+	if w.mer != nil {
+		w.fillMerchantView(v, a)
+	}
 }
 
 // viewKind says which call a view is built for: the rumours of the information
