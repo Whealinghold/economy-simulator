@@ -29,7 +29,8 @@ type StepIn struct {
 // with step = max(1, B * StepBP / 10 000), floor = B * FloorBP / 10 000 and ceil
 // = B * CeilBP / 10 000, truncated toward zero. Nothing moves with a StepBP of 0
 // or a closed endowment, and a Base of 0 has a ceiling of 0. ok is false for a
-// negative number or a product beyond int64, with Posted returned.
+// negative number, a Cut above Idle (it is a part of it), or a product beyond
+// int64 in the step or in the bound the taken branch uses, with Posted returned.
 func Step(in StepIn) (next int64, ok bool) {
 	if !in.valid() {
 		return in.Posted, false
@@ -37,32 +38,40 @@ func Step(in StepIn) (next int64, ok bool) {
 	if in.StepBP == 0 || in.Closed {
 		return in.Posted, true
 	}
-	step, floor, ceil, ok := band(in)
+	step, ok := checked.MulDiv(in.Base, in.StepBP, BasisPoints)
 	if !ok {
 		return in.Posted, false
 	}
+	step = max(1, step)
 	switch {
 	case in.Unserved > 0 && in.Cut == 0:
-		up, ok := checked.Add(in.Posted, step)
-		if !ok {
-			return in.Posted, false
-		}
-		return min(ceil, up), true
+		return raise(in, step)
 	case in.Idle > 0:
-		return max(floor, in.Posted-step), true // Posted and step are at least 0 and 1, and the difference cannot overflow
+		return lower(in, step)
 	}
 	return in.Posted, true
 }
 
-// valid reports whether no field is negative.
-func (in StepIn) valid() bool {
-	return min(in.Posted, in.Base, in.StepBP, in.FloorBP, in.CeilBP, in.Unserved, in.Idle, in.Cut) >= 0
+// raise is the rent after a rise by step, held under the ceiling.
+func raise(in StepIn, step int64) (int64, bool) {
+	ceil, ok := checked.MulDiv(in.Base, in.CeilBP, BasisPoints)
+	up, ok2 := checked.Add(in.Posted, step)
+	if !ok || !ok2 {
+		return in.Posted, false
+	}
+	return min(ceil, up), true
 }
 
-// band returns the step, the floor and the ceiling of the posted rent.
-func band(in StepIn) (step, floor, ceil int64, ok bool) {
-	step, ok1 := checked.MulDiv(in.Base, in.StepBP, BasisPoints)
-	floor, ok2 := checked.MulDiv(in.Base, in.FloorBP, BasisPoints)
-	ceil, ok3 := checked.MulDiv(in.Base, in.CeilBP, BasisPoints)
-	return max(1, step), floor, ceil, ok1 && ok2 && ok3
+// lower is the rent after a fall by step, held over the floor.
+func lower(in StepIn, step int64) (int64, bool) {
+	floor, ok := checked.MulDiv(in.Base, in.FloorBP, BasisPoints)
+	if !ok {
+		return in.Posted, false
+	}
+	return max(floor, in.Posted-step), true // Posted and step are at least 0 and 1, and the difference cannot overflow
+}
+
+// valid reports whether no field is negative and Cut is within Idle.
+func (in StepIn) valid() bool {
+	return in.Cut <= in.Idle && min(in.Posted, in.Base, in.StepBP, in.FloorBP, in.CeilBP, in.Unserved, in.Idle, in.Cut) >= 0
 }

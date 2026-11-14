@@ -21,7 +21,9 @@ type Holder struct {
 // Request is one request on the endowment (spec-land.md 4.3): Executions wanted
 // of Draw units each. ID is the executor's agent ID (distinct), Principal the
 // account whose inputs the job uses, Key the stateless key of RES 5.3.3 and
-// Balance the principal's money at the ration. Exempt requests pay no rent
+// Balance the principal's money at the ration. Each request is clipped against
+// the whole Balance on its own; a principal with several requests is held to what
+// it can pay only by Charge at the start (spec-land.md 5.4), not here. Exempt requests pay no rent
 // (5.3.4). Ref is the caller's slot and is not read.
 //
 // Own, Commons and Let are written by Tiers: the executions granted in each
@@ -58,7 +60,8 @@ type Params struct {
 // of the unused entitlements, and Held that same sum when the endowment is
 // Closed (the supply is then 0). PricedOut is the units the clip removed and
 // Unserved the units asked of the let tier at the rent in force and not granted
-// (the X of spec-land.md 5.5.1).
+// (the X of spec-land.md 5.5.1). A Closed endowment lets nothing, so it clips
+// and serves no let demand: PricedOut and Unserved are 0 (spec-land.md 4.3 step 3).
 type Result struct {
 	OwnUnits     int64
 	CommonsUnits int64

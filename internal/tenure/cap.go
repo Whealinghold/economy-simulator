@@ -14,7 +14,8 @@ func HolderShare(weight, shareBP int64) (int64, bool) {
 
 // OverCap reports whether a share held by one agent passes the cap
 // (spec-land.md 6.1.2, 6.3.4). A cap of BasisPoints or more bounds nothing,
-// which is the default. The pool is never checked: its caller does not ask.
+// which is the default. A negative cap is not a cap: LargestOverCap refuses it.
+// The pool is never checked: its caller does not ask.
 func OverCap(shareBP, capBP int64) bool {
 	return capBP < BasisPoints && shareBP > capBP
 }
@@ -25,6 +26,9 @@ func OverCap(shareBP, capBP int64) bool {
 // is false when no agent passes the cap. ok is false for a negative number or a
 // product beyond int64.
 func LargestOverCap(weights []int64, shareBP, capBP int64) (idx int, found, ok bool) {
+	if capBP < 0 {
+		return 0, false, false
+	}
 	for i, w := range weights {
 		share, valid := HolderShare(w, shareBP)
 		if !valid {

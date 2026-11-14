@@ -259,31 +259,47 @@ func exactBand(in tenure.StepIn) (step, floor, ceil *big.Int, fit bool) {
 // exactStep is the rent step of spec-land.md 5.5.1 computed without overflow; fit
 // is false when a band value or the raised rent passes int64.
 func exactStep(in tenure.StepIn) (next int64, fit bool) {
+	if in.Cut > in.Idle {
+		return in.Posted, false
+	}
 	if in.StepBP == 0 || in.Closed {
 		return in.Posted, true
 	}
-	step, floor, ceil, fit := exactBand(in)
-	if !fit {
+	step, floor, ceil, _ := exactBand(in)
+	if !fits(step) {
 		return in.Posted, false
 	}
 	switch {
 	case in.Unserved > 0 && in.Cut == 0:
-		up := new(big.Int).Add(bi(in.Posted), step)
-		if !fits(up) {
-			return in.Posted, false
-		}
-		if up.Cmp(ceil) > 0 {
-			up = ceil
-		}
-		return up.Int64(), true
+		return exactRaise(in.Posted, step, ceil)
 	case in.Idle > 0:
-		down := new(big.Int).Sub(bi(in.Posted), step)
-		if down.Cmp(floor) < 0 {
-			down = floor
-		}
-		return down.Int64(), true
+		return exactLower(in.Posted, step, floor)
 	}
 	return in.Posted, true
+}
+
+// exactRaise is min(ceil, posted + step); fit is false when a value passes int64.
+func exactRaise(posted int64, step, ceil *big.Int) (int64, bool) {
+	up := new(big.Int).Add(bi(posted), step)
+	if !fits(up) || !fits(ceil) {
+		return posted, false
+	}
+	if up.Cmp(ceil) > 0 {
+		up = ceil
+	}
+	return up.Int64(), true
+}
+
+// exactLower is max(floor, posted - step); fit is false when floor passes int64.
+func exactLower(posted int64, step, floor *big.Int) (int64, bool) {
+	if !fits(floor) {
+		return posted, false
+	}
+	down := new(big.Int).Sub(bi(posted), step)
+	if down.Cmp(floor) < 0 {
+		down = floor
+	}
+	return down.Int64(), true
 }
 
 // TestStep_MatchesBigIntOracle verifies the rent step against an arbitrary

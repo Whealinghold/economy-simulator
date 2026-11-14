@@ -10,7 +10,7 @@ import (
 // Part is one claimant of an apportionment: a holder, or the commons.
 //
 // Ref is the slot of the out slice where the result is written and must be
-// distinct for every part. Share is the weight (basis points for a stock, units
+// distinct for every part (a repeated Ref is refused). Share is the weight (basis points for a stock, units
 // for a supply). ID is the agent ID and Key the stateless key of
 // spec-resources.md 5.3.3, both the tie-break. Commons marks the commons part,
 // which has no ID and ranks after every agent.
@@ -35,7 +35,7 @@ type Part struct {
 // does not depend on how the parts were listed, and the units sum to stock
 // exactly. Apportion sorts parts in place and allocates nothing. ok is false,
 // and every slot a part names is 0, for a negative stock or Share, a Ref outside
-// out, a sum of weights beyond int64, or a positive stock with no weight.
+// out or repeated, a sum of weights beyond int64, or a positive stock with no weight.
 func Apportion(stock int64, parts []Part, out []int64) (ok bool) {
 	total, valid := weights(stock, parts, len(out))
 	if !valid {
@@ -87,7 +87,19 @@ func weights(stock int64, parts []Part, n int) (int64, bool) {
 			return 0, false
 		}
 	}
-	return total, total > 0 || stock == 0
+	return total, (total > 0 || stock == 0) && distinctRefs(parts)
+}
+
+// distinctRefs reports whether no two parts name the same slot. It sorts parts
+// by Ref, which Apportion reorders anyway.
+func distinctRefs(parts []Part) bool {
+	slices.SortFunc(parts, func(a, b Part) int { return cmp.Compare(a.Ref, b.Ref) })
+	for i := 1; i < len(parts); i++ {
+		if parts[i].Ref == parts[i-1].Ref {
+			return false
+		}
+	}
+	return true
 }
 
 // zeroOut writes 0 to every slot of a part that has one.

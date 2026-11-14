@@ -97,3 +97,43 @@ func TestTotalRent_NegativeKWithoutLinesIsRefused(t *testing.T) {
 		t.Errorf("TotalRent(nil, -1) = %d, %v, want 0, false", total, ok)
 	}
 }
+
+// TestApportion_RepeatedRefIsRefused verifies two parts naming one slot are
+// refused with the slot 0, not summed into a total below the stock.
+//
+// Requirement: FR-LND-013
+func TestApportion_RepeatedRefIsRefused(t *testing.T) {
+	t.Parallel()
+	parts := []tenure.Part{{Ref: 0, ID: 1, Share: 1}, {Ref: 0, ID: 2, Share: 1}}
+	out := []int64{9, 9}
+	if tenure.Apportion(10, parts, out) || out[0] != 0 || out[1] != 9 {
+		t.Errorf("Apportion(10, repeated Ref) = %v, want refused with slot 0 zeroed", out)
+	}
+}
+
+// TestStep_CutAboveIdleIsRefused verifies a cut that exceeds the idle supply it
+// is a part of is refused, and that a bound the taken branch does not use cannot
+// refuse the step.
+//
+// Requirement: FR-LND-019, NFR-LND-003
+func TestStep_CutAboveIdleIsRefused(t *testing.T) {
+	t.Parallel()
+	if next, ok := tenure.Step(tenure.StepIn{Posted: 5, Base: 10, StepBP: 1000, Cut: 1}); ok || next != 5 {
+		t.Errorf("Step(Cut 1, Idle 0) = %d, %v, want 5, false", next, ok)
+	}
+	in := tenure.StepIn{Posted: 50, Base: math.MaxInt64, StepBP: 1, FloorBP: 1, CeilBP: math.MaxInt64, Idle: 1}
+	if next, ok := tenure.Step(in); !ok || next != math.MaxInt64/10_000 {
+		t.Errorf("Step(down, ceiling beyond int64) = %d, %v, want the floor %d", next, ok, int64(math.MaxInt64/10_000))
+	}
+}
+
+// TestLargestOverCap_NegativeCapIsRefused verifies a negative cap is refused
+// instead of flagging every agent.
+//
+// Requirement: FR-LND-014, NFR-LND-003
+func TestLargestOverCap_NegativeCapIsRefused(t *testing.T) {
+	t.Parallel()
+	if _, found, ok := tenure.LargestOverCap([]int64{1, 2}, 0, -1); ok || found {
+		t.Errorf("LargestOverCap(negative cap) = found %v, ok %v, want refused", found, ok)
+	}
+}
