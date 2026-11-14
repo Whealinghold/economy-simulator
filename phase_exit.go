@@ -167,6 +167,9 @@ func (w *World) addAgentRow(a *agent) {
 		Money: Money(acct.Balance), Unfed: a.unfed, Hunger: a.hunger, Privation: a.privation,
 		RoleSince: a.roleSince, Upkeep: x.upkeep[a.role], OwnUse: w.sub.on(a),
 	})
+	if w.skills != nil {
+		w.fillAgentSkills(&x.view.Agents[len(x.view.Agents)-1], a)
+	}
 }
 
 // fillRoles fills the per-role group of the view of region g, in canonical role
@@ -186,6 +189,9 @@ func (w *World) fillRoles(g RegionID) {
 			TrainingTicks: cfg.TrainingTicks, CapitalReturn: w.cfg.Regions[g].CapitalReturn,
 			RenewalCarry: w.state.renewalCarry[int(g)*len(w.cfg.Roles)+r],
 		}
+	}
+	if w.skills != nil {
+		w.fillRoleSkills(g)
 	}
 }
 
@@ -266,6 +272,13 @@ func (w *World) p71Entry() error {
 // entryRegion runs the entry step of region g: Decide, the plan in order, the
 // renewal carry, the logs and the one EntryLimited of the region (FR-SPN-035).
 func (w *World) entryRegion(g RegionID) error {
+	if w.skills != nil {
+		// P7.1(a): completions, places and ticks served come before the view, so the
+		// spawner sees the roles after them (spec-skill-barriers.md 4.2.1).
+		if err := w.skillsEntry(g); err != nil {
+			return fmt.Errorf("traineeships of region %d at tick %d: %w", g, w.Tick(), err)
+		}
+	}
 	plan := w.decideRegion(g)
 	w.tally.addPlan(g, plan)
 	w.ex.budgetTaken = false
@@ -304,6 +317,9 @@ func (w *World) execute(g RegionID, d Decision) error {
 		w.takeBudget(g)
 	}
 	switch d.Kind {
+	case DecideApply:
+		w.execApply(g, &w.agents[d.Agent], d)
+		return nil
 	case DecideRemove:
 		return w.execRemove(g, &w.agents[d.Agent], d.Cause)
 	case DecideReduce:
@@ -317,7 +333,7 @@ func (w *World) execute(g RegionID, d Decision) error {
 // refusal returns the reason a decision is refused, or "" when it passes. The
 // kinds of the slice map one to one onto internal/occupation's.
 func (w *World) refusal(g RegionID, d *Decision) Reason {
-	if d.Kind < DecideRemove || d.Kind > DecideEnter {
+	if !w.knownKind(d.Kind) {
 		return reasonUnknownKind
 	}
 	f := occupation.Facts{
@@ -326,9 +342,16 @@ func (w *World) refusal(g RegionID, d *Decision) Reason {
 	}
 	if a := w.agentIn(g, d.Agent); a != nil {
 		f.AgentKnown, f.External, f.SameRole, f.Weight = true, a.external && !a.mortal, a.role == d.Role, a.weight
-		f.OnJourney = d.Kind == DecideSwitch && w.onJourney(a) // only a switch reads it (spec-spawner.md 4)
+		f.OnJourney = (d.Kind == DecideSwitch || d.Kind == DecideApply) && w.onJourney(a) // only a switch and an apply read it (spec-spawner.md 4)
 	}
+	w.applyFacts(&f, w.agentIn(g, d.Agent), d) // the traineeships' facts, a no-op while w.skills is nil
 	return refusalReason(occupation.Refuse(occupation.Kind(d.Kind), f))
+}
+
+// knownKind reports whether the world executes decisions of kind k: the four of
+// the slice, and an Apply while some role has a traineeship.
+func (w *World) knownKind(k DecisionKind) bool {
+	return k >= DecideRemove && (k <= DecideEnter || (k == DecideApply && w.skills != nil))
 }
 
 // agentIn returns the household agent id when it exists and its account is in
@@ -453,9 +476,20 @@ func mustRemain(x, w, to int64) int64 {
 // to the estate whole lots at a time, and the agent takes up the new role. The
 // account and the money stay, so no account is opened or closed.
 func (w *World) execSwitch(g RegionID, a *agent, d Decision) error {
+	return w.changeRole(g, a, d, false)
+}
+
+// changeRole is execSwitch, also for the completion of a traineeship (completed
+// true, which only skillsEntry says): there the traineeship ends and
+// TraineeshipCompleted is emitted between the abandonment of the job and the
+// RoleChanged it causes (spec-observability.md 4.4.8).
+func (w *World) changeRole(g RegionID, a *agent, d Decision, completed bool) error {
 	from, to := a.role, d.Role
 	if a.hasJob() {
 		w.abandonJob(a, g, ReasonRoleChanged)
+	}
+	if completed {
+		w.traineeshipCompleted(a, g, to)
 	}
 	newRow := w.roles.row(to)
 	lots, err := w.estates.acceptGoods(w.ledger, a.account, g, ledger.EstateGoods, func(c int) bool { return !newRow.isTradable(CommodityID(c)) })
@@ -556,12 +590,14 @@ func (w *World) execEnter(g RegionID, d Decision) error {
 
 // gatherHosts lists the agents of role in region g in ascending ID, the
 // candidates of Place, into the executor's scratch. An external agent is never one:
-// its weight is 1 (spec-integration.md 4.1, 4.6).
+// its weight is 1 (spec-integration.md 4.1, 4.6). A trainee, a trainer with
+// trainees and a queued applicant are none either: the traineeships need agents
+// of weight 1 (FR-SKL-012) and a larger host would break that.
 func (w *World) gatherHosts(g RegionID, role RoleID) {
 	x := &w.ex
 	x.hosts, x.hostAt = x.hosts[:0], x.hostAt[:0]
 	for i := w.firstHousehold; i < len(w.agents); i++ {
-		if a := &w.agents[i]; a.weight >= 1 && !a.external && a.role == role && w.regionOf(a) == g && !w.offStage(a) {
+		if a := &w.agents[i]; a.weight >= 1 && !a.external && a.role == role && w.regionOf(a) == g && !w.offStage(a) && !w.skills.bound(a.id) {
 			x.hosts = append(x.hosts, occupation.Host{Ref: len(x.hostAt), Weight: a.weight})
 			x.hostAt = append(x.hostAt, i)
 		}

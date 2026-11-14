@@ -141,18 +141,7 @@ func (w *World) allocate() {
 	w.employment = newEmployment(&w.cfg)
 	w.polity = newPolity(&w.cfg)
 	w.skills = newSkills(&w.cfg)
-	if w.transport != nil {
-		w.bounds.add(openShipment, w.transport.holds)
-	}
-	if w.migration != nil {
-		w.bounds.add(onJourneyName, w.migration.holds)
-	}
-	if w.mer != nil && w.mer.on {
-		w.bounds.add(openContract, w.mer.holds)
-	}
-	if w.skills != nil {
-		w.bounds.add(inTraineeshipName, w.skills.holds)
-	}
+	w.registerBounds()
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
 	}
@@ -179,6 +168,23 @@ func (w *World) allocate() {
 	w.pr = newProductionTick(&w.cfg)
 	w.oc = newOutcomeTick(&w.cfg)
 	w.ex = newExitTick(&w.cfg, w.obs.supplied)
+}
+
+// registerBounds registers the region_bound obligations of the modules that are on,
+// in module order (spec-regions.md 6.5.2); a module's change appends its line.
+func (w *World) registerBounds() {
+	if w.transport != nil {
+		w.bounds.add(openShipment, w.transport.holds)
+	}
+	if w.migration != nil {
+		w.bounds.add(onJourneyName, w.migration.holds)
+	}
+	if w.mer != nil && w.mer.on {
+		w.bounds.add(openContract, w.mer.holds)
+	}
+	if w.skills != nil {
+		w.bounds.add(inTraineeshipName, w.skills.holds)
+	}
 }
 
 // seedPrices returns the function that gives the seed price of a market: the

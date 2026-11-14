@@ -203,6 +203,9 @@ func (w *World) moveAgent(a *agent, to RegionID, cause Cause) error {
 	if w.sub != nil {
 		w.sub.drop(a.id) // the floor, its yield and its endowment are the old region's (spec-subsistence.md 5.8)
 	}
+	if w.skills != nil {
+		w.skills.dequeue(a.id) // a queue is a region's: an applicant that moves leaves it (spec-skill-barriers.md 4.4)
+	}
 	// Units cannot overflow here: a commodity holds at most MaxQuantity, and
 	// there are at most MaxCommodities of them.
 	if w.obs.supplied {

@@ -103,3 +103,19 @@ func TestRefusal_UnsupportedCauseIsLast(t *testing.T) {
 		t.Errorf("RefusalEnd = %d, want %d", occupation.RefusalEnd, occupation.AlreadyQueued+1)
 	}
 }
+
+// TestRefuse_UnknownKindIsNotRefused verifies that a decision kind the slice does
+// not know, or a negative one, passes the checks (RefusalNone): the root maps an
+// unknown kind to its own reason before it asks for the facts.
+//
+// Guard: Refuse ends in a RefusalNone fallthrough; a kind appended to the enumeration
+// without a case must not silently inherit the refusal of another.
+func TestRefuse_UnknownKindIsNotRefused(t *testing.T) {
+	t.Parallel()
+	all := occupation.Facts{AgentKnown: true, RoleKnown: true, External: true, SameRole: true, InTraineeship: true, OnJourney: true, Queued: true, Weight: 9}
+	for _, k := range []occupation.Kind{occupation.KindApply + 1, -1} {
+		if got := occupation.Refuse(k, all); got != occupation.RefusalNone {
+			t.Errorf("Refuse(%d, %+v) = %d, want RefusalNone", k, all, got)
+		}
+	}
+}

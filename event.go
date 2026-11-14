@@ -165,6 +165,9 @@ const (
 	// ReasonRegionChanged is a job abandoned because its agent left its region on
 	// a migration journey (spec-production.md 14.1, spec-migration.md 8.2).
 	ReasonRegionChanged Reason = "region_changed"
+	// ReasonPrincipalLeft is a trainee's job abandoned because its trainer was
+	// removed (spec-production.md 5.4, spec-skill-barriers.md 4.6).
+	ReasonPrincipalLeft Reason = "principal_left"
 )
 
 // The reasons of the migration module (spec-migration.md 7.6, 8.3, 13.2): a

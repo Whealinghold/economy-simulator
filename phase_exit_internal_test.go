@@ -25,12 +25,20 @@ func exitConfig() Config {
 	c.Roles[0].StartMoney = 7_000
 	weaver := DefaultRole()
 	weaver.ID, weaver.StartMoney, weaver.ExpectedWorkTicks = "weaver", 3_000, 200
-	weaver.TrainingTicks, weaver.Closed = 4, true
+	weaver.Closed = true
 	c.Roles = append(c.Roles, weaver)
 	c.Groups = []Group{
 		{Region: "home", Role: "miller", Households: 3, Scale: 2},
 		{Region: "home", Role: "weaver", Households: 1},
 	}
+	return c
+}
+
+// exitTrainingConfig is exitConfig with 4 ticks of training for the weaver, so
+// the world has the state of the traineeships.
+func exitTrainingConfig() Config {
+	c := exitConfig()
+	c.Roles[1].TrainingTicks = 4
 	return c
 }
 
@@ -58,12 +66,23 @@ func exitWorld(t *testing.T, opts ...Option) *World {
 // (2 + 1) = 433 (truncated), and weaver, with no working tick, has none. A
 // household starts with its role's StartMoney, so agent 1 holds 2 * 7 000 =
 // 14 000, agent 2 7 000 and agent 3 3 000. The CapitalReturn is the region's,
-// 1 000, and a role's RenewalCarry is the world's, here 42 and 7.
+// 1 000, and a role's RenewalCarry is the world's, here 42 and 7. The weaver
+// trains (exitTrainingConfig): its one agent, of weight 1 and no trainee, is the
+// one trainer, with the role's default of 3 places and an empty queue. The
+// surplus S_u of a miller is the padded ratio over 10 000 times the upkeep: the
+// window is 30, so one record and 29 padded ticks of upkeep 1 000 at the default
+// ratio 10 000, and the ratio of agent 1 is (1 000 + 29 000) * 10 000 / 29 000 =
+// 10 344, a surplus of (10 344 - 10 000) * 1 000 / 10 000 = 34, and that of agent
+// 2 (300 + 29 000) * 10 000 / 29 000 = 10 103, a surplus of 10; the weaver has no
+// record and the padded ratio is the default, 10 000, so 0.
 //
 // Requirement: FR-SPN-001, FR-SPN-002
 func TestBuildRegionView_EveryFieldEqualsItsSource(t *testing.T) {
 	t.Parallel()
-	w := exitWorld(t)
+	w := newMill(t, exitTrainingConfig(), WithSeed(exitSeed))
+	if err := w.estates.seedPool(w.ledger, 0, 25_000); err != nil {
+		t.Fatalf("seed %d: seedPool() error = %v, want nil", exitSeed, err)
+	}
 	w.agents[1].history.Push(welfare.Record{Income: 1_000, Working: true, WorkHH: 2})
 	w.agents[2].history.Push(welfare.Record{Income: 300, Working: true, WorkHH: 1})
 	w.state.renewalCarry[0], w.state.renewalCarry[1] = 42, 7
@@ -77,11 +96,11 @@ func TestBuildRegionView_EveryFieldEqualsItsSource(t *testing.T) {
 		ChangePrivation: 3, RemovePrivation: 10, DeathStep: 1_000, ExitShare: 100, Renewal: 10_000, EntryPoolShare: 5_000,
 		Roles: []RoleView{
 			{Role: 0, Households: 3, Agents: 2, Wage: 433, HasWage: true, Upkeep: 1_000, ExpectedWorkTicks: 250, StartMoney: 7_000, ToolPrice: 5_000, CapitalReturn: 1_000, RenewalCarry: 42},
-			{Role: 1, Closed: true, Households: 1, Agents: 1, Upkeep: 1_000, ExpectedWorkTicks: 200, StartMoney: 3_000, TrainingTicks: 4, CapitalReturn: 1_000, RenewalCarry: 7},
+			{Role: 1, Closed: true, Households: 1, Agents: 1, Upkeep: 1_000, ExpectedWorkTicks: 200, StartMoney: 3_000, TrainingTicks: 4, CapitalReturn: 1_000, RenewalCarry: 7, Trainers: 1, MaxTrainees: 3},
 		},
 		Agents: []RegionAgent{
-			{Agent: 1, Role: 0, Weight: 2, Money: 14_000, Unfed: 1, Hunger: 2, Privation: 3, RoleSince: 4, Upkeep: 1_000},
-			{Agent: 2, Role: 0, Weight: 1, Money: 7_000, Upkeep: 1_000},
+			{Agent: 1, Role: 0, Weight: 2, Money: 14_000, Unfed: 1, Hunger: 2, Privation: 3, RoleSince: 4, Upkeep: 1_000, Surplus: 34},
+			{Agent: 2, Role: 0, Weight: 1, Money: 7_000, Upkeep: 1_000, Surplus: 10},
 			{Agent: 3, Role: 1, Weight: 1, External: true, Mortal: true, Money: 3_000, Privation: 9, RoleSince: -2, Upkeep: 1_000},
 		},
 	}
