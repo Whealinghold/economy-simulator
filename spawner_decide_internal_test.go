@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"math"
 	"math/rand/v2"
 	"reflect"
 	"slices"
@@ -1011,6 +1012,8 @@ func TestDecide_AppliesWhenReturnClears(t *testing.T) {
 		{"a queue of 1 000 lowers the appeal", func(v *RegionView) { v.Roles[1].QueueAhead = 1000 }, nil},
 		{"a shorter queue still clears", func(v *RegionView) { v.Roles[1].QueueAhead = 10 }, want},
 		{"no trainer", func(v *RegionView) { v.Roles[1].Trainers = 0 }, nil},
+		{"trainers that hold no place", func(v *RegionView) { v.Roles[1].MaxTrainees = 0 }, nil},
+		{"a training cost beyond int64", func(v *RegionView) { v.Agents[0].Surplus = math.MaxInt64 }, nil},
 		{"role closed", func(v *RegionView) { v.Roles[1].Closed = true }, nil},
 		{"role with no signal", func(v *RegionView) { v.Roles[1].HasWage = false }, nil},
 		{"a surplus too high for the return", func(v *RegionView) { v.Agents[0].Surplus = 300_000 }, nil},

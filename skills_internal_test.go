@@ -413,6 +413,8 @@ func TestCheckpoint_SkillsRefusesCorrupt(t *testing.T) {
 			s.trainees = [][5]int64{{a(hm[0]), hw, 1, 2, 3}, {a(hm[1]), hw, 1, 2, 3}}
 			s.trainers = []trainerRow{{hw, 0, []int64{a(hm[0]), a(hm[1]), -1}}}
 		}), nil},
+		{"trainer that is not an agent", with(func(s *skillSection) { s.trainers = []trainerRow{{999, 0, []int64{a(hm[0])}}} }), nil},
+		{"applicant that is not an agent", with(func(s *skillSection) { s.queues = []queueRow{{0, 1, [][3]int64{{999, 3, 0}}}} }), nil},
 		{"trainer lists an agent beyond the agents", with(func(s *skillSection) { s.trainers = []trainerRow{{hw, 0, []int64{a(hm[0]), 1 << 40}}} }), nil},
 		{"trainee listed twice by its trainer", with(func(s *skillSection) { s.trainers = []trainerRow{{hw, 0, []int64{a(hm[0]), a(hm[0])}}} }), nil},
 		{"queued trainee", with(func(s *skillSection) { s.queues = []queueRow{{0, 1, [][3]int64{{a(hm[0]), 3, 0}}}} }), nil},
@@ -457,7 +459,8 @@ func TestCheckpoint_SkillsRefusesCorrupt(t *testing.T) {
 			}
 			if err == nil {
 				t.Errorf("loadSkills + skillsCross accepted %+v, want a refusal", tt.sec)
-
+			} else if !errors.Is(err, codec.ErrMalformed) && !errors.Is(err, ErrCheckpointCorrupt) {
+				t.Errorf("loadSkills + skillsCross refused %+v with %v, want codec.ErrMalformed or ErrCheckpointCorrupt", tt.sec, err)
 			}
 		})
 	}
