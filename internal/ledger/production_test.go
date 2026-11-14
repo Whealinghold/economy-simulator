@@ -422,7 +422,7 @@ func mustNil(err error) {
 // into the lot of their new durability, earmarked items skipped, and the units
 // counted being the durability actually removed.
 //
-// Requirement: FR-LED-015, FR-LED-016, FR-LED-040, FR-LED-041, FR-LED-042
+// Requirement: FR-LED-015, FR-LED-016, FR-LED-040, FR-LED-041, FR-LED-042, FR-SKL-002
 func TestWearItems_Selection(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
