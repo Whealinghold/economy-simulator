@@ -1,0 +1,12 @@
+# A traineeship on the second setting, by configuration alone (architecture.md 9.4,
+# FR-SKL-010): the regolith miners are trained for 10 ticks by a miner, three at a
+# time, and the trainee runs the trainer's recipe at 7 000 of a full execution. No
+# Go code names the role or the recipe. Layered over second/second.toml and
+# second/warm-second.toml.
+[recipe.dig_regolith]
+trainee_eligible = true
+trainee_yield = 7000
+[role.regolith_miner]
+training_ticks = 10
+max_trainees = 3
+teaching_load = 1000
