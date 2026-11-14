@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"errors"
+	"log/slog"
 	"slices"
 	"strconv"
 	"strings"
@@ -420,6 +421,89 @@ func TestWarnings_Storage(t *testing.T) {
 				t.Errorf("Warnings() has %q, want it to include %q", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestStorage_WarningsAreLogged verifies that each configuration warning of the
+// storage module reaches the injected logger once, at Warn, with the constant
+// message and the rule and the dotted path of the warning, before "world created",
+// that the lines are the ones World.Warnings returns, and that a configuration that
+// draws none logs none of them.
+//
+// Guard: the warnings are the only signal of a storage configuration that is valid
+// but leaves a role unable to start a recipe or holding a class nothing uses, and a
+// consumer that never calls Warnings sees them only in the log; without this test a
+// change to the construction line could drop them silently.
+//
+// Requirement: FR-STO-038
+func TestStorage_WarningsAreLogged(t *testing.T) {
+	t.Parallel()
+	isStorage := func(rule string) bool {
+		switch rule {
+		case "no_limited_role", "room_below_cover", "room_below_recipe", "store_class_unused", "store_levy_below_upkeep":
+			return true
+		}
+		return false
+	}
+	// The growers' room of 100 mass holds the upkeep but not a household's recipe
+	// output with no store, and the two classes are then named by no row.
+	c := storageConfig()
+	c.Modules.Storage.Roles[1].Base = &economysim.Capacity{Mass: 100, Bulk: 2_000}
+	c.Modules.Storage.Roles[1].Stores = nil
+	h := newCaptureHandler()
+	w, err := economysim.NewWorld(c, economysim.WithLogger(slog.New(h)))
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil (a warning never fails construction)", err)
+	}
+	var want []string
+	for _, wn := range w.Warnings() {
+		if isStorage(wn.Rule) {
+			want = append(want, wn.Rule+"@"+strings.Join(wn.Path, "."))
+		}
+	}
+	for _, rule := range []string{"room_below_recipe", "store_class_unused"} {
+		if !slices.ContainsFunc(want, func(s string) bool { return strings.HasPrefix(s, rule+"@") }) {
+			t.Fatalf("Warnings() = %v, want a %s warning for the scenario to mean anything", want, rule)
+		}
+	}
+	var got []string
+	created := -1
+	for i, l := range h.sink.lines {
+		if l.msg == "world created" {
+			created = i
+		}
+		if l.level == slog.LevelError {
+			t.Errorf("log line %v at Error, want none", l)
+		}
+		if l.level != slog.LevelWarn {
+			continue
+		}
+		attrs := map[string]string{}
+		for _, a := range l.attrs {
+			attrs[a.Key] = a.Value.String()
+		}
+		if !isStorage(attrs["rule"]) {
+			continue // the reference chain's own warnings
+		}
+		if l.msg != "configuration warning" || created >= 0 {
+			t.Errorf("storage warning line %v (after \"world created\": %v), want message %q before the summary", l, created >= 0, "configuration warning")
+		}
+		got = append(got, attrs["rule"]+"@"+attrs["path"])
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("logged storage warnings = %v, want World.Warnings() = %v", got, want)
+	}
+
+	quiet := newCaptureHandler()
+	if _, err := economysim.NewWorld(storageConfig(), economysim.WithLogger(slog.New(quiet))); err != nil {
+		t.Fatalf("NewWorld(valid storage) error = %v, want nil", err)
+	}
+	for _, l := range quiet.sink.lines {
+		for _, a := range l.attrs {
+			if a.Key == "rule" && isStorage(a.Value.String()) {
+				t.Errorf("a clean storage configuration logged %v, want no storage warning", l)
+			}
+		}
 	}
 }
 
