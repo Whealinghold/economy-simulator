@@ -349,17 +349,27 @@ func roomWarnings(c *Config, lk lookup, m *Storage, ro *Role, row int, room *Cap
 	if !ok1 || !ok2 || cover > room.Mass || coverB > room.Bulk {
 		out = append(out, Warning{Path: p, Rule: "room_below_cover"})
 	}
+	return append(out, recipeWarnings(lk, m, ro, row, room, p, upMass, upBulk)...)
+}
+
+// recipeWarnings is room_below_recipe for one limited role: a recipe whose
+// non-discard outputs, with one tick's upkeep, do not fit the room of one household
+// and its stores. The sums are checked, and an overflow does not fit.
+func recipeWarnings(lk lookup, m *Storage, ro *Role, row int, room *Capacity, p []string, upMass, upBulk int64) []Warning {
 	capMass, capBulk, ok := cohortRoom(m, row, 1, room)
 	if !ok {
-		return out
+		return nil
 	}
+	var out []Warning
 	for _, id := range ro.Recipes {
 		rc := lk.recipe[id]
 		if rc == nil {
 			continue
 		}
 		oMass, oBulk := outputLoad(lk, rc)
-		if upMass+oMass > capMass || upBulk+oBulk > capBulk {
+		sumMass, ok1 := checked.Add(upMass, oMass)
+		sumBulk, ok2 := checked.Add(upBulk, oBulk)
+		if !ok1 || !ok2 || sumMass > capMass || sumBulk > capBulk {
 			out = append(out, Warning{Path: append(slices.Clone(p), "recipe", id), Rule: "room_below_recipe"})
 		}
 	}

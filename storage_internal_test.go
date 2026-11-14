@@ -3,6 +3,7 @@ package economysim
 import (
 	"bytes"
 	"encoding/binary"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -263,5 +264,32 @@ func TestStorageCanonical_SharesNoRoom(t *testing.T) {
 	m.Base.Mass, m.Roles[0].Base.Mass = 90, 91
 	if cc.Base.Mass != 1 || cc.Roles[0].Base.Mass != 3 {
 		t.Errorf("canonical bases = %+v, %+v, want {1 2} and {3 4} unmoved", *cc.Base, *cc.Roles[0].Base)
+	}
+}
+
+// TestStorageWarnings_RecipeLoadOverflowWarns verifies that a recipe whose output
+// load does not fit in int64 is still room_below_recipe when the role also has an
+// upkeep load: the sum of the two is checked, not wrapped.
+//
+// Requirement: FR-STO-038
+//
+// Guard: an unchecked upkeep + output sum wraps the overflow sentinel to a negative
+// figure, which is below any room, and the warning is silently dropped.
+func TestStorageWarnings_RecipeLoadOverflowWarns(t *testing.T) {
+	t.Parallel()
+	c := Config{
+		World:       WorldParams{Upkeep: []Item{{Commodity: "u", Quantity: 1}}},
+		Commodities: []Commodity{{ID: "u", Mass: 1, Bulk: 1}, {ID: "g", Mass: math.MaxInt64 / 2}},
+		Recipes:     []Recipe{{ID: "r", Outputs: []Output{{Commodity: "g", Quantity: 3}}}},
+		Regions:     []Region{{ID: "a"}},
+		Roles:       []Role{{ID: "x", Recipes: []string{"r"}}},
+		Modules:     Modules{Storage: &Storage{Base: &Capacity{Mass: MaxRoom, Bulk: MaxRoom}}},
+	}
+	var got bool
+	for _, w := range storageWarnings(&c) {
+		got = got || w.Rule == "room_below_recipe"
+	}
+	if !got {
+		t.Errorf("storageWarnings = %v, want room_below_recipe for an output load that overflows", storageWarnings(&c))
 	}
 }
