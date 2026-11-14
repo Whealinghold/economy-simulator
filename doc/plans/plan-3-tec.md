@@ -281,6 +281,15 @@ Provides:
 
 TEC needs PRO, REG and CAL only (roadmap), all merged; it needs no other Stage 3 module and can merge before or after any of them. Soft links, none blocking: **EMP** (the hire form's `HireYieldBP` composes with `tech` when EMP builds it), **CAP** (a build or repair recipe in a field counts executions and reads no yield, FR-CAP-011; CAP's start path must pass the same term), **SKL** (a trainee's executions count in full; the `traineeRequest` site is in `skills.go` and is a hook here), **STO** (its start pledge edits the same lines of `phase_production.go`), **POL** (a jurisdiction has no lever on a gain), **SAV** and **LND** (read the effect through `E`, no rule), **POP** and **RES** (read only by the warnings of 10.3 and 10.4 when those modules are on). Merge order does not matter for correctness; the shared-file table says where conflicts fall.
 
+## Implementation notes, PR A (Phases 1 to 3)
+
+- `internal/technology` has no `products.go`: the products of spec 9.5 use `internal/checked` or 128-bit `math/bits` at the call, and `TestProducts_AtBounds` (root) and `TestLearned_ErrorsAndBounds` check them at the bounds. `Weight` and `Frontier` have no overflow to report (the 128-bit product is divided by a value above the weight), so they return no `ok`.
+- `Step` takes one `Input` (cells in region-major order, counters, trend carries, the fields as primitives, a `DistanceFunc` by region index and the key), writes its new state only on success and returns one `Result` per cell, which carries the identity of 4.6.3.
+- The key is `technology.Key(seed, site)`; the site constant `siteTechnology` is appended to `random.go` in PR B (Phase 4), as the plan has it.
+- A recipe named twice in one field is `ErrDuplicateID` at that list entry (the spec is silent; the hash would otherwise tell two spellings of one behaviour apart).
+- The hoist of `yieldMax` leaves `overflow` at CCN 27 and NLOC 84 (111 lines, down from 120): an existing finding, as the plan says.
+- `Modules.Technology` is listed in `allPackNotYetOn` (all_pack_test.go), as Storage is: the all-on layer moves once at Stage 3 close.
+
 ## Codacy hygiene (every phase)
 
 The Codacy gate fails on any new issue of level Info or higher (`phase-3-owner-questions.md`: PR #62 failed on 12 MD032 findings, PR #63 on two MD060 findings and one Lizard CCN 15). So, before a commit that opens or updates a PR, in every phase:

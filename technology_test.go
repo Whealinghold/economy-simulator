@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"errors"
+	"math/big"
 	"slices"
 	"strconv"
 	"testing"
@@ -433,4 +434,67 @@ func TestWarnings_TechnologyTrend(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestProducts_AtBounds verifies the products of spec-technology.md 9.5 at the bounds
+// of bounds.go, in 128-bit arithmetic that cannot overflow: X + Base fits int64 with
+// MaxExperience, the largest learned product (DoublingBP times 62 doublings of 4 096) is
+// far below 2^63, the catch-up numerator gap * CatchUpBP + carry fits int64 at the
+// largest gap, the contact weight's (Reach - d) * 10 000 fits at MaxDistance, and
+// MaxTechBP is 10 000 plus the largest cap.
+//
+// Requirement: NFR-TEC-005
+func TestProducts_AtBounds(t *testing.T) {
+	t.Parallel()
+	prod := func(vs ...int64) *big.Int {
+		p := big.NewInt(1)
+		for _, v := range vs {
+			p.Mul(p, big.NewInt(v))
+		}
+		return p
+	}
+	limit := new(big.Int).Lsh(big.NewInt(1), 63)
+	tests := []struct {
+		name string
+		got  *big.Int
+	}{
+		{"X + Base", new(big.Int).Add(big.NewInt(economysim.MaxExperience), big.NewInt(economysim.MaxTechBase))},
+		{"DoublingBP * 62 * 4096", prod(economysim.MaxDoublingBP, 62, 4096)},
+		{"gap * CatchUpBP + carry", new(big.Int).Add(prod(economysim.MaxGainBP, economysim.MaxCatchUpBP), prod(10_000, economysim.MaxTicksPerYear))},
+		{"(Reach - d) * 10 000", prod(economysim.MaxDistance, 10_000)},
+		{"MaxGainBP * weight", prod(economysim.MaxGainBP, 10_000)},
+	}
+	for _, tt := range tests {
+		if tt.got.Cmp(limit) >= 0 {
+			t.Errorf("%s = %s at the bounds, want below 2^63", tt.name, tt.got)
+		}
+	}
+	if economysim.MaxTechBP != 10_000+economysim.MaxGainBP || economysim.MaxStepBP != economysim.MaxGainBP {
+		t.Errorf("MaxTechBP = %d and MaxStepBP = %d, want 10 000 + MaxGainBP and MaxGainBP", economysim.MaxTechBP, economysim.MaxStepBP)
+	}
+}
+
+// FuzzValidateTechnology verifies that Validate and Warnings never panic on a
+// technology module built from arbitrary numbers and recipe names, and that a
+// configuration Validate accepts raises no error from the module's rules when
+// validated again after canonicalisation (the verdict does not depend on the order
+// the fields were written in).
+//
+// Requirement: FR-TEC-002, FR-TEC-003
+func FuzzValidateTechnology(f *testing.F) {
+	f.Add(int64(3000), int64(1000), int64(300), int64(100), int64(5000), int64(100), int64(2000), int64(250), "grow_staple", "cut_fuel")
+	f.Add(int64(0), int64(-1), int64(1)<<62, int64(-5), int64(0), int64(0), int64(0), int64(0), "", "grow_staple")
+	f.Fuzz(func(t *testing.T, capBP, base, doubling, trend, discovery, step, catchUp, reach int64, r1, r2 string) {
+		c := referenceConfig()
+		c.Modules.Technology = &economysim.Technology{Fields: []economysim.TechField{
+			{ID: "a", Recipes: []string{r1}, CapBP: capBP, Base: base, DoublingBP: doubling, TrendBP: trend, DiscoveryBP: discovery, StepBP: step, CatchUpBP: catchUp, Reach: reach},
+			{ID: "b", Recipes: []string{r2, r1}, CapBP: 5},
+		}}
+		first := c.Validate()
+		c.Modules.Technology.Fields[0], c.Modules.Technology.Fields[1] = c.Modules.Technology.Fields[1], c.Modules.Technology.Fields[0]
+		if (first == nil) != (c.Validate() == nil) {
+			t.Fatalf("the verdict depends on the order of the fields: first %v", first)
+		}
+		_ = c.Warnings()
+	})
 }
