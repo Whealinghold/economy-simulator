@@ -140,6 +140,12 @@ type Modules struct {
 	// has a block. It needs no other module. Its hash id is 15, whatever its place in
 	// this struct.
 	Credit *Credit
+	// Technology is the technology module: a gain in yield held per region and
+	// technology field, raised by doing, a trend, discovery and contact
+	// (spec-technology.md). Nil is off; non-nil is on, even when empty (an empty
+	// module has no field and does nothing). It needs no other module. Its hash id is
+	// 24, whatever its place in this struct.
+	Technology *Technology
 }
 
 // Credit is the configuration of the credit module (spec-credit.md 4.1, 14). Its
@@ -202,6 +208,53 @@ type BorrowTerms struct {
 	SlackTicks int64
 }
 
+// Technology is the configuration of the technology module (spec-technology.md
+// 9.1): the technology fields. Its presence switches the module on; every rate
+// of a field defaults to 0, which turns its mechanism off. After construction the
+// fields are in ID order (spec-config.md 3.4).
+type Technology struct {
+	// Fields are the technology fields, at most MaxTechFields, canonical by ID; the
+	// index of a field in this order is its TechFieldID.
+	Fields []TechField
+}
+
+// TechField is a body of knowledge shared by a set of recipes (spec-technology.md
+// 3.1): plain data. A mechanism is on when its rate is above 0; a value that an
+// off mechanism does not use must be 0, and one an on mechanism needs must be set
+// (spec-technology.md 3.1.2).
+type TechField struct {
+	// ID is [a-z][a-z0-9_]* of at most MaxIDLength bytes, unique among fields.
+	ID string
+	// Recipes are the recipe IDs that share what is learned, canonical by ID: 1 to
+	// MaxFieldRecipes, each in at most one field.
+	Recipes []string
+	// CapBP is the largest gain of a cell, in basis points: 1 to MaxGainBP.
+	// Required.
+	CapBP int64
+	// Base is the executions already behind the field (learning): 1 to MaxTechBase,
+	// required with DoublingBP above 0 and 0 otherwise.
+	Base int64
+	// DoublingBP is the gain per doubling of the cumulative work: 0 (off) to
+	// MaxDoublingBP.
+	DoublingBP int64
+	// TrendBP is the gain added a year to every cell: 0 (off) to MaxTechTrendBP.
+	TrendBP int64
+	// DiscoveryBP is the expected discoveries a year of a cell that practises, in
+	// basis points of one: 0 (off) to MaxDiscoveryBP.
+	DiscoveryBP int64
+	// StepBP is the gain of one discovery: 1 to MaxStepBP, required with
+	// DiscoveryBP above 0 and 0 otherwise.
+	StepBP int64
+	// CatchUpBP is the share of the gap to the frontier closed a year (diffusion): 0
+	// (off) to MaxCatchUpBP.
+	CatchUpBP int64
+	// Reach is the distance at which contact is lost, in the distance unit of the
+	// pack: 1 to MaxDistance, required with CatchUpBP above 0 and 0 otherwise.
+	Reach int64
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
 // canonical returns a copy of the module, nil for nil. It has no list to sort.
 func (m *Credit) canonical() *Credit {
 	if m == nil {
@@ -225,6 +278,21 @@ func (c *CreditTerms) canonical() *CreditTerms {
 	if c.Borrow != nil {
 		b := *c.Borrow
 		out.Borrow = &b
+	}
+	return &out
+}
+
+// canonical returns a copy of the module with the fields by ID and each field's
+// recipes sorted (spec-config.md 3.4, spec-technology.md 9.1), nil for nil. The
+// recipe lists are copied, so the copy owns them.
+func (m *Technology) canonical() *Technology {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Fields = sortedBy(m.Fields, func(a, b TechField) int { return cmp.Compare(a.ID, b.ID) })
+	for i := range out.Fields {
+		out.Fields[i].Recipes = sortedBy(out.Fields[i].Recipes, cmp.Compare[string])
 	}
 	return &out
 }
@@ -1454,6 +1522,7 @@ func (c Config) canonical() Config {
 	out.Modules.Polity = c.Modules.Polity.canonical()
 	out.Modules.Storage = c.Modules.Storage.canonical()
 	out.Modules.Credit = c.Modules.Credit.canonical()
+	out.Modules.Technology = c.Modules.Technology.canonical()
 	return out
 }
 

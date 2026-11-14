@@ -357,7 +357,7 @@ with the slice (`vision.md` section 4).
 | `institutions.go`, `internal/institution` | ORG | POL, SKL, SET |
 | `policy.go`, `internal/policy` (`Policy`, `WithPolicy`, `DirectPolicy`) | PLC | POL, FIS, INT |
 | `saving.go`, `internal/saving` | SAV | CAP, WEL |
-| `technology.go`, `internal/technology` | TEC | PRO, REG, CAL |
+| `technology.go`, `internal/technology` | TEC | PRO, REG, CAL (plan 3-tec; PR A in progress) |
 
 Each ships as a stage 2 module does. The checkpoint tag of each is appended
 (`spec-checkpoint.md` 4.2); `testdata/golden/all/` moves once per module, with
