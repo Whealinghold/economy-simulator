@@ -27,13 +27,13 @@ const moneyStepAllocBaseline = 71
 const externalAgentStepAllocBaseline = 72
 
 // storageStepAllocBaseline is the same measure for pack one with the storage module
-// alone on (overlay/storage.toml, limited accounts): 73, three above the off world.
-// Measured under -race at 50 ticks, seed 1. The module is a different run (bids rejected
-// for room, a start cut, goods moved to the estate at a role change), and the three are
-// not traced to a call site: NFR-STO-002 asks for the off baseline plus nothing, so the
-// figure is a finding to close before the module's exit gate, and this constant holds
-// it at what it is. Raising it is a reviewed change (rule 8.2).
-const storageStepAllocBaseline = 73
+// alone on (overlay/storage.toml, limited accounts): 70, the off world's figure, as
+// NFR-STO-002 asks (the baseline plus nothing for the module). The 73 it was came from
+// the room a household gets when it enters (one allocation each, now cut from a block of
+// 64 by the ledger) and from the lots a role change reads to cut the account to its room
+// (now a scratch of the module). Measured under -race at 50 ticks, seed 1. Raising it is
+// a reviewed change (rule 8.2).
+const storageStepAllocBaseline = 70
 
 // TestStep_AllocationsStayAtTheBaseline checks that a full Step of pack one
 // allocates no more than the baseline. Not parallel: testing.AllocsPerRun
@@ -58,7 +58,7 @@ func TestStep_AllocationsStayAtTheBaseline(t *testing.T) {
 		{"one", packOne, stepAllocBaseline, false},
 		{"one+faucet-sunk", packOneFaucetSunk, moneyStepAllocBaseline, false},
 		{"one+external-agent", packOne, externalAgentStepAllocBaseline, true},
-		{"one+storage", packOneStorage, storageStepAllocBaseline, false}, // NFR-STO-002: 3 above the off world, see the constant
+		{"one+storage", packOneStorage, storageStepAllocBaseline, false}, // NFR-STO-002: the off world's figure, see the constant
 		{"one+external", packExternal(), stepAllocBaseline, false},       // NFR-EXT-001: no more than the off world (36 measured)
 	} {
 		cfg := loadValidPack(t, row.layers...)

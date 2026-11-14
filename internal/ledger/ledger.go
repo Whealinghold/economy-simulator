@@ -99,6 +99,9 @@ type Ledger struct {
 	flowOff   []int
 
 	accounts []account
+	// rooms is the block the next rooms are cut from: a limited account is created at
+	// runtime with each household that enters, and one block serves roomBlock of them.
+	rooms []Room
 	// boundary is the account ID of each (reason, thing), indexed like a
 	// region's block of flow slots, -1 where none was opened.
 	boundary []int

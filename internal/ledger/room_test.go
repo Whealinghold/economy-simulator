@@ -956,3 +956,33 @@ func TestRoom_NamedLotFromReservedDrawsReserved(t *testing.T) {
 	}
 	f.checkLoad(t)
 }
+
+// TestSetRoom_RoomsOfManyAccountsAreIndependent verifies that the rooms of more
+// accounts than one allocation block holds (a block serves 64) keep their own size:
+// setting each account a different mass and bulk and reading them back gives each its
+// own pair, so rooms cut from one block never alias.
+//
+// Requirement: NFR-STO-002
+//
+// Guard: rooms are cut from shared blocks to spare an allocation per household that
+// enters; a block slice that moved or was reused would give two accounts one room.
+func TestSetRoom_RoomsOfManyAccountsAreIndependent(t *testing.T) {
+	t.Parallel()
+	f := newRoomFix(t, 1000, rSizes, true)
+	const n = 150 // two full blocks of 64 and a part
+	ids := make([]int, n)
+	for i := range ids {
+		id, err := f.l.Open(ledger.KindAgent, 0, 0)
+		if err != nil {
+			t.Fatalf("Open(agent) %d error = %v, want nil", i, err)
+		}
+		ids[i] = id
+		f.limit(t, id, int64(10+i), int64(100+i))
+	}
+	for i, id := range ids {
+		r := f.room(t, id)
+		if r.Mass != int64(10+i) || r.Bulk != int64(100+i) || !r.Limited {
+			t.Errorf("RoomOf(account %d) = %+v, want mass %d, bulk %d, limited", id, r, 10+i, 100+i)
+		}
+	}
+}

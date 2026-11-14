@@ -72,6 +72,8 @@ type storage struct {
 	// facilityCount is the installed store facilities of a class an agent has (D9);
 	// nil is none, until the infrastructure module sets it.
 	facilityCount func(a *agent, class StoreClassID) int
+	// lots is the scratch of the lots of the account a role change cuts to its room.
+	lots []ledger.Lot
 	// scratch for the stores of one account and the lists of a recipe.
 	caps []room.Pair
 	in   []room.Item

@@ -131,7 +131,8 @@ func (w *World) cutForRole(a *agent, region RegionID, to RoleID) (int64, error) 
 // in flight is not moved: the arrival diverts it if the room cannot hold it.
 func (w *World) cutLoad(a *agent, region RegionID, to room.Pair) (int64, error) {
 	s := w.sto
-	lots, err := w.ledger.AppendLots(nil, a.account)
+	lots, err := w.ledger.AppendLots(s.lots[:0], a.account)
+	s.lots = lots
 	if err != nil {
 		s.broke(a.id, "the account of an agent that loses room is unreadable: "+err.Error())
 	}
