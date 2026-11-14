@@ -139,14 +139,57 @@ func (w *World) auditStorage() error {
 	}
 	for i := w.firstHousehold; i < len(w.agents); i++ {
 		a := &w.agents[i]
-		if a.weight < 1 {
-			continue
-		}
-		if err := w.auditRoom(a, jobs); err != nil {
+		if err := w.auditAgent(a, jobs); err != nil {
 			return fmt.Errorf("storage: agent %d: %w", a.id, err)
 		}
 	}
 	return s.auditInbound(w)
+}
+
+// auditAgent is auditStorage for one household slot: a live agent's books and room, a
+// removed agent's books at rest.
+func (w *World) auditAgent(a *agent, jobs []room.Pair) error {
+	if a.weight < 1 {
+		return w.sto.auditGone(a)
+	}
+	if err := w.sto.auditBooks(a, jobs); err != nil {
+		return err
+	}
+	return w.auditRoom(a, jobs)
+}
+
+// auditBooks checks the module's own books of a live agent, a limited one or not (a
+// trainer in a role with no room carries the pledge its trainees' jobs put on it until
+// it changes role, and the ledger does not hold it): the sum pledged on the agent is
+// that of the jobs that name it, and the load its own job pledged, and on whom, is that
+// of its pending output now. A book that drifts would release too much or too little
+// at the next change of the job.
+func (s *storage) auditBooks(a *agent, jobs []room.Pair) error {
+	if s.held[a.id] != jobs[a.id] {
+		return fmt.Errorf("the pledge held for the jobs that name it is %v, the jobs imply %v", s.held[a.id], jobs[a.id])
+	}
+	load, ok := s.pendingLoad(&a.job)
+	prin := a.id
+	if a.job.executions > 0 {
+		prin = a.job.principal
+	}
+	if !ok || s.jobLoad[a.id] != load || s.jobPrin[a.id] != prin {
+		return fmt.Errorf("its job's pledge is %v on agent %d, its job implies %v on agent %d", s.jobLoad[a.id], s.jobPrin[a.id], load, prin)
+	}
+	return nil
+}
+
+// auditGone checks that a removed agent leaves nothing behind in the module: no
+// store, no cargo expected, no pledge held or placed (dropStorage).
+func (s *storage) auditGone(a *agent) error {
+	if int(a.id) >= len(s.stores) {
+		return nil
+	}
+	if s.owned(a.id) > 0 || s.inbound[a.id] != (room.Pair{}) || s.held[a.id] != (room.Pair{}) ||
+		s.jobLoad[a.id] != (room.Pair{}) || s.jobPrin[a.id] != a.id {
+		return errors.New("a removed agent still has stores, cargo or a pledge in the module's books")
+	}
+	return nil
 }
 
 // auditRoom is auditStorage for one agent.

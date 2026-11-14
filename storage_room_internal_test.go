@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"slices"
 	"testing"
+
+	"github.com/Whealinghold/economy-sim/internal/room"
 )
 
 // The world of the room tests is shipConfig of the transport tests with the storage
@@ -628,5 +630,52 @@ func TestStoredLoad_OfAnAccount(t *testing.T) {
 	stoGrain(t, w, shipHome, 33) // 43 grain: load (129, 86)
 	if got := w.storedLoad(a); got.Mass != 69 || got.Bulk != 46 {
 		t.Errorf("storedLoad at load (129, 86) = %+v, want (69, 46)", got)
+	}
+}
+
+// TestAudit_StorageNamesADriftedBook verifies that the audit of the module finds a
+// drift of its own books that the ledger cannot show: a pledge held for the jobs of
+// an agent whose account has no room (the ledger holds none for it), the load a job
+// pledged, the principal it pledged on, and what a removed agent left behind. Each
+// names the agent and wraps ErrAuditFailed.
+//
+// Requirement: FR-STO-040
+//
+// Guard: a trainer in a role with no room carries its trainees' pledge only in the
+// module's books until it changes role. Without the audit of the books a stale or
+// doubled release would first show when that role change set the ledger's pledge.
+func TestAudit_StorageNamesADriftedBook(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		drift func(w *World)
+	}{
+		{"pledge held on an unlimited agent", func(w *World) { w.sto.held[shipHome] = room.Pair{Mass: 3, Bulk: 2} }},
+		{"load a job pledged", func(w *World) { w.sto.jobLoad[shipHome2] = room.Pair{Mass: 3, Bulk: 2} }},
+		{"principal of a job", func(w *World) { w.sto.jobPrin[shipHome2] = shipHome }},
+		{"cargo expected by a removed agent", func(w *World) {
+			w.agents[shipHome2].weight = 0
+			w.sto.inbound[shipHome2] = room.Pair{Mass: 1}
+		}},
+		{"pledge held for a removed agent", func(w *World) {
+			w.agents[shipHome2].weight = 0
+			w.sto.held[shipHome2] = room.Pair{Bulk: 1}
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			w, _ := stoWorld(t, nil)
+			if err := w.execSwitch(regHome, &w.agents[shipHome], Decision{Role: 1, Cause: CauseReview}); err != nil {
+				t.Fatalf("execSwitch() to the unlimited role = %v, want nil", err)
+			}
+			if err := w.Audit(); err != nil {
+				t.Fatalf("Audit() before the drift = %v, want nil", err)
+			}
+			tt.drift(w)
+			if err := w.Audit(); !errors.Is(err, ErrAuditFailed) {
+				t.Errorf("Audit() with a drifted %s = %v, want ErrAuditFailed", tt.name, err)
+			}
+		})
 	}
 }

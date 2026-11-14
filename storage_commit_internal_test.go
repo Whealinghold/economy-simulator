@@ -428,3 +428,41 @@ func TestPledge_TraineeJobPledgesThePrincipal(t *testing.T) {
 		t.Errorf("pledge of the principal after the job ends = %+v, want (0, 0)", got)
 	}
 }
+
+// TestRoleChange_TrainerToLimitedRolePledgesItsTraineesOutput verifies that a trainer
+// whose role has no base room, with a trainee's job pledged on it, is given the
+// pledge of that job in the ledger when it changes to a limited role: the load was
+// tracked while the account was unlimited and must reach the ledger with the room.
+//
+// Arithmetic: 3 flour of (3, 2) are (9, 6).
+//
+// Requirement: FR-STO-013, FR-STO-034
+//
+// Guard: the pledge a trainee put on an unlimited trainer is tracked but not set in
+// the ledger (the account has no room). Without the repledge of the role change the
+// trainer would hold a limited account with a pledge of 0 against the (9, 6) its
+// trainee's job implies, and the audit would name it. (The explicit repledge of the
+// agent in roleChangedStorage is covered by syncJob for an agent with no job; the test
+// fails only if both go.)
+func TestRoleChange_TrainerToLimitedRolePledgesItsTraineesOutput(t *testing.T) {
+	t.Parallel()
+	w, _ := stoWorld(t, nil)
+	trainer, trainee := &w.agents[shipHome], &w.agents[shipHome2]
+	if err := w.execSwitch(regHome, trainer, Decision{Role: 1, Cause: CauseReview}); err != nil {
+		t.Fatalf("execSwitch() to the unlimited role = %v, want nil", err)
+	}
+	trainee.job = job{recipe: stoMill, remaining: 2, executions: 1, principal: shipHome, yield: 10_000, pending: []int64{3}}
+	w.syncJob(trainee)
+	if st := roomOfAgent(t, w, shipHome); st.Limited || st.Pledge != (Capacity{}) {
+		t.Fatalf("room group of the unlimited trainer = %+v, want unlimited with no pledge in the ledger", st)
+	}
+	if err := w.execSwitch(regHome, trainer, Decision{Role: 0, Cause: CauseReview}); err != nil {
+		t.Fatalf("execSwitch() to the limited role = %v, want nil", err)
+	}
+	if got, want := roomOfAgent(t, w, shipHome).Pledge, (Capacity{Mass: 9, Bulk: 6}); got != want {
+		t.Errorf("pledge of the trainer after the change = %+v, want %+v (its trainee's output)", got, want)
+	}
+	if err := w.Audit(); err != nil {
+		t.Errorf("Audit() after the change = %v, want nil", err)
+	}
+}
