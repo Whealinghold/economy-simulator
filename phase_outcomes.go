@@ -206,7 +206,11 @@ func (w *World) p61Upkeep() error {
 		// refusal of the world's own accounts, which a valid configuration cannot cause
 		// and no test can inject from the root (D190); the branch only wraps and returns
 		// it.
-		if err := consume(w.ledger, a, a.account, w.roles.row(a.role).upkeepIn(g), &oc.eat); err != nil {
+		from := a.account
+		if w.skills != nil {
+			from = w.boardAccount(a) // a trainee eats from its trainer's account
+		}
+		if err := consume(w.ledger, a, from, w.roles.row(a.role).upkeepIn(g), &oc.eat); err != nil {
 			return fmt.Errorf("consumption at tick %d: %w", w.Tick(), err)
 		}
 		w.countUpkeep(a, int(g)*roles+int(a.role))
@@ -293,6 +297,9 @@ func (w *World) p63Welfare() {
 	w.valuePrices()
 	if w.sub != nil {
 		w.sub.priceReceipts(w)
+	}
+	if w.skills != nil {
+		w.valueBoard() // the trainees' in-kind receipts, netted from their trainers (spec-welfare-and-wages.md 6.3)
 	}
 	clear(w.oc.clamped)
 	roles, nc := len(w.cfg.Roles), len(w.cfg.Commodities)

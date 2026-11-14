@@ -520,3 +520,33 @@ const (
 	// ancestors.
 	MaxPolityDepth = 8
 )
+
+// The bounds of the storage module (spec-storage.md 12.2). All three are
+// placeholders (N-015, N-027).
+const (
+	// MaxRoom is the largest mass room and bulk room, of a base room, of a store
+	// class and of one dimension of a Capacity: 10^12, so that MaxWeight * MaxRoom
+	// is 10^18 and the largest room of an account (the base room of a cohort and
+	// MaxStoresPerAgent stores) is below int64.
+	MaxRoom = 1_000_000_000_000
+	// MaxStoresPerAgent is the most stores an agent owns, in a role row's Stores
+	// and by calls.
+	MaxStoresPerAgent = 8
+	// MaxStoreClasses is the most store classes.
+	MaxStoreClasses = 64
+)
+
+// The bounds of the credit module (spec-credit.md 14). All three are placeholders
+// (N-015, N-027).
+const (
+	// MaxCreditRateBP is the largest yearly rate of a lender, of a borrower's limit
+	// and of an effective rate: ten times the principal a year. A rate above it is a
+	// typing error, and with MaxCreditTerm and MaxMoney the interest product fits 128
+	// bits.
+	MaxCreditRateBP = 100_000
+	// MaxCreditTerm is the longest term, shield, write-off, keep and slack, in ticks:
+	// ten years of daily ticks. spec-insurance.md reuses it for PayoutTicks.
+	MaxCreditTerm = 3_650
+	// MaxOpenClaims is the most open claims at once, the bound of Credit.MaxClaims.
+	MaxOpenClaims = 1_000_000
+)

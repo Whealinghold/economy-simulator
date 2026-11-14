@@ -10,13 +10,21 @@ import (
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 )
 
+// relocConfig is removalConfig with training for the weaver, so the in_traineeship
+// obligation is registered.
+func relocConfig() Config {
+	c := removalConfig()
+	c.Roles[1].TrainingTicks = 4
+	return c
+}
+
 // relocWorld is the two-region world of removalConfig: agents 2 and 3 are the
 // millers of home (region 0), 4 the weaver of home, 5 the miller of yonder
 // (region 1); 0 and 1 are the estates. It has no module, so the table of
 // obligations is empty unless a test adds one.
 func relocWorld(t *testing.T, opts ...Option) *World {
 	t.Helper()
-	return newMill(t, removalConfig(), append([]Option{WithSeed(exitSeed)}, opts...)...)
+	return newMill(t, relocConfig(), append([]Option{WithSeed(exitSeed)}, opts...)...)
 }
 
 // holdsShipment registers a fake obligation named open_shipment that agent 3
@@ -222,7 +230,7 @@ func TestSkipHas(t *testing.T) {
 func TestRelocationRegistry_AddTwiceIsAnInvariant(t *testing.T) {
 	t.Parallel()
 	w := relocWorld(t)
-	// removalConfig has a role with training, so the skill barriers register their
+	// relocWorld's weaver has training, so the skill barriers register their
 	// obligation; no module is on.
 	if n := len(w.bounds.rows); n != 1 || w.bounds.rows[0].err.Obligation != "in_traineeship" {
 		t.Fatalf("obligations of a world with no module = %d, want only in_traineeship", n)

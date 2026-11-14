@@ -97,25 +97,33 @@ func TestRefusals_OrderOfTests(t *testing.T) {
 	t.Parallel()
 	ok := occupation.Facts{AgentKnown: true, RoleKnown: true, CauseSupported: true, Households: 2, Weight: 1}
 	with := func(f func(*occupation.Facts)) occupation.Facts { x := ok; f(&x); return x }
+	// An apply names a role with a traineeship, which the executor sets from the
+	// configuration (TrainingTicks above 0).
+	okApply := with(func(f *occupation.Facts) { f.TrainingRole = true })
+	withA := func(f func(*occupation.Facts)) occupation.Facts { x := okApply; f(&x); return x }
 	tests := []struct {
 		name string
 		kind occupation.Kind
 		f    occupation.Facts
 		want occupation.Refusal
 	}{
-		{"apply passes", occupation.KindApply, ok, occupation.RefusalNone},
-		{"apply of weight 0 is not refused for its weight", occupation.KindApply, with(func(f *occupation.Facts) { f.Weight = 0 }), occupation.RefusalNone},
-		{"apply of a trainee", occupation.KindApply, with(func(f *occupation.Facts) { f.InTraineeship = true }), occupation.InTraineeship},
-		{"apply needs weight one", occupation.KindApply, with(func(f *occupation.Facts) { f.Weight = 2 }), occupation.NeedsWeightOne},
-		{"apply already queued", occupation.KindApply, with(func(f *occupation.Facts) { f.Queued = true }), occupation.AlreadyQueued},
-		{"apply on a journey", occupation.KindApply, with(func(f *occupation.Facts) { f.OnJourney = true }), occupation.OnJourney},
-		{"apply of an external agent", occupation.KindApply, with(func(f *occupation.Facts) { f.External = true }), occupation.ExternalAgent},
-		{"apply to an unknown role", occupation.KindApply, with(func(f *occupation.Facts) { f.RoleKnown = false }), occupation.UnknownRole},
-		{"apply to an unknown agent", occupation.KindApply, with(func(f *occupation.Facts) { f.AgentKnown = false }), occupation.UnknownAgent},
-		{"apply to the own role is not same_role", occupation.KindApply, with(func(f *occupation.Facts) { f.SameRole = true }), occupation.RefusalNone},
-		{"order: in_traineeship before on_journey", occupation.KindApply, with(func(f *occupation.Facts) { f.InTraineeship, f.OnJourney = true, true }), occupation.InTraineeship},
-		{"order: on_journey before needs_weight_one", occupation.KindApply, with(func(f *occupation.Facts) { f.OnJourney, f.Weight = true, 3 }), occupation.OnJourney},
-		{"order: needs_weight_one before already_queued", occupation.KindApply, with(func(f *occupation.Facts) { f.Weight, f.Queued = 3, true }), occupation.NeedsWeightOne},
+		{"apply passes", occupation.KindApply, okApply, occupation.RefusalNone},
+		{"apply of weight 0 is not refused for its weight", occupation.KindApply, withA(func(f *occupation.Facts) { f.Weight = 0 }), occupation.RefusalNone},
+		{"apply of a trainee or a trainer with trainees", occupation.KindApply, withA(func(f *occupation.Facts) { f.InTraineeship = true }), occupation.InTraineeship},
+		{"apply needs weight one", occupation.KindApply, withA(func(f *occupation.Facts) { f.Weight = 2 }), occupation.NeedsWeightOne},
+		{"apply already queued", occupation.KindApply, withA(func(f *occupation.Facts) { f.Queued = true }), occupation.AlreadyQueued},
+		{"apply on a journey", occupation.KindApply, withA(func(f *occupation.Facts) { f.OnJourney = true }), occupation.OnJourney},
+		{"apply of an external agent", occupation.KindApply, withA(func(f *occupation.Facts) { f.External = true }), occupation.ExternalAgent},
+		{"apply to an unknown role", occupation.KindApply, withA(func(f *occupation.Facts) { f.RoleKnown = false }), occupation.UnknownRole},
+		{"apply to a role with no traineeship", occupation.KindApply, withA(func(f *occupation.Facts) { f.TrainingRole = false }), occupation.UnknownRole},
+		{"apply to an unknown agent", occupation.KindApply, withA(func(f *occupation.Facts) { f.AgentKnown = false }), occupation.UnknownAgent},
+		{"apply to the own role is same_role", occupation.KindApply, withA(func(f *occupation.Facts) { f.SameRole = true }), occupation.SameRole},
+		{"order: unknown_role before external_agent", occupation.KindApply, withA(func(f *occupation.Facts) { f.TrainingRole, f.External = false, true }), occupation.UnknownRole},
+		{"order: external_agent before same_role", occupation.KindApply, withA(func(f *occupation.Facts) { f.External, f.SameRole = true, true }), occupation.ExternalAgent},
+		{"order: same_role before in_traineeship", occupation.KindApply, withA(func(f *occupation.Facts) { f.SameRole, f.InTraineeship = true, true }), occupation.SameRole},
+		{"order: in_traineeship before on_journey", occupation.KindApply, withA(func(f *occupation.Facts) { f.InTraineeship, f.OnJourney = true, true }), occupation.InTraineeship},
+		{"order: on_journey before needs_weight_one", occupation.KindApply, withA(func(f *occupation.Facts) { f.OnJourney, f.Weight = true, 3 }), occupation.OnJourney},
+		{"order: needs_weight_one before already_queued", occupation.KindApply, withA(func(f *occupation.Facts) { f.Weight, f.Queued = 3, true }), occupation.NeedsWeightOne},
 		{"switch of a trainee", occupation.KindSwitch, with(func(f *occupation.Facts) { f.InTraineeship = true }), occupation.InTraineeship},
 		{"switch: same_role before in_traineeship", occupation.KindSwitch, with(func(f *occupation.Facts) { f.SameRole, f.InTraineeship = true, true }), occupation.SameRole},
 		{"switch: in_traineeship before on_journey", occupation.KindSwitch, with(func(f *occupation.Facts) { f.InTraineeship, f.OnJourney = true, true }), occupation.InTraineeship},

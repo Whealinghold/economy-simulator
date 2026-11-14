@@ -134,7 +134,11 @@ func (w *World) p21Complete() {
 // the output, RecipeExecuted is delivered under the flag and the overflow Warn
 // is considered.
 func (w *World) finishJob(a *agent, region RegionID) {
-	c := w.prod.complete(w.ledger, &a.job, a.account, MaxQuantity)
+	account := a.account
+	if w.skills != nil {
+		account = w.jobAccount(a) // a trainee's output goes to its trainer
+	}
+	c := w.prod.complete(w.ledger, &a.job, account, MaxQuantity)
 	if w.obs.supplied {
 		w.obs.deliver(w.prod.recipeExecuted(nil, nil, nil, w.Tick(), a.id, region, &c, w.cfg.Recipes[c.recipe].Duration))
 	}
@@ -209,6 +213,9 @@ func (w *World) p25Work() error {
 func (w *World) workAgent(a *agent, region RegionID) error {
 	if a.hasJob() || w.welfare.at(int(a.id)).jobSet || w.offStage(a) {
 		return nil
+	}
+	if w.skills != nil && w.skillsWork(a, region) {
+		return nil // a trainee asks for the trainer's eligible recipe, a teaching trainer for none
 	}
 	v := &w.tk.view
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
@@ -304,8 +311,12 @@ func (w *World) startReq(a *agent, region RegionID, recipe RecipeID, maximum int
 		// the effective yield in range.
 		invariant("the effective yield does not fit after validation")
 	}
-	return startReq{recipe: recipe, account: a.account, principal: a.id, weight: a.weight,
+	q := startReq{recipe: recipe, account: a.account, principal: a.id, weight: a.weight,
 		maximum: maximum, effective: e, hasProfile: has}
+	if w.skills != nil {
+		w.traineeRequest(&q, a, region)
+	}
+	return q
 }
 
 // refuse records a request that starts nothing: a Debug line "recipe not
@@ -372,13 +383,17 @@ func (w *World) p27Start() error {
 
 // startJob starts the job of an admitted request.
 func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
-	row := w.roles.row(a.role)
+	owner := a // the agent whose residues the job carries: the principal's
+	if w.skills != nil {
+		owner = w.residueOwner(a)
+	}
+	row := w.roles.row(owner.role)
 	off, _ := residueOffset(row.jobs, &w.recipes, ask.recipe)
 	q := w.startReq(a, region, ask.recipe, ask.maximum)
 	if w.res != nil {
 		w.capDraws(&q, ask.first, ask.draws)
 	}
-	res, err := w.prod.start(w.ledger, &a.job, a.residues[off:off+len(w.recipes.row(ask.recipe).outputs)], &q)
+	res, err := w.prod.start(w.ledger, &a.job, owner.residues[off:off+len(w.recipes.row(ask.recipe).outputs)], &q)
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 	// refusal of the world's own accounts, which a valid configuration cannot cause
 	// and no test can inject from the root (D190); the branch only wraps and returns

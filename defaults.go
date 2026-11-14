@@ -294,3 +294,16 @@ func DefaultEmployer() Employer { return Employer{PayrollBP: 5_000} }
 // a membership are structure, and the default of the section as a whole is "no
 // jurisdictions", which is the world without the module. Its bounds are in
 // bounds.go (MaxJurisdictions, MaxPolityDepth).
+
+// The storage module (spec-storage.md 12.2) has no tunable with a non-nil default:
+// no base room is the default (every role is unlimited), and a store class and a
+// role row are structure. The sorts of its lists are in Storage.canonical
+// (config.go) and its bounds are in bounds.go (MaxRoom, MaxStoresPerAgent,
+// MaxStoreClasses).
+
+// The credit module (spec-credit.md 4.1.2, 14) has no tunable with a non-nil
+// default and no default macro constant (N-027): MinPrincipal and MaxClaims are
+// required, ShieldTicks, WriteOffTicks, KeepTicks and SlackTicks default to 0 (no
+// shield, never written off, no keep, no slack), and a rate is required and never
+// defaulted, 0 being interest-free. Its bounds are in bounds.go (MaxCreditRateBP,
+// MaxCreditTerm, MaxOpenClaims).

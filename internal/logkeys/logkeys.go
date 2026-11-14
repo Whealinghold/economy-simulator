@@ -168,3 +168,10 @@ const (
 	Jurisdictions = "jurisdictions"
 	Governed      = "governed"
 )
+
+// StoreClass is a store class ID, and StoreClasses a count of store classes in the
+// construction summary, in the lines of the storage module.
+const (
+	StoreClass   = "store_class"
+	StoreClasses = "store_classes"
+)

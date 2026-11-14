@@ -128,6 +128,190 @@ type Modules struct {
 	// (spec-polity.md). Nil is off; non-nil is on, even when empty. It needs no other
 	// module. Its hash id is 19, whatever its place in this struct.
 	Polity *PolityConfig
+	// Storage is the storage module: an agent's account may carry a room, a base
+	// room per household of its role plus the capacity of its stores
+	// (spec-storage.md). Nil is off; non-nil is on, even when empty (an empty
+	// module has no limited role and does nothing). It needs no other module. Its
+	// hash id is 12, whatever its place in this struct.
+	Storage *Storage
+	// Credit is the credit module: roles that lend and borrow, requests and offers
+	// matched in a round at a posted rate, interest fixed at formation and repayment
+	// at the due tick (spec-credit.md). Nil is off; non-nil is on, even when no role
+	// has a block. It needs no other module. Its hash id is 15, whatever its place in
+	// this struct.
+	Credit *Credit
+}
+
+// Credit is the configuration of the credit module (spec-credit.md 4.1, 14). Its
+// presence switches the module on. Every field is a placeholder (N-015, N-027):
+// MinPrincipal and MaxClaims have no default and must be set, ShieldTicks and
+// WriteOffTicks have the off value 0.
+type Credit struct {
+	// MinPrincipal is the smallest principal of a claim, in minor units, 1 to
+	// MaxMoney. Required.
+	MinPrincipal int64
+	// ShieldTicks is the ticks of a debtor's upkeep cost kept out of reach of
+	// repayment (spec-credit.md 8.2), 0 to MaxCreditTerm. 0 is no shield.
+	ShieldTicks int64
+	// WriteOffTicks is the ticks after the due tick at which an unpaid claim is
+	// written off, 0 to MaxCreditTerm. 0 means never.
+	WriteOffTicks int64
+	// MaxClaims is the most open claims at once, of either origin, 1 to
+	// MaxOpenClaims. Required.
+	MaxClaims int64
+}
+
+// CreditTerms is the credit block of a role, a pointer of Role: nil means the role
+// does not deal in credit, and exactly one of Lend and Borrow is set (spec-credit.md
+// 4.2). It needs Modules.Credit. It is hashed when non-nil, even when empty.
+type CreditTerms struct {
+	// Lend is the block of a role whose households post offers.
+	Lend *LendTerms
+	// Borrow is the block of a role whose households post requests.
+	Borrow *BorrowTerms
+}
+
+// LendTerms is what a lender posts and keeps (spec-credit.md 4.2). It is hashed
+// when non-nil, even when every field is zero.
+type LendTerms struct {
+	// RateBP is the posted yearly rate in basis points, simple interest, 0 to
+	// MaxCreditRateBP. 0 lends at no interest, is written to a hash and is never a
+	// default: a file that omits it is ErrMissingField.
+	RateBP int64
+	// MaxTermTicks is the longest term the lender lends for, 1 to MaxCreditTerm.
+	MaxTermTicks int64
+	// KeepTicks is the ticks of its upkeep cost the lender keeps out of its offers,
+	// 0 to MaxCreditTerm.
+	KeepTicks int64
+	// ShareBP is the share of its lendable money offered in one tick, 1 to 10 000.
+	ShareBP int64
+}
+
+// BorrowTerms is what a borrower accepts and may owe (spec-credit.md 4.2). It is
+// hashed when non-nil, even when every field is zero.
+type BorrowTerms struct {
+	// MaxRateBP is the highest yearly rate it accepts, 0 to MaxCreditRateBP. 0
+	// accepts only interest-free credit, is written to a hash and is never a
+	// default: a file that omits it is ErrMissingField.
+	MaxRateBP int64
+	// MaxDebtTicks is the exposure cap in ticks of the agent's upkeep cost, 1 to
+	// MaxCreditTerm.
+	MaxDebtTicks int64
+	// SlackTicks is the ticks added to the horizon of the borrower's gap, 0 to
+	// MaxCreditTerm.
+	SlackTicks int64
+}
+
+// canonical returns a copy of the module, nil for nil. It has no list to sort.
+func (m *Credit) canonical() *Credit {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	return &out
+}
+
+// canonical returns a copy of the block with a copy of each sub-block, nil for nil,
+// so a change of the consumer's Config after construction moves no role block.
+func (c *CreditTerms) canonical() *CreditTerms {
+	if c == nil {
+		return nil
+	}
+	out := *c
+	if c.Lend != nil {
+		l := *c.Lend
+		out.Lend = &l
+	}
+	if c.Borrow != nil {
+		b := *c.Borrow
+		out.Borrow = &b
+	}
+	return &out
+}
+
+// Storage is the configuration of the storage module (spec-storage.md 12.1): a
+// base room per household for every role, a row per role that replaces it, and
+// the store classes. Its presence switches the module on. After construction the
+// lists are in canonical order (spec-config.md 3.4).
+type Storage struct {
+	// Base is the base room per household for every role without a row; nil is
+	// unlimited. Mass and Bulk are each 0 to MaxRoom.
+	Base *Capacity
+	// Roles are the role rows, at most one per role, canonical by role. A row
+	// replaces Base for its role as a whole (spec-storage.md 12.1.1).
+	Roles []RoleRoom
+	// Classes are the store classes, at most MaxStoreClasses, canonical by ID; the
+	// index of a class in this order is its StoreClassID.
+	Classes []StoreClass
+}
+
+// Capacity is a pair of room: a mass room and a bulk room (spec-goods.md 3.2).
+// Each is 0 to MaxRoom.
+type Capacity struct {
+	// Mass is the mass room.
+	Mass int64
+	// Bulk is the bulk room.
+	Bulk int64
+}
+
+// RoleRoom is the storage row of one role, in the replace mode of
+// spec-regions.md 5.1 (spec-storage.md 12.1).
+type RoleRoom struct {
+	// Role is the ID of a configured role; one row per role.
+	Role string
+	// Base is the base room of the role per household; nil makes the role
+	// unlimited even when Storage.Base is set, and a row with Stores states it.
+	Base *Capacity
+	// Stores are the store classes each agent of the role is created with, in
+	// class order (a class may repeat), at most MaxStoresPerAgent. They are
+	// refused on a role whose base room is nil.
+	Stores []string
+}
+
+// StoreClass is a kind of store: a capacity pair and a label (spec-storage.md
+// 3.2). It has no price and no durability: what a store costs is a money flow
+// whose target names the class.
+type StoreClass struct {
+	// ID is [a-z][a-z0-9_]* of at most MaxIDLength bytes, unique among classes.
+	ID string
+	// Mass is the mass room one store of the class adds, 0 to MaxRoom; not both
+	// Mass and Bulk are 0.
+	Mass int64
+	// Bulk is the bulk room one store of the class adds, 0 to MaxRoom.
+	Bulk int64
+	// Needs is a flag of the settlements module that the region must carry for the
+	// store to be given; empty is none. It is non-empty only with Modules.Settlements,
+	// which is not built, so a non-empty value is ErrModuleDependency.
+	Needs string
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// clone returns a copy that shares nothing with c, nil for nil.
+func (c *Capacity) clone() *Capacity {
+	if c == nil {
+		return nil
+	}
+	out := *c
+	return &out
+}
+
+// canonical returns a copy of the module with the role rows by role, each row's
+// stores in class order and the classes by ID (spec-config.md 3.4,
+// spec-storage.md 12.1), nil for nil.
+func (m *Storage) canonical() *Storage {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Base = m.Base.clone()
+	out.Roles = sortedBy(m.Roles, func(a, b RoleRoom) int { return cmp.Compare(a.Role, b.Role) })
+	for i := range out.Roles {
+		out.Roles[i].Base = out.Roles[i].Base.clone()
+		out.Roles[i].Stores = sortedBy(out.Roles[i].Stores, cmp.Compare[string])
+	}
+	out.Classes = sortedBy(m.Classes, func(a, b StoreClass) int { return cmp.Compare(a.ID, b.ID) })
+	return &out
 }
 
 // PolityConfig is the configuration of the polity module (spec-polity.md 8): the
@@ -1046,6 +1230,10 @@ type Role struct {
 	// Employer is the employer block: non-nil makes the role a payer
 	// (spec-employment.md 24.3.2). It is hashed when non-nil. Its hash id is 24.
 	Employer *Employer
+	// Credit is the credit block: non-nil makes the role a lender or a borrower
+	// (spec-credit.md 4.2), exactly one of Lend and Borrow. It needs Modules.Credit
+	// and is hashed when non-nil, even when empty. Its hash id is 25.
+	Credit *CreditTerms
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string
@@ -1224,6 +1412,7 @@ func (c Config) canonical() Config {
 		r.StartStock = sortedBy(r.StartStock, byCommodity)
 		r.Merchant = r.Merchant.canonical()
 		r.Employer = r.Employer.canonical()
+		r.Credit = r.Credit.canonical()
 	}
 	out.Regions = sortedBy(c.Regions, func(a, b Region) int { return cmp.Compare(a.ID, b.ID) })
 	for i := range out.Regions {
@@ -1263,6 +1452,8 @@ func (c Config) canonical() Config {
 	out.Modules.Migration = c.Modules.Migration.canonical()
 	out.Modules.External = c.Modules.External.canonical(c.Calendar.Seasons)
 	out.Modules.Polity = c.Modules.Polity.canonical()
+	out.Modules.Storage = c.Modules.Storage.canonical()
+	out.Modules.Credit = c.Modules.Credit.canonical()
 	return out
 }
 
@@ -1374,7 +1565,8 @@ type MoneyFlow struct {
 
 // FlowTarget names a class of accounts (spec-money-supply.md 4.3). The kinds
 // TargetHouseholds and TargetPool are built; the other kinds are recognised and
-// refused with ErrModuleDependency until their modules are built.
+// refused with ErrModuleDependency until their modules are built (the stores kind
+// is validated with the storage module and refused until its step is built).
 type FlowTarget struct {
 	// Kind is TargetHouseholds or TargetPool.
 	Kind string
@@ -1382,6 +1574,9 @@ type FlowTarget struct {
 	Region string
 	// Role is the role of the households; a pool has none.
 	Role string
+	// Store is the store class of a stores target; empty is every class. It has a
+	// meaning only for the kind stores (spec-storage.md 7.1.2, 12.3).
+	Store string
 }
 
 // External is the external-sector module (spec-external-sector.md 3.3): the

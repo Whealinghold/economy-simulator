@@ -187,8 +187,10 @@ func (w *World) traineeRowOK(r *codec.Reader, id, trainer uint64, role RoleID, t
 }
 
 // readTrainers reads the second count of tag 10: each trainer with at least one
-// trainee, its accumulator in [0, 9 999] and its trainees strictly ascending. The
-// trainer is not itself a trainee.
+// trainee, at most its role's MaxTrainees (an institution may lower a body's
+// maximum under a traineeship, never raise the role's), its accumulator in
+// [0, 9 999] and its trainees strictly ascending. The trainer is not itself a
+// trainee.
 func (w *World) readTrainers(r *codec.Reader) {
 	s := w.skills
 	n := r.Count(3)
@@ -201,11 +203,16 @@ func (w *World) readTrainers(r *codec.Reader) {
 			return
 		}
 		prev = id
-		if w.skillAgent(r, id, "trainer") == nil {
+		t := w.skillAgent(r, id, "trainer")
+		if t == nil {
 			return
 		}
 		if m == 0 || s.isTrainee(AgentID(id)) {
 			r.Failf("trainer %d has no trainee or is a trainee", id)
+			return
+		}
+		if int64(m) > w.cfg.Roles[t.role].MaxTrainees {
+			r.Failf("trainer %d holds %d trainees, above MaxTrainees %d of its role", id, m, w.cfg.Roles[t.role].MaxTrainees)
 			return
 		}
 		list := make([]AgentID, 0, m)
@@ -229,7 +236,8 @@ func (w *World) readTrainers(r *codec.Reader) {
 // readQueues reads the third count of tag 10: the cells in ascending (region,
 // role) order, each with at least one applicant. An applicant is a live agent of
 // weight 1 in the cell's region and not in its role, not a trainee, and queued
-// once in the whole section; its ticks served do not pass the course.
+// once in the whole section; its ticks served do not pass the course. The queue
+// is in the order skill.Requeue gives, as enqueue keeps it.
 func (w *World) readQueues(rs *restoreCtx, r *codec.Reader) {
 	s := w.skills
 	regions := len(w.cfg.Regions)
@@ -254,7 +262,12 @@ func (w *World) readQueues(rs *restoreCtx, r *codec.Reader) {
 			if !ok {
 				return
 			}
+			if !queueOrdered(r, s.queue[key], ap, RegionID(region), RoleID(role)) {
+				return
+			}
 			s.queue[key] = append(s.queue[key], ap)
+			s.grow(ap.agent)
+			s.queuedIn[ap.agent] = int32(key) + 1
 		}
 	}
 }
@@ -305,4 +318,14 @@ func (w *World) skillsCross() error {
 		}
 	}
 	return nil
+}
+
+// queueOrdered reports whether applicant ap comes after the last of q in the order
+// of skill.Requeue, recording the failure on r when it does not.
+func queueOrdered(r *codec.Reader, q []applicant, ap applicant, region RegionID, role RoleID) bool {
+	if len(q) == 0 || skill.Requeue(q[len(q)-1].rule(), ap.rule()) {
+		return true
+	}
+	r.Failf("applicant %d is not after applicant %d in the queue order of cell (region %d, role %d)", ap.agent, q[len(q)-1].agent, region, role)
+	return false
 }

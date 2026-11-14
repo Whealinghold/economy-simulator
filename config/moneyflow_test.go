@@ -98,7 +98,7 @@ func TestLoad_MoneySupplyKeys(t *testing.T) {
 	}{
 		{"unknown key in the module", minimal + "[modules.money_supply]\nbogus = 1\n", economysim.ErrUnknownKey, []string{"modules", "money_supply", "bogus"}},
 		{"unknown key in a flow", minimal + flow + ok + "bogus = 1\n", economysim.ErrUnknownKey, []string{"modules", "money_supply", "flow", "f", "bogus"}},
-		{"unknown key in a target", minimal + flow + "kind = \"grant\"\ntarget = { kind = \"households\", store = \"s\" }\n", economysim.ErrUnknownKey, []string{"modules", "money_supply", "flow", "f", "target", "store"}},
+		{"unknown key in a target", minimal + flow + "kind = \"grant\"\ntarget = { kind = \"households\", shop = \"s\" }\n", economysim.ErrUnknownKey, []string{"modules", "money_supply", "flow", "f", "target", "shop"}},
 		{"flows in the plural", minimal + "[modules.money_supply.flows.f]\n" + ok, economysim.ErrUnknownKey, []string{"modules", "money_supply", "flows"}},
 		{"missing kind", minimal + flow + "target = { kind = \"households\" }\n", economysim.ErrMissingField, []string{"modules", "money_supply", "flow", "f", "kind"}},
 		{"missing target", minimal + flow + "kind = \"grant\"\n", economysim.ErrMissingField, []string{"modules", "money_supply", "flow", "f", "target"}},

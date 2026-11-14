@@ -317,13 +317,21 @@ func (t *tradeCtx) makes(c CommodityID) bool {
 // upkeepUnits returns U_c, the units of c the agent eats this tick, and whether
 // c is an upkeep commodity. ok is false on overflow.
 func (t *tradeCtx) upkeepUnits(c CommodityID) (u int64, isUpkeep, ok bool) {
+	ok = true
 	for _, row := range t.v.Upkeep {
 		if row.Commodity == c {
 			u, ok = checked.Mul(t.v.Weight, row.Quantity)
-			return u, true, ok
+			isUpkeep = true
+			break
 		}
 	}
-	return 0, false, true
+	for _, row := range t.v.Board { // the use of a trainer includes its trainees' upkeep (spec-agents.md 5.7)
+		if row.Commodity == c && ok {
+			u, ok = checked.Add(u, row.Quantity)
+			isUpkeep = true
+		}
+	}
+	return u, isUpkeep, ok
 }
 
 // purposeOf is the Purpose of an intent for c (7.3.6): an input of the planned

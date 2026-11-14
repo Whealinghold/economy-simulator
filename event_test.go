@@ -696,6 +696,7 @@ func TestConstants_Values(t *testing.T) {
 		{economysim.ReasonTrainerLeft, "trainer_left"},
 		{economysim.ReasonAgentLeft, "agent_left"},
 		{economysim.ReasonRoleRemoved, "role_removed"},
+		{economysim.ReasonPrincipalLeft, "principal_left"},
 	}
 	spawnerReasons := []struct {
 		got  economysim.Reason

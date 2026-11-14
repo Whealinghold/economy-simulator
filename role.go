@@ -42,6 +42,10 @@ type roleRow struct {
 	// effectiveWindow computes for the validator (spec-welfare-and-wages.md
 	// 2.3.3). Appended by the welfare row; modules join L inside that function.
 	window int64
+	// room is the resolved base room per household of the role (spec-storage.md
+	// 3.3.1): nil is an unlimited role, and always nil with the module off. It is
+	// not state: the constructor fills it from the configuration.
+	room *Capacity
 }
 
 // roleTable holds one row per role, indexed by RoleID, and anyTradable, which
@@ -87,6 +91,7 @@ func newRoleTable(c *Config) roleTable {
 			panic("economysim: invariant violated: role " + r.ID + " has no effective welfare window after validation")
 		}
 		row.window = w
+		row.room = c.Modules.Storage.roomOf(r.ID) // the module's join; off: nil
 		for _, id := range r.Trades {
 			row.trades = append(row.trades, roleCommodity(c, r.ID, id))
 		}

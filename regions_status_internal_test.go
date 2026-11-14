@@ -454,7 +454,7 @@ func TestCheckpoint_PendingRelocationTotals(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Checkpoint() = %v, want nil", err)
 	}
-	r, err := RestoreWorld(removalConfig(), ck)
+	r, err := RestoreWorld(relocConfig(), ck)
 	if err != nil {
 		t.Fatalf("RestoreWorld() = %v, want nil", err)
 	}

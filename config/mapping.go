@@ -318,6 +318,94 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Polity = l.polity(ps)
 		ps.finish()
 	}
+	if ss := m.sub("storage"); ss != nil {
+		cfg.Modules.Storage = l.storage(ss)
+		ss.finish()
+	}
+	if cs := m.sub("credit"); cs != nil {
+		cfg.Modules.Credit = creditModule(cs)
+		cs.finish()
+	}
+}
+
+// creditModule reads [modules.credit] (spec-config.md 6.2, spec-credit.md 4.1): the
+// four keys of the module. A key-less table switches the module on, and every key is
+// optional here: the bounds of Validate say MinPrincipal and MaxClaims must be set.
+func creditModule(t *tbl) *economysim.Credit {
+	var m economysim.Credit
+	readInts(t, []intField{
+		{"min_principal", &m.MinPrincipal}, {"shield_ticks", &m.ShieldTicks},
+		{"write_off_ticks", &m.WriteOffTicks}, {"max_claims", &m.MaxClaims},
+	})
+	return &m
+}
+
+// creditTerms reads the table [role.<id>.credit] (spec-credit.md 4.2): the sub-tables
+// lend and borrow, each a block of its own, so that layers merge by key. A rate is
+// required in a block that is written: a file that omits rate_bp or max_rate_bp is
+// ErrMissingField, since a missing rate must never be a silent interest-free loan
+// (FR-CRD-011). A table with neither sub-table is an empty block, which Validate
+// refuses with ErrCreditShape.
+func creditTerms(t *tbl) *economysim.CreditTerms {
+	var c economysim.CreditTerms
+	if ls := t.sub("lend"); ls != nil {
+		var l economysim.LendTerms
+		ls.need("rate_bp", integer(ls, "rate_bp", &l.RateBP))
+		readInts(ls, []intField{{"max_term_ticks", &l.MaxTermTicks}, {"keep_ticks", &l.KeepTicks}, {"share_bp", &l.ShareBP}})
+		ls.finish()
+		c.Lend = &l
+	}
+	if bs := t.sub("borrow"); bs != nil {
+		var b economysim.BorrowTerms
+		bs.need("max_rate_bp", integer(bs, "max_rate_bp", &b.MaxRateBP))
+		readInts(bs, []intField{{"max_debt_ticks", &b.MaxDebtTicks}, {"slack_ticks", &b.SlackTicks}})
+		bs.finish()
+		c.Borrow = &b
+	}
+	return &c
+}
+
+// storage reads [modules.storage] (spec-config.md 6.2.1, spec-storage.md 12.5): the
+// base room as [base] (keys mass, bulk), a role row as [role.<id>] (key stores, and
+// a [role.<id>.base] table), and a class as [class.<id>] (keys mass, bulk, needs,
+// label). A key-less table switches the module on; a key-less base table is a
+// base room of 0 (one key without the other is ErrMissingField), and an absent one
+// is unlimited. The rows come out in ID order because every level is read in the
+// order of the keys.
+func (l *loader) storage(t *tbl) *economysim.Storage {
+	var m economysim.Storage
+	m.Base = capacity(t.sub("base"))
+	t.entities("role", func(id string, e *tbl) {
+		r := economysim.RoleRoom{Role: id}
+		e.strings("stores", &r.Stores)
+		r.Base = capacity(e.sub("base"))
+		m.Roles = append(m.Roles, r)
+	})
+	t.entities("class", func(id string, e *tbl) {
+		c := economysim.StoreClass{ID: id}
+		e.need("mass", integer(e, "mass", &c.Mass))
+		e.need("bulk", integer(e, "bulk", &c.Bulk))
+		e.text("needs", &c.Needs)
+		e.text("label", &c.Label)
+		m.Classes = append(m.Classes, c)
+	})
+	return &m
+}
+
+// capacity reads a room table (keys mass and bulk) and finishes it; nil for an
+// absent table.
+func capacity(t *tbl) *economysim.Capacity {
+	if t == nil {
+		return nil
+	}
+	var c economysim.Capacity
+	hasMass, hasBulk := integer(t, "mass", &c.Mass), integer(t, "bulk", &c.Bulk)
+	if hasMass || hasBulk { // a key-less table is the zero room; a lone key is a typo
+		t.need("mass", hasMass)
+		t.need("bulk", hasBulk)
+	}
+	t.finish()
+	return &c
 }
 
 // polity reads [modules.polity] (spec-config.md 6.2, spec-polity.md 3.4.2): the
@@ -518,6 +606,10 @@ func (l *loader) role(id string, t *tbl) economysim.Role {
 		es.finish()
 		r.Employer = &e
 	}
+	if cs := t.sub("credit"); cs != nil {
+		r.Credit = creditTerms(cs)
+		cs.finish()
+	}
 	t.text("label", &r.Label)
 	return r
 }
@@ -678,6 +770,7 @@ func (l *loader) moneySupply(t *tbl) *economysim.MoneySupply {
 			tg.text("kind", &f.Target.Kind)
 			tg.text("region", &f.Target.Region)
 			tg.text("role", &f.Target.Role)
+			tg.text("store", &f.Target.Store)
 			tg.finish()
 		}
 		readInts(e, []intField{
