@@ -254,3 +254,40 @@ func TestClaimsLimit_Saturates(t *testing.T) {
 		})
 	}
 }
+
+// TestCreditHorizon_SlackOverflowIsRefused verifies that the horizon Duration + 1 +
+// SlackTicks is computed with checked additions, so a SlackTicks at the int64
+// maximum (a configuration that does not validate, which Warnings still reads)
+// reports ok false instead of a wrapped negative horizon.
+//
+// Requirement: FR-CRD-076
+//
+// Fix: review of 2026-11-14. The sum 1+SlackTicks was unchecked and wrapped to
+// the int64 minimum, so term_exceeds_lenders was missed and cap_below_horizon
+// could fire on a negative horizon.
+func TestCreditHorizon_SlackOverflowIsRefused(t *testing.T) {
+	t.Parallel()
+	lk := lookup{recipe: map[string]*Recipe{"r": {ID: "r", Duration: 3}}}
+	tests := []struct {
+		name   string
+		slack  int64
+		want   int64
+		wantOK bool
+	}{
+		// 3 + 1 + 4 = 8.
+		{"small slack adds up", 4, 8, true},
+		{"slack at the int64 maximum overflows", 1<<63 - 1, 0, false},
+		// 3 + 1 = 4, then 4 + (2^63 - 4) = 2^63 overflows.
+		{"slack that overflows at the second add", 1<<63 - 4, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ro := &Role{ID: "b", Recipes: []string{"r"}, Credit: &CreditTerms{Borrow: &BorrowTerms{SlackTicks: tt.slack}}}
+			got, ok := creditHorizon(&Config{}, lk, ro)
+			if ok != tt.wantOK || (ok && got != tt.want) {
+				t.Errorf("creditHorizon(SlackTicks %d) = %d, %v, want %d, %v", tt.slack, got, ok, tt.want, tt.wantOK)
+			}
+		})
+	}
+}

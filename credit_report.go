@@ -189,7 +189,10 @@ func creditHorizon(c *Config, lk lookup, ro *Role) (h int64, ok bool) {
 	if rc == nil || rc.Duration < 1 {
 		return 0, false
 	}
-	h, ok = checked.Add(rc.Duration, 1+ro.Credit.Borrow.SlackTicks)
+	h, ok = checked.Add(rc.Duration, 1)
+	if ok {
+		h, ok = checked.Add(h, ro.Credit.Borrow.SlackTicks)
+	}
 	if ok && lateCan1(c, lk, ro, rc) {
 		h, ok = checked.Add(h, 1)
 	}
