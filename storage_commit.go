@@ -346,7 +346,8 @@ func (s *storage) roomLeftPair(l *ledger.Ledger, account int) room.Pair {
 // the executions the room cut are counted and the principal's pledge is set to the
 // pending output's load plus the cargo in flight.
 func (w *World) startedStorage(a *agent, region RegionID, res startResult) {
-	w.sto.counts[w.cellOf(region, a)].startsCut += res.cut
+	c := &w.sto.counts[w.cellOf(region, a)]
+	c.startsCut = satAdd(c.startsCut, res.cut) // a sum over every start of the cell: saturates
 	w.syncJob(a)
 }
 

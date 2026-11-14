@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"errors"
+	"math"
 	"math/rand/v2"
 	"strings"
 	"testing"
@@ -464,5 +465,23 @@ func TestRoleChange_TrainerToLimitedRolePledgesItsTraineesOutput(t *testing.T) {
 	}
 	if err := w.Audit(); err != nil {
 		t.Errorf("Audit() after the change = %v, want nil", err)
+	}
+}
+
+// TestStarted_CutCountSaturates verifies that the executions the room cut, summed over
+// the starts of a cell in a tick, saturate at the largest int64 instead of wrapping.
+//
+// Requirement: FR-STO-011
+//
+// Guard: the count is a sum over every start of the tick and feeds RoomLimited. A
+// wrapped sum would report a negative count of executions cut.
+func TestStarted_CutCountSaturates(t *testing.T) {
+	t.Parallel()
+	w, _ := stoMillWorld(t, 120, 80, stoMiller{}, nil)
+	a := &w.agents[shipHome]
+	w.startedStorage(a, regHome, startResult{cut: math.MaxInt64 - 1})
+	w.startedStorage(a, regHome, startResult{cut: 5})
+	if got := w.sto.counts[w.cellOf(regHome, a)].startsCut; got != math.MaxInt64 {
+		t.Errorf("startsCut after cuts of MaxInt64-1 and 5 = %d, want %d (saturated)", got, int64(math.MaxInt64))
 	}
 }
