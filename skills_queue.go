@@ -165,6 +165,8 @@ func (w *World) placeRole(g RegionID, r RoleID) {
 	stop, head := placeOpen, AgentID(0)
 	if len(s.queue[s.cell(g, r)]) > 0 {
 		stop, head = w.fillPlaces(g, r)
+	} else if s.warnRun[s.cell(g, r)] == 0 {
+		return
 	}
 	w.reportPlaces(g, r, stop, head)
 }
