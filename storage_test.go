@@ -225,7 +225,7 @@ func storageRoomCases(
 // configuration that breaks only that rule: the sentinel by errors.Is, the path of
 // the offending row by its index in the order written, and the value.
 //
-// Requirement: FR-STO-038, FR-STO-002, FR-STO-003, FR-CFG-085
+// Requirement: FR-STO-038, FR-STO-002, FR-STO-003, FR-STO-026, FR-STO-044, FR-CFG-085
 func TestValidateStorage_Errors(t *testing.T) {
 	t.Parallel()
 	for _, tt := range storageFieldCases() {
