@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
+	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/occupation"
 	"github.com/Whealinghold/economy-sim/internal/skill"
 )
@@ -149,7 +151,11 @@ func (r *s06Run) checkD(cfg economysim.Config, role string) {
 	var wages, n int64
 	for _, row := range r.final.Roles {
 		if row.Region == 0 && row.HasWage && cfg.Roles[row.Role].Unskilled {
-			wages, n = wages+int64(row.WageObserved), n+1
+			sum, ok := checked.Add(wages, int64(row.WageObserved))
+			if !ok {
+				return // a sum that does not fit is no mean wage: check D has no figure
+			}
+			wages, n = sum, n+1
 		}
 	}
 	if n == 0 || wages <= 0 || !r.hasPremium {
@@ -172,15 +178,18 @@ func cookShare(s economysim.Snapshot) (int64, bool) {
 		if row.Region != 0 {
 			continue
 		}
-		all += row.Households
+		var ok bool
+		if all, ok = checked.Add(all, row.Households); !ok {
+			return 0, false
+		}
 		if int(row.Role) == c {
-			cooks += row.Households
+			cooks += row.Households // never above all, which fits
 		}
 	}
 	if all == 0 {
 		return 0, false
 	}
-	return cooks * 10_000 / all, true
+	return checked.MulDiv(cooks, 10_000, all)
 }
 
 // TestScenarioS06_IncomeGapTraineeship runs S06 (spec-reference-chain.md 7.4) on pack
@@ -321,8 +330,17 @@ func TestSkillPremium_CheckC(t *testing.T) {
 // max(25% of the predicted excess over 10 000, 200 basis points, cvx2), cvx2 being twice
 // the coefficient of variation of the premium across seeds.
 func premiumCheckD(observed, predicted, cvx2 int64) (ok bool, tolerance int64) {
-	tolerance = skill.Tolerance(predicted-10_000, cvx2)
-	return observed >= predicted-tolerance && observed <= predicted+tolerance, tolerance
+	excess, _ := checked.Sub(predicted, 10_000)
+	tolerance = skill.Tolerance(excess, cvx2)
+	lo, okLo := checked.Sub(predicted, tolerance)
+	hi, okHi := checked.Add(predicted, tolerance)
+	if !okLo { // the edge is beyond what int64 holds: every observed premium is above it
+		lo = math.MinInt64
+	}
+	if !okHi {
+		hi = math.MaxInt64
+	}
+	return observed >= lo && observed <= hi, tolerance
 }
 
 // TestSkillPremium_CheckD_Tolerance verifies the acceptance of check D on the two worked
@@ -755,5 +773,37 @@ func TestDeterminism_Skills(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestSkillPremium_CheckD_NoOverflow verifies that check D and the cook share of S06 read
+// the largest figures without wrapping: a predicted premium at the top of int64 accepts
+// itself and rejects the bottom, a household count whose sum does not fit has no share, and
+// the cook share of a region of two roles is exact at the largest count that fits.
+//
+// Requirement: FR-SKL-024
+//
+// Guard: with the plain sums a predicted premium of MaxInt64 wrapped its upper edge to a
+// negative number and rejected the premium it equals.
+func TestSkillPremium_CheckD_NoOverflow(t *testing.T) {
+	t.Parallel()
+	if ok, _ := premiumCheckD(math.MaxInt64, math.MaxInt64, 0); !ok {
+		t.Errorf("premiumCheckD(MaxInt64, MaxInt64) rejected, want accepted")
+	}
+	if ok, _ := premiumCheckD(0, math.MaxInt64, 0); ok {
+		t.Errorf("premiumCheckD(0, MaxInt64) accepted, want rejected")
+	}
+	if ok, _ := premiumCheckD(math.MinInt64, math.MinInt64, 0); !ok {
+		t.Errorf("premiumCheckD(MinInt64, MinInt64) rejected, want accepted")
+	}
+	rows := func(a, b int64) economysim.Snapshot {
+		return economysim.Snapshot{Names: economysim.Names{Roles: []string{"cook", "grower"}},
+			Roles: []economysim.RoleRow{{Role: 0, Households: a}, {Role: 1, Households: b}}}
+	}
+	if _, ok := cookShare(rows(math.MaxInt64, 1)); ok {
+		t.Errorf("cookShare(MaxInt64 + 1 households) = ok, want no share for a count that does not fit")
+	}
+	if got, ok := cookShare(rows(math.MaxInt64/2, math.MaxInt64/2)); !ok || got != 5_000 {
+		t.Errorf("cookShare(half of %d) = %d, %v, want 5000, true", int64(math.MaxInt64), got, ok)
 	}
 }
