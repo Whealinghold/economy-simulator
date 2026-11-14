@@ -1,6 +1,8 @@
 package economysim
 
 import (
+	"errors"
+	"fmt"
 	"math/rand/v2"
 	"reflect"
 	"sync"
@@ -156,15 +158,23 @@ func TestPolity_TreasuryNeverMeetsAStrategyOrAMarket(t *testing.T) {
 			t.Errorf("the strategy was called for agent %d, below firstHousehold %d", a, w.firstHousehold)
 		}
 	}
-	treasury := map[AgentID]bool{2: true, 3: true}
 	for _, e := range rec.events {
-		v := reflect.ValueOf(e)
-		for i := range v.NumField() {
-			if f := v.Field(i); f.Type() == reflect.TypeOf(AgentID(0)) && treasury[AgentID(f.Int())] {
-				t.Fatalf("%T names the treasury agent %d in %s", e, f.Int(), v.Type().Field(i).Name)
-			}
+		if field, ok := namesAgent(e, 2, 3); ok {
+			t.Fatalf("%T names a treasury agent in %s", e, field)
 		}
 	}
+}
+
+// namesAgent returns the name of the first AgentID field of e that holds an ID from
+// lo to hi.
+func namesAgent(e Event, lo, hi AgentID) (string, bool) {
+	v := reflect.ValueOf(e)
+	for i := range v.NumField() {
+		if f := v.Field(i); f.Type() == reflect.TypeOf(AgentID(0)) && AgentID(f.Int()) >= lo && AgentID(f.Int()) <= hi {
+			return v.Type().Field(i).Name, true
+		}
+	}
+	return "", false
 }
 
 // TestPolity_HouseholdsKeepTheirShiftedIDs verifies FR-POL-016 and the shift of
@@ -176,41 +186,52 @@ func TestPolity_TreasuryNeverMeetsAStrategyOrAMarket(t *testing.T) {
 func TestPolity_HouseholdsKeepTheirShiftedIDs(t *testing.T) {
 	t.Parallel()
 	w := newMill(t, treasuryConfig(), WithAudit())
+	all := householdIDs(t, w, 2)
+	if len(all) != 4 {
+		t.Fatalf("Agents lists %v, want the four households", all)
+	}
+	for _, id := range all {
+		if st, err := w.Agent(id); int(id) < w.firstHousehold || err != nil || st.ID != id {
+			t.Errorf("Agent(%d) = %+v, %v, want that household at or above firstHousehold %d", id, st, err, w.firstHousehold)
+		}
+	}
+	for _, id := range []AgentID{0, 1, 2, 3} {
+		if _, err := w.Agent(id); !errors.Is(err, ErrUnknownAgent) {
+			t.Errorf("Agent(%d) error = %v, want ErrUnknownAgent for a pseudo-agent", id, err)
+		}
+	}
+	relocateAndCheck(t, w, all[0])
+}
+
+// relocateAndCheck moves the household id to the other of the two regions, steps once
+// and checks it is there.
+func relocateAndCheck(t *testing.T, w *World, id AgentID) {
+	t.Helper()
+	st, _ := w.Agent(id)
+	to := 1 - st.Region
+	if err := w.Relocate(id, to); err != nil {
+		t.Fatalf("Relocate(%d, %d) error = %v, want nil", id, to, err)
+	}
+	if err := w.Step(); err != nil {
+		t.Fatalf("Step() after the relocation error = %v, want nil", err)
+	}
+	if st, err := w.Agent(id); err != nil || st.Region != to {
+		t.Errorf("Agent(%d) = %+v, %v, want region %d", id, st, err, to)
+	}
+}
+
+// householdIDs lists the households of the first n regions in region order.
+func householdIDs(t *testing.T, w *World, n RegionID) []AgentID {
+	t.Helper()
 	var all []AgentID
-	for g := range RegionID(2) {
+	for g := range n {
 		ids, err := w.Agents(g)
 		if err != nil {
 			t.Fatalf("Agents(%d) error = %v, want nil", g, err)
 		}
 		all = append(all, ids...)
 	}
-	if len(all) != 4 {
-		t.Fatalf("Agents lists %v, want the four households", all)
-	}
-	for _, id := range all {
-		if int(id) < w.firstHousehold {
-			t.Errorf("Agents lists %d, a pseudo-agent below firstHousehold %d", id, w.firstHousehold)
-		}
-		if st, err := w.Agent(id); err != nil || st.ID != id {
-			t.Errorf("Agent(%d) = %+v, %v, want that household", id, st, err)
-		}
-	}
-	for _, id := range []AgentID{0, 1, 2, 3} {
-		if _, err := w.Agent(id); err == nil {
-			t.Errorf("Agent(%d) error = nil, want ErrUnknownAgent for a pseudo-agent", id)
-		}
-	}
-	st, _ := w.Agent(all[0])
-	to := 1 - st.Region
-	if err := w.Relocate(all[0], to); err != nil {
-		t.Fatalf("Relocate(%d, %d) error = %v, want nil", all[0], to, err)
-	}
-	if err := w.Step(); err != nil {
-		t.Fatalf("Step() after the relocation error = %v, want nil", err)
-	}
-	if st, err := w.Agent(all[0]); err != nil || st.Region != to {
-		t.Errorf("Agent(%d) = %+v, %v, want region %d", all[0], st, err, to)
-	}
+	return all
 }
 
 // TestPolity_StartMoneyAtMaxMoney verifies the upper bound of FR-POL-014 in a built
@@ -256,16 +277,7 @@ func TestFork_TreasuryWithOutside(t *testing.T) {
 		}
 		return c
 	}
-	run := func(t *testing.T, w *World, s *extScript, n int) {
-		t.Helper()
-		ore := commodityOf(t, w, "ore")
-		miner := AgentID(w.firstHousehold)
-		s.plan[miner] = []Intent{{Commodity: ore, Side: Ask, Quantity: 200, Limit: 90}}
-		for range n {
-			give(t, w, miner, ore, 200)
-			step(t, w, 1)
-		}
-	}
+	run := runOreMiner
 	w, s, rec := extWorld(t, cfg())
 	if w.firstHousehold != 5 {
 		t.Fatalf("firstHousehold = %d, want 5 (2 estates, 2 counterparties, 1 treasury)", w.firstHousehold)
@@ -282,13 +294,7 @@ func TestFork_TreasuryWithOutside(t *testing.T) {
 	}
 	run(t, w, s, 4)
 	run(t, r, rs, 4)
-	traded := 0
-	for _, e := range rec.events {
-		if tr, ok := e.(TradeExecuted); ok && (tr.Buyer == 2 || tr.Buyer == 3 || tr.Seller == 2 || tr.Seller == 3) {
-			traded++
-		}
-	}
-	if traded == 0 {
+	if counterpartyTrades(rec) == 0 {
 		t.Error("no trade with a counterparty, want the miner's ore sold to the outside")
 	}
 	for _, x := range []*World{w, r} {
@@ -296,11 +302,42 @@ func TestFork_TreasuryWithOutside(t *testing.T) {
 			t.Errorf("treasury holds %d after the run, want 900", v.Balance)
 		}
 	}
-	a, errA := w.Checkpoint()
-	b, errB := r.Checkpoint()
-	sa, _ := w.Snapshot()
-	sb, _ := r.Snapshot()
-	if errA != nil || errB != nil || !reflect.DeepEqual(a, b) || !reflect.DeepEqual(sa, sb) {
-		t.Errorf("after the restore and 4 more ticks: checkpoints equal %v (%v, %v), snapshots equal %v, want both equal", reflect.DeepEqual(a, b), errA, errB, reflect.DeepEqual(sa, sb))
+	if err := sameState(w, r); err != "" {
+		t.Errorf("after the restore and 4 more ticks: %s", err)
 	}
+}
+
+// sameState reports how the checkpoints and snapshots of two worlds differ, "" if not.
+func sameState(a, b *World) string {
+	ca, errA := a.Checkpoint()
+	cb, errB := b.Checkpoint()
+	sa, _ := a.Snapshot()
+	sb, _ := b.Snapshot()
+	if errA != nil || errB != nil || !reflect.DeepEqual(ca, cb) || !reflect.DeepEqual(sa, sb) {
+		return fmt.Sprintf("checkpoints equal %v (%v, %v), snapshots equal %v, want both equal", reflect.DeepEqual(ca, cb), errA, errB, reflect.DeepEqual(sa, sb))
+	}
+	return ""
+}
+
+// runOreMiner has the first household offer 200 units of ore a tick for n ticks.
+func runOreMiner(t *testing.T, w *World, s *extScript, n int) {
+	t.Helper()
+	ore := commodityOf(t, w, "ore")
+	miner := AgentID(w.firstHousehold)
+	s.plan[miner] = []Intent{{Commodity: ore, Side: Ask, Quantity: 200, Limit: 90}}
+	for range n {
+		give(t, w, miner, ore, 200)
+		step(t, w, 1)
+	}
+}
+
+// counterpartyTrades counts the trades with the counterparties 2 and 3.
+func counterpartyTrades(rec *evLog) int {
+	n := 0
+	for _, e := range of[TradeExecuted](rec) {
+		if e.Buyer == 2 || e.Buyer == 3 || e.Seller == 2 || e.Seller == 3 {
+			n++
+		}
+	}
+	return n
 }
