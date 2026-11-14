@@ -52,7 +52,8 @@ func Step(in StepIn) (next int64, ok bool) {
 	return in.Posted, true
 }
 
-// raise is the rent after a rise by step, held under the ceiling.
+// raise is the rent after a rise by step, held under the ceiling. A Posted above
+// the ceiling falls to it, as the formula of spec-land.md 5.5.1 reads.
 func raise(in StepIn, step int64) (int64, bool) {
 	ceil, ok := checked.MulDiv(in.Base, in.CeilBP, BasisPoints)
 	up, ok2 := checked.Add(in.Posted, step)
