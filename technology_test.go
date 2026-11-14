@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"slices"
 	"strconv"
@@ -497,4 +498,25 @@ func FuzzValidateTechnology(f *testing.F) {
 		}
 		_ = c.Warnings()
 	})
+}
+
+// TestWarnings_TechnologyContactUnbuilt verifies that a graph that cannot be built
+// (more regions than MaxRegions) gives no diffusion_no_contact warning, since the
+// warning would state a fact that was not read.
+//
+// Requirement: FR-TEC-029
+func TestWarnings_TechnologyContactUnbuilt(t *testing.T) {
+	t.Parallel()
+	c := technologyConfig()
+	f := &c.Modules.Technology.Fields[0]
+	f.CatchUpBP, f.Reach = 500, 100
+	base := c.Regions[0]
+	for i := range economysim.MaxRegions {
+		r := base
+		r.ID = fmt.Sprintf("r%04d", i)
+		c.Regions = append(c.Regions, r)
+	}
+	if hasWarning(c.Warnings(), "diffusion_no_contact", "modules", "technology", "fields[0]") {
+		t.Errorf("Warnings() has diffusion_no_contact on a graph that was not built, want none")
+	}
 }

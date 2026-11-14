@@ -125,7 +125,12 @@ func shapeOK(in Input, outLen int) bool {
 		len(in.TrendCarry) != nf || outLen != n || in.TicksPerYear < 1 {
 		return false
 	}
-	return !slices.ContainsFunc(in.Fields, func(f Field) bool { return !f.valid() })
+	if slices.ContainsFunc(in.Fields, func(f Field) bool { return !f.valid() }) {
+		return false
+	}
+	// a field with diffusion on reads the distances, so Dist must be set
+	return in.Dist != nil || in.Regions < 2 ||
+		!slices.ContainsFunc(in.Fields, func(f Field) bool { return f.CatchUpBP > 0 })
 }
 
 // phases runs the six sub-steps of 4.6.1 in order and stops at the first

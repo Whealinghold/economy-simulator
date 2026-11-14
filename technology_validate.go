@@ -1,7 +1,6 @@
 package economysim
 
 import (
-	"cmp"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
@@ -166,7 +165,8 @@ func (v *validator) withTech(recipe string, yieldMax int64) int64 {
 	if m == nil {
 		return yieldMax
 	}
-	if _, in := techFieldOfRecipe(m)[recipe]; !in {
+	in := slices.ContainsFunc(m.Fields, func(f TechField) bool { return slices.Contains(f.Recipes, recipe) })
+	if !in {
 		return yieldMax
 	}
 	return yieldMax * MaxTechBP / wholeBP // at most 10^6 * 1.1 * 10^5 / 10^4
@@ -239,23 +239,22 @@ func techUsedRecipes(c *Config) map[string]bool {
 // techContact returns a function that reports whether some ordered pair of
 // ordinary regions has a finite distance below a reach over the edges as
 // configured (spec-technology.md 10.2, diffusion_no_contact). It builds the
-// shortest paths once, and reports no contact when the graph cannot be built.
+// shortest paths once, from the geometry of regions.go. When the graph cannot be
+// built it reports contact, so that no warning fires on a fact it did not read.
 func techContact(c *Config, m *Technology) func(reach int64) bool {
 	if !slices.ContainsFunc(m.Fields, func(f TechField) bool { return f.CatchUpBP > 0 }) {
 		return func(int64) bool { return true }
 	}
-	ids := make([]string, 0, len(c.Regions))
-	for i := range c.Regions {
-		ids = append(ids, c.Regions[i].ID)
+	g, ok := readGeometry(c)
+	if !ok {
+		return func(int64) bool { return true }
 	}
-	slices.Sort(ids)
-	ids = slices.Compact(ids)
-	ordinary := ordinaryRegions(c, ids)
-	tables := techTables(c, ids)
+	tables, err := graph.Build(len(g.ids), g.edges)
+	if err != nil {
+		return func(int64) bool { return true }
+	}
+	ordinary := ordinaryRegions(c, g.ids)
 	return func(reach int64) bool {
-		if tables == nil {
-			return false
-		}
 		for _, a := range ordinary {
 			for _, b := range ordinary {
 				if d, ok := tables.Dist(a, b); a != b && ok && d < reach {
@@ -278,29 +277,6 @@ func ordinaryRegions(c *Config, ids []string) []int {
 		}
 	}
 	return out
-}
-
-// techTables builds the shortest-path tables of the edges as configured over the
-// regions in ids, skipping an edge that names an unknown region, joins a region to
-// itself, is outside the bound or repeats an earlier edge. It is nil on a failure.
-func techTables(c *Config, ids []string) *graph.Tables {
-	var open []graph.Edge
-	seen := make(map[[2]int]bool, len(c.Edges)) // a membership test only
-	for _, e := range c.Edges {
-		a, okA := slices.BinarySearch(ids, e.From)
-		b, okB := slices.BinarySearch(ids, e.To)
-		if !okA || !okB || a == b || e.Distance < 1 || e.Distance > MaxDistance || seen[[2]int{a, b}] {
-			continue
-		}
-		seen[[2]int{a, b}] = true
-		open = append(open, graph.Edge{From: a, To: b, Length: e.Distance})
-	}
-	slices.SortFunc(open, func(x, y graph.Edge) int { return cmp.Or(cmp.Compare(x.From, y.From), cmp.Compare(x.To, y.To)) })
-	t, err := graph.Build(len(ids), open)
-	if err != nil {
-		return nil
-	}
-	return t
 }
 
 // techPastMaximumYield is technology_past_maximum_yield (10.3, FR-TEC-030): the

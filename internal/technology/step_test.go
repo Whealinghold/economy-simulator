@@ -289,3 +289,24 @@ func TestResult_Accrued(t *testing.T) {
 		}
 	}
 }
+
+// TestStep_RefusesDiffusionWithoutDistances verifies that a field with diffusion
+// on and two regions or more, given no distance function, is refused with nothing
+// changed, and not a nil call.
+//
+// Requirement: FR-TEC-016
+func TestStep_RefusesDiffusionWithoutDistances(t *testing.T) {
+	t.Parallel()
+	in := diffusionInput(nil)
+	in.Tick = 1
+	out := make([]technology.Result, 3)
+	var s technology.Scratch
+	if technology.Step(in, &s, out) {
+		t.Fatalf("Step accepted diffusion with no distances, want a refusal")
+	}
+	one := diffusionInput(nil)
+	one.Cells, one.Counters, one.Regions, one.Tick = one.Cells[:1], one.Counters[:1], 1, 1
+	if !technology.Step(one, &s, out[:1]) {
+		t.Errorf("Step refused one region with no distances, want accepted")
+	}
+}
