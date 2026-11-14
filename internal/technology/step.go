@@ -93,7 +93,8 @@ func grow(b []int64, n int) []int64 {
 // out, one Result per cell, and on success writes the new state into in.Cells
 // and in.TrendCarry; on ok false (a shape mismatch or an overflow, neither of
 // which the bounds of the configuration allow) it changes nothing but out and
-// the scratch. It takes no random word and reads nothing but its input
+// the scratch, and the content of out is then undefined (a half-filled row must
+// not be read). It takes no random word and reads nothing but its input
 // (FR-TEC-033), and the result does not depend on the order in which cells are
 // visited (FR-TEC-013, NFR-TEC-002): diffusion reads one snapshot.
 func Step(in Input, s *Scratch, out []Result) bool {

@@ -169,7 +169,9 @@ func (v *validator) withTech(recipe string, yieldMax int64) int64 {
 	if !in {
 		return yieldMax
 	}
-	// rounded up: the result is a bound, and the caller's yieldMax is already rounded
+	// rounded up: the result is a bound. The caller's yieldMax is truncated, so the bound
+	// can sit below the exact maximum by under MaxTechBP/10 000 units, far inside the
+	// slack of the int64 checks that read it
 	return (yieldMax*MaxTechBP + wholeBP - 1) / wholeBP // at most 10^6 * 1.1 * 10^5 / 10^4
 }
 
