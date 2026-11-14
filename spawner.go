@@ -243,6 +243,7 @@ var _ Spawner = DefaultSpawner{}
 // Decide appends the default's plan for v to d, in the order of
 // spec-spawner.md 10.2: rung-3 reductions and removals, then the population
 // module's deaths, then the switches of rung 1 and of the review, then the
+// applications to a traineeship (spec-skill-barriers.md 4.5), then the
 // renewal entries, then the module's births (spec-population.md 4.8). It draws nothing and
 // reads nothing but v. The counts of d are added to, so the world resets d
 // before each region.
