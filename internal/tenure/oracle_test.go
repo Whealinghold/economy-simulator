@@ -87,6 +87,21 @@ func genLines(g caseGen) []tenure.Line {
 	return lines
 }
 
+// totalMismatch returns how TotalRent's answer departs from the exact total, or
+// "" when it does not.
+func totalMismatch(lines []tenure.Line, k, got int64, ok bool) string {
+	want := exactTotal(lines, k)
+	switch {
+	case ok && (!fits(want) || got != want.Int64()):
+		return "want exact " + want.String()
+	case !ok && fits(want) && billedUnitsFit(lines, k):
+		return "refused though the exact total " + want.String() + " fits and no product overflows"
+	case !ok && got != 0:
+		return "want 0 on refusal"
+	}
+	return ""
+}
+
 // TestTotalRent_MatchesBigIntOracle verifies TotalRent against an arbitrary
 // precision sum at the int64 edges: when it reports ok the value is the exact
 // total, and when it refuses the exact total passes int64 or an intermediate
@@ -104,15 +119,8 @@ func TestTotalRent_MatchesBigIntOracle(t *testing.T) {
 		for i := range oracleCases {
 			lines, k := genLines(g), g.val()
 			got, ok := tenure.TotalRent(lines, k)
-			want := exactTotal(lines, k)
-			if ok && (!fits(want) || got != want.Int64()) {
-				t.Fatalf("seed %d case %d: TotalRent(%+v, %d) = %d, true, want exact %s", seed, i, lines, k, got, want)
-			}
-			if !ok && fits(want) && billedUnitsFit(lines, k) {
-				t.Fatalf("seed %d case %d: TotalRent(%+v, %d) refused, exact total %s fits and no product overflows", seed, i, lines, k, want)
-			}
-			if !ok && got != 0 {
-				t.Fatalf("seed %d case %d: TotalRent(%+v, %d) = %d, false, want 0 on refusal", seed, i, lines, k, got)
+			if bad := totalMismatch(lines, k, got, ok); bad != "" {
+				t.Fatalf("seed %d case %d: TotalRent(%+v, %d) = %d, %v: %s", seed, i, lines, k, got, ok, bad)
 			}
 		}
 	}
@@ -167,6 +175,24 @@ func TestCharge_MatchesBigIntOracle(t *testing.T) {
 	}
 }
 
+// exactRent is floor(posted * scale / 10 000), at least 1 when both are positive.
+func exactRent(posted, scale int64) *big.Int {
+	want := new(big.Int).Mul(bi(posted), bi(scale))
+	want.Quo(want, bi(tenure.BasisPoints))
+	if posted > 0 && scale > 0 && want.Sign() == 0 {
+		want.SetInt64(1)
+	}
+	return want
+}
+
+// fitInt returns x when it fits int64, else 0 (what a refusal returns).
+func fitInt(x *big.Int) (int64, bool) {
+	if !fits(x) {
+		return 0, false
+	}
+	return x.Int64(), true
+}
+
 // TestRentInForce_MatchesBigIntOracle verifies the rent in force is
 // floor(posted * scale / 10 000), at least 1 when both are positive, at the int64
 // edges, and refused exactly when the result passes int64.
@@ -178,13 +204,9 @@ func TestRentInForce_MatchesBigIntOracle(t *testing.T) {
 		g := newCaseGen(seed)
 		for i := range oracleCases {
 			posted, scale := g.val(), g.val()
-			want := new(big.Int).Mul(bi(posted), bi(scale))
-			want.Quo(want, bi(tenure.BasisPoints))
-			if posted > 0 && scale > 0 && want.Sign() == 0 {
-				want.SetInt64(1)
-			}
+			want := exactRent(posted, scale)
 			got, ok := tenure.RentInForce(posted, scale)
-			if ok != fits(want) || (ok && got != want.Int64()) || (!ok && got != 0) {
+			if wantInt, _ := fitInt(want); ok != fits(want) || got != wantInt {
 				t.Fatalf("seed %d case %d: RentInForce(%d, %d) = %d, %v, want %s (fits %v)", seed, i, posted, scale, got, ok, want, fits(want))
 			}
 		}
@@ -223,21 +245,28 @@ func TestLeastRent_MatchesBigIntOracle(t *testing.T) {
 	}
 }
 
+// exactBand is the step, floor and ceiling of the band in arbitrary precision;
+// fit is false when one passes int64.
+func exactBand(in tenure.StepIn) (step, floor, ceil *big.Int, fit bool) {
+	scale := func(bp int64) *big.Int {
+		x := new(big.Int).Mul(bi(in.Base), bi(bp))
+		return x.Quo(x, bi(tenure.BasisPoints))
+	}
+	step, floor, ceil = scale(in.StepBP), scale(in.FloorBP), scale(in.CeilBP)
+	if step.Sign() == 0 {
+		step.SetInt64(1)
+	}
+	return step, floor, ceil, fits(step) && fits(floor) && fits(ceil)
+}
+
 // exactStep is the rent step of spec-land.md 5.5.1 computed without overflow; fit
 // is false when a band value or the raised rent passes int64.
 func exactStep(in tenure.StepIn) (next int64, fit bool) {
 	if in.StepBP == 0 || in.Closed {
 		return in.Posted, true
 	}
-	scale := func(bp int64) *big.Int {
-		x := new(big.Int).Mul(bi(in.Base), bi(bp))
-		return x.Quo(x, bi(tenure.BasisPoints))
-	}
-	step, floor, ceil := scale(in.StepBP), scale(in.FloorBP), scale(in.CeilBP)
-	if step.Sign() == 0 {
-		step.SetInt64(1)
-	}
-	if !fits(step) || !fits(floor) || !fits(ceil) {
+	step, floor, ceil, fit := exactBand(in)
+	if !fit {
 		return in.Posted, false
 	}
 	switch {

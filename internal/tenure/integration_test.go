@@ -96,9 +96,7 @@ func (run *endowmentRun) attribute(t *testing.T, s *tenure.Scratch, rent int64, 
 	}
 	for i, h := range holders {
 		run.supply += supply[i]
-		if supply[i] > 0 {
-			lessors = append(lessors, tenure.Taker{ID: h.ID, Units: supply[i]})
-		}
+		lessors = append(lessors, tenure.Taker{ID: h.ID, Units: supply[i]})
 	}
 	var ok bool
 	if run.triples, ok = s.Attribute(nil, tenants, lessors); !ok {
@@ -106,18 +104,21 @@ func (run *endowmentRun) attribute(t *testing.T, s *tenure.Scratch, rent int64, 
 	}
 	for _, tr := range run.triples {
 		payer, payee := tenants[tr.Tenant].ID, lessors[tr.Lessor].ID
-		if tr.Self {
-			continue
+		if !tr.Self {
+			run.pay(payer, payee, tr.Units*rent)
 		}
-		due := tr.Units * rent
-		if run.reqs[payer-1].Exempt {
-			due = 0
-		}
-		paid, lost, _ := tenure.Credit(run.credit[payee], due, payeeLimit)
-		run.debit[payer] += due
-		run.credit[payee] += paid
-		run.forfeited += lost
 	}
+}
+
+// pay moves the rent due from payer to payee; an exempt payer owes none.
+func (run *endowmentRun) pay(payer, payee, due int64) {
+	if run.reqs[payer-1].Exempt {
+		due = 0
+	}
+	paid, lost, _ := tenure.Credit(run.credit[payee], due, payeeLimit)
+	run.debit[payer] += due
+	run.credit[payee] += paid
+	run.forfeited += lost
 }
 
 // TestRules_UsedTogetherConserveUnitsAndMoney passes random endowments through
@@ -154,6 +155,20 @@ func TestRules_UsedTogetherConserveUnitsAndMoney(t *testing.T) {
 	}
 }
 
+// totals returns the units attributed and the rent debited and credited.
+func (run endowmentRun) totals() (attributed, debit, credit int64) {
+	for _, tr := range run.triples {
+		attributed += tr.Units
+	}
+	for _, v := range run.debit {
+		debit += v
+	}
+	for _, v := range run.credit {
+		credit += v
+	}
+	return attributed, debit, credit
+}
+
 // checkRun asserts the conservation properties of one endowment.
 func checkRun(t *testing.T, seed uint64, i int, run endowmentRun) {
 	t.Helper()
@@ -164,16 +179,7 @@ func checkRun(t *testing.T, seed uint64, i int, run endowmentRun) {
 	if got := run.res.OwnUnits + run.res.CommonsUnits + run.res.LetUnits; got > run.stock {
 		at("drew %d units of a stock of %d", got, run.stock)
 	}
-	var attributed, debit, credit int64
-	for _, tr := range run.triples {
-		attributed += tr.Units
-	}
-	for _, v := range run.debit {
-		debit += v
-	}
-	for _, v := range run.credit {
-		credit += v
-	}
+	attributed, debit, credit := run.totals()
 	if run.supply != run.res.LetUnits || attributed != run.res.LetUnits {
 		at("let units %d, lessor supply %d, attributed %d, want all equal", run.res.LetUnits, run.supply, attributed)
 	}
@@ -185,6 +191,16 @@ func checkRun(t *testing.T, seed uint64, i int, run endowmentRun) {
 			at("tenant %d paid %d with a balance of %d", r.ID, run.debit[r.ID], r.Balance)
 		}
 	}
+}
+
+// sameOutcome reports whether two runs granted, attributed and forfeited alike.
+func sameOutcome(a, b endowmentRun) bool {
+	if a.res != b.res || !slices.Equal(a.triples, b.triples) || a.forfeited != b.forfeited {
+		return false
+	}
+	return slices.EqualFunc(a.reqs, b.reqs, func(x, y tenure.Request) bool {
+		return x.ID == y.ID && x.Own == y.Own && x.Commons == y.Commons && x.Let == y.Let && x.PricedOut == y.PricedOut
+	})
 }
 
 // TestRules_ListingOrderDoesNotChangeTheOutcome verifies that the whole chain of
@@ -201,13 +217,8 @@ func TestRules_ListingOrderDoesNotChangeTheOutcome(t *testing.T) {
 	for seed := uint64(1); seed <= 40; seed++ {
 		first := runEndowment(t, rand.New(rand.NewPCG(seed, 5)), rand.New(rand.NewPCG(seed, 1)))
 		second := runEndowment(t, rand.New(rand.NewPCG(seed, 5)), rand.New(rand.NewPCG(seed, 2)))
-		if first.res != second.res || !slices.Equal(first.triples, second.triples) || first.forfeited != second.forfeited {
+		if !sameOutcome(first, second) {
 			t.Fatalf("seed %d: two listings gave %+v / %v and %+v / %v", seed, first.res, first.triples, second.res, second.triples)
-		}
-		for j := range first.reqs {
-			if a, b := first.reqs[j], second.reqs[j]; a.Own != b.Own || a.Commons != b.Commons || a.Let != b.Let || a.PricedOut != b.PricedOut {
-				t.Fatalf("seed %d: request %d got %+v and %+v", seed, a.ID, a, b)
-			}
 		}
 	}
 }

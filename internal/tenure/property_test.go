@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"math/rand/v2"
 	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/tenure"
@@ -69,6 +70,29 @@ func randomParts(rng *rand.Rand) []tenure.Part {
 	return parts
 }
 
+// apportionMismatch returns how Apportion's answer departs from the exact
+// largest remainder, or "" when it does not. A positive stock with no weight must
+// be refused with every slot 0.
+func apportionMismatch(stock int64, parts []tenure.Part, out []int64, ok bool) string {
+	var weight int64
+	for _, p := range parts {
+		weight += p.Share
+	}
+	if weight == 0 && stock > 0 {
+		if ok || sum(out) != 0 {
+			return "want refused with 0: no weight"
+		}
+		return ""
+	}
+	want := expectedApportion(stock, parts)
+	for _, p := range parts {
+		if !ok || out[p.Ref] != want[p.Ref] {
+			return "part " + strconv.Itoa(p.Ref) + " should get " + strconv.FormatInt(want[p.Ref], 10)
+		}
+	}
+	return ""
+}
+
 // TestApportion_MatchesExactLargestRemainder verifies, over random weights and
 // stocks up to MaxInt64 (so stock * weight passes 64 bits), that Apportion gives
 // exactly the largest-remainder result computed with arbitrary precision: the
@@ -90,29 +114,28 @@ func TestApportion_MatchesExactLargestRemainder(t *testing.T) {
 			if rng.IntN(2) == 0 {
 				stock = rng.Int64N(1 << uint(1+rng.IntN(62)))
 			}
-			var weight int64
-			for _, p := range parts {
-				weight += p.Share
-			}
 			out := make([]int64, len(parts))
 			ok := tenure.Apportion(stock, slices.Clone(parts), out)
-			if weight == 0 && stock > 0 {
-				if ok || sum(out) != 0 {
-					t.Fatalf("seed %d case %d: Apportion(%d, %+v) = %v, %v, want refused with 0: no weight", seed, i, stock, parts, out, ok)
-				}
-				continue
-			}
-			want := expectedApportion(stock, parts)
-			for _, p := range parts {
-				if !ok || out[p.Ref] != want[p.Ref] {
-					t.Fatalf("seed %d case %d: Apportion(%d, %+v) = %v, %v, want part %d to get %d", seed, i, stock, parts, out, ok, p.Ref, want[p.Ref])
-				}
-			}
-			if sum(out) != stock {
-				t.Fatalf("seed %d case %d: Apportion(%d, %+v) = %v sums to %d", seed, i, stock, parts, out, sum(out))
+			if bad := apportionMismatch(stock, parts, out, ok); bad != "" {
+				t.Fatalf("seed %d case %d: Apportion(%d, %+v) = %v, %v: %s", seed, i, stock, parts, out, ok, bad)
 			}
 		}
 	}
+}
+
+// creditOK reports whether a Credit answer is the one the contract gives: refused
+// with 0 when the balance is above the limit, else paid plus forfeited is the
+// amount, paid is within the room, and something is forfeited only when the room
+// is full.
+func creditOK(balance, amount, limit, paid, forfeited int64, ok bool) bool {
+	if balance > limit {
+		return !ok && paid == 0 && forfeited == 0
+	}
+	room := limit - balance
+	if !ok || paid < 0 || forfeited < 0 {
+		return false
+	}
+	return paid+forfeited == amount && paid <= room && (forfeited == 0 || paid == room)
 }
 
 // TestCredit_PaidPlusForfeitedIsTheAmount verifies over random balances, limits
@@ -130,15 +153,8 @@ func TestCredit_PaidPlusForfeitedIsTheAmount(t *testing.T) {
 	for i := range oracleCases {
 		balance, amount, limit := g.val(), g.val(), g.val()
 		paid, forfeited, ok := tenure.Credit(balance, amount, limit)
-		if balance > limit {
-			if ok || paid != 0 || forfeited != 0 {
-				t.Fatalf("case %d: Credit(%d, %d, %d) = %d, %d, %v, want refused: balance above limit", i, balance, amount, limit, paid, forfeited, ok)
-			}
-			continue
-		}
-		room := limit - balance
-		if !ok || paid+forfeited != amount || paid < 0 || forfeited < 0 || paid > room || (forfeited > 0 && paid != room) {
-			t.Fatalf("case %d: Credit(%d, %d, %d) = %d, %d, %v, want paid+forfeited = %d within room %d", i, balance, amount, limit, paid, forfeited, ok, amount, room)
+		if !creditOK(balance, amount, limit, paid, forfeited, ok) {
+			t.Fatalf("case %d: Credit(%d, %d, %d) = %d, %d, %v, want paid+forfeited = the amount within the room, or refused above the limit", i, balance, amount, limit, paid, forfeited, ok)
 		}
 	}
 }
