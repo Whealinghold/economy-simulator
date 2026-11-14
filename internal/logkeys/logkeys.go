@@ -175,3 +175,10 @@ const (
 	StoreClass   = "store_class"
 	StoreClasses = "store_classes"
 )
+
+// Trainer is the agent ID of a trainee's trainer, and Served the ticks of a
+// traineeship served, in the line "traineeship ended" of the skill barriers.
+const (
+	Trainer = "trainer"
+	Served  = "served"
+)

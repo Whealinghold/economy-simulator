@@ -78,6 +78,11 @@ type skills struct {
 	// configuration and never saved. ready is the scratch of the entry step.
 	headroom func(RegionID, RoleID) (headroom int64, noLimit bool)
 	ready    []AgentID
+	// slots and drop are the scratch of the places and of a trainer's removal,
+	// kept so that a tick with no traineeship in motion allocates nothing
+	// (NFR-SKL-001).
+	slots []trainerSlot
+	drop  []AgentID
 }
 
 // newSkills returns the state of the traineeships, or nil when no role of the
