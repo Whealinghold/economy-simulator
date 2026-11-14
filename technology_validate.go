@@ -169,7 +169,8 @@ func (v *validator) withTech(recipe string, yieldMax int64) int64 {
 	if !in {
 		return yieldMax
 	}
-	return yieldMax * MaxTechBP / wholeBP // at most 10^6 * 1.1 * 10^5 / 10^4
+	// rounded up: the result is a bound, and the caller's yieldMax is already rounded
+	return (yieldMax*MaxTechBP + wholeBP - 1) / wholeBP // at most 10^6 * 1.1 * 10^5 / 10^4
 }
 
 // technologyWarnings are the warnings of spec-technology.md 10.2 to 10.4: field_inert,
@@ -257,7 +258,7 @@ func techContact(c *Config, m *Technology) func(reach int64) bool {
 	return func(reach int64) bool {
 		for _, a := range ordinary {
 			for _, b := range ordinary {
-				if d, ok := tables.Dist(a, b); a != b && ok && d < reach {
+				if d, ok := tables.Dist(a, b); a != b && ok && d >= 1 && d < reach {
 					return true
 				}
 			}

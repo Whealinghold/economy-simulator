@@ -159,6 +159,18 @@ func learnedOf(f Field, x int64) (int64, bool) {
 	return Learned(f.DoublingBP, max(f.Base, 1), x)
 }
 
+// doingOf is the change of g over a step from x0 to x. g does not fall as X
+// grows, so a negative change is a refusal, not a value.
+func doingOf(f Field, x0, x int64) (int64, bool) {
+	g0, ok0 := learnedOf(f, x0)
+	g1, ok1 := learnedOf(f, x)
+	if !ok0 || !ok1 {
+		return 0, false
+	}
+	d, ok := checked.Sub(g1, g0)
+	return d, ok && d >= 0
+}
+
 // foldAll is sub-step 1: X = min(MaxExperience, X + counter), Doing = the
 // change of g(X). Before is the gain at the start of the step.
 func foldAll(in Input, out []Result) bool {
@@ -181,14 +193,13 @@ func foldAll(in Input, out []Result) bool {
 		if c < in.MaxExperience-x0 {
 			x = x0 + c
 		}
-		g0, ok0 := learnedOf(f, x0)
-		g1, ok1 := learnedOf(f, x)
-		if !ok0 || !ok1 {
+		doing, ok := doingOf(f, x0, x)
+		if !ok {
 			return false
 		}
 		out[i].Before = before
 		out[i].Experience = x
-		out[i].Doing = g1 - g0
+		out[i].Doing = doing
 	}
 	return true
 }
