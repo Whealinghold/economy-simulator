@@ -290,6 +290,8 @@ func account(w Window, open, closing economysim.Snapshot, r economysim.RegionID,
 		change.addInt(measure.FromInt64(int64(cr.MoneyPool)))
 		change.addInt(neg(int64(or.MoneyHouseholds)))
 		change.addInt(neg(int64(or.MoneyPool)))
+		change.addInt(measure.FromInt64(int64(cr.MoneyTreasury)))
+		change.addInt(neg(int64(or.MoneyTreasury)))
 		for _, x := range f.rows {
 			if x.Region != g || x.Commodity != economysim.NoCommodity {
 				continue

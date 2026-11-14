@@ -137,6 +137,24 @@ func TestRegionalMoneyIdentity_Terms(t *testing.T) {
 	}
 }
 
+// TestRegionalMoneyIdentity_Treasury verifies that the change of a region's
+// money counts its treasury: a treasury funded by a faucet closes the account.
+//
+// Requirement: FR-IND-019
+func TestRegionalMoneyIdentity_Treasury(t *testing.T) {
+	w, open, closing := workedWindow(t)
+	withMoney(&open, &closing, [4]economysim.Money{4900, 800, 2000, 0}, [4]economysim.Money{4900, 800, 2000, 0}, 100)
+	closing.Regions[0].MoneyTreasury = 300
+	addFlow(&w, moneyFlow(10, alpha, economysim.ReasonStartMoney, economysim.KindFaucet, 300))
+	got, err := indicator.Sectors(w, open, closing, valleyTable(t, w, alphaP, alphaP))
+	if err != nil {
+		t.Fatalf("Sectors() error = %v, want nil", err)
+	}
+	if a := got.Regions[0].Account; a.Change != 300 || a.Faucets != 300 || a.Residual != 0 {
+		t.Errorf("Sectors().alpha account = %+v, want change 300, faucets 300, residual 0", a)
+	}
+}
+
 // TestTradeBalance_GrossAndNet verifies 18.8: at gate beta the outside's budget
 // of 200 less 32 unspent is 168 exported and 120 received for imports, a net of
 // +48; 15 units of wood imported (20 offered, 5 unsold) and 6 of loaf exported,
