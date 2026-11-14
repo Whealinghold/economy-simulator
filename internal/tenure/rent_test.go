@@ -135,8 +135,9 @@ func TestCharge_OverflowIsUnaffordableAndRefusals(t *testing.T) {
 			t.Errorf("Charge(%d, %d, %+v) = %d, %d, %v, want refused", bad.available, bad.other, bad.lines, k, rent, ok)
 		}
 	}
-	if total, ok := tenure.TotalRent([]tenure.Line{{Rent: 1, Draw: 1, Own: math.MaxInt64, Commons: 1}}, 5); ok || total != 0 {
-		t.Errorf("TotalRent(free beyond int64) = %d, %v, want refused", total, ok)
+	// free entitlements beyond int64 in sum still cover k: the line is free, not unaffordable
+	if total, ok := tenure.TotalRent([]tenure.Line{{Rent: 1, Draw: 1, Own: math.MaxInt64, Commons: 1}}, 5); !ok || total != 0 {
+		t.Errorf("TotalRent(free beyond int64) = %d, %v, want 0, true", total, ok)
 	}
 }
 

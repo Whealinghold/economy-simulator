@@ -38,6 +38,6 @@ func LeastRent(executions, draw, own, commons, rent int64) (least int64, ok bool
 	if !ok {
 		return 0, false
 	}
-	units = max(0, units-own-commons) // the two sums cannot go below -2 * MaxInt64: both are at least 0
+	units = max(0, max(0, units-own)-commons) // one subtraction at a time: each stays within int64
 	return checked.Mul(units, rent)
 }

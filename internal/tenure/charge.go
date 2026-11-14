@@ -25,7 +25,8 @@ func Available(balance, reserved int64) int64 {
 // TotalRent is the total rent of k executions over all the lines,
 // the sum of Rent * Draw * max(0, k - Own - Commons) (spec-land.md 5.4.1). It
 // is non-decreasing in k. ok is false when the total passes int64, which the
-// start treats as unaffordable.
+// start treats as unaffordable, and for a negative k or a line with a negative
+// field, with 0 returned.
 func TotalRent(lines []Line, k int64) (total int64, ok bool) {
 	for _, l := range lines {
 		line, valid := lineRent(l, k)
@@ -39,13 +40,16 @@ func TotalRent(lines []Line, k int64) (total int64, ok bool) {
 	return total, true
 }
 
-// lineRent is the rent of k executions of one line.
+// lineRent is the rent of k executions of one line. ok is false for a negative
+// k or field. The two entitlements are taken off k one at a time, so a sum of
+// them beyond int64 cannot wrap: k and both are at least 0, and so is each
+// difference.
 func lineRent(l Line, k int64) (int64, bool) {
-	free, ok := checked.Add(l.Own, l.Commons)
-	if !ok {
+	if k < 0 || l.Rent < 0 || l.Draw < 0 || l.Own < 0 || l.Commons < 0 {
 		return 0, false
 	}
-	units, ok := checked.Mul(max(0, k-free), l.Draw)
+	billed := max(0, max(0, k-l.Own)-l.Commons)
+	units, ok := checked.Mul(billed, l.Draw)
 	if !ok {
 		return 0, false
 	}
@@ -73,7 +77,10 @@ func Charge(available, other int64, lines []Line) (k, rent int64, ok bool) {
 			hi = mid - 1
 		}
 	}
-	rent, _ = TotalRent(lines, lo)
+	rent, ok = TotalRent(lines, lo)
+	if !ok { // lo was found affordable, so this cannot happen; refuse rather than return a zero rent
+		return 0, 0, false
+	}
 	return lo, rent, true
 }
 
