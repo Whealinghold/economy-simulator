@@ -1427,6 +1427,32 @@
 //   - Treasury sector: the non-boundary sector of the money identity that holds the
 //     treasury accounts (RegionRow.MoneyTreasury).
 //   - Combining mode: how the rows of a table keyed by jurisdiction combine along a
-//     chain: innermost (the first row), added (the sum) or scaled (the product, rounded
 //     once).
+//   - Settlement class: the size class of a region, derived from its households and
+//     ordered by its enter threshold; SettlementClassID is its index in that order and
+//     NoSettlementClass means none (Settlements is the module, a pointer of
+//     Config.Modules; SettlementClass is the type of a configured class and
+//     RegionSettlement the row that scales or floors one region; spec-settlements.md).
+//   - Enter threshold: the households at or above which a class is reached from below.
+//   - Leave threshold: the count below which a class is given up; the enter threshold
+//     less the band.
+//   - Band: the basis points of an enter threshold between it and its leave threshold.
+//   - Dwell: the least ticks between two changes of a region's class.
+//   - Settlement review: the one step, at P7.2a, that gives a region its class from its
+//     household count.
+//   - Household count (of a region): the sum of the weights of the live agents whose
+//     account is in the region, pseudo-agents excluded.
+//   - Flag: a name a class carries; a permission that a reader asks for.
+//   - Limit: a name with a count per class (ClassLimit); no row means no limit and 0
+//     means a closed gate.
+//   - Gate: a role field (Role.Needs, Role.Ceiling) that a class opens or bounds.
+//   - Class floor: the lowest class a region may have (RegionSettlement.Floor); not the
+//     price floor or the belief floor.
+//   - Held change: a class change the review found due that the dwell holds; it leaves
+//     no state and is reported by SettlementHeld.
+//   - Headroom (of a role's ceiling): the limit of the region's class less the
+//     households of the role, never below 0.
+//   - Ceiling (of a role): the limit that bounds the households of the role in a region.
+//   - SettlementClassChanged, SettlementHeld: the events of a class change and of a held
+//     change.
 package economysim

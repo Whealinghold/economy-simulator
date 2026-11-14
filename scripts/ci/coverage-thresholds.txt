@@ -42,3 +42,4 @@ internal/transit 90
 internal/verdict 90
 internal/welfare 90
 otelobserver 80
+internal/settlement 90
