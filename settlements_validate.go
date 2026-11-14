@@ -264,8 +264,8 @@ func (m *Settlements) limitSet() map[string]bool {
 }
 
 // settlementThresholds returns the effective enter and leave thresholds of every
-// region that is not an outside node, in the order of c.Regions, from the canonical
-// classes of m. ok is false when the module has no class or an arithmetic step does
+// region, outside nodes included (a consumer skips those), in the order of c.Regions,
+// from the canonical classes of m. ok is false when the module has no class or an arithmetic step does
 // not fit, which validation prevents.
 func settlementThresholds(c *Config, m *Settlements) (e, l [][]int64, ok bool) {
 	enter := make([]int64, len(m.Classes))
