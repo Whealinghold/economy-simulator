@@ -858,6 +858,20 @@ func (w *World) auditInFlight() error {
 	return nil
 }
 
+// auditHeld is the audit of what the modules hold on accounts: the counterparties of
+// the external module, then the rooms of the storage module.
+func (w *World) auditHeld() error {
+	if w.external != nil {
+		if err := w.external.audit(w); err != nil {
+			return err
+		}
+	}
+	if w.sto != nil {
+		return w.auditStorage()
+	}
+	return nil
+}
+
 // auditModules is the modules' part of the audit (plan 2-6 D333): for each flow
 // the boundary balance of its reason is the total with the sign of its kind, and
 // the first flow that disagrees is named (FR-MON-026, 027). It is nil with no
@@ -866,10 +880,8 @@ func (w *World) auditModules() error {
 	if err := w.auditInFlight(); err != nil {
 		return err
 	}
-	if w.external != nil {
-		if err := w.external.audit(w); err != nil {
-			return auditFailure(w.Tick(), err)
-		}
+	if err := w.auditHeld(); err != nil {
+		return auditFailure(w.Tick(), err)
 	}
 	if w.money == nil {
 		return nil

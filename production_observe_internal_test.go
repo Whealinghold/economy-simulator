@@ -57,7 +57,7 @@ func TestRefusalTally_Invariants(t *testing.T) {
 		name string
 		do   func(*refusalTally)
 	}{
-		{"later module reason", func(tl *refusalTally) { tl.add(0, 0, Reason("no_room"), 1) }},
+		{"later module reason", func(tl *refusalTally) { tl.add(0, 0, Reason("not_permitted"), 1) }},
 		{"empty reason", func(tl *refusalTally) { tl.add(0, 0, "", 1) }},
 		{"region past the table", func(tl *refusalTally) { tl.add(2, 0, ReasonNoInput, 1) }},
 		{"negative region", func(tl *refusalTally) { tl.add(-1, 0, ReasonNoInput, 1) }},

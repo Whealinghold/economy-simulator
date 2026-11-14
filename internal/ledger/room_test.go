@@ -920,3 +920,39 @@ func TestRoom_OverflowingCreditIsRefusedInARoomOfMaxInt64(t *testing.T) {
 		t.Errorf("load after the refusals = (%d, %d), want (0, 0)", r.LoadMass, r.LoadBulk)
 	}
 }
+
+// TestRoom_NamedLotFromReservedDrawsReserved verifies the settlement of a named lot
+// (an estate's ask) to a limited buyer: MoveLotCredited with the form from reserved
+// draws the reserved room as the commodity form does, and without it the same move is
+// refused because the free room does not include the reserved room.
+//
+// Arithmetic: 4 goods of (2, 1) are a load of (8, 4); the room (20, 20) has (8, 4)
+// reserved, so the free room is (12, 16) and the credit fits it either way; the buyer
+// with only (6, 3) free would refuse the unmarked form: the case below reserves all.
+//
+// Requirement: FR-STO-007, FR-STO-009
+func TestRoom_NamedLotFromReservedDrawsReserved(t *testing.T) {
+	t.Parallel()
+	f := settleFix(t)
+	if err := f.l.ReserveRoom(f.a0, 12, 16); err != nil { // the whole free room
+		t.Fatal(err)
+	}
+	lots, err := f.l.AppendLots(nil, f.a1)
+	if err != nil || len(lots) == 0 {
+		t.Fatalf("AppendLots() = %v, %v, want a lot", lots, err)
+	}
+	key := ledger.Key{Commodity: lots[0].Commodity, Born: lots[0].Born, Durability: lots[0].Durability}
+	if err := f.l.ReserveLot(f.a1, key, 4); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.l.MoveLotCredited(f.a1, f.a0, key, 4, ledger.Trade, true, ledger.CreditFree); !errors.Is(err, ledger.ErrNoRoom) {
+		t.Errorf("MoveLotCredited(free form) with the free room reserved = %v, want ErrNoRoom", err)
+	}
+	if err := f.l.MoveLotCredited(f.a1, f.a0, key, 4, ledger.Trade, true, ledger.CreditReserved); err != nil {
+		t.Fatalf("MoveLotCredited(from reserved) = %v, want nil", err)
+	}
+	if r := f.room(t, f.a0); r.LoadMass != 8 || r.LoadBulk != 4 || r.ReservedMass != 12 || r.ReservedBulk != 16 {
+		t.Errorf("room after the lot settlement = %+v, want load (8, 4) and reserved (12, 16): the (8, 4) was drawn from the (20, 20)", r)
+	}
+	f.checkLoad(t)
+}

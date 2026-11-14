@@ -40,33 +40,33 @@ type shipCtx struct {
 }
 
 // shipChecks are the checks of spec-transport.md 5.4 in the order of its table.
-// Rows 3a (has_store), 11a (consignee_full) and 22a
-// (toll_unaffordable) are the marked seams of their modules: each is an empty
-// position here, filled when its module is built, and none of their reasons is
-// declared yet (D446). The table is never written.
+// Row 22a (toll_unaffordable) is the marked seam of its module: an empty
+// position here, filled when its module is built, and its reason is not declared
+// yet (D446). Rows 3a (has_store) and 11a (consignee_full) are the storage
+// module's and do nothing while it is off. The table is never written.
 var shipChecks = [...]func(c *shipCtx) Reason{
-	ckCount,       // 1
-	ckMode,        // 2
-	ckAway,        // 3
-	nil,           // 3a has_store: STO
-	ckJob,         // 4
-	ckSame,        // 5
-	ckRegion,      // 6
-	ckOutside,     // 6a outside_destination: EXT
-	ckRoute,       // 7
-	ckBlocked,     // 8
-	ckTooFar,      // 9
-	ckConsignee,   // 10
-	ckElsewhere,   // 11
-	nil,           // 11a consignee_full: STO
-	ckLines,       // 12 to 16
-	ckStock,       // 17
-	ckCrew,        // 18
-	ckCapacity,    // 19
-	ckHaul,        // 20
-	ckFeed,        // 21
-	ckProvisioned, // 22
-	nil,           // 22a toll_unaffordable: FIS
+	ckCount,         // 1
+	ckMode,          // 2
+	ckAway,          // 3
+	ckHasStore,      // 3a has_store: STO
+	ckJob,           // 4
+	ckSame,          // 5
+	ckRegion,        // 6
+	ckOutside,       // 6a outside_destination: EXT
+	ckRoute,         // 7
+	ckBlocked,       // 8
+	ckTooFar,        // 9
+	ckConsignee,     // 10
+	ckElsewhere,     // 11
+	ckConsigneeFull, // 11a consignee_full: STO
+	ckLines,         // 12 to 16
+	ckStock,         // 17
+	ckCrew,          // 18
+	ckCapacity,      // 19
+	ckHaul,          // 20
+	ckFeed,          // 21
+	ckProvisioned,   // 22
+	nil,             // 22a toll_unaffordable: FIS
 }
 
 // ckCount is row 1: the request number MaxDispatchPerTick + 1 or later.
@@ -92,6 +92,15 @@ func ckAway(c *shipCtx) Reason {
 		return ReasonTravellerAway
 	}
 	return ""
+}
+
+// ckHasStore is row 3a: a self-carried request of an agent that owns a store
+// (spec-storage.md 9.3, FR-STO-031). It is empty while the storage module is off.
+func ckHasStore(c *shipCtx) Reason {
+	if c.w.sto == nil {
+		return ""
+	}
+	return c.w.sto.tripRefusal(c)
 }
 
 // ckJob is row 4: a self-carried request of an agent with a job in progress,
@@ -185,6 +194,16 @@ func ckElsewhere(c *shipCtx) Reason {
 		return ReasonConsigneeElsewhere
 	}
 	return ""
+}
+
+// ckConsigneeFull is row 11a: a consignee other than the shipper whose limited account
+// has not the room for the lines (spec-storage.md 5.4.1, FR-STO-014). It is empty
+// while the storage module is off.
+func ckConsigneeFull(c *shipCtx) Reason {
+	if c.w.sto == nil {
+		return ""
+	}
+	return c.w.sto.consigneeRefusal(c)
 }
 
 // ckLines is rows 12 to 16: the lines are consistent with the kind of request,
@@ -549,6 +568,9 @@ func (w *World) send(c *shipCtx) shipment {
 		s.account = w.transitAccount(c.region)
 		s.lines = append(t.lend(), c.lines...)
 		w.moveLines(a, &s)
+		if w.sto != nil {
+			w.shippedStorage(&s)
+		}
 	}
 	if s.hired {
 		w.redeemHaul(a, c)

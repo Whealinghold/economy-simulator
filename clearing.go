@@ -73,8 +73,7 @@ func (AverageClearing) Clear(bids, asks []Order, rng *rand.Rand) []Trade {
 
 // codeReasons maps the admission codes of internal/clearing to the rejection
 // reasons of event.go, indexed by code (spec-clearing.md 3.2). It is never
-// mutated. The rows of the modules (not_permitted, no_room) are added with
-// their codes.
+// mutated. The rows of the modules (not_permitted) are added with their codes.
 var codeReasons = [...]Reason{
 	clearing.UnknownAgent:      ReasonUnknownAgent,
 	clearing.SideNotAllowed:    ReasonSideNotAllowed,
@@ -88,6 +87,7 @@ var codeReasons = [...]Reason{
 	clearing.ReceiptLimit:      ReasonReceiptLimit,
 	clearing.InsufficientFunds: ReasonInsufficientFunds,
 	clearing.InsufficientStock: ReasonInsufficientStock,
+	clearing.NoRoom:            ReasonNoRoom,
 }
 
 // reasonOfCode returns the Reason of a rejection code, and false for Admitted
@@ -172,6 +172,13 @@ type orderFacts struct {
 	Tradable bool
 	// Tally is the world's receipt tally; required for an ask.
 	Tally *receiptTally
+	// Limited, FreeMass, FreeBulk, SizeMass and SizeBulk are the room facts of the
+	// storage module for a bid (spec-storage.md 5.2.1): whether the account has a
+	// room, its free room and the size of one unit of the commodity. They stay at
+	// their zero value with the module off.
+	Limited            bool
+	FreeMass, FreeBulk int64
+	SizeMass, SizeBulk int64
 }
 
 // bookEntry is one admitted order and the reservation it holds.
@@ -185,6 +192,10 @@ type bookEntry struct {
 	// slot is the position of the order in Sums for the current clearing:
 	// bids first, then asks.
 	slot int
+	// roomed says the bid reserved room with its cash, sizeMass and sizeBulk being
+	// the size of one unit of the commodity (storage module, spec-storage.md 5.2).
+	roomed             bool
+	sizeMass, sizeBulk int64
 }
 
 // clearScratch is the working memory of one market step, owned by the world
@@ -307,6 +318,7 @@ func (b *book) admit(l *ledger.Ledger, f orderFacts, o Order) (Reason, bool) {
 		Bid: bid, Price: int64(o.Price), Qty: int64(o.Quantity),
 		MaxPrice: MaxPrice, MaxQuantity: MaxQuantity, MaxMoney: MaxMoney,
 		Duplicate: b.duplicate(o),
+		Limited:   f.Limited && bid, FreeMass: f.FreeMass, FreeBulk: f.FreeBulk, SizeMass: f.SizeMass, SizeBulk: f.SizeBulk,
 	}
 	if f.AgentKnown {
 		b.readFacts(l, f, o, &cf)
@@ -325,6 +337,7 @@ func (b *book) admit(l *ledger.Ledger, f orderFacts, o Order) (Reason, bool) {
 	b.entries = append(b.entries, bookEntry{
 		agent: o.Agent, account: f.Account, side: o.Side,
 		price: o.Price, qty: o.Quantity, lot: o.Lot,
+		roomed: cf.Limited, sizeMass: f.SizeMass, sizeBulk: f.SizeBulk,
 	})
 	return "", true
 }
@@ -393,6 +406,9 @@ func (b *book) reserve(l *ledger.Ledger, f orderFacts, o Order, tally int64) (Re
 		if err := l.ReserveMoney(f.Account, cost); err != nil {
 			invariant("the ledger refused the reservation of an admitted bid: " + err.Error())
 		}
+		if f.Limited {
+			b.reserveRoom(l, f, o)
+		}
 		return "", true
 	}
 	worst, ok := checked.Mul(int64(o.Quantity), MaxPrice)
@@ -411,6 +427,20 @@ func (b *book) reserve(l *ledger.Ledger, f orderFacts, o Order, tally int64) (Re
 	}
 	f.Tally.set(f.Account, sum)
 	return "", true
+}
+
+// reserveRoom reserves the room of an admitted bid of a limited account with its
+// cash (spec-storage.md 5.2.1, FR-STO-009). Admission tested the room, so a refusal
+// is a violated invariant.
+func (b *book) reserveRoom(l *ledger.Ledger, f orderFacts, o Order) {
+	mass, okm := checked.Mul(int64(o.Quantity), f.SizeMass)
+	bulk, okb := checked.Mul(int64(o.Quantity), f.SizeBulk)
+	if !okm || !okb {
+		invariant("a bid that passed the room row has a load that overflows")
+	}
+	if err := l.ReserveRoom(f.Account, mass, bulk); err != nil {
+		invariant("the ledger refused the room of an admitted bid: " + err.Error())
+	}
 }
 
 // emitPlaced delivers OrderPlaced for an admitted order, when an observer was
@@ -500,6 +530,9 @@ func (b *book) release(l *ledger.Ledger, sums []int64) {
 				invariant("the remainder of an admitted bid has a product that overflows")
 			}
 			err = l.ReleaseMoney(e.account, money)
+			if err == nil && e.roomed {
+				err = b.releaseRoom(l, e, rem)
+			}
 		case e.lot.Named:
 			err = l.ReleaseLot(e.account, ledger.Key{Commodity: int(b.commodity), Born: e.lot.Born, Durability: e.lot.Durability}, rem)
 		default:
@@ -509,6 +542,17 @@ func (b *book) release(l *ledger.Ledger, sums []int64) {
 			invariant("the ledger refused the release of a reservation the book holds: " + err.Error())
 		}
 	}
+}
+
+// releaseRoom returns the room of the unmatched part rem of a bid that reserved it
+// (spec-storage.md 5.2.2, FR-STO-009).
+func (b *book) releaseRoom(l *ledger.Ledger, e *bookEntry, rem int64) error {
+	mass, okm := checked.Mul(rem, e.sizeMass)
+	bulk, okb := checked.Mul(rem, e.sizeBulk)
+	if !okm || !okb {
+		invariant("the room of the remainder of an admitted bid overflows")
+	}
+	return l.ReleaseRoom(e.account, mass, bulk)
 }
 
 // tradeListError is the error of a list of trades that fails the check of
@@ -656,11 +700,15 @@ func (b *book) settle(l *ledger.Ledger, m clearing.Match, tick int64, obs *obser
 	if refund := (int64(bid.price) - m.Price) * m.Qty; refund > 0 { // <= limit * qty, fits
 		mustSettle(l.ReleaseMoney(bid.account, refund), "the refund")
 	}
+	form := ledger.CreditFree
+	if bid.roomed {
+		form = ledger.CreditReserved // the goods draw on the room the bid reserved
+	}
 	if ask.lot.Named {
 		key := ledger.Key{Commodity: int(b.commodity), Born: ask.lot.Born, Durability: ask.lot.Durability}
-		mustSettle(l.MoveLotReserved(ask.account, bid.account, key, m.Qty, ledger.Trade), "the delivery of a lot")
+		mustSettle(l.MoveLotCredited(ask.account, bid.account, key, m.Qty, ledger.Trade, true, form), "the delivery of a lot")
 	} else {
-		mustSettle(l.MoveReserved(ask.account, bid.account, int(b.commodity), m.Qty, ledger.Trade), "the delivery")
+		mustSettle(l.MoveCredited(ask.account, bid.account, int(b.commodity), m.Qty, ledger.Trade, true, form), "the delivery")
 	}
 	t := Trade{
 		Commodity: b.commodity, Buyer: bid.agent, Seller: ask.agent,

@@ -282,6 +282,7 @@ var invariantTable = []invariantCase{
 	{"one+subsistence", packOneSubsistence, 4, 0, "", nil},
 	{"one-demand+employment", packOneDemandEmployment, 4, 0, "", nil},
 	{"one+population", packOnePopulation, 4, 0, "", nil},
+	{"one+storage", packOneStorage, 4, 0, "", nil},
 	{"three", []string{"base.toml", "three.toml", "warm-three.toml"}, 4, 0, "", nil},
 	{"two+trade", tradeWarm("two"), 4, 0, "", nil},
 	{"two+transport", packTwoTransport, 4, 0, "", nil},

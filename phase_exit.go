@@ -212,6 +212,9 @@ func (w *World) toolPrice(id RoleID) Money {
 // caller has checked that there is a job.
 func (w *World) abandonJob(a *agent, region RegionID, reason Reason) {
 	recipe, executions := a.job.abandon()
+	if w.sto != nil {
+		w.repledge(a)
+	}
 	if w.obs.supplied {
 		w.obs.deliver(recipeAbandoned(w.Tick(), a.id, region, recipe, executions, reason))
 	}
@@ -392,6 +395,9 @@ func (w *World) execReduce(g RegionID, a *agent, d Decision) error {
 	}
 	a.job.reweigh(to)
 	a.weight = to
+	if w.sto != nil {
+		w.weightChangedStorage(a)
+	}
 	a.unfed = min(a.unfed, to) // the last count stays within the weight until the next consumption phase
 	w.live.households -= d.Households
 	w.ex.removed[a.role] = satAdd(w.ex.removed[a.role], d.Households)
@@ -466,6 +472,13 @@ func (w *World) execSwitch(g RegionID, a *agent, d Decision) error {
 	if err != nil {
 		return err
 	}
+	if w.sto != nil {
+		more, err := w.cutForRole(a, g, to)
+		if err != nil {
+			return err
+		}
+		lots += more
+	}
 	w.takeRole(a, g, to)
 	roles := len(w.cfg.Roles)
 	w.live.inRole[int(g)*roles+int(from)]--
@@ -474,6 +487,9 @@ func (w *World) execSwitch(g RegionID, a *agent, d Decision) error {
 	w.tally.addExecuted(g, a.weight, 0, 0, 0, 0)
 	if w.obs.supplied {
 		w.obs.deliver(RoleChanged{Tick: w.Tick(), Agent: a.id, Region: g, From: from, To: to, Weight: a.weight, Cause: d.Cause, GoodsListed: lots})
+		if w.sto != nil {
+			w.deliverEnded()
+		}
 	}
 	w.logRoleChanged(a, d.Cause)
 	return nil
@@ -598,6 +614,9 @@ func (w *World) enlarge(g RegionID, a *agent, take int64, cause Cause) error {
 	}
 	from := a.weight
 	a.weight += take
+	if w.sto != nil {
+		w.weightChangedStorage(a)
+	}
 	w.live.households += take
 	if w.obs.supplied {
 		w.obs.deliver(WeightChanged{Tick: w.Tick(), Agent: a.id, Region: g, Role: a.role, From: from, To: a.weight, Cause: cause, Money: given})

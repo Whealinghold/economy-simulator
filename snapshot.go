@@ -87,6 +87,9 @@ type Snapshot struct {
 	// Outside is the state of the external module (spec-observability.md 5.3.9); the
 	// zero value with the module off.
 	Outside OutsideState
+	// Stores has one row per (region, store class) with at least one store, by region
+	// then class; empty with the storage module off (spec-storage.md 14.5).
+	Stores []StoreRow
 }
 
 // EndowmentRow is the state of one endowment (spec-observability.md 5.3.6).
@@ -234,6 +237,11 @@ type RoleRow struct {
 	// trainees at TrainingTicks held for want of headroom. All 0 for a role with no
 	// training (spec-skill-barriers.md 8.2).
 	Places, PlacesTaken, Queue, Trainers, Held int64
+	// LimitedHouseholds is the households of the role's agents whose account has a
+	// room, RoomMass and RoomBulk their room (the weight folded in) and LoadMass and
+	// LoadBulk their load, summed over the role's limited agents in the region. All 0
+	// while the storage module is off (spec-storage.md 14.5).
+	LimitedHouseholds, RoomMass, RoomBulk, LoadMass, LoadBulk int64
 }
 
 // MarketState is the report of one market and its price window: the type the
@@ -556,6 +564,9 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 		rr.Households = satAdd(rr.Households, ra.Weight)
 		rr.MoneyHouseholds = Money(satAdd(int64(rr.MoneyHouseholds), int64(ra.Money)))
 		addRoleAgent(&s.Roles[int(g)*nr+int(ra.Role)], ra)
+		if w.sto != nil {
+			w.addRoomRow(&s.Roles[int(g)*nr+int(ra.Role)], &w.agents[ra.Agent])
+		}
 		// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 		// refusal of the world's own accounts, which a valid configuration cannot cause
 		// and no test can inject from the root (D190); the branch only wraps and returns
@@ -574,6 +585,9 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 	}
 	if w.pop != nil {
 		w.popSnapshotRegion(s, g, v)
+	}
+	if w.sto != nil {
+		s.Stores = w.storeRows(s.Stores, g, v)
 	}
 	w.marketRows(s, g, acc)
 	s.Jobs = appendJobs(s.Jobs, g, acc)

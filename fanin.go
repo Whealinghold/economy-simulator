@@ -137,6 +137,9 @@ func (w *World) dropModules(a *agent) {
 		w.sub.drop(a.id)
 	}
 	w.dropExternal(a)
+	if w.sto != nil {
+		w.dropStorage(a)
+	}
 }
 
 // agentJoined is the first agent-lifecycle fan-in (architecture.md 2.10.4, ADR
@@ -146,6 +149,9 @@ func (w *World) dropModules(a *agent) {
 func (w *World) agentJoined(a *agent, region RegionID) {
 	if w.demand != nil {
 		w.joinedDemand(a, region)
+	}
+	if w.sto != nil {
+		w.joinedStorage(a)
 	}
 }
 
@@ -161,6 +167,9 @@ func (w *World) agentRoleChanged(a *agent, from RoleID, region RegionID) {
 	}
 	if a.external {
 		w.externalRoleChanged(a)
+	}
+	if w.sto != nil {
+		w.roleChangedStorage(a, region)
 	}
 }
 

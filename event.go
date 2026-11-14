@@ -98,6 +98,24 @@ const (
 	ReasonInsufficientStock Reason = "insufficient_stock"
 )
 
+// The reasons of the storage module (spec-storage.md 14.2), appended after the
+// others. no_room is the last row of the admission of an order (spec-clearing.md
+// 3.2) and the last refusal of a job start (spec-production.md 4.2),
+// consignee_full a refusal of a shipment request (spec-transport.md 5.4, row 11a)
+// and has_store both that refusal of a self-carried request (row 3a) and the name
+// of the region_bound obligation of an owner of a store (spec-regions.md 6.5.2).
+const (
+	// ReasonNoRoom is a bid whose load exceeds the free room of a limited account,
+	// and a job start that the room of its principal cuts to no execution.
+	ReasonNoRoom Reason = "no_room"
+	// ReasonConsigneeFull is a shipment whose lines exceed the free room, less the
+	// upkeep room, of its limited consignee.
+	ReasonConsigneeFull Reason = "consignee_full"
+	// ReasonHasStore is a self-carried request of an agent that owns a store, and
+	// the name of the region_bound obligation of such an agent.
+	ReasonHasStore Reason = "has_store"
+)
+
 // The reasons a shipment request is refused, in the order of the checks
 // (spec-transport.md 5.4). ReasonUnknownRegion, ReasonSameRegion,
 // ReasonUnknownCommodity, ReasonInvalidQuantity, ReasonInsufficientStock and
@@ -514,6 +532,12 @@ const (
 	CauseBirths Cause = "births"
 	// CauseTraineeship is a role change at the completion of a traineeship.
 	CauseTraineeship Cause = "traineeship"
+	// CauseRoleChanged is the cause of a StoreChanged that ends a store because the
+	// agent's role has no base room (spec-storage.md 3.6.1a).
+	CauseRoleChanged Cause = "role_changed"
+	// CauseFacility is the cause of a StoreChanged that a store facility makes
+	// (spec-storage.md 3.6.3); the infrastructure module sets it.
+	CauseFacility Cause = "facility"
 )
 
 // Kind is the kind of a boundary flow, a member of a closed set: a faucet
@@ -555,6 +579,9 @@ type Names struct {
 	// Jurisdictions holds the string ID of each JurisdictionID; nil when the polity
 	// module is off.
 	Jurisdictions []string
+	// StoreClasses holds the string ID of each StoreClassID; nil when the storage
+	// module is off.
+	StoreClasses []string
 }
 
 // Amount is a quantity of one commodity.
@@ -806,6 +833,9 @@ type RecipeRefused struct {
 	// NoEndowment is the households for which the ration granted no execution of
 	// a draw (resources module).
 	NoEndowment int64
+	// NoRoom is the households for which the room of the principal held no
+	// execution of the recipe (storage module).
+	NoRoom int64
 }
 
 // RecipeAbandoned is emitted when a job ends without output.
@@ -909,6 +939,10 @@ type AgentSpawned struct {
 	StartMoney Money
 	// External is whether the agent is driven by the consumer.
 	External bool
+	// StoresLocked is the stores of the agent's role row that were not given
+	// because the region's class lacks the Needs flag of the class (storage module,
+	// spec-storage.md 3.2.3); 0 with no gate.
+	StoresLocked int64
 }
 
 // AgentBankrupted is emitted when an agent is removed entirely. It is the only
@@ -983,6 +1017,38 @@ type RoleChanged struct {
 	Cause Cause
 	// GoodsListed is the number of lots passed to the estate.
 	GoodsListed int64
+}
+
+// The kinds of StoreChanged (spec-storage.md 14.1), a closed set of the type Kind.
+const (
+	// KindAdded is a store given to an agent.
+	KindAdded Kind = "added"
+	// KindRemoved is a store taken from an agent.
+	KindRemoved Kind = "removed"
+)
+
+// StoreChanged is emitted when a store is added to an agent or removed from it,
+// once per store (spec-storage.md 14.1): at the call (AddStore, RemoveStore), in
+// phase 7 after the RoleChanged that ended it, or at the facility step of phase 8.
+// It is emitted only when the storage module is on. Stores given by the role row
+// at the creation of an agent have no event: AgentSpawned reports them.
+type StoreChanged struct {
+	Tick int64
+	// Agent is the owner, Region its region and Role its role.
+	Agent  AgentID
+	Region RegionID
+	Role   RoleID
+	// Class is the store class.
+	Class StoreClassID
+	// Kind is added or removed.
+	Kind Kind
+	// Cause is consumer for a call, role_changed or facility.
+	Cause Cause
+	// Stores is the agent's stores of the class after the change.
+	Stores int64
+	// Room and Load are the account's room and load after the change, as pairs; the
+	// room is 0 for an account that is not limited (a store ended by a role change).
+	Room, Load Capacity
 }
 
 // EntryLimited is emitted once per region per tick in which a limit or refusal
@@ -1382,6 +1448,7 @@ func (BoundaryFlow) isEvent()       {}
 func (WearApplied) isEvent()        {}
 func (WorldRestored) isEvent()      {}
 func (AgentRelocated) isEvent()     {}
+func (StoreChanged) isEvent()       {}
 func (EdgeStatusChanged) isEvent()  {}
 func (ReliefPaid) isEvent()         {}
 func (MoneyFlowLimited) isEvent()   {}

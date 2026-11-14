@@ -109,6 +109,11 @@ func newLedger(cfg Config) (*ledger.Ledger, error) {
 	if err != nil {
 		return nil, fmt.Errorf("build ledger: %w", err)
 	}
+	if sizes := ledgerSizes(&cfg); sizes != nil {
+		if err := l.SetSizes(sizes); err != nil {
+			return nil, fmt.Errorf("give the ledger the unit sizes: %w", err)
+		}
+	}
 	for _, g := range boundaryGroups(len(comms), modules, len(classes), outsideGroupOf(&cfg)) {
 		if err := g.open(l); err != nil {
 			return nil, fmt.Errorf("open the %s boundary accounts: %w", g.name, err)
