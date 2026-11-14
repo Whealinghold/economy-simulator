@@ -79,6 +79,12 @@ var (
 	ErrNotRelocatable = errors.New("ledger: account is not relocatable")
 	// ErrSameRegion means a Relocate into the region the account is in.
 	ErrSameRegion = errors.New("ledger: account is already in the region")
+	// ErrNoRoom means a credit of goods, or a reservation of room, does not fit
+	// the free room of a limited account (spec-storage.md 4.1.2).
+	ErrNoRoom = errors.New("ledger: no room")
+	// ErrNotLimited means an operation on room named an account that has no
+	// room, or a credit marked from reserved room or from the pledge named one.
+	ErrNotLimited = errors.New("ledger: account has no room")
 	// ErrAuditFailed means Audit found an identity false. The error is an
 	// *AuditError that names it, and matches this sentinel.
 	ErrAuditFailed = errors.New("ledger: audit failed")

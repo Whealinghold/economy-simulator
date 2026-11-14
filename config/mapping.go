@@ -314,6 +314,83 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Employment = &economysim.Employment{}
 		es.finish()
 	}
+	if ps := m.sub("polity"); ps != nil {
+		cfg.Modules.Polity = l.polity(ps)
+		ps.finish()
+	}
+	if ss := m.sub("storage"); ss != nil {
+		cfg.Modules.Storage = l.storage(ss)
+		ss.finish()
+	}
+}
+
+// storage reads [modules.storage] (spec-config.md 6.2.1, spec-storage.md 12.5): the
+// base room as [base] (keys mass, bulk), a role row as [role.<id>] (key stores, and
+// a [role.<id>.base] table), and a class as [class.<id>] (keys mass, bulk, needs,
+// label). A key-less table switches the module on; a key-less base table is a
+// base room of 0 (one key without the other is ErrMissingField), and an absent one
+// is unlimited. The rows come out in ID order because every level is read in the
+// order of the keys.
+func (l *loader) storage(t *tbl) *economysim.Storage {
+	var m economysim.Storage
+	m.Base = capacity(t.sub("base"))
+	t.entities("role", func(id string, e *tbl) {
+		r := economysim.RoleRoom{Role: id}
+		e.strings("stores", &r.Stores)
+		r.Base = capacity(e.sub("base"))
+		m.Roles = append(m.Roles, r)
+	})
+	t.entities("class", func(id string, e *tbl) {
+		c := economysim.StoreClass{ID: id}
+		e.need("mass", integer(e, "mass", &c.Mass))
+		e.need("bulk", integer(e, "bulk", &c.Bulk))
+		e.text("needs", &c.Needs)
+		e.text("label", &c.Label)
+		m.Classes = append(m.Classes, c)
+	})
+	return &m
+}
+
+// capacity reads a room table (keys mass and bulk) and finishes it; nil for an
+// absent table.
+func capacity(t *tbl) *economysim.Capacity {
+	if t == nil {
+		return nil
+	}
+	var c economysim.Capacity
+	hasMass, hasBulk := integer(t, "mass", &c.Mass), integer(t, "bulk", &c.Bulk)
+	if hasMass || hasBulk { // a key-less table is the zero room; a lone key is a typo
+		t.need("mass", hasMass)
+		t.need("bulk", hasBulk)
+	}
+	t.finish()
+	return &c
+}
+
+// polity reads [modules.polity] (spec-config.md 6.2, spec-polity.md 3.4.2): the
+// jurisdictions as [jurisdiction.<id>] (keys parent, seat, start_money, label) and
+// the membership as [member] with one key per region, <region> = "<jurisdiction>".
+// A key-less table switches the module on. The rows come out in ID order because
+// every level is read in the order of the keys.
+func (l *loader) polity(t *tbl) *economysim.PolityConfig {
+	var m economysim.PolityConfig
+	t.entities("jurisdiction", func(id string, e *tbl) {
+		j := economysim.Jurisdiction{ID: id}
+		e.text("parent", &j.Parent)
+		e.text("seat", &j.Seat)
+		integer(e, "start_money", &j.StartMoney)
+		e.text("label", &j.Label)
+		m.Jurisdictions = append(m.Jurisdictions, j)
+	})
+	if mt := t.sub("member"); mt != nil {
+		for _, region := range slices.Sorted(maps.Keys(mt.m)) {
+			row := economysim.Member{Region: region}
+			mt.text(region, &row.Jurisdiction)
+			m.Members = append(m.Members, row)
+		}
+		mt.finish()
+	}
+	return &m
 }
 
 // world reads the [world] table over DefaultWorldParams (spec-config.md 3.7.2).
@@ -648,6 +725,7 @@ func (l *loader) moneySupply(t *tbl) *economysim.MoneySupply {
 			tg.text("kind", &f.Target.Kind)
 			tg.text("region", &f.Target.Region)
 			tg.text("role", &f.Target.Role)
+			tg.text("store", &f.Target.Store)
 			tg.finish()
 		}
 		readInts(e, []intField{

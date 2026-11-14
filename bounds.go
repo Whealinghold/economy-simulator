@@ -508,3 +508,30 @@ const (
 	// the rows together move at most MaxMoney of list value.
 	MaxLineTotal = MaxMoney / (MaxCounterparties * MaxOutsideLines)
 )
+
+// The bounds of the polity module (spec-polity.md 8). Both are placeholders
+// (N-015, spec-polity.md 17.7).
+const (
+	// MaxJurisdictions is the most jurisdictions: the value of MaxRegions, since a
+	// jurisdiction that covers no region draws a warning and more is pointless.
+	MaxJurisdictions = MaxRegions
+	// MaxPolityDepth is the most levels of a chain of jurisdictions: a chain has at
+	// most this many entries and a jurisdiction at most this many less one
+	// ancestors.
+	MaxPolityDepth = 8
+)
+
+// The bounds of the storage module (spec-storage.md 12.2). All three are
+// placeholders (N-015, N-027).
+const (
+	// MaxRoom is the largest mass room and bulk room, of a base room, of a store
+	// class and of one dimension of a Capacity: 10^12, so that MaxWeight * MaxRoom
+	// is 10^18 and the largest room of an account (the base room of a cohort and
+	// MaxStoresPerAgent stores) is below int64.
+	MaxRoom = 1_000_000_000_000
+	// MaxStoresPerAgent is the most stores an agent owns, in a role row's Stores
+	// and by calls.
+	MaxStoresPerAgent = 8
+	// MaxStoreClasses is the most store classes.
+	MaxStoreClasses = 64
+)

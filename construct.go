@@ -139,6 +139,7 @@ func (w *World) allocate() {
 	w.migration = newMigration(&w.cfg)
 	w.mer = newMerchants(&w.cfg, &w.roles, w.transport)
 	w.employment = newEmployment(&w.cfg)
+	w.polity = newPolity(&w.cfg)
 	w.skills = newSkills(&w.cfg)
 	w.registerBounds()
 	if w.cfg.Modules.Estates != nil {
@@ -322,6 +323,7 @@ func namesOf(c *Config) Names {
 	n.Wants = demandNames(c)
 	n.Resources = resourceNames(c)
 	n.Modes = modeNames(c)
+	n.Jurisdictions = polityNames(c)
 	return n
 }
 
@@ -337,7 +339,7 @@ func modulesOn(c *Config) []string {
 		{"demand", m.Demand != nil}, {"money_supply", m.MoneySupply != nil}, {"estates", m.Estates != nil},
 		{"resources", m.Resources != nil}, {"subsistence", m.Subsistence != nil}, {"population", m.Population != nil},
 		{"transport", m.Transport != nil}, {"information", m.Information != nil}, {"migration", m.Migration != nil},
-		{"merchants", m.Merchants != nil}, {"external", m.External != nil},
+		{"merchants", m.Merchants != nil}, {"external", m.External != nil}, {"polity", m.Polity != nil},
 	}
 	on := []string{}
 	for _, t := range table {
@@ -421,6 +423,10 @@ func (w *World) summary() []slog.Attr {
 	}
 	if x := w.external; x != nil {
 		attrs = append(attrs, slog.Int(logkeys.Nodes, len(w.cfg.Modules.External.Nodes)), slog.Int(logkeys.Counterparties, len(x.cps)))
+	}
+	if w.polity != nil {
+		total, governed := polityTotals(&w.cfg)
+		attrs = append(attrs, slog.Int(logkeys.Jurisdictions, total), slog.Int(logkeys.Governed, governed))
 	}
 	return attrs
 }

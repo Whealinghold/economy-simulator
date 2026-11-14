@@ -30,9 +30,11 @@ internal/occupation 90
 internal/ordering 90
 internal/outside 90
 internal/ownuse 90
+internal/polity 90
 internal/population 90
 internal/production 90
 internal/reduce 90
+internal/room 90
 internal/rumour 90
 internal/skill 90
 internal/steady 90

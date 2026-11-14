@@ -40,12 +40,12 @@ var notBuilt = []string{
 	// entry here.
 	"Modules.Credit", "Modules.Fiscal",
 	"Modules.Infrastructure", "Modules.Institutions", "Modules.Insurance",
-	"Modules.Policy", "Modules.Polity",
+	"Modules.Policy",
 	"Modules.Risk", "Modules.Saving",
-	"Modules.Settlements", "Modules.Storage", "Modules.Technology",
+	"Modules.Settlements", "Modules.Technology",
 	"Modules.Tenure",
 	// Fields of FlowTarget that the targets of the stores and treasury kinds add.
-	"FlowTarget.Store", "FlowTarget.Jurisdiction",
+	"FlowTarget.Jurisdiction",
 	// Fields that a module appends to the core types Recipe, Region and Role.
 	"Recipe.Builds", "Recipe.Needs", "Recipe.Repairs",
 	"Role.Ceiling", "Role.Cover", "Role.Credit",
@@ -56,16 +56,16 @@ var notBuilt = []string{
 	"Employment.MaxOpen", "Employer.Recipes", "Employer.MaxHires",
 	"Employer.WorkerShareBP", "Employer.HireYieldBP",
 	// Scopes (Go type names) of the modules that are not built.
-	"Body", "Borrow", "Capacity", "ClassLimit", "Control", "CoverTerms", "Credit",
+	"Body", "Borrow", "ClassLimit", "Control", "CoverTerms", "Credit",
 	"CreditTerms", "Duty",
 	"FacilityBuild", "FacilityClass", "FacilityRepair", "Fiscal", "Holding",
 	"Infrastructure", "InitialFacility", "Institutions", "Insurance", "Insure",
-	"Jurisdiction", "Lend", "Lever", "Member",
-	"Payout", "Policy", "PolicyActor", "Polity", "ProjectWorth", "Purchase",
+	"Lend", "Lever",
+	"Payout", "Policy", "PolicyActor", "ProjectWorth", "Purchase",
 	"RateLimit", "Reaction", "RegionSettlement",
-	"Release", "Right", "Risk", "RoleRoom", "RouteRisk",
+	"Release", "Right", "Risk", "RouteRisk",
 	"Saver", "Saving", "ScheduleStep", "SettlementClass",
-	"Settlements", "Storage", "StoreClass", "StoreRisk", "Tax", "TechField",
+	"Settlements", "StoreRisk", "Tax", "TechField",
 	"Technology", "Tenure", "TenureTerm", "Toll", "Underwrite",
 	"Window",
 }
@@ -81,7 +81,7 @@ var exemptFields = map[string]bool{
 	"Config.Groups": true, "Config.Modules": true,
 	// The demand module: its pointer is the switch (spec-config.md 6.2.1), and the
 	// two taste lists are containers whose fields are the rows (spec-demand.md 9).
-	"Modules.Demand": true, "Modules.External": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Modules.Migration": true, "Modules.Merchants": true, "Modules.Employment": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
+	"Modules.Demand": true, "Modules.External": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Modules.Migration": true, "Modules.Merchants": true, "Modules.Employment": true, "Modules.Polity": true, "Modules.Storage": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
 	"YieldProfile.HasAll": true,
 	// The Has flags of an Endowment row only spell in Go what the file says by writing the key.
 	"Endowment.HasCapacity": true, "Endowment.HasInitial": true, "Endowment.HasRegenScale": true,
@@ -91,7 +91,7 @@ var exemptFields = map[string]bool{
 // the table names the module and the type is called after its configuration
 // (spec-config.md 3.7.1: the scope Subsistence is the type SubsistenceConfig, as
 // Tenure is TenureConfig).
-var scopeAlias = map[string]string{"Subsistence": "SubsistenceConfig"}
+var scopeAlias = map[string]string{"Subsistence": "SubsistenceConfig", "Polity": "PolityConfig"}
 
 // readOwnerTable reads the parameter-owner table of doc/specs/README.md by a
 // plain text parse: the pipe rows under the heading "Parameter owners".

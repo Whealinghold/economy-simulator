@@ -555,6 +555,9 @@ type Names struct {
 	// Modes holds the string ID of each ModeID; nil when the transport module is
 	// off.
 	Modes []string
+	// Jurisdictions holds the string ID of each JurisdictionID; nil when the polity
+	// module is off.
+	Jurisdictions []string
 }
 
 // Amount is a quantity of one commodity.

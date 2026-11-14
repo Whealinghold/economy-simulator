@@ -104,6 +104,9 @@ func (l *Ledger) add(a *account, k Key, n int64) {
 	if s := l.comms[k.Commodity].ShelfLife; s > 0 {
 		a.noteExpiry(expiry(k.Born, s))
 	}
+	if a.room != nil {
+		l.loadAdd(a, k.Commodity, n)
+	}
 }
 
 // take removes n units from lot i, from its earmark if marked, and returns the
@@ -140,6 +143,8 @@ type goodsMove struct {
 	// stated credits under key instead of the creation defaults (5.2.4).
 	stated bool
 	key    Key
+	// credit is the form of the credit to a limited account (room.go).
+	credit Credit
 }
 
 // Move moves qty units of a commodity from one account to another under a
@@ -158,7 +163,11 @@ type goodsMove struct {
 //  4. ErrReasonMismatch, as for Transfer but for goods;
 //  5. ErrInsufficientStock;
 //  6. ErrBalanceOverflow, in to (above MaxQuantity, or int64 for a boundary),
-//     the debited boundary, or the flow total.
+//     the debited boundary, or the flow total;
+//  7. a refusal of room, only for a credit to a limited account (room.go):
+//     ErrReservationExceeds, ErrNoRoom, or ErrNotLimited for a form that
+//     needs a room, checked with the holding bound of check 6 and before the
+//     flow total.
 //
 // The flow is attributed as Transfer's is and counted in units.
 func (l *Ledger) Move(from, to, commodity int, qty int64, r Reason) error {
@@ -196,6 +205,16 @@ func (l *Ledger) MoveLotReserved(from, to int, key Key, qty int64, r Reason) err
 // commodity that does not spoil or wear.
 func (l *Ledger) MoveStated(from, to int, key Key, qty int64, r Reason) error {
 	return l.move(goodsMove{from: from, to: to, commodity: key.Commodity, qty: qty, r: r, stated: true, key: key})
+}
+
+// MoveCredited is Move, or MoveReserved if marked, with the credit to the
+// destination in the given form (room.go, spec-storage.md 4.1.3): the
+// settlement of a bid is MoveCredited(..., true, CreditReserved) from the
+// seller's earmarked goods to the buyer's reserved room. The form changes
+// nothing for a destination that is not limited, except that the forms that
+// draw on a room are ErrNotLimited there.
+func (l *Ledger) MoveCredited(from, to, commodity int, qty int64, r Reason, marked bool, form Credit) error {
+	return l.move(goodsMove{from: from, to: to, commodity: commodity, qty: qty, r: r, marked: marked, credit: form})
 }
 
 // validStated reports whether a stated key is inside the ranges of 5.2.4.
@@ -247,6 +266,10 @@ func (l *Ledger) move(m goodsMove) error {
 
 	// Nothing below can fail.
 	flows[slot] = total
+	if t.room != nil && m.credit != CreditFree {
+		dm, db, _ := l.unitLoad(m.commodity, m.qty)
+		settleCredit(t, dm, db, m.credit)
+	}
 	if f.kind == KindBoundary {
 		f.balance = newFrom
 		l.add(t, l.moveKey(m), m.qty)
@@ -350,12 +373,31 @@ func (l *Ledger) creditCheck(t *account, m goodsMove) (newTo int64, err error) {
 		if !ok {
 			return 0, ErrBalanceOverflow
 		}
-		return n, nil
+		return n, checkRoomCredit(t, Size{}, Size{}, m.credit)
 	}
 	if n, ok := checked.Add(t.held(m.commodity), m.qty); !ok || n > l.maxQty {
 		return 0, ErrBalanceOverflow
 	}
-	return 0, nil
+	return 0, l.creditRoom(t, m)
+}
+
+// creditRoom tests the credit of a move against the room of the destination
+// (room.go). A credit whose load does not fit int64 does not fit any room.
+func (l *Ledger) creditRoom(t *account, m goodsMove) error {
+	if t.room == nil && m.credit == CreditFree {
+		return nil
+	}
+	dm, db, ok := l.unitLoad(m.commodity, m.qty)
+	if !ok && t.room != nil {
+		// A load that does not fit int64 is above any room, reserved room and
+		// pledge, even a room of MaxInt64 that a saturated load would fit: the
+		// form picks its own refusal.
+		if m.credit == CreditFree {
+			return ErrNoRoom
+		}
+		return ErrReservationExceeds
+	}
+	return checkRoomCredit(t, Size{dm, db}, Size{}, m.credit)
 }
 
 // takeLots moves the units out of the source lots in canonical order and
@@ -370,6 +412,9 @@ func (l *Ledger) takeLots(f, t *account, m goodsMove) {
 			continue
 		}
 		key := f.take(i, n, m.marked)
+		if f.room != nil {
+			l.loadSub(f, key.Commodity, n)
+		}
 		remaining -= n
 		emptied = emptied || f.lots[i].Quantity == 0
 		if t.kind != KindBoundary {

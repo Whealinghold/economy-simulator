@@ -67,6 +67,10 @@ type account struct {
 	// the commodity index. They are zero for any other kind.
 	reason Reason
 	thing  int
+	// room is the room of a limited agent account, nil for any other account
+	// (spec-storage.md 4.1). Room is not saved: the world sets it again after
+	// a restore, and the load is rebuilt from the lots.
+	room *Room
 }
 
 // Ledger holds all the money and goods and is the only place that changes
@@ -77,6 +81,8 @@ type Ledger struct {
 	maxQty   int64
 	comms    []Commodity
 	regions  int
+	// sizes is the table of unit sizes of SetSizes, nil while none was given.
+	sizes []Size
 
 	// stride is the number of flow slots of one region and off the offset of
 	// each (reason, thing) in a region's block, -1 for a pair no row moves.
@@ -436,7 +442,7 @@ func (l *Ledger) Close(id int) error {
 	switch {
 	case a.kind == KindBoundary:
 		return ErrInvalidKind
-	case a.reserved != 0 || a.earmarked():
+	case a.reserved != 0 || a.earmarked() || a.roomReserved():
 		return ErrOpenReservation
 	case a.balance != 0 || len(a.lots) != 0:
 		return ErrNotEmpty

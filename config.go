@@ -123,6 +123,157 @@ type Modules struct {
 	// block and a Hireable role. Its hash id is 13, whatever its place in this
 	// struct.
 	Employment *Employment
+	// Polity is the polity module: jurisdictions as one tree over the regions, the
+	// membership of the regions and the treasury of a governed jurisdiction
+	// (spec-polity.md). Nil is off; non-nil is on, even when empty. It needs no other
+	// module. Its hash id is 19, whatever its place in this struct.
+	Polity *PolityConfig
+	// Storage is the storage module: an agent's account may carry a room, a base
+	// room per household of its role plus the capacity of its stores
+	// (spec-storage.md). Nil is off; non-nil is on, even when empty (an empty
+	// module has no limited role and does nothing). It needs no other module. Its
+	// hash id is 12, whatever its place in this struct.
+	Storage *Storage
+}
+
+// Storage is the configuration of the storage module (spec-storage.md 12.1): a
+// base room per household for every role, a row per role that replaces it, and
+// the store classes. Its presence switches the module on. After construction the
+// lists are in canonical order (spec-config.md 3.4).
+type Storage struct {
+	// Base is the base room per household for every role without a row; nil is
+	// unlimited. Mass and Bulk are each 0 to MaxRoom.
+	Base *Capacity
+	// Roles are the role rows, at most one per role, canonical by role. A row
+	// replaces Base for its role as a whole (spec-storage.md 12.1.1).
+	Roles []RoleRoom
+	// Classes are the store classes, at most MaxStoreClasses, canonical by ID; the
+	// index of a class in this order is its StoreClassID.
+	Classes []StoreClass
+}
+
+// Capacity is a pair of room: a mass room and a bulk room (spec-goods.md 3.2).
+// Each is 0 to MaxRoom.
+type Capacity struct {
+	// Mass is the mass room.
+	Mass int64
+	// Bulk is the bulk room.
+	Bulk int64
+}
+
+// RoleRoom is the storage row of one role, in the replace mode of
+// spec-regions.md 5.1 (spec-storage.md 12.1).
+type RoleRoom struct {
+	// Role is the ID of a configured role; one row per role.
+	Role string
+	// Base is the base room of the role per household; nil makes the role
+	// unlimited even when Storage.Base is set, and a row with Stores states it.
+	Base *Capacity
+	// Stores are the store classes each agent of the role is created with, in
+	// class order (a class may repeat), at most MaxStoresPerAgent. They are
+	// refused on a role whose base room is nil.
+	Stores []string
+}
+
+// StoreClass is a kind of store: a capacity pair and a label (spec-storage.md
+// 3.2). It has no price and no durability: what a store costs is a money flow
+// whose target names the class.
+type StoreClass struct {
+	// ID is [a-z][a-z0-9_]* of at most MaxIDLength bytes, unique among classes.
+	ID string
+	// Mass is the mass room one store of the class adds, 0 to MaxRoom; not both
+	// Mass and Bulk are 0.
+	Mass int64
+	// Bulk is the bulk room one store of the class adds, 0 to MaxRoom.
+	Bulk int64
+	// Needs is a flag of the settlements module that the region must carry for the
+	// store to be given; empty is none. It is non-empty only with Modules.Settlements,
+	// which is not built, so a non-empty value is ErrModuleDependency.
+	Needs string
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// clone returns a copy that shares nothing with c, nil for nil.
+func (c *Capacity) clone() *Capacity {
+	if c == nil {
+		return nil
+	}
+	out := *c
+	return &out
+}
+
+// canonical returns a copy of the module with the role rows by role, each row's
+// stores in class order and the classes by ID (spec-config.md 3.4,
+// spec-storage.md 12.1), nil for nil.
+func (m *Storage) canonical() *Storage {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Base = m.Base.clone()
+	out.Roles = sortedBy(m.Roles, func(a, b RoleRoom) int { return cmp.Compare(a.Role, b.Role) })
+	for i := range out.Roles {
+		out.Roles[i].Base = out.Roles[i].Base.clone()
+		out.Roles[i].Stores = sortedBy(out.Roles[i].Stores, cmp.Compare[string])
+	}
+	out.Classes = sortedBy(m.Classes, func(a, b StoreClass) int { return cmp.Compare(a.ID, b.ID) })
+	return &out
+}
+
+// PolityConfig is the configuration of the polity module (spec-polity.md 8): the
+// jurisdictions and the membership of the regions. The type is called PolityConfig
+// because Polity is the value the queries are read through (spec-polity.md 4.2.1);
+// the scope Polity of the parameter-owner table resolves to this type. The zero
+// value is a module that is on with no jurisdiction, which is the world without the
+// module. After construction the lists are in canonical order (spec-config.md
+// 3.4).
+type PolityConfig struct {
+	// Jurisdictions are the jurisdictions, at most MaxJurisdictions. Their order is
+	// canonical by ID, bytewise, and their index in it is the JurisdictionID.
+	Jurisdictions []Jurisdiction
+	// Members are the membership rows, one per region at most, canonical by region.
+	Members []Member
+}
+
+// Jurisdiction is one node of the tree of the polity module (spec-polity.md 3).
+type Jurisdiction struct {
+	// ID is the identity, [a-z][a-z0-9_]* of at most 64 bytes, unique among
+	// jurisdictions (a jurisdiction may have the ID of a region).
+	ID string
+	// Parent is the parent jurisdiction, or empty for a root: a defined jurisdiction
+	// other than itself, with no cycle and fewer than MaxPolityDepth ancestors.
+	Parent string
+	// Seat is the region the jurisdiction is governed from, or empty for a grouping:
+	// a region it covers that is not an outside node. A governed jurisdiction has a
+	// treasury.
+	Seat string
+	// StartMoney is the money the treasury is created with, in minor units, 0 to
+	// MaxMoney, and only with a Seat.
+	StartMoney Money
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// Member says that a region is a direct member of a jurisdiction (spec-polity.md
+// 3.4.1). A region has at most one row.
+type Member struct {
+	// Region is a defined region.
+	Region string
+	// Jurisdiction is a defined jurisdiction.
+	Jurisdiction string
+}
+
+// canonical returns a copy of the module with the jurisdictions by ID and the
+// members by region (spec-config.md 3.4, spec-polity.md 3.2.1), nil for nil.
+func (m *PolityConfig) canonical() *PolityConfig {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Jurisdictions = sortedBy(m.Jurisdictions, func(a, b Jurisdiction) int { return cmp.Compare(a.ID, b.ID) })
+	out.Members = sortedBy(m.Members, func(a, b Member) int { return cmp.Compare(a.Region, b.Region) })
+	return &out
 }
 
 // Employment is the employment module in its payroll form (spec-employment.md
@@ -1202,6 +1353,8 @@ func (c Config) canonical() Config {
 	out.Modules.Transport = c.Modules.Transport.canonical()
 	out.Modules.Migration = c.Modules.Migration.canonical()
 	out.Modules.External = c.Modules.External.canonical(c.Calendar.Seasons)
+	out.Modules.Polity = c.Modules.Polity.canonical()
+	out.Modules.Storage = c.Modules.Storage.canonical()
 	return out
 }
 
@@ -1313,7 +1466,8 @@ type MoneyFlow struct {
 
 // FlowTarget names a class of accounts (spec-money-supply.md 4.3). The kinds
 // TargetHouseholds and TargetPool are built; the other kinds are recognised and
-// refused with ErrModuleDependency until their modules are built.
+// refused with ErrModuleDependency until their modules are built (the stores kind
+// is validated with the storage module and refused until its step is built).
 type FlowTarget struct {
 	// Kind is TargetHouseholds or TargetPool.
 	Kind string
@@ -1321,6 +1475,9 @@ type FlowTarget struct {
 	Region string
 	// Role is the role of the households; a pool has none.
 	Role string
+	// Store is the store class of a stores target; empty is every class. It has a
+	// meaning only for the kind stores (spec-storage.md 7.1.2, 12.3).
+	Store string
 }
 
 // External is the external-sector module (spec-external-sector.md 3.3): the

@@ -22,11 +22,11 @@ func auditErr(t *testing.T, err error) *AuditError {
 // Guard: String indexes a table; the number equal to its length must not index it.
 func TestIdentity_StringAtTheEndOfTheTable(t *testing.T) {
 	t.Parallel()
-	if got := IdentityClaimTotals.String(); got != "claim totals" {
-		t.Errorf("IdentityClaimTotals.String() = %q, want %q", got, "claim totals")
+	if got := IdentityRoom.String(); got != "room" {
+		t.Errorf("IdentityRoom.String() = %q, want %q", got, "room")
 	}
 	n := Identity(len(identityNames))
-	if got, want := n.String(), "identity 9"; got != want {
+	if got, want := n.String(), "identity 10"; got != want {
 		t.Errorf("Identity(%d).String() = %q, want %q", n, got, want)
 	}
 }
