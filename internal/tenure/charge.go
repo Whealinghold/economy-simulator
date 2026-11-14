@@ -28,6 +28,9 @@ func Available(balance, reserved int64) int64 {
 // start treats as unaffordable, and for a negative k or a line with a negative
 // field, with 0 returned.
 func TotalRent(lines []Line, k int64) (total int64, ok bool) {
+	if k < 0 {
+		return 0, false
+	}
 	for _, l := range lines {
 		line, valid := lineRent(l, k)
 		if !valid {
@@ -70,7 +73,7 @@ func Charge(available, other int64, lines []Line) (k, rent int64, ok bool) {
 	}
 	lo, hi := int64(0), other // TotalRent(lo) is affordable (0 units); find the largest affordable k
 	for lo < hi {
-		mid := lo + (hi-lo+1)/2
+		mid := lo + (hi-lo)/2 + (hi-lo)%2 // upper midpoint; hi-lo+1 would wrap at MaxInt64
 		if r, ok := TotalRent(lines, mid); ok && r <= available {
 			lo = mid
 		} else {

@@ -156,10 +156,7 @@ func TestCharge_MatchesBigIntOracle(t *testing.T) {
 	for _, seed := range oracleSeeds {
 		g := newCaseGen(seed)
 		for i := range oracleCases {
-			// other stops one short of MaxInt64: Charge's midpoint hi-lo+1 wraps for
-			// lo 0 and hi MaxInt64 and the bisection then answers k 0 (reported, not
-			// fixed, in the testing log of PR 1). Executions are far below it.
-			lines, available, other := genLines(g), g.val(), min(g.val(), math.MaxInt64-1)
+			lines, available, other := genLines(g), g.val(), g.val()
 			if !billedUnitsFit(lines, other) {
 				continue
 			}

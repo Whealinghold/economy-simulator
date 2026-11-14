@@ -52,3 +52,48 @@ func TestTiers_EntitlementsBeyondInt64AreRefused(t *testing.T) {
 		t.Errorf("Tiers(entitlements beyond int64) = %+v, %v, own %d, want refused with 0", res, ok, reqs[0].Own)
 	}
 }
+
+// TestCharge_OtherAtMaxInt64 verifies the bisection does not wrap its midpoint
+// when other is MaxInt64: a free line and a line whose rent exactly fits the
+// balance serve every execution asked, and a rent of 2 per execution serves half.
+//
+// Requirement: FR-LND-016, NFR-LND-003
+//
+// Guard: a wrapped midpoint answered k 0, refusing a start the principal can pay.
+func TestCharge_OtherAtMaxInt64(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		available int64
+		lines     []tenure.Line
+		wantK     int64
+		wantRent  int64
+	}{
+		{"free", 0, []tenure.Line{{Rent: 0, Draw: 1}}, math.MaxInt64, 0},
+		{"no lines", 0, nil, math.MaxInt64, 0},
+		{"exact fit", math.MaxInt64, []tenure.Line{{Rent: 1, Draw: 1}}, math.MaxInt64, math.MaxInt64},
+		{"one short", math.MaxInt64 - 1, []tenure.Line{{Rent: 1, Draw: 1}}, math.MaxInt64 - 1, math.MaxInt64 - 1},
+		{"half", math.MaxInt64, []tenure.Line{{Rent: 2, Draw: 1}}, math.MaxInt64 / 2, math.MaxInt64 - 1},
+		{"unaffordable", 5, []tenure.Line{{Rent: 2, Draw: 1}}, 2, 4},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			k, rent, ok := tenure.Charge(tc.available, math.MaxInt64, tc.lines)
+			if !ok || k != tc.wantK || rent != tc.wantRent {
+				t.Errorf("Charge(%d, MaxInt64, %+v) = %d, %d, %v, want %d, %d, true", tc.available, tc.lines, k, rent, ok, tc.wantK, tc.wantRent)
+			}
+		})
+	}
+}
+
+// TestTotalRent_NegativeKWithoutLinesIsRefused verifies a negative k is refused
+// even when there is no line to refuse it.
+//
+// Requirement: FR-LND-016, NFR-LND-003
+func TestTotalRent_NegativeKWithoutLinesIsRefused(t *testing.T) {
+	t.Parallel()
+	if total, ok := tenure.TotalRent(nil, -1); ok || total != 0 {
+		t.Errorf("TotalRent(nil, -1) = %d, %v, want 0, false", total, ok)
+	}
+}
