@@ -26,7 +26,7 @@ func TestBlockReasonAt_UnknownReasonIsTheLast(t *testing.T) {
 
 // TestBlocksOwnUse_RefusalsOfCase verifies that a start refused for an endowment or
 // for room blocks an own-use household and that a refusal of case (a) or any other
-// does not, and that the blocking reasons are listed in blockReasons.
+// does not, and that no_room is counted in the slot of any other reason.
 //
 // Requirement: FR-SUB-023
 //
@@ -45,8 +45,8 @@ func TestBlocksOwnUse_RefusalsOfCase(t *testing.T) {
 			t.Errorf("blocksOwnUse(%v) = %t, want %t", tc.reason, got, tc.want)
 		}
 	}
-	if got, want := blockReasonAt(ReasonNoRoom), 3; got != want {
-		t.Errorf("blockReasonAt(no_room) = %d, want %d (before the last, any other)", got, want)
+	if got, want := blockReasonAt(ReasonNoRoom), len(blockReasons)-1; got != want {
+		t.Errorf("blockReasonAt(no_room) = %d, want %d (the slot of any other until blockReasons grows with golden/all)", got, want)
 	}
 }
 

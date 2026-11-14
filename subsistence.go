@@ -130,7 +130,7 @@ func (m *viaModel) ownUseOnly() []bool {
 // blockReasons are the reasons a household in the mode is blocked, the last being
 // any other; the Warn "own use blocked" names the commonest (spec-subsistence.md
 // 14.2). A later module that adds a refusal appends its reason here (D418).
-var blockReasons = [...]Reason{ReasonZeroYield, ReasonNoSite, ReasonNoEndowment, ReasonNoRoom, ReasonNoRecipe}
+var blockReasons = [...]Reason{ReasonZeroYield, ReasonNoSite, ReasonNoEndowment, ReasonNoRecipe}
 
 // blockReasonAt is the index of a reason in blockReasons, the last for any other.
 func blockReasonAt(r Reason) int {
@@ -477,7 +477,10 @@ func (s *subsistence) noteStart(w *World, a *agent, cell int, recipe RecipeID, k
 
 // blocksOwnUse reports whether a start refused for the reason blocks an own-use
 // household (FR-SUB-023, case b). The reasons that later modules add are appended
-// here and to blockReasons (D418).
+// here and to blockReasons (D418). no_room is not in blockReasons yet: a longer
+// blockedBy changes the hashed shape of the state and so golden/all, which no module
+// PR moves (plan 3-sto Q3), so a household refused for room counts in the slot of any
+// other reason until the PR that moves golden/all appends it.
 func blocksOwnUse(reason Reason) bool {
 	return reason == ReasonNoEndowment || reason == ReasonNoRoom
 }
