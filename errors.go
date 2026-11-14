@@ -577,3 +577,18 @@ var (
 	// with that do not fit.
 	ErrNoRoom = errors.New("no room")
 )
+
+// The sentinels of the settlements module (spec-settlements.md 9.1). They are root
+// sentinels matched with errors.Is; the module reuses ErrOutOfBounds,
+// ErrInvalidID, ErrDuplicateID, ErrTooMany, ErrUnknownRegion, ErrOutsideNode and
+// ErrModuleDependency.
+var (
+	// ErrUnknownSettlementClass is a region row's Floor naming a class that is not
+	// defined.
+	ErrUnknownSettlementClass = errors.New("unknown settlement class")
+	// ErrUnknownSettlementFlag is a Role.Needs or a StoreClass.Needs naming a flag
+	// that no class carries.
+	ErrUnknownSettlementFlag = errors.New("unknown settlement flag")
+	// ErrUnknownLimit is a Role.Ceiling naming a limit that no class carries.
+	ErrUnknownLimit = errors.New("unknown settlement limit")
+)

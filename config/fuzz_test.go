@@ -46,6 +46,7 @@ func FuzzLoad(f *testing.F) {
 	f.Add([]byte(migrationDoc), []byte("[modules.migration]\nmove_speed = 0\nmove_out_share = 1.5\n"), []byte("[modules.migration.region.a]\nout_share = -1\n[role.a]\nfixed = 1\n"))
 	f.Add([]byte(merchantsDoc), []byte("[modules.merchants]\nmax_open = 0\n"), []byte("[role.broker.merchant]\nlot_units = 1.5\nconsigns = 1\n"))
 	f.Add([]byte(storageDoc), []byte("[modules.storage.class.bin]\nmass = 1.5\n"), []byte("[modules.storage.role.a]\nstores = [ 1 ]\n"))
+	f.Add([]byte(settlementsDoc), []byte("[modules.settlements.class.a]\nenter = 1.5\n"), []byte("[modules.settlements.class.a.limits]\nplaces = \"1\"\n[role.a]\nneeds = 1\n"))
 	f.Add([]byte(minimal+"[modules.storage]\n"), []byte("[role.a]\ntarget_ratio = 1.5\n"), []byte("world = 1\n"))
 	f.Add([]byte(minimal+"[region.a.edge.b]\ndistance = 3\n[region.b.edge.a]\ndistance = 0\n"), []byte("[region.a.edge.a]\ndistance = 2\n"), []byte("[region.a.reference_price]\nx = 1\n"))
 	f.Add([]byte(minimal+"[region.a.edge.b]\n"), []byte("[region.a.edge.b]\ndistance = 1.5\n"), []byte("[region.a.reference_price]\nx = \"1\"\n"))

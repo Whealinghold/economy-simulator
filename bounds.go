@@ -535,3 +535,24 @@ const (
 	// MaxStoreClasses is the most store classes.
 	MaxStoreClasses = 64
 )
+
+// The bounds of the settlements module (spec-settlements.md 8.1). All five are
+// placeholders (N-015, N-027).
+const (
+	// MaxSettlementClasses is the most settlement classes: a ranking of settlements
+	// is short, and each region holds one threshold per class.
+	MaxSettlementClasses = 16
+	// MaxClassFlags is the most distinct flag names over the classes of the module,
+	// so that the flags of a class fit one 64-bit word.
+	MaxClassFlags = 64
+	// MaxClassLimits is the most distinct limit names over the classes of the module,
+	// so that which limits a class carries fits one 64-bit word.
+	MaxClassLimits = 64
+	// MaxBandBP is the largest band, in basis points of an enter threshold: a leave
+	// threshold is at least half the enter threshold, so a region that has just
+	// reached a class is not a few households from losing it.
+	MaxBandBP = 5_000
+	// MaxThresholdBP is the largest scale of the enter thresholds of a region, in
+	// basis points: ten times, as MaxYieldBP.
+	MaxThresholdBP = 100_000
+)

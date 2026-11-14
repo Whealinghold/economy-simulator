@@ -333,6 +333,8 @@ func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 		e.num(1, r.Employer.PayrollBP)
 		e.end()
 	}
+	e.text(25, r.Needs)
+	e.text(26, r.Ceiling)
 }
 
 // pairsRegion writes the pairs of a Region: ids 1 to 7. Label is presentation
@@ -469,7 +471,7 @@ func pairsModules(e *encoder, m Modules) {
 	pairsLaterModules(e, m)
 }
 
-// pairsLaterModules writes the pairs of the modules of ids 9, 10, 12, 13, 19 and 25 of
+// pairsLaterModules writes the pairs of the modules of ids 9, 10, 11, 12, 13, 19 and 25 of
 // Modules, after those pairsModules writes (a continuation for the Lizard limit).
 func pairsLaterModules(e *encoder, m Modules) {
 	if m.Migration != nil {
@@ -480,6 +482,11 @@ func pairsLaterModules(e *encoder, m Modules) {
 	if m.Merchants != nil {
 		e.id(10)
 		e.num(1, m.Merchants.MaxOpen)
+		e.end()
+	}
+	if m.Settlements != nil {
+		e.id(11)
+		pairsSettlements(e, *m.Settlements)
 		e.end()
 	}
 	if m.Storage != nil {
@@ -534,6 +541,31 @@ func pairsBase(e *encoder, id uint16, c *Capacity) {
 	e.num(1, c.Mass)
 	e.num(2, c.Bulk)
 	e.end()
+}
+
+// pairsSettlements writes the pairs of a Settlements: Classes 1, BandBP 2, Dwell 3,
+// Regions 4. A SettlementClass has ID 1, Enter 2, Flags 3 and Limits 4 (Label is
+// presentation only and has no id); a ClassLimit has Name 1 and Value 2; a
+// RegionSettlement has Region 1, ThresholdBP 2 and Floor 3. The classes are written
+// in canonical order, by Enter, each class's flags and limits by name and the rows
+// by region, so two configurations of equal content hash alike.
+func pairsSettlements(e *encoder, s Settlements) {
+	encodeList(e, 1, s.Classes, func(e *encoder, c SettlementClass) {
+		e.text(1, c.ID)
+		e.num(2, c.Enter)
+		e.texts(3, c.Flags)
+		encodeList(e, 4, c.Limits, func(e *encoder, l ClassLimit) {
+			e.text(1, l.Name)
+			e.num(2, l.Value)
+		})
+	})
+	e.num(2, s.BandBP)
+	e.num(3, s.Dwell)
+	encodeList(e, 4, s.Regions, func(e *encoder, r RegionSettlement) {
+		e.text(1, r.Region)
+		e.num(2, r.ThresholdBP)
+		e.text(3, r.Floor)
+	})
 }
 
 // pairsPolity writes the pairs of a PolityConfig: Jurisdictions 1, Members 2.

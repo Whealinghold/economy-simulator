@@ -134,6 +134,11 @@ type Modules struct {
 	// module has no limited role and does nothing). It needs no other module. Its
 	// hash id is 12, whatever its place in this struct.
 	Storage *Storage
+	// Settlements is the settlements module: a region has a size class derived from
+	// its households, and a role may need a flag of the class or be bounded by its
+	// limit (spec-settlements.md). Nil is off; non-nil is on. It needs no other
+	// module. Its hash id is 11, whatever its place in this struct.
+	Settlements *Settlements
 }
 
 // Storage is the configuration of the storage module (spec-storage.md 12.1): a
@@ -150,6 +155,90 @@ type Storage struct {
 	// Classes are the store classes, at most MaxStoreClasses, canonical by ID; the
 	// index of a class in this order is its StoreClassID.
 	Classes []StoreClass
+}
+
+// Settlements is the configuration of the settlements module
+// (spec-settlements.md 3.1): the size classes with what each carries, the band and
+// the dwell that keep a class from flapping, and the rows that scale the thresholds
+// of one region or give it a floor. Its presence switches the module on. After
+// construction the classes are in canonical order, by Enter, and the flags, the
+// limits and the region rows are sorted (spec-config.md 3.4).
+type Settlements struct {
+	// Classes are the size classes, 1 to MaxSettlementClasses. The class with the
+	// smallest Enter is the first and has Enter 0; the index in canonical order is
+	// the SettlementClassID.
+	Classes []SettlementClass
+	// BandBP is the band, in basis points of an enter threshold, 0 to MaxBandBP: how
+	// far below an enter threshold the count may fall before a class is given up.
+	// DefaultSettlements gives 1 000. Its hash id is 2.
+	BandBP int64
+	// Dwell is the least ticks between two changes of a region's class, 0 to
+	// MaxWelfareWindow. DefaultSettlements gives 30. Its hash id is 3.
+	Dwell int64
+	// Regions are the region rows, at most one per region that is not an outside
+	// node, canonical by region.
+	Regions []RegionSettlement
+}
+
+// SettlementClass is one size class (spec-settlements.md 3.1).
+type SettlementClass struct {
+	// ID is [a-z][a-z0-9_]* of at most MaxIDLength bytes, unique among classes.
+	ID string
+	// Enter is the households at or above which the class is reached, 0 to
+	// MaxHouseholds; 0 for the first class and distinct over the classes.
+	Enter int64
+	// Flags are the flag names the class carries, each at most once, sorted by name
+	// after construction.
+	Flags []string
+	// Limits are the limits the class carries, each name at most once, sorted by
+	// name after construction.
+	Limits []ClassLimit
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// ClassLimit names a limit and gives its value for one class: a count of
+// households, agents, units or places, 0 to MaxQuantity (spec-settlements.md
+// 3.3.2). Without a row a class has no limit; a value of 0 is a closed gate.
+type ClassLimit struct {
+	// Name is the limit's name, [a-z][a-z0-9_]* of at most MaxIDLength bytes.
+	Name string
+	// Value is the count, 0 to MaxQuantity.
+	Value int64
+}
+
+// RegionSettlement is a row of the region-keyed table of the settlements module
+// (spec-settlements.md 3.5, spec-regions.md 5.1).
+type RegionSettlement struct {
+	// Region is the ID of a defined region that is not an outside node; one row per
+	// region.
+	Region string
+	// ThresholdBP scales every enter threshold of the region but the first, in basis
+	// points, 1 to MaxThresholdBP (10 000 leaves them as written; the zero is out of
+	// bounds, DefaultRegionSettlement sets it).
+	ThresholdBP int64
+	// Floor is the ID of the lowest class the region may have; empty for none.
+	Floor string
+}
+
+// canonical returns a copy of the module with the classes by Enter (ID breaks a
+// tie, so the order is total even for a configuration that validation refuses),
+// each class's flags by name and limits by name, and the region rows by region
+// (spec-config.md 3.4, spec-settlements.md 3.2), nil for nil.
+func (m *Settlements) canonical() *Settlements {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Classes = sortedBy(m.Classes, func(a, b SettlementClass) int {
+		return cmp.Or(cmp.Compare(a.Enter, b.Enter), cmp.Compare(a.ID, b.ID))
+	})
+	for i := range out.Classes {
+		out.Classes[i].Flags = sortedBy(out.Classes[i].Flags, cmp.Compare[string])
+		out.Classes[i].Limits = sortedBy(out.Classes[i].Limits, func(a, b ClassLimit) int { return cmp.Compare(a.Name, b.Name) })
+	}
+	out.Regions = sortedBy(m.Regions, func(a, b RegionSettlement) int { return cmp.Compare(a.Region, b.Region) })
+	return &out
 }
 
 // Capacity is a pair of room: a mass room and a bulk room (spec-goods.md 3.2).
@@ -1137,6 +1226,17 @@ type Role struct {
 	// Employer is the employer block: non-nil makes the role a payer
 	// (spec-employment.md 24.3.2). It is hashed when non-nil. Its hash id is 24.
 	Employer *Employer
+	// Needs is the flag a settlement class must carry for the role to be open in a
+	// region: a role with Needs is closed, as Closed is, where the region's class
+	// lacks the flag (spec-settlements.md 6.4.1). Empty is none. It needs
+	// Modules.Settlements (a value with the module nil is ErrModuleDependency) and a
+	// flag some class carries. Its hash id is 25.
+	Needs string
+	// Ceiling is the limit that bounds the households of the role in a region: the
+	// default spawner admits only what fits the limit of the region's class
+	// (spec-settlements.md 6.4.2). Empty is none. It needs Modules.Settlements and a
+	// limit some class carries. Its hash id is 26.
+	Ceiling string
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string
@@ -1355,6 +1455,7 @@ func (c Config) canonical() Config {
 	out.Modules.External = c.Modules.External.canonical(c.Calendar.Seasons)
 	out.Modules.Polity = c.Modules.Polity.canonical()
 	out.Modules.Storage = c.Modules.Storage.canonical()
+	out.Modules.Settlements = c.Modules.Settlements.canonical()
 	return out
 }
 

@@ -322,6 +322,44 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Storage = l.storage(ss)
 		ss.finish()
 	}
+	if ss := m.sub("settlements"); ss != nil {
+		cfg.Modules.Settlements = l.settlements(ss)
+		ss.finish()
+	}
+}
+
+// settlements reads [modules.settlements] over DefaultSettlements (spec-config.md 6.2,
+// spec-settlements.md 3.1): the keys band_bp and dwell, a class as [class.<id>] (keys
+// enter, flags, label, and a [class.<id>.limits] table with one key per limit) and a
+// region row as [region.<id>] (keys threshold_bp, floor) over DefaultRegionSettlement.
+// A key-less table switches the module on. The rows come out in ID order because every
+// level is read in the order of the keys, and the limits in the order of their names.
+func (l *loader) settlements(t *tbl) *economysim.Settlements {
+	m := economysim.DefaultSettlements()
+	integer(t, "band_bp", &m.BandBP)
+	integer(t, "dwell", &m.Dwell)
+	t.entities("class", func(id string, e *tbl) {
+		c := economysim.SettlementClass{ID: id}
+		e.need("enter", integer(e, "enter", &c.Enter))
+		e.strings("flags", &c.Flags)
+		e.text("label", &c.Label)
+		if lt := e.sub("limits"); lt != nil {
+			for _, name := range slices.Sorted(maps.Keys(lt.m)) {
+				lim := economysim.ClassLimit{Name: name}
+				lt.need(name, integer(lt, name, &lim.Value))
+				c.Limits = append(c.Limits, lim)
+			}
+			lt.finish()
+		}
+		m.Classes = append(m.Classes, c)
+	})
+	t.entities("region", func(id string, e *tbl) {
+		r := economysim.DefaultRegionSettlement(id)
+		integer(e, "threshold_bp", &r.ThresholdBP)
+		e.text("floor", &r.Floor)
+		m.Regions = append(m.Regions, r)
+	})
+	return &m
 }
 
 // storage reads [modules.storage] (spec-config.md 6.2.1, spec-storage.md 12.5): the
@@ -565,6 +603,8 @@ func (l *loader) role(id string, t *tbl) economysim.Role {
 		es.finish()
 		r.Employer = &e
 	}
+	t.text("needs", &r.Needs)
+	t.text("ceiling", &r.Ceiling)
 	t.text("label", &r.Label)
 	return r
 }

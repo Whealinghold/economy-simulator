@@ -54,6 +54,16 @@ type ModeID int
 // exchange.
 type StoreClassID int
 
+// SettlementClassID is the index of a settlement class in ascending order of Enter,
+// which is its position in the canonical Config().Modules.Settlements.Classes
+// (spec-settlements.md 3.2). It is not the rank of the ID string, and it is not
+// stable across configurations: adding a class renumbers the others. Use the string
+// ID to persist or exchange.
+type SettlementClassID int
+
+// NoSettlementClass means no class: the From of the event of a founding.
+const NoSettlementClass SettlementClassID = -1
+
 // ShipmentID identifies a shipment. IDs are assigned in order of dispatch from 0
 // and are never reused within a world.
 type ShipmentID int64
