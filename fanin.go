@@ -16,19 +16,6 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if err := w.views.fillCore(v, a, &w.tk.vctx); err != nil {
 		return err
 	}
-	w.fillSharedViews(v, a)
-	if kind == viewTrade {
-		w.fillTradeViews(v, a)
-	}
-	if w.sub != nil {
-		return w.sub.fillView(w, v, a, &w.tk.vctx)
-	}
-	return nil
-}
-
-// fillSharedViews is the part of fillAgentView that Work and Trade both see: the
-// groups of the demand, resources and transport modules, in module order.
-func (w *World) fillSharedViews(v *AgentView, a *agent) {
 	if w.demand != nil {
 		w.fillWants(v, a)
 	}
@@ -38,12 +25,21 @@ func (w *World) fillSharedViews(v *AgentView, a *agent) {
 	if w.transport != nil {
 		w.fillTransport(v, a)
 	}
+	if kind == viewTrade {
+		w.fillTradeOnly(v, a)
+	}
+	if w.sub != nil {
+		if err := w.sub.fillView(w, v, a, &w.tk.vctx); err != nil {
+			return err
+		}
+	}
+	w.fillBoard(v, a)
+	return nil
 }
 
-// fillTradeViews is the part of fillAgentView that Trade alone sees: the rumours
-// of the information module and the lanes of a merchant (spec-information.md
-// 6.2.1).
-func (w *World) fillTradeViews(v *AgentView, a *agent) {
+// fillTradeOnly is the module fillers that are an input to Trade only: the
+// rumours of the information module and the merchant view.
+func (w *World) fillTradeOnly(v *AgentView, a *agent) {
 	if w.info != nil {
 		w.fillRumours(v, a)
 		w.recordRumours(v, a)
@@ -93,6 +89,7 @@ func (w *World) checkTradePlan(a *agent, p *TradePlan) {
 // A module's step is appended below its slot, and the events stay last.
 func (w *World) removeAgent(a *agent, cause Cause) error {
 	tick, region := w.Tick(), w.regionOf(a)
+	w.dropAgent(a) // step 2 of the traineeships, nil-safe: a queue entry goes, a trainer's trainees return before its own events
 	if a.hasJob() {
 		w.abandonJob(a, region, ReasonAgentRemoved)
 	}
@@ -164,6 +161,9 @@ func (w *World) agentRoleChanged(a *agent, from RoleID, region RegionID) {
 	}
 	if w.sub != nil {
 		w.sub.roleChanged(a)
+	}
+	if w.skills != nil {
+		w.skills.dequeue(a.id) // a queued applicant that changes role leaves its queue (spec-spawner.md 6.2)
 	}
 	if a.external {
 		w.externalRoleChanged(a)

@@ -3,6 +3,7 @@ package economysim
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -16,7 +17,7 @@ import (
 // weaver. The weaver role trains (4 ticks), so the state exists; the millers do
 // not.
 func skillsConfig() Config {
-	c := exitConfig()
+	c := exitTrainingConfig()
 	r := DefaultRegion()
 	r.ID = "yonder"
 	c.Regions = append(c.Regions, r)
@@ -79,8 +80,9 @@ func plantSkills(w *World, c skillCast) {
 	s := w.skills
 	s.start(c.homeMillers[0], c.homeWeaver, 1, 2, 3)
 	s.trainer[c.homeWeaver].acc = 4_500
-	s.queue[s.cell(0, 1)] = []applicant{{c.homeMillers[1], 4, 1}, {c.homeMillers[2], 4, 0}}
-	s.queue[s.cell(1, 1)] = []applicant{{c.yonderMillers[0], 2, 3}}
+	s.enqueue(s.cell(0, 1), applicant{c.homeMillers[1], 4, 1})
+	s.enqueue(s.cell(0, 1), applicant{c.homeMillers[2], 4, 0})
+	s.enqueue(s.cell(1, 1), applicant{c.yonderMillers[0], 2, 3})
 	s.warnRun[s.cell(1, 1)] = 7
 }
 
@@ -202,6 +204,29 @@ func TestSkills_StartEndKeepTrainersInOrder(t *testing.T) {
 		if msg := invariantMessage(f); msg == "" {
 			t.Errorf("start with %s did not panic, want a violated invariant", name)
 		}
+	}
+	want := fmt.Sprintf("(trainee %d, trainer %d)", c.homeMillers[0], c.homeWeaver)
+	if msg := invariantMessage(func() { s.start(c.homeMillers[0], c.homeWeaver, 1, 0, 1) }); !strings.Contains(msg, want) {
+		t.Errorf("start invariant message = %q, want it to name %q", msg, want)
+	}
+}
+
+// TestSkills_InvariantsNameTheAgent verifies that the violated invariants of the
+// queue and of a completion say which agent they concern, so a panic in a large
+// run is localised without a replay.
+//
+// Requirement: FR-SKL-012
+func TestSkills_InvariantsNameTheAgent(t *testing.T) {
+	t.Parallel()
+	w, c := skillsWorld(t, 8)
+	id := c.homeMillers[0]
+	w.skills.grow(id)
+	w.skills.queuedIn[id] = 1 // marked as queued, but in no queue
+	if msg := invariantMessage(func() { w.skills.dequeue(id) }); !strings.Contains(msg, fmt.Sprintf("agent %d is marked as queued", id)) {
+		t.Errorf("dequeue invariant message = %q, want it to name agent %d", msg, id)
+	}
+	if msg := invariantMessage(func() { w.traineeshipCompleted(&w.agents[id], 0, 1) }); !strings.Contains(msg, fmt.Sprintf("agent %d, which is no trainee", id)) {
+		t.Errorf("completion invariant message = %q, want it to name agent %d", msg, id)
 	}
 }
 
@@ -388,6 +413,8 @@ func TestCheckpoint_SkillsRefusesCorrupt(t *testing.T) {
 			s.trainees = [][5]int64{{a(hm[0]), hw, 1, 2, 3}, {a(hm[1]), hw, 1, 2, 3}}
 			s.trainers = []trainerRow{{hw, 0, []int64{a(hm[0]), a(hm[1]), -1}}}
 		}), nil},
+		{"trainer that is not an agent", with(func(s *skillSection) { s.trainers = []trainerRow{{999, 0, []int64{a(hm[0])}}} }), nil},
+		{"applicant that is not an agent", with(func(s *skillSection) { s.queues = []queueRow{{0, 1, [][3]int64{{999, 3, 0}}}} }), nil},
 		{"trainer lists an agent beyond the agents", with(func(s *skillSection) { s.trainers = []trainerRow{{hw, 0, []int64{a(hm[0]), 1 << 40}}} }), nil},
 		{"trainee listed twice by its trainer", with(func(s *skillSection) { s.trainers = []trainerRow{{hw, 0, []int64{a(hm[0]), a(hm[0])}}} }), nil},
 		{"queued trainee", with(func(s *skillSection) { s.queues = []queueRow{{0, 1, [][3]int64{{a(hm[0]), 3, 0}}}} }), nil},
@@ -405,6 +432,14 @@ func TestCheckpoint_SkillsRefusesCorrupt(t *testing.T) {
 		}), nil},
 		{"applicant with ticks served above the course", with(func(s *skillSection) { s.queues = []queueRow{{0, 1, [][3]int64{{a(hm[1]), 3, 5}}}} }), nil},
 		{"applicant that applied in the future", with(func(s *skillSection) { s.queues = []queueRow{{0, 1, [][3]int64{{a(hm[1]), 9, 0}}}} }), nil},
+		// Defensive: enqueue keeps the queue in the order of skill.Requeue, so a queue
+		// out of it cannot be a state of a live world.
+		{"queue out of order by application tick", with(func(s *skillSection) {
+			s.queues = []queueRow{{0, 1, [][3]int64{{a(hm[1]), 4, 0}, {a(hm[2]), 3, 0}}}}
+		}), nil},
+		{"queue out of order by ticks served", with(func(s *skillSection) {
+			s.queues = []queueRow{{0, 1, [][3]int64{{a(hm[1]), 3, 0}, {a(hm[2]), 4, 2}}}}
+		}), nil},
 		{"warn run of a role with no training", with(func(s *skillSection) { s.warns = [][3]int64{{0, 0, 3}} }), nil},
 		{"warn run above the ticks", with(func(s *skillSection) { s.warns = [][3]int64{{0, 1, 9}} }), nil},
 		{"warn run at 0", with(func(s *skillSection) { s.warns = [][3]int64{{0, 1, 0}} }), nil},
@@ -424,7 +459,8 @@ func TestCheckpoint_SkillsRefusesCorrupt(t *testing.T) {
 			}
 			if err == nil {
 				t.Errorf("loadSkills + skillsCross accepted %+v, want a refusal", tt.sec)
-
+			} else if !errors.Is(err, codec.ErrMalformed) && !errors.Is(err, ErrCheckpointCorrupt) {
+				t.Errorf("loadSkills + skillsCross refused %+v with %v, want codec.ErrMalformed or ErrCheckpointCorrupt", tt.sec, err)
 			}
 		})
 	}
@@ -547,10 +583,10 @@ func FuzzLoadSkillsSection(f *testing.F) {
 }
 
 // TestSkills_PlantedStateSurvivesTicksAndFork verifies, with real components, that
-// a world holding a traineeship, two queues and a Warn run keeps them untouched
-// through further steps (PR A adds no behaviour, so nothing may move them), passes
-// its audit, and that a world restored from a checkpoint taken then stays equal to
-// the original, checkpoint byte for byte, after the same further steps.
+// a world holding a traineeship, two queues and a Warn run passes its audit through
+// further steps (the traineeships now move: places fill, ticks are served), and that
+// a world restored from a checkpoint taken then stays equal to the original,
+// checkpoint byte for byte, after the same further steps.
 //
 // Guard: the state is carried by tag 10 only, and the fork of a world with skills
 // must replay the original; a field of the state that the codec drops, or a hook
@@ -564,15 +600,11 @@ func TestSkills_PlantedStateSurvivesTicksAndFork(t *testing.T) {
 	}
 	w, c := skillsWorld(t, 8)
 	plantSkills(w, c)
-	before := section10(t, w)
 	fork := restoreWith(t, w, skillsConfig())
 	step(t, w, 6)
 	step(t, fork, 6)
-	if got := section10(t, w); !bytes.Equal(got, before) {
-		t.Errorf("tag 10 after 6 steps = %v, want the planted %v", got, before)
-	}
-	if got := section10(t, fork); !bytes.Equal(got, before) {
-		t.Errorf("tag 10 of the fork after 6 steps = %v, want the planted %v", got, before)
+	if got, want := section10(t, fork), section10(t, w); !bytes.Equal(got, want) {
+		t.Errorf("tag 10 of the fork after 6 steps = %v, want that of the original %v", got, want)
 	}
 	a, err := w.Checkpoint()
 	if err != nil {

@@ -131,12 +131,16 @@ func (w *World) fillRoomState(st *AgentState, a *agent) {
 // cargo of the shipments in flight. It names the first that fails.
 func (w *World) auditStorage() error {
 	s := w.sto
+	jobs, err := s.pledgedByJobs(w)
+	if err != nil {
+		return err
+	}
 	for i := w.firstHousehold; i < len(w.agents); i++ {
 		a := &w.agents[i]
 		if a.weight < 1 {
 			continue
 		}
-		if err := w.auditRoom(a); err != nil {
+		if err := w.auditRoom(a, jobs); err != nil {
 			return fmt.Errorf("storage: agent %d: %w", a.id, err)
 		}
 	}
@@ -144,7 +148,7 @@ func (w *World) auditStorage() error {
 }
 
 // auditRoom is auditStorage for one agent.
-func (w *World) auditRoom(a *agent) error {
+func (w *World) auditRoom(a *agent, jobs []room.Pair) error {
 	s := w.sto
 	rm, err := w.ledger.RoomOf(a.account)
 	if err != nil {
@@ -162,7 +166,7 @@ func (w *World) auditRoom(a *agent) error {
 	if rm.ReservedMass != 0 || rm.ReservedBulk != 0 {
 		return fmt.Errorf("reserved room (%d, %d) at a boundary", rm.ReservedMass, rm.ReservedBulk)
 	}
-	if err := s.auditPledge(rm, a); err != nil {
+	if err := s.auditPledge(rm, a, jobs); err != nil {
 		return err
 	}
 	if r := s.roomFor(a); rm.Mass != r.Mass || rm.Bulk != r.Bulk {
@@ -173,10 +177,9 @@ func (w *World) auditRoom(a *agent) error {
 
 // auditPledge checks that the pledge of a limited account is what its job and its
 // cargo in flight imply (spec-storage.md 4.4 identity 4).
-func (s *storage) auditPledge(rm ledger.Room, a *agent) error {
-	load, okj := s.jobLoad(&a.job)
-	want, okp := addPair(load, s.inbound[a.id])
-	if !okj || !okp {
+func (s *storage) auditPledge(rm ledger.Room, a *agent, jobs []room.Pair) error {
+	want, okp := addPair(jobs[a.id], s.inbound[a.id])
+	if !okp {
 		return errors.New("the pledge its job and cargo imply does not fit int64")
 	}
 	if rm.PledgeMass != want.Mass || rm.PledgeBulk != want.Bulk {
@@ -220,4 +223,24 @@ func (s *storage) cargoInFlight(w *World) ([]room.Pair, error) {
 		want[sh.consignee] = sum
 	}
 	return want, nil
+}
+
+// pledgedByJobs is, per principal, the load of the pending output of the jobs in
+// progress that name it, scanned from the agents' jobs (the audit's check of the
+// pledge that syncJob keeps).
+func (s *storage) pledgedByJobs(w *World) ([]room.Pair, error) {
+	out := make([]room.Pair, len(w.agents))
+	for i := w.firstHousehold; i < len(w.agents); i++ {
+		a := &w.agents[i]
+		if a.weight < 1 || a.job.executions <= 0 {
+			continue
+		}
+		load, ok := s.pendingLoad(&a.job)
+		sum, ok2 := addPair(out[a.job.principal], load)
+		if !ok || !ok2 {
+			return nil, fmt.Errorf("storage: the pledge of the job of agent %d does not fit int64", a.id)
+		}
+		out[a.job.principal] = sum
+	}
+	return out, nil
 }

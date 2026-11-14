@@ -170,10 +170,10 @@ changes nothing, is counted in `EntryLimited` (13.1) and logged at `Debug` with 
 
 | Reason | Refused when |
 |--------|--------------|
-| `unknown_agent`, `unknown_role` | the ID does not exist, or the agent is in another region |
+| `unknown_agent`, `unknown_role` | the ID does not exist, or the agent is in another region; an `Apply` to a role with `TrainingTicks` 0 is `unknown_role` too, since that role has no traineeship |
 | `external_agent` | the agent is external and not mortal (9) |
-| `same_role` | a switch to the agent's own role |
-| `in_traineeship` | a switch or apply of a trainee, or a switch of a trainer with trainees. A removal is never refused for this: removing a trainee ends its traineeship (`spec-agents.md` 3.6 step 2) and removing a trainer returns its trainees to their own role (`spec-skill-barriers.md` 4.6) |
+| `same_role` | a switch, or an apply, to the agent's own role |
+| `in_traineeship` | a switch or apply of a trainee, or of a trainer with trainees (a trainer is never a trainee). A removal is never refused for this: removing a trainee ends its traineeship (`spec-agents.md` 3.6 step 2) and removing a trainer returns its trainees to their own role (`spec-skill-barriers.md` 4.6) |
 | `on_journey` | a `Switch` or `Apply` of an agent on a migration journey (`spec-migration.md` 8.3). A removal or a reduction is never refused for this. The constant is also the name of the `region_bound` refusal that the migration module registers (`spec-migration.md` 7.2.2), which is a different table (`spec-regions.md` 6.5.2) |
 | `needs_weight_one` | an `Apply` for an agent of weight above 1 (N-064, `spec-skill-barriers.md` 4.1.1) |
 | `needs_traineeship` | a `Switch` or an `Enter` into a role with `TrainingTicks` above 0, which is entered only by `Apply` (`spec-skill-barriers.md` 4.6.2) |
@@ -185,7 +185,8 @@ changes nothing, is counted in `EntryLimited` (13.1) and logged at `Debug` with 
 The world checks a decision in the order of the table: `unknown_agent`, `unknown_role`,
 `external_agent`, `same_role`, `in_traineeship`, `on_journey`, `needs_weight_one`,
 `bad_households`, then `unsupported_cause`, appended last; the first check that fails is
-the `reason`. `unfunded` is not a refusal but a partial result: the funded part proceeds and the
+the `reason`. For an `Apply` the order is `unknown_agent`, `unknown_role`, `external_agent`, `same_role`,
+`in_traineeship`, `on_journey`, `needs_weight_one`, `already_queued`. `unfunded` is not a refusal but a partial result: the funded part proceeds and the
 rest is counted in `Unfunded`, not in `Refused`. The Stage 1 slice declares the `Refusal`
 values and `Reason` constants of `unknown_agent`, `unknown_role`, `external_agent`,
 `same_role`, `bad_households` and `unsupported_cause`; those of `in_traineeship`,

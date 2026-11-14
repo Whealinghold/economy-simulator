@@ -398,3 +398,33 @@ func TestCredit_NoRoomWhereCommittedPanicsOrAuditFails(t *testing.T) {
 	}()
 	mustSettle(err, "the delivery")
 }
+
+// TestPledge_TraineeJobPledgesThePrincipal verifies that the output of a job whose principal
+// is another agent (a trainee's job, spec-production.md 4.3.2) is pledged on the
+// principal's account, not the executor's, and leaves it when the job does; the audit
+// of the pledge agrees at each point.
+//
+// Arithmetic: 3 flour of (3, 2) are (9, 6).
+//
+// Requirement: FR-STO-013, FR-STO-020
+func TestPledge_TraineeJobPledgesThePrincipal(t *testing.T) {
+	t.Parallel()
+	w, _ := stoMillWorld(t, 120, 80, stoMiller{}, nil)
+	trainee := &w.agents[shipHome2]
+	trainee.job = job{recipe: stoMill, remaining: 2, executions: 1, principal: shipHome, yield: 10_000, pending: []int64{3}}
+	w.syncJob(trainee)
+	if got, want := roomOfAgent(t, w, shipHome).Pledge, (Capacity{Mass: 9, Bulk: 6}); got != want {
+		t.Errorf("pledge of the principal = %+v, want %+v", got, want)
+	}
+	if got := roomOfAgent(t, w, shipHome2).Pledge; got != (Capacity{}) {
+		t.Errorf("pledge of the executor = %+v, want (0, 0)", got)
+	}
+	if err := w.Audit(); err != nil {
+		t.Errorf("Audit() with a trainee's job = %v, want nil", err)
+	}
+	trainee.job.clear()
+	w.syncJob(trainee)
+	if got := roomOfAgent(t, w, shipHome).Pledge; got != (Capacity{}) {
+		t.Errorf("pledge of the principal after the job ends = %+v, want (0, 0)", got)
+	}
+}

@@ -116,14 +116,20 @@ func refuseEnter(f Facts) Refusal {
 }
 
 // refuseApply runs the checks of an Apply in the order of spec-spawner.md 4:
-// the agent, the role and the external check, then in_traineeship, on_journey,
-// needs_weight_one and already_queued. An apply to the agent's own role is not
-// a same_role case: the table names a switch only.
+// the agent, then the role, which must have a traineeship (a role with
+// TrainingTicks 0 has none and is refused as an unknown role), then external,
+// same_role (an apply to the agent's own role), in_traineeship, on_journey,
+// needs_weight_one and already_queued.
 func refuseApply(f Facts) Refusal {
-	if r := refuseAgent(f, true); r != RefusalNone {
-		return r
-	}
 	switch {
+	case !f.AgentKnown:
+		return UnknownAgent
+	case !f.RoleKnown || !f.TrainingRole:
+		return UnknownRole
+	case f.External:
+		return ExternalAgent
+	case f.SameRole:
+		return SameRole
 	case f.InTraineeship:
 		return InTraineeship
 	case f.OnJourney:

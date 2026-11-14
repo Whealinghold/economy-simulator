@@ -156,6 +156,13 @@ func (s *welfareScratch) addUnearned(slot int, amount int64) {
 	f.unearned = satAdd(f.unearned, amount)
 }
 
+// addInKind adds the value of goods received in kind (K_t): the board a trainee
+// takes from its trainer's account (spec-welfare-and-wages.md 6.3).
+func (s *welfareScratch) addInKind(slot int, amount int64) {
+	f := s.at(slot)
+	f.inKind = satAdd(f.inKind, amount)
+}
+
 // addEarned adds the wage a worker received (Y_t): earned income, in the income
 // of the tick and not in the relief, the unearned or the own-use terms
 // (spec-employment.md 24.2.1).

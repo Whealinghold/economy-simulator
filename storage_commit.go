@@ -26,11 +26,11 @@ func (s *storage) loadOfLots(lots []ledger.Lot) (load room.Pair, ok bool) {
 	return load, ok
 }
 
-// jobLoad is the load of the pending output of a job: the outputs that sit in the
+// pendingLoad is the load of the pending output of a job: the outputs that sit in the
 // account, quantity times size per dimension. A discard output is created and
 // disposed at the completion and takes no room (spec-storage.md 5.3.2). ok is false
 // when a dimension overflows int64.
-func (s *storage) jobLoad(j *job) (load room.Pair, ok bool) {
+func (s *storage) pendingLoad(j *job) (load room.Pair, ok bool) {
 	if j.executions <= 0 {
 		return room.Pair{}, true
 	}
@@ -49,20 +49,57 @@ func (s *storage) jobLoad(j *job) (load room.Pair, ok bool) {
 	return load, ok
 }
 
-// repledge sets the pledge of agent a to what its job and its cargo in flight imply
-// (spec-storage.md 3.4.2, 4.3), absolute. The value is not tested against the room:
-// the commitments that made it were each tested, and after a cut it may exceed it
-// (spec-storage.md 4.1.2). A pledge that does not fit int64 is a violated
-// invariant: every part of it was bounded by the room when it was committed. It
-// does nothing for an account that is not limited.
+// syncJob brings the pledge up to date with the job of executor a (spec-storage.md
+// 3.4.2, 4.3): the load its job had pledged on its principal is taken off, the load
+// of its pending output now is put on the principal it has now (the executor itself,
+// or a trainer for a trainee's job), and both principals' pledges are derived again.
+// It is called at every change of a job: a start, a completion, an abandon, a change
+// of weight.
+func (w *World) syncJob(a *agent) {
+	s := w.sto
+	s.grow(a.id)
+	old, op := s.jobLoad[a.id], s.jobPrin[a.id]
+	rest, ok := subPair(s.held[op], old)
+	if !ok {
+		invariant("the pledge of a principal is below the load of a job it pledged")
+	}
+	s.held[op] = rest
+	load, okj := s.pendingLoad(&a.job)
+	np := a.id
+	if a.job.executions > 0 {
+		np = a.job.principal
+	}
+	sum, oks := addPair(s.held[np], load)
+	if !okj || !oks {
+		invariant("the pledge of a principal does not fit int64")
+	}
+	s.held[np], s.jobLoad[a.id], s.jobPrin[a.id] = sum, load, np
+	w.repledge(&w.agents[op])
+	if np != op {
+		w.repledge(&w.agents[np])
+	}
+}
+
+// subPair is the checked difference of two pairs, ok false below 0 or on overflow.
+func subPair(a, b room.Pair) (room.Pair, bool) {
+	m, okm := checked.Sub(a.Mass, b.Mass)
+	k, okk := checked.Sub(a.Bulk, b.Bulk)
+	return room.Pair{Mass: m, Bulk: k}, okm && okk && m >= 0 && k >= 0
+}
+
+// repledge sets the pledge of agent a to what the jobs pledged on it and the cargo in
+// flight to it imply (spec-storage.md 3.4.2, 4.3), absolute. The value is not tested
+// against the room: the commitments that made it were each tested, and after a cut
+// it may exceed it (spec-storage.md 4.1.2). A pledge that does not fit int64 is a
+// violated invariant: every part of it was bounded by the room when it was committed.
+// It does nothing for an account that is not limited.
 func (w *World) repledge(a *agent) {
 	s := w.sto
-	if !s.limited(a) {
+	if !s.limited(a) || a.weight < 1 {
 		return
 	}
-	load, okj := s.jobLoad(&a.job)
-	p, okp := addPair(load, s.inbound[a.id])
-	if !okj || !okp {
+	p, ok := addPair(s.held[a.id], s.inbound[a.id])
+	if !ok {
 		invariant("the pledge of an account does not fit int64")
 	}
 	if err := w.ledger.SetPledge(a.account, p.Mass, p.Bulk); err != nil {
@@ -227,7 +264,7 @@ func (s *storage) boundExecutions(l *ledger.Ledger, q *startReq, k0 int64, reaso
 		invariant("the account of a principal is unreadable: " + err.Error())
 	}
 	m, b, _ := l.FreeRoom(q.account)
-	up, ok := s.upkeepRoom(q.exec, RegionID(view.Region))
+	up, ok := s.upkeepRoom(&s.world.agents[q.principal], RegionID(view.Region))
 	if !ok {
 		return 0, ReasonNoRoom
 	}
@@ -255,11 +292,15 @@ func (s *storage) recipeInputs(recipe RecipeID) []room.Item {
 func (s *storage) recipeOutputs(q *startReq) []room.Output {
 	s.out = s.out[:0]
 	row := s.recipes.row(q.recipe)
-	off, _ := residueOffset(s.roles.row(q.exec.role).jobs, s.recipes, q.recipe)
+	owner := q.exec // a trainee's job takes its trainer's residues
+	if s.world.skills != nil {
+		owner = s.world.residueOwner(q.exec)
+	}
+	off, _ := residueOffset(s.roles.row(owner.role).jobs, s.recipes, q.recipe)
 	for i, o := range row.outputs {
 		var residue int64
-		if off+i < len(q.exec.residues) {
-			residue = q.exec.residues[off+i]
+		if off+i < len(owner.residues) {
+			residue = owner.residues[off+i]
 		}
 		s.out = append(s.out, room.Output{Item: room.Item{Qty: int64(o.quantity), Size: s.sizes[o.commodity]}, Residue: residue, Discard: o.discard})
 	}
@@ -307,7 +348,7 @@ func (s *storage) roomLeftPair(l *ledger.Ledger, account int) (room.Pair, bool) 
 // pending output's load plus the cargo in flight.
 func (w *World) startedStorage(a *agent, region RegionID, res startResult) {
 	w.sto.counts[w.cellOf(region, a)].startsCut += res.cut
-	w.repledge(a)
+	w.syncJob(a)
 }
 
 // weightChangedStorage is the step of a change of an agent's weight (spec-storage.md
@@ -319,7 +360,7 @@ func (w *World) weightChangedStorage(a *agent) {
 	if err := w.sto.apply(w.ledger, a); err != nil {
 		invariant("a change of weight took the room of an account below its load: " + err.Error())
 	}
-	w.repledge(a)
+	w.syncJob(a)
 }
 
 // tripRefusal is row 3a of the shipment checks (spec-storage.md 9.3, FR-STO-031): a

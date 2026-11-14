@@ -162,8 +162,15 @@ func (t *yieldTable) effective(sh *yieldShocks, region RegionID, recipe RecipeID
 // callers that read a stock pass the abundance of their moment; effective is the
 // neutral term and is what the warm start and the solver read.
 func (t *yieldTable) effectiveAt(sh *yieldShocks, region RegionID, recipe RecipeID, season int, sited bool, abundance int64) (e int64, has, ok bool) {
+	return t.effectiveFor(sh, region, recipe, season, sited, abundance, production.BP)
+}
+
+// effectiveFor is effectiveAt with the trainee term of the effective factor, in
+// basis points: TraineeYield for the job of a trainee, 10 000 for any other
+// (spec-production.md 6.3, 8.2).
+func (t *yieldTable) effectiveFor(sh *yieldShocks, region RegionID, recipe RecipeID, season int, sited bool, abundance, trainee int64) (e int64, has, ok bool) {
 	site, has := t.site(region, recipe, season, sited)
-	e, ok = production.Effective(site, sh.factor(region, recipe), production.BP, production.BP, abundance)
+	e, ok = production.Effective(site, sh.factor(region, recipe), production.BP, trainee, abundance)
 	return e, has, ok
 }
 

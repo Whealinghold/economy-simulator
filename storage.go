@@ -50,6 +50,15 @@ type storage struct {
 	// counts is the per-tick counters of RoomLimited per (region, role), cleared at
 	// the end of every step (storage_commit.go).
 	counts []roomCount
+	// world is the world the state belongs to, for the agents a job's principal and
+	// residue owner name (a trainee's job is its trainer's).
+	world *World
+	// jobLoad is, per executor, the load its job pledged on its principal; jobPrin
+	// is that principal; held is, per principal, the sum of the loads pledged on it.
+	// They are derived from the jobs and never saved.
+	jobLoad []room.Pair
+	jobPrin []AgentID
+	held    []room.Pair
 	// ended holds the stores that a role change ended until the world has emitted
 	// the RoleChanged they follow (spec-storage.md 3.6.1a); empty without an observer.
 	ended []StoreChanged
@@ -165,6 +174,9 @@ func (s *storage) grow(id AgentID) {
 	for len(s.stores) <= int(id) {
 		s.stores = append(s.stores, nil)
 		s.inbound = append(s.inbound, room.Pair{})
+		s.jobLoad = append(s.jobLoad, room.Pair{})
+		s.jobPrin = append(s.jobPrin, 0)
+		s.held = append(s.held, room.Pair{})
 	}
 }
 
@@ -295,7 +307,7 @@ func (w *World) roleChangedStorage(a *agent, region RegionID) {
 	if err := s.apply(w.ledger, a); err != nil {
 		invariant("the room of an agent that changed role is below its goods: " + err.Error())
 	}
-	w.repledge(a)
+	w.syncJob(a)
 }
 
 // dropStorage is the step of a removal for the module (spec-storage.md 3.5.1): the
@@ -305,6 +317,7 @@ func (w *World) dropStorage(a *agent) {
 	s := w.sto
 	if int(a.id) < len(s.stores) {
 		s.stores[a.id], s.inbound[a.id] = nil, room.Pair{}
+		s.jobLoad[a.id], s.held[a.id] = room.Pair{}, room.Pair{}
 	}
 }
 
@@ -526,7 +539,7 @@ func (w *World) finishStorage() error {
 			return fmt.Errorf("agent %d of role %s: the goods it starts with do not fit its room: %w",
 				a.id, w.cfg.Roles[a.role].ID, ErrRoomShape)
 		}
-		w.repledge(a)
+		w.syncJob(a)
 		if s.limited(a) && !w.roomHolds(a, s.roomFor(a)) {
 			return fmt.Errorf("agent %d of role %s: its warm job's output and its goods do not fit its room: %w",
 				a.id, w.cfg.Roles[a.role].ID, ErrRoomShape)
