@@ -318,6 +318,7 @@ func (w *World) dropStorage(a *agent) {
 	if int(a.id) < len(s.stores) {
 		s.stores[a.id], s.inbound[a.id] = nil, room.Pair{}
 		s.jobLoad[a.id], s.held[a.id] = room.Pair{}, room.Pair{}
+		s.jobPrin[a.id] = a.id
 	}
 }
 

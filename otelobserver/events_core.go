@@ -256,11 +256,12 @@ func (o *Observer) recipeExecuted(ev economysim.RecipeExecuted) {
 }
 
 // refusalReasons are the reasons of a refused start, in the order of the fields
-// of RecipeRefused. The sixth, no_endowment, is the module of resources'.
-var refusalReasons = [...]string{"not_on_role", "zero_yield", "no_site", "no_tool", "no_input", "no_endowment"}
+// of RecipeRefused. The sixth, no_endowment, is the module of resources' and the seventh, no_room, the
+// module of storage'.
+var refusalReasons = [...]string{"not_on_role", "zero_yield", "no_site", "no_tool", "no_input", "no_endowment", "no_room"}
 
 func (o *Observer) recipeRefused(ev economysim.RecipeRefused) {
-	counts := [len(refusalReasons)]int64{ev.NotOnRole, ev.ZeroYield, ev.NoSite, ev.NoTool, ev.NoInput, ev.NoEndowment}
+	counts := [len(refusalReasons)]int64{ev.NotOnRole, ev.ZeroYield, ev.NoSite, ev.NoTool, ev.NoInput, ev.NoEndowment, ev.NoRoom}
 	for i, v := range counts {
 		if v != 0 {
 			o.count(m2(iRecipeRefused, ix(ev.Recipe), o.reason(refusalReasons[i])), v)
