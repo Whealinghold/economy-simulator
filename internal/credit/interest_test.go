@@ -47,6 +47,8 @@ func TestInterest_Exact(t *testing.T) {
 		{"example A of 20.1", 5_700, 600, 65, 365, 61},
 		{"example C of 20.3", 1_470, 900, 33, 400, 11},
 		{"interest free", 5_700, 0, 65, 365, 0},
+		{"no principal", 0, 600, 65, 365, 0},
+		{"a one-tick year", 5_700, 600, 1, 1, 342},
 		{"zero term", 5_700, 600, 0, 365, 0},
 		// 10 000 * 1 * 1 / (10 000 * 2) = 0.5: the tie goes to the even 0.
 		{"midpoint 0.5 goes to even 0", 10_000, 1, 1, 2, 0},
@@ -118,6 +120,7 @@ func TestInterest_Overflow(t *testing.T) {
 		{"negative rate", 1, -600, 65, 365},
 		{"negative term", 1, 600, -65, 365},
 		{"no ticks in a year", 1, 600, 65, 0},
+		{"a negative year", 1, 600, 65, -365},
 		{"rate times term overflows", 1, math.MaxInt64, 2, 365},
 		{"year times basis overflows", 1, 600, 65, math.MaxInt64},
 		{"quotient overflows", math.MaxInt64, math.MaxInt64, 1, 1},
@@ -145,6 +148,8 @@ func TestEffective_ScaleAndClamp(t *testing.T) {
 		wantOK                 bool
 	}{
 		{"unscaled", 600, 10_000, maxRateBP, 600, true},
+		{"a posted rate of 0", 0, 10_000, maxRateBP, 0, true},
+		{"a bound of 0", 600, 10_000, 0, 0, true},
 		{"doubled", 600, 20_000, maxRateBP, 1_200, true},
 		{"scaled to zero is interest free", 600, 0, maxRateBP, 0, true},
 		{"0.5 goes to even 0", 1, 5_000, maxRateBP, 0, true},

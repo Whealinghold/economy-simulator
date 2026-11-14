@@ -29,6 +29,7 @@ func TestPay_Shield(t *testing.T) {
 		{"no shield", 80, 0, 100, 5_761, 80, true},
 		{"no upkeep, no shield", 80, 5, 0, 5_761, 80, true},
 		{"nothing owed", 80, 0, 100, 0, 0, true},
+		{"no balance", 0, 1, 100, 50, 0, true},
 		{"the shield product saturates at MaxMoney", maxMoney, math.MaxInt64, 2, 10, 0, true},
 		{"negative balance", -1, 1, 1, 1, 0, false},
 		{"negative shield", 1, -1, 1, 1, 0, false},
@@ -43,6 +44,17 @@ func TestPay_Shield(t *testing.T) {
 	}
 	if _, ok := credit.Pay(1, 0, 0, 1, -1); ok {
 		t.Errorf("Pay with a negative MaxMoney = ok, want refused")
+	}
+	// A shield product that fits int64 and is above MaxMoney is saturated at it: with
+	// MaxMoney 100 the shield of 1 000 is 100, so a balance of 150 has a pot of 50.
+	if got, ok := credit.Pay(150, 1, 1_000, 500, 100); got != 50 || !ok {
+		t.Errorf("Pay(150, 1, 1000, 500, MaxMoney 100) = %d, %v, want 50, true", got, ok)
+	}
+	if got, ok := credit.Pay(150, 1, 100, 500, 100); got != 50 || !ok {
+		t.Errorf("Pay with a shield equal to MaxMoney = %d, %v, want 50, true", got, ok)
+	}
+	if got, ok := credit.Pay(150, 1, 5, 500, 0); got != 150 || !ok {
+		t.Errorf("Pay with a MaxMoney of 0 = %d, %v, want 150, true: a MaxMoney of 0 is accepted and caps the shield at 0", got, ok)
 	}
 }
 

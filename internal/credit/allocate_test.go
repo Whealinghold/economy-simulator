@@ -39,6 +39,8 @@ func TestAllocate_ExampleB(t *testing.T) {
 		{"paid in full", 1_200, []int64{500, 700}, []int64{500, 700}},
 		{"nothing paid", 0, []int64{500, 700}, []int64{0, 0}},
 		{"no claim", 0, nil, []int64{}},
+		{"a claim of nothing among others", 5, []int64{0, 10, 0}, []int64{0, 5, 0}},
+		{"nothing owed at all", 0, []int64{0, 0}, []int64{0, 0}},
 	}
 	var s credit.Scratch
 	for _, tt := range tests {
@@ -90,6 +92,7 @@ func TestAllocate_Refused(t *testing.T) {
 		{"negative owed", 1, []int64{5, -1}, []uint64{0, 0}},
 		{"pay above the total", 6, []int64{5}, []uint64{0}},
 		{"short tie", 1, []int64{5, 5}, []uint64{0}},
+		{"long tie", 1, []int64{5, 5}, []uint64{0, 0, 0}},
 		{"sum overflows", 1, []int64{math.MaxInt64, 1}, []uint64{0, 0}},
 	}
 	var s credit.Scratch

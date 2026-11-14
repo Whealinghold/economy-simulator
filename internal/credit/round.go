@@ -79,8 +79,9 @@ const (
 // offers in order: it skips an offer of the request's own agent, one whose Term is
 // below the request's or one with nothing left; it ends the scan at the first offer
 // whose rate exceeds the request's limit (no lender at the price); it takes
-// x = min(p, q) and, when x is below minPrincipal, ends the request if x = p and
-// skips the offer otherwise; and it passes the fill to form, lowering both
+// x = min(p, q) and, when x is below minPrincipal, skips the offer (when x = p the
+// request's remainder is too small for every later offer too, which is spec-credit.md
+// 6.3.2's end of the request); and it passes the fill to form, lowering both
 // remainders by x when form answers Formed, dropping the fill on Dropped and
 // ending the whole round on Halted. Each fill is at its offer's own rate
 // (discriminatory, 6.3.3). The Principal of every row is left at its remainder,
@@ -100,27 +101,32 @@ type step int
 
 const (
 	stepSkip step = iota // pass over the offer
-	stepEnd              // end the request: no lender at the price, or its remainder is too small
+	stepEnd              // end the request: no lender at the price
 	stepFill             // take a fill
 )
 
-// decide returns what the matching does with offer o for request r and, for a
-// fill, its principal x = min(p, q) (spec-credit.md 6.3.2 steps 1 to 3).
-func decide(r, o *Row, minPrincipal int64) (step, int64) {
+// verdict is a step and, for a fill, its principal.
+type verdict struct {
+	what step
+	x    int64
+}
+
+// decide returns what the matching does with offer o for request r
+// (spec-credit.md 6.3.2 steps 1 to 3): skip it, end the request, or fill
+// x = min(p, q). A fill below minPrincipal is skipped: when x = p the remainder of
+// the request is below the minimum for every later offer too, so skipping to the end
+// of the scan is the same as ending the request, and when x = q the offer is skipped.
+func decide(r, o *Row, minPrincipal int64) verdict {
 	switch {
 	case o.Agent == r.Agent || o.Term < r.Term || o.Principal <= 0:
-		return stepSkip, 0
+		return verdict{what: stepSkip}
 	case o.RateBP > r.RateBP:
-		return stepEnd, 0 // ascending rates: no lender at the price
+		return verdict{what: stepEnd} // ascending rates: no lender at the price
 	}
-	x := min(r.Principal, o.Principal)
-	switch {
-	case x >= minPrincipal:
-		return stepFill, x
-	case x == r.Principal:
-		return stepEnd, 0 // the remainder of the request is too small
+	if x := min(r.Principal, o.Principal); x >= minPrincipal {
+		return verdict{what: stepFill, x: x}
 	}
-	return stepSkip, 0 // the remainder of the offer is too small
+	return verdict{what: stepSkip}
 }
 
 // fillRequest matches one request against the ordered offers and reports whether
@@ -131,18 +137,21 @@ func fillRequest(r *Row, offers []Row, minPrincipal int64, form func(Fill) Outco
 			return false
 		}
 		o := &offers[j]
-		what, x := decide(r, o, minPrincipal)
-		if what == stepEnd {
+		v := decide(r, o, minPrincipal)
+		switch v.what {
+		case stepEnd:
 			return false
-		}
-		if what == stepSkip {
+		case stepSkip:
 			continue
+		case stepFill:
 		}
-		if out := form(Fill{Request: r.Ref, Offer: o.Ref, Principal: x, RateBP: o.RateBP, Term: r.Term}); out == Halted {
+		switch form(Fill{Request: r.Ref, Offer: o.Ref, Principal: v.x, RateBP: o.RateBP, Term: r.Term}) {
+		case Halted:
 			return true
-		} else if out == Formed {
-			r.Principal -= x
-			o.Principal -= x
+		case Formed:
+			r.Principal -= v.x
+			o.Principal -= v.x
+		case Dropped:
 		}
 	}
 	return false

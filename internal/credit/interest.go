@@ -13,12 +13,9 @@ func Interest(x, rateBP, term, ticksPerYear int64) (interest int64, ok bool) {
 	if x < 0 || rateBP < 0 || term < 0 || ticksPerYear < 1 {
 		return 0, false
 	}
-	rn, ok := checked.Mul(rateBP, term)
-	if !ok {
-		return 0, false
-	}
-	d, ok := checked.Mul(Basis, ticksPerYear)
-	if !ok {
+	rn, ok1 := checked.Mul(rateBP, term)
+	d, ok2 := checked.Mul(Basis, ticksPerYear)
+	if !ok1 || !ok2 {
 		return 0, false
 	}
 	q, ok := checked.MulDivHalfEven(x, rn, d)

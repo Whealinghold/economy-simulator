@@ -220,6 +220,36 @@ func TestMatch_Outcomes(t *testing.T) {
 	}
 }
 
+// TestMatch_EmptyAndNegative verifies that an offer or a request with nothing left,
+// or a negative amount, is never filled, and that an offer of 1 is lent when the
+// minimum is 1.
+//
+// Requirement: FR-CRD-024
+func TestMatch_EmptyAndNegative(t *testing.T) {
+	t.Parallel()
+	row := func(agent int64, principal int64) credit.Row {
+		return credit.Row{Ref: int(agent), Agent: agent, Principal: principal, Term: 1, RateBP: 100}
+	}
+	tests := []struct {
+		name           string
+		request, offer credit.Row
+		want           int
+	}{
+		{"an offer of 1 at minimum 1", row(1, 1), row(2, 1), 1},
+		{"an offer of 0", row(1, 5), row(2, 0), 0},
+		{"a negative offer", row(1, 5), row(2, -5), 0},
+		{"a request of 0", row(1, 0), row(2, 5), 0},
+		{"a negative request", row(1, -5), row(2, 5), 0},
+	}
+	for _, tt := range tests {
+		var fills []credit.Fill
+		credit.Match([]credit.Row{tt.request}, []credit.Row{tt.offer}, 1, formAll(&fills))
+		if len(fills) != tt.want {
+			t.Errorf("%s: %d fills, want %d", tt.name, len(fills), tt.want)
+		}
+	}
+}
+
 // naivePick returns the index of the cheapest eligible offer for a request with
 // p still to fill, the first in order among equal rates, or -1.
 func naivePick(r credit.Row, p int64, offs []credit.Row, rest map[int]int64, minP int64) int {

@@ -38,15 +38,19 @@ func (s *Scratch) Allocate(dst []int64, pay int64, owed []int64, tie []uint64) (
 		return nil, false
 	}
 	shares = slices.Grow(dst[:0], len(owed))[:len(owed)]
+	if total == 0 {
+		clear(shares) // nothing is owed, so nothing is paid (pay <= total)
+		return shares, true
+	}
 	s.rem = s.rem[:0]
 	var given int64
 	for i, o := range owed {
-		q, r, _ := checked.MulDivRem(pay, o, max(total, 1)) // total >= pay >= 0; o <= total: the quotient fits
+		q, r, _ := checked.MulDivRem(pay, o, total) // 0 <= pay <= total and o <= total: the quotient fits
 		shares[i] = q
 		given += q // at most pay
-		if r > 0 {
-			s.rem = append(s.rem, remainder{frac: uint64(r), key: tie[i], idx: i})
-		}
+		// A zero remainder is appended too: it sorts last and is never reached,
+		// because the units left are fewer than the claims with a positive one.
+		s.rem = append(s.rem, remainder{frac: uint64(r), key: tie[i], idx: i})
 	}
 	slices.SortFunc(s.rem, func(a, b remainder) int {
 		return cmp.Or(cmp.Compare(b.frac, a.frac), cmp.Compare(a.key, b.key), cmp.Compare(a.idx, b.idx))
@@ -57,14 +61,15 @@ func (s *Scratch) Allocate(dst []int64, pay int64, owed []int64, tie []uint64) (
 	return shares, true
 }
 
-// sumOwed returns the sum of owed, ok false for a negative element or an overflow.
+// sumOwed returns the sum of owed, ok false for a negative element or an overflow;
+// the total of a refused sum is partial and a caller must not use it.
 func sumOwed(owed []int64) (total int64, ok bool) {
 	for _, o := range owed {
 		if o < 0 {
-			return 0, false
+			return total, false
 		}
 		if total, ok = checked.Add(total, o); !ok {
-			return 0, false
+			return total, false
 		}
 	}
 	return total, true
