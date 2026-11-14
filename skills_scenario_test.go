@@ -297,8 +297,11 @@ func TestSkillPremium_CheckC(t *testing.T) {
 		if !ok {
 			t.Fatalf("BreakEven(price %d) not ok, want a premium", price)
 		}
-		if (price == 0) != (got == 10_000) && price*ret >= work*wage {
-			t.Errorf("BreakEven(price %d) = %d, want exactly 10 000 for a free tool and above it for a tool worth a basis point", price, got)
+		switch {
+		case price == 0 && got != 10_000:
+			t.Errorf("BreakEven(free tool) = %d, want exactly 10 000", got)
+		case price*ret >= work*wage && got <= 10_000:
+			t.Errorf("BreakEven(price %d) = %d, want above 10 000 for a tool worth at least a basis point of the annual wage", price, got)
 		}
 		if got < prevPremium {
 			t.Errorf("BreakEven(price %d) = %d, below %d of a cheaper tool: the premium must rise with the price", price, got, prevPremium)
@@ -727,7 +730,7 @@ func TestScenario_ToolHolderDiesEstateSells(t *testing.T) {
 // equal the reference's. The 400 ticks hold placements, completions and the removal of
 // trainers, so the queue, the accumulator and the courses are under it.
 //
-// Requirement: FR-CFG-026, FR-OBS-023, FR-WLD-063, FR-SKL-027, FR-SKL-028
+// Requirement: FR-CFG-026, FR-OBS-023, FR-WLD-063, FR-SKL-002, FR-SKL-027, FR-SKL-028
 //
 // Guard: the traineeships draw no random number and read no wall clock; a draw or a
 // dependence on the observer would fail here.
@@ -805,5 +808,59 @@ func TestSkillPremium_CheckD_NoOverflow(t *testing.T) {
 	}
 	if got, ok := cookShare(rows(math.MaxInt64/2, math.MaxInt64/2)); !ok || got != 5_000 {
 		t.Errorf("cookShare(half of %d) = %d, %v, want 5000, true", int64(math.MaxInt64), got, ok)
+	}
+}
+
+// wearOf returns the WearApplied events of a run of pack one with the traineeship over
+// ticks ticks, in the order the world emitted them.
+func wearOf(t testing.TB, cfg economysim.Config, ticks int64) (rows []economysim.WearApplied, names economysim.Names) {
+	t.Helper()
+	res := runPack(t, cfg, runSpec{Seed: 1, Ticks: ticks, Drive: driveStep, Observe: true})
+	for _, e := range res.Events {
+		if x, ok := e.(economysim.WearApplied); ok {
+			rows = append(rows, x)
+		}
+	}
+	return rows, res.Final.Names
+}
+
+// TestScenario_ToolWearIsDeterministicAndOnlyOfTools verifies FR-SKL-001 and FR-SKL-002
+// through the public events: over 150 ticks of pack one, warm, with the traineeship, the
+// commodities that wear are tools some recipe requires and never an input or an output
+// that no recipe requires, at least one tool wears by a positive amount, and a second
+// run of the same seed reports the same wear rows in the same order, so the counter is
+// a durability that nothing random moves.
+//
+// Requirement: FR-SKL-001, FR-SKL-002
+//
+// Guard: wear on a non-tool would mean an input was consumed as a tool, and a different
+// row order or amount between two runs would mean a draw or a map-order dependence.
+func TestScenario_ToolWearIsDeterministicAndOnlyOfTools(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	cfg := loadValidPack(t, packOneSkills...)
+	tools := map[string]bool{}
+	for _, r := range cfg.Recipes {
+		for _, tool := range r.Requires {
+			tools[tool.Commodity] = true
+		}
+	}
+	first, names := wearOf(t, cfg, 150)
+	second, _ := wearOf(t, cfg, 150)
+	if len(first) == 0 {
+		t.Fatalf("no WearApplied in 150 ticks, want the tool recipes to wear their tools")
+	}
+	for _, row := range first {
+		if c := names.Commodities[row.Commodity]; !tools[c] {
+			t.Errorf("tick %d: %s wore by %d, want only commodities that a recipe requires as a tool", row.Tick, c, row.Units)
+		}
+		if row.Units < 1 {
+			t.Errorf("tick %d: WearApplied of %d units, want at least 1", row.Tick, row.Units)
+		}
+	}
+	if !slices.Equal(first, second) {
+		t.Errorf("two runs of seed 1 reported different wear rows (%d against %d)", len(first), len(second))
 	}
 }

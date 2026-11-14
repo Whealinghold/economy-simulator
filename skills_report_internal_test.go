@@ -303,18 +303,23 @@ func TestEvents_TraineeshipFields(t *testing.T) {
 	if err := w.removeAgent(&w.agents[c.homeMillers[2]], CauseConsumer); err != nil {
 		t.Fatalf("removeAgent error = %v, want nil", err)
 	}
-	if got := len(of[TraineeshipStarted](&rec)); got != 2 {
-		t.Errorf("TraineeshipStarted events = %d, want 2", got)
+	wantStarted := []TraineeshipStarted{
+		{Tick: 1, Trainee: a, Trainer: c.homeWeaver, Role: 1, Region: 0},
+		{Tick: 1, Trainee: b, Trainer: c.homeWeaver, Role: 1, Region: 0},
 	}
-	st := of[TraineeshipStarted](&rec)[0]
-	if st.Trainee != a || st.Trainer != c.homeWeaver || st.Role != 1 || st.Region != 0 || st.Tick != 1 {
-		t.Errorf("TraineeshipStarted = %+v, want trainee %d, trainer %d, role 1, region 0, tick 1", st, a, c.homeWeaver)
+	if got := of[TraineeshipStarted](&rec); !slices.Equal(got, wantStarted) {
+		t.Errorf("TraineeshipStarted = %+v, want %+v", got, wantStarted)
 	}
-	if got := of[TraineeshipCompleted](&rec); len(got) != 2 || got[0].Agent != a || got[0].Region != 0 || got[0].From != 0 || got[0].To != 1 {
-		t.Errorf("TraineeshipCompleted = %+v, want two, the first of agent %d in region 0 from role 0 to role 1", got, a)
+	wantCompleted := []TraineeshipCompleted{
+		{Tick: 1, Agent: a, Region: 0, From: 0, To: 1},
+		{Tick: 1, Agent: b, Region: 0, From: 0, To: 1},
 	}
-	if got := of[TraineeshipEnded](&rec); len(got) != 1 || got[0].Agent != c.homeMillers[2] || got[0].Region != 0 || got[0].Reason != ReasonAgentLeft {
-		t.Errorf("TraineeshipEnded = %+v, want one, agent %d region 0 reason agent_left", got, c.homeMillers[2])
+	if got := of[TraineeshipCompleted](&rec); !slices.Equal(got, wantCompleted) {
+		t.Errorf("TraineeshipCompleted = %+v, want %+v", got, wantCompleted)
+	}
+	wantEnded := []TraineeshipEnded{{Tick: 1, Agent: c.homeMillers[2], Region: 0, Reason: ReasonAgentLeft}}
+	if got := of[TraineeshipEnded](&rec); !slices.Equal(got, wantEnded) {
+		t.Errorf("TraineeshipEnded = %+v, want %+v", got, wantEnded)
 	}
 	for name, ok := range seenAfter {
 		if !ok {
