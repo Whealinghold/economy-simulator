@@ -3,9 +3,11 @@ package economysim_test
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -518,5 +520,98 @@ func TestWarnings_TechnologyContactUnbuilt(t *testing.T) {
 	}
 	if hasWarning(c.Warnings(), "diffusion_no_contact", "modules", "technology", "fields[0]") {
 		t.Errorf("Warnings() has diffusion_no_contact on a graph that was not built, want none")
+	}
+}
+
+// isTechnologyRule reports whether a warning rule is one of the technology module's.
+func isTechnologyRule(rule string) bool {
+	switch rule {
+	case "field_inert", "field_unused", "diffusion_no_contact", "technology_past_maximum_yield", "trend_outpaces_schedule":
+		return true
+	}
+	return false
+}
+
+// technologyLoggedWarnings returns the technology warnings of a captured log as
+// rule@path, in log order, and fails the test for a line that is not a Warn
+// "configuration warning" before the "world created" summary or that is at Error.
+func technologyLoggedWarnings(t *testing.T, h *captureHandler) []string {
+	t.Helper()
+	var got []string
+	created := -1
+	for i, l := range h.sink.lines {
+		if l.msg == "world created" {
+			created = i
+		}
+		if l.level == slog.LevelError {
+			t.Errorf("log line %v at Error, want none", l)
+		}
+		if l.level != slog.LevelWarn {
+			continue
+		}
+		attrs := map[string]string{}
+		for _, a := range l.attrs {
+			attrs[a.Key] = a.Value.String()
+		}
+		if !isTechnologyRule(attrs["rule"]) {
+			continue // the reference chain's own warnings
+		}
+		if l.msg != "configuration warning" || created >= 0 {
+			t.Errorf("technology warning line %v (after \"world created\": %v), want message %q before the summary", l, created >= 0, "configuration warning")
+		}
+		got = append(got, attrs["rule"]+"@"+attrs["path"])
+	}
+	return got
+}
+
+// TestTechnology_WarningsAreLogged verifies that each configuration warning of the
+// technology module reaches the injected logger once, at Warn, with the constant
+// message and the rule and the dotted path of the warning, before "world created",
+// that the lines are the ones World.Warnings returns, and that a configuration that
+// draws none logs none of them.
+//
+// Guard: the warnings are the only signal of a field that learns nothing or a
+// diffusion that can do nothing, and a consumer that never calls Warnings sees them
+// only in the log; without this test a change to the construction line could drop
+// them silently.
+//
+// Requirement: FR-TEC-029
+func TestTechnology_WarningsAreLogged(t *testing.T) {
+	t.Parallel()
+	// farming has every rate off (field_inert) and forestry holds a recipe that no
+	// role lists (field_unused).
+	c := technologyConfig()
+	r := economysim.DefaultRecipe()
+	r.ID = "idle"
+	r.Outputs = slices.Clone(c.Recipes[slices.IndexFunc(c.Recipes, func(x economysim.Recipe) bool { return x.ID == "cut_fuel" })].Outputs)
+	c.Recipes = append(c.Recipes, r)
+	c.Modules.Technology.Fields[0] = economysim.TechField{ID: "farming", Recipes: []string{"gather_seed", "grow_staple"}, CapBP: 5}
+	c.Modules.Technology.Fields[1].Recipes = []string{"idle"}
+	h := newCaptureHandler()
+	w, err := economysim.NewWorld(c, economysim.WithLogger(slog.New(h)))
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil (a warning never fails construction)", err)
+	}
+	var want []string
+	for _, wn := range w.Warnings() {
+		if isTechnologyRule(wn.Rule) {
+			want = append(want, wn.Rule+"@"+strings.Join(wn.Path, "."))
+		}
+	}
+	for _, rule := range []string{"field_inert", "field_unused"} {
+		if !slices.ContainsFunc(want, func(s string) bool { return strings.HasPrefix(s, rule+"@") }) {
+			t.Fatalf("Warnings() = %v, want a %s warning for the scenario to mean anything", want, rule)
+		}
+	}
+	if got := technologyLoggedWarnings(t, h); !slices.Equal(got, want) {
+		t.Errorf("logged technology warnings = %v, want World.Warnings() = %v", got, want)
+	}
+
+	quiet := newCaptureHandler()
+	if _, err := economysim.NewWorld(technologyConfig(), economysim.WithLogger(slog.New(quiet))); err != nil {
+		t.Fatalf("NewWorld(valid technology) error = %v, want nil", err)
+	}
+	if got := technologyLoggedWarnings(t, quiet); len(got) != 0 {
+		t.Errorf("a clean technology configuration logged %v, want no technology warning", got)
 	}
 }
