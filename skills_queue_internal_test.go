@@ -355,3 +355,51 @@ func TestFillPlaces_TrainerApplicantWaits(t *testing.T) {
 		t.Errorf("trainer applicant left the queue, want it queued")
 	}
 }
+
+// TestCanTrain_QueuedAgentIsNoTrainer verifies that an applicant is not a trainer
+// candidate: a queued trainer with trainees is a state the checkpoint refuses and
+// fillPlaces can only make it wait, so no world may reach it. The weaver is queued
+// for the miller role (a planted entry) and is then not listed by trainersOf.
+//
+// Requirement: FR-SKL-017, FR-CHK-023
+func TestCanTrain_QueuedAgentIsNoTrainer(t *testing.T) {
+	t.Parallel()
+	w, c := trainingWorld(t, 3)
+	s := w.skills
+	if got := w.trainersOf(0, 1); len(got) != 1 || got[0].id != c.homeWeaver {
+		t.Fatalf("trainersOf before the application = %v, want the weaver", got)
+	}
+	s.enqueue(s.cell(0, 0), applicant{agent: c.homeWeaver, applied: 1})
+	if got := w.trainersOf(0, 1); len(got) != 0 {
+		t.Errorf("trainersOf with the weaver queued = %v, want none", got)
+	}
+	s.dequeue(c.homeWeaver)
+	if got := w.trainersOf(0, 1); len(got) != 1 {
+		t.Errorf("trainersOf after it left the queue = %v, want the weaver again", got)
+	}
+}
+
+// TestGatherHosts_SkipsAgentsOfTheTraineeships verifies that an entry into a role
+// never enlarges a trainee, a trainer with trainees or a queued applicant: their
+// weight must stay 1 (FR-SKL-012) or the checkpoint refuses the world.
+//
+// Requirement: FR-SKL-012, FR-SPN-008, FR-CHK-023
+func TestGatherHosts_SkipsAgentsOfTheTraineeships(t *testing.T) {
+	t.Parallel()
+	w, c := trainingWorld(t, 3)
+	m, s := c.homeMillers, w.skills
+	s.start(m[0], c.homeWeaver, 1, 0, 0)
+	s.enqueue(s.cell(0, 1), applicant{agent: m[1], applied: 1})
+	w.gatherHosts(0, 0)
+	var got []AgentID
+	for _, i := range w.ex.hostAt {
+		got = append(got, AgentID(i))
+	}
+	if want := []AgentID{m[2]}; !slices.Equal(got, want) {
+		t.Errorf("hosts of the miller role = %v, want only the free miller %v", got, want)
+	}
+	w.gatherHosts(0, 1)
+	if len(w.ex.hostAt) != 0 {
+		t.Errorf("hosts of the weaver role = %v, want none (a trainer with trainees)", w.ex.hostAt)
+	}
+}

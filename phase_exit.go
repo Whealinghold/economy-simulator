@@ -590,12 +590,14 @@ func (w *World) execEnter(g RegionID, d Decision) error {
 
 // gatherHosts lists the agents of role in region g in ascending ID, the
 // candidates of Place, into the executor's scratch. An external agent is never one:
-// its weight is 1 (spec-integration.md 4.1, 4.6).
+// its weight is 1 (spec-integration.md 4.1, 4.6). A trainee, a trainer with
+// trainees and a queued applicant are none either: the traineeships need agents
+// of weight 1 (FR-SKL-012) and a larger host would break that.
 func (w *World) gatherHosts(g RegionID, role RoleID) {
 	x := &w.ex
 	x.hosts, x.hostAt = x.hosts[:0], x.hostAt[:0]
 	for i := w.firstHousehold; i < len(w.agents); i++ {
-		if a := &w.agents[i]; a.weight >= 1 && !a.external && a.role == role && w.regionOf(a) == g && !w.offStage(a) {
+		if a := &w.agents[i]; a.weight >= 1 && !a.external && a.role == role && w.regionOf(a) == g && !w.offStage(a) && !w.skills.bound(a.id) {
 			x.hosts = append(x.hosts, occupation.Host{Ref: len(x.hostAt), Weight: a.weight})
 			x.hostAt = append(x.hostAt, i)
 		}

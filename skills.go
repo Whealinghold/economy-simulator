@@ -120,6 +120,12 @@ func (s *skills) isTrainer(id AgentID) bool {
 	return id >= 0 && int(id) < len(s.trainer) && len(s.trainer[id].trainees) > 0
 }
 
+// bound reports whether the agent is in a traineeship or waits in a queue, so its
+// weight must stay 1. It is false while the receiver is nil.
+func (s *skills) bound(id AgentID) bool {
+	return s != nil && (s.isTrainee(id) || s.isTrainer(id) || s.queued(id))
+}
+
 // holds is the test of the region_bound obligation in_traineeship: a trainee, or a
 // trainer with trainees, unless skip names the instance by key
 // "in_traineeship:<agent>" or the obligation by name (spec-regions.md 6.5.2).

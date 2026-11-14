@@ -103,10 +103,12 @@ type trainerSlot struct {
 }
 
 // canTrain reports whether agent a may be the trainer of a place of its role: a
-// live household of weight 1 that is no trainee and is neither on a migration
-// journey nor away (spec-skill-barriers.md 4.1.1, 4.6.1).
+// live household of weight 1 that is no trainee, waits in no queue (an applicant
+// that took a trainee would be a queued trainer, a state the checkpoint refuses,
+// and a trainer never applies) and is neither on a migration journey nor away
+// (spec-skill-barriers.md 4.1.1, 4.6.1).
 func (w *World) canTrain(a *agent) bool {
-	return a.weight == 1 && !w.skills.isTrainee(a.id) && !w.onJourney(a) && !w.offStage(a)
+	return a.weight == 1 && !w.skills.isTrainee(a.id) && !w.skills.queued(a.id) && !w.onJourney(a) && !w.offStage(a)
 }
 
 // trainersOf lists the agents of role r in region g that can take a trainee, in
