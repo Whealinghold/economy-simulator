@@ -406,6 +406,14 @@ func TestCheckpoint_SkillsRefusesCorrupt(t *testing.T) {
 		}), nil},
 		{"applicant with ticks served above the course", with(func(s *skillSection) { s.queues = []queueRow{{0, 1, [][3]int64{{a(hm[1]), 3, 5}}}} }), nil},
 		{"applicant that applied in the future", with(func(s *skillSection) { s.queues = []queueRow{{0, 1, [][3]int64{{a(hm[1]), 9, 0}}}} }), nil},
+		// Defensive: enqueue keeps the queue in the order of skill.Requeue, so a queue
+		// out of it cannot be a state of a live world.
+		{"queue out of order by application tick", with(func(s *skillSection) {
+			s.queues = []queueRow{{0, 1, [][3]int64{{a(hm[1]), 4, 0}, {a(hm[2]), 3, 0}}}}
+		}), nil},
+		{"queue out of order by ticks served", with(func(s *skillSection) {
+			s.queues = []queueRow{{0, 1, [][3]int64{{a(hm[1]), 3, 0}, {a(hm[2]), 4, 2}}}}
+		}), nil},
 		{"warn run of a role with no training", with(func(s *skillSection) { s.warns = [][3]int64{{0, 0, 3}} }), nil},
 		{"warn run above the ticks", with(func(s *skillSection) { s.warns = [][3]int64{{0, 1, 9}} }), nil},
 		{"warn run at 0", with(func(s *skillSection) { s.warns = [][3]int64{{0, 1, 0}} }), nil},

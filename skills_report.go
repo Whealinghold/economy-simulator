@@ -236,7 +236,8 @@ func (w *World) readTrainers(r *codec.Reader) {
 // readQueues reads the third count of tag 10: the cells in ascending (region,
 // role) order, each with at least one applicant. An applicant is a live agent of
 // weight 1 in the cell's region and not in its role, not a trainee, and queued
-// once in the whole section; its ticks served do not pass the course.
+// once in the whole section; its ticks served do not pass the course. The queue
+// is in the order skill.Requeue gives, as enqueue keeps it.
 func (w *World) readQueues(rs *restoreCtx, r *codec.Reader) {
 	s := w.skills
 	regions := len(w.cfg.Regions)
@@ -259,6 +260,10 @@ func (w *World) readQueues(rs *restoreCtx, r *codec.Reader) {
 		for range m {
 			ap, ok := w.readApplicant(rs, r, seen, RegionID(region), RoleID(role), ticks)
 			if !ok {
+				return
+			}
+			if q := s.queue[key]; len(q) > 0 && !skill.Requeue(q[len(q)-1].rule(), ap.rule()) {
+				r.Failf("applicant %d is not after applicant %d in the queue order of cell (region %d, role %d)", ap.agent, q[len(q)-1].agent, region, role)
 				return
 			}
 			s.queue[key] = append(s.queue[key], ap)
