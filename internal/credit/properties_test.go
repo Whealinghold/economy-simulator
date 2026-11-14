@@ -2,6 +2,7 @@ package credit_test
 
 import (
 	"fmt"
+	"math/big"
 	"math/rand/v2"
 	"slices"
 	"testing"
@@ -32,11 +33,8 @@ func TestInterest_Property(t *testing.T) {
 // quotient against the oracle, the zero cases and the monotonicity.
 func interestProblem(x, rate, term int64) string {
 	got, ok := credit.Interest(x, rate, term, ticksYear)
-	// A quotient above int64 is reported, never wrapped: ok is false and the
-	// interest 0; otherwise it is the exact quotient.
-	want := exactInterest(x, rate, term, ticksYear)
-	if fits := want.IsInt64(); ok != fits || (fits && got != want.Int64()) || (!fits && got != 0) {
-		return fmt.Sprintf("= %d, %v, want %s (fits int64: %v)", got, ok, want, fits)
+	if msg := oracleProblem(got, ok, exactInterest(x, rate, term, ticksYear)); msg != "" {
+		return msg
 	}
 	for name, in := range map[string][2]int64{"a rate of 0": {0, term}, "a term of 0": {rate, 0}} {
 		if zero, _ := credit.Interest(x, in[0], in[1], ticksYear); zero != 0 {
@@ -49,6 +47,17 @@ func interestProblem(x, rate, term int64) string {
 		}
 	}
 	return ""
+}
+
+// oracleProblem compares an Interest result with the exact quotient: a quotient
+// above int64 is reported, never wrapped (ok false and the interest 0); otherwise
+// the result is the quotient.
+func oracleProblem(got int64, ok bool, want *big.Int) string {
+	fits := want.IsInt64()
+	if ok == fits && ((fits && got == want.Int64()) || (!fits && got == 0)) {
+		return ""
+	}
+	return fmt.Sprintf("= %d, %v, want %s (fits int64: %v)", got, ok, want, fits)
 }
 
 // TestPay_Property verifies, over 500 random cases with a seed of their own, that a
