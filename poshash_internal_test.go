@@ -59,6 +59,10 @@ var skipFields = []string{
 	// held are the pledge of the jobs, derived from the jobs the walk already hashes
 	// and never saved (storage_commit.go).
 	"storage.world", "storage.jobLoad", "storage.jobPrin", "storage.held",
+	// storage.lots is the scratch of the lots a role change cuts to its room, and
+	// Ledger.rooms the block the next Room is cut from: allocation scratch with no state
+	// of its own (the rooms are hashed through the accounts that hold them).
+	"storage.lots", "Ledger.rooms",
 	// popState.snap is the snapshot's scratch, rebuilt before each use, and
 	// popState.figures is derived from cfg alone (population.go).
 	"popState.snap", "popState.figures",
