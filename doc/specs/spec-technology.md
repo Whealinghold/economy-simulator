@@ -661,8 +661,8 @@ region (the world exposes no remote state to a strategy, N-106).
 6.1.1. **One new position, P8.3c**, for `spec-world.md` 6.10, after CAP's P8.3b (the
 facility step) and before P8.4 (the optional audit):
 
-| ID | What runs | Owner | Reads / writes | Draws | Events |
-|----|-----------|-------|----------------|-------|--------|
+| ID    | What runs                                                                                                                                                     | Owner   | Reads / writes                                                                                                           | Draws                               | Events                                                                                                                          |
+|-------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------|-------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
 | P8.3c | The technology step, with the module on: fold the execution counters of the tick, the trend, discovery, the snapshot of the gains, diffusion, the clamp (4.6) | TEC 4.6 | the counters, the saved cells, the graph tables, the key; writes `X`, `A`, `CatchUp`, `TrendCarry` and the derived gains | none (the keyed hash takes no word) | `TechnologyAdvanced`, per cell in ascending (`RegionID`, `TechFieldID`) order, after the events of P8.3b and before `TickEnded` |
 
 6.1.2. **Two rows of the table gain a clause** (an edit, 17.2): P2.1 "the executions
