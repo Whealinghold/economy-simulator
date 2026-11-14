@@ -136,6 +136,8 @@ economy-sim/
   integration_estate.go  integration_directive.go  integration_slots.go  (INT)
   storage_validate.go  storage_commit.go  storage_report.go          (STO)
   skills_queue.go  skills_report.go                                    (SKL)
+  credit_round.go  credit_settle.go  credit_strategy.go  credit_report.go
+  credit_state.go                                                     (CRD)
 
   # Module files, one per optional module (2.10.1), named after the concept.
   demand.go  resources.go  subsistence.go  population.go  transport.go
@@ -307,7 +309,8 @@ The audit call and the restore are one hook: `World.Audit` and `p84Audit` each
 call the module's `auditModules` (defined in the module file, `moneyflow.go` for
 the money flows), and a restore reaches it through `Audit`
 (`checkpoint_restore.go`). The module's step of a removal is called from
-`removeAgent` as `dropAgent` (`fanin.go`), a guarded one-line call beside the
+`removeAgent` as `dropAgent` (`fanin.go`, the skills module's, `skills_queue.go`) or as
+`dropClaims` (the credit module's, `credit_settle.go`), a one-line call beside the
 estate intake. A module may add one accessor to a core concept file, as
 (a) says of `effectiveAt`: `addUnearned` in `welfare.go` takes the income a money
 flow pays outside work, beside `addReceipt`, and holds no logic of the module.
@@ -1082,4 +1085,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 354c9304a17403fb4bd93ae8
+RULE-TAG: 3de5f581320ee356f9013e6c
