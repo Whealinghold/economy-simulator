@@ -141,6 +141,7 @@ economy-sim/
 │   integration_estate.go integration_directive.go integration_slots.go (INT)
 │   storage_validate.go storage_commit.go storage_report.go (STO)
 │   skills_queue.go skills_report.go (SKL)
+│   tenure_validate.go tenure_ration.go tenure_transfer.go tenure_report.go (LND)
 │                           # CONTINUATION files: a concept past the Lizard limits
 │                           #   of N-243 is split; each maps to the area code of
 │                           #   its concept, and its _test.go carries that area's

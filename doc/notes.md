@@ -46,16 +46,16 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351, N-353 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
 | CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349 |
 | CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
-| CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339 |
+| CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-360 |
 | CLR | N-113, N-137, N-241 |
 | CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354 |
-| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319 |
+| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-358 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
@@ -65,13 +65,13 @@ PR description.
 | FIS | N-107, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-183, N-184, N-185, N-186, N-187, N-188, N-189, N-190, N-204 |
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350 |
-| INF | N-110, N-112, N-156, N-170, N-214 |
+| INF | N-110, N-112, N-156, N-170, N-214, N-359 |
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323 |
-| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205 |
+| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
-| MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330 |
+| MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-359 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
 | OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349 |
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244 |
@@ -81,7 +81,7 @@ PR description.
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226, N-327 |
-| SAV | N-145, N-156, N-195, N-197 |
+| SAV | N-145, N-156, N-195, N-197, N-358 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-140, N-192, N-268, N-348 |
 | SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-264, N-268, N-244, N-317 |
@@ -92,7 +92,7 @@ PR description.
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-214 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322 |
-| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-360 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346 |
 | WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337 |
 
@@ -1010,6 +1010,7 @@ PR description.
 - **Areas:** RSK, CAP, SET, FIS, PLC, LND, ORG
 - **Raised:** 2026-10-13, `spec-storage.md` 3.2.3, 3.6.3, 8.3, 10.
 - **Note:** RSK reads the stored load and the stores by class (8.3). CAP calls `addStore` and `removeStore` (3.6.3), and the away test of `ErrAgentAway` is in `addStore`, so the completion of a store facility meets it and keeps the facility until the arrival. SET gates a store class by `StoreClass.Needs` and `ErrStoreLocked` (3.2.3, 10.3). A buffer store over a treasury's goods (a pack's word for it is flagged in STO's header) is FIS's (`spec-fiscal.md` 9.6.1; N-186): STO may accept a treasury as a holder later (FIS open question 8), and the release is PLC's lever or FIS's standing order. A keeper and a lease are a contract over the same room (LND, ORG; 10.4).
+- **Update (2026-11-14, plan 3-lnd Phase 1):** read: LND builds no keeper and no lease over a room (`spec-land.md` 7.4); a title is a share of an endowment, not of a room. Left open for ORG.
 
 ### N-142 A job start and a dispatch leave the upkeep room free
 
@@ -1111,6 +1112,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-land.md` 6.2 and `spec-saving-and-investment.md` 6.3, 19 (one decision, two sources).
 - **Note:** The decision to acquire a title is SAV's, with CRD's credit; it calls `TransferTitles` and needs a field in the plan a `Strategy` returns. It cannot be made until a holder's receipt is something a household can see: today a holder's receipts depend on others' draws and the attribution of `spec-land.md` 4.4.2, and the view carries the rent in force and no draws, and there is no seller (the pool holds and lets). The shape, if a consumer asks, is a plan field `TitleBids` matched in a round (SAV 6.3, open question 2). A facility bought for a price has the same two gaps (CAP 5.3.4: a ground facility is valued only by a `Worth` row).
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: `TradePlan` has `Intents` and `Discards` only and no `TitleBids`; the plan type is built so that a field is appended (architecture.md 2.10.5). Left open.
+- **Update (2026-11-14, plan 3-lnd Phase 1):** read: LND builds `TransferTitles` and the queries `Titles`, `Holders`, `Rent` (PR 3 of plan 3-lnd); the view carries `Posted`, `ShareBP`, `Entitled` and `Closed` and no other holder's share (`spec-land.md` 4.6.1); `TradePlan` still has no `TitleBids`. Left open for SAV, CRD and AGT (see N-358).
 
 ### N-158 The steady-state programme has one row per endowment; the warm start has no rent column
 
@@ -1134,6 +1136,7 @@ PR description.
 - **Areas:** FIS, ORG, PLC, LND, STO
 - **Raised:** 2026-10-13, `spec-polity.md` 6.1, 6.2, 6.3.
 - **Note:** A table keyed by (jurisdiction, subject) has one row per key, absence is the default, canonical order, resolved once into a dense array by `RegionID`, and one of three modes (innermost, added, scaled with one rounding) over `Chain(region)`; a crossing is applied in the order `Exit` then `Enter`. A reader never reads a count of households or a money supply of a jurisdiction to change a rate of decision (`spec-world.md` 9.4.1); it adds its row to the table of hooks in 6.3.
+- **Update (2026-11-14, plan 3-lnd Phase 1):** read: tenure terms and holdings are keyed by region (`spec-land.md` 3.3.1), not by jurisdiction, so LND reads no table of this note's rule. Left open for FIS, ORG and PLC.
 
 ### N-161 A transfer of a region between jurisdictions is reserved
 
@@ -1184,6 +1187,7 @@ PR description.
 - **Areas:** CRD, LND, STO
 - **Raised:** 2026-10-13, `spec-credit.md` 3.5 and open question 3.
 - **Note:** The candidates are goods in custody, a title of LND and a pledge of room of STO. A title is the cheapest: a `TransferTitles` at default and a `Security` field of the claim.
+- **Update (2026-11-14, plan 3-lnd Phase 1):** read: LND builds `TransferTitles`, which a later CRD default could call; no claim has a `Security` field and no title is pledged. Left open for CRD.
 
 ### N-167 The goods of a removed debtor do not pay its creditors
 
@@ -1318,6 +1322,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-fiscal.md` 24 item 3.
 - **Note:** In version 1 a tax on a reason is a tax on the holder role; a hook at the transfer would let a flow tax one ledger reason whoever pays it.
 - **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form's `wage_pay` is one more reason a hook at the transfer could tax. Not built; left open.
+- **Update (2026-11-14, plan 3-lnd Phase 1):** read: the charge of rent is one function over (payer, payee, units, rent) in the plan (plan 3-lnd D5), so a hook that taxes a reason is one call in it later; not built here. Left open for FIS.
 
 ### N-188 Incidence is statutory; a duty is not in any limit price
 
@@ -1338,6 +1343,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-institutions.md` 6.3, 6.6 to 6.8.
 - **Note:** In the admission of a market (and of the contract and credit rounds) a bid is capped and an ask floored; any later spec that forms a price from two limits (a rent, a wage, a fee, a tariff) applies the same clamp at its own admission. Never a rejection and never a rule of the strategy.
 - **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form has no price formed from two limits, so no wage control applies to it. Left open for the hire form.
+- **Update (2026-11-14, plan 3-lnd Phase 1):** read: LND applies no legal clamp to the rent in force (`spec-land.md` 5.2.2: posted rent times scale); a legal clamp of rent is ORG's. Left open for ORG and EMP.
 
 ### N-191 A right is read at a start, an order and a place
 
@@ -1345,6 +1351,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-institutions.md` 5.5.1.
 - **Note:** Never at a continuation, a completion, a holding, a consumption or a shipment; a job in progress runs to its end.
 - **Update (2026-10-16, plan 1-5 Phase 1):** read for the production row; left open for ORG. `not_permitted` is a pair appended after `not_on_role` and before `zero_yield` (`spec-production.md` 4.2.1, position 2); a continuation, a completion and a holding read no right.
+- **Update (2026-11-14, plan 3-lnd Phase 1):** read: LND reads no right at a start in version 1; `no_title` and `rent_funds` come after `no_endowment` and before CAP's build reasons (`spec-land.md` 4.5.1). Left open for ORG.
 
 ### N-192 A body's places are a second limit into the headroom
 
@@ -1447,6 +1454,7 @@ PR description.
 - **Areas:** INT, ORG, CRD, LND, CAP, RSK, STO
 - **Raised:** 2026-10-13, `spec-policy.md` 6.3, 6.3.2, 6.3.3.
 - **Note:** A later spec that adds a rate or a scale an authority would hold adds a row to PLC 6.3 (kind, key, reach rule, bound, default, read position) in the change that adds the slot to INT; a shock of the story is not a lever. `SetRateScales` (CRD), `SetRentScales` (LND) and `SetLegalLevels` (ORG) are integrated, and PLC keeps the three kinds reserved. When a kind goes live, its event (`CreditRateScaled`, `RentScaled`, `LegalLevelSet`) needs a `Cause` field like `MoneyFlowScaled`.
+- **Update (2026-11-14, plan 3-lnd Phase 1):** read: `SetRentScales` is built in PR 3 of plan 3-lnd; `RentScaled` has no `Cause` field (owner question Q8: left to PLC, an append when the `rent` kind goes live). Left open.
 
 ### N-206 The engine cannot call an indicator
 
@@ -2260,9 +2268,28 @@ PR description.
 
 ### N-357 A guarded hook call in a fan-in can break the Lizard limit
 
-- **Areas:** STO, CODE
+- **Areas:** STO, LND, CODE
 - **Raised:** 2026-11-13, plan 3-sto Phase 1 (E1, measured with `lizard -l go -C 10 -a 8 -L 100 -w`).
 - **Note:** `fillAgentView` and `removeAgent` of `fanin.go` are at CCN 10 today, one guarded call (`if w.x != nil`) from the limit of N-243; `ckLines` of `transport_request.go` is at 9, `plannedRecipe` of `strategy_default.go` at 9, `limitList` of `production.go` at 9, and `ckProvisioned` of `transport_request.go` is already at 11. Every Stage 3 module that adds a guarded call to one of them, as ADR 0010 allows, forces a refactor first (a fixed-order table of module fillers called in a loop, or a split by concern) in the same change. The first module to need it makes it, in its own commit before the hook; the others reuse it.
+- **Update (2026-11-14, plan 3-lnd Phase 1, E3):** measured at `d996592` with the same command: `startJob` (`phase_production.go`) is at CCN 10, `removeAgent` at 10, `limitList` and `start` of `production.go` at 9, `consider` and `plannedRecipe` of `strategy_default.go` at 9, `checkpointCross` of `checkpoint_restore.go` already at 14. LND's hooks H3, H11 and H12 land there, so PR 3 and PR 4 of plan 3-lnd start with refactor-first commits; the first of STO and LND to land does the `removeAgent` one.
+
+### N-358 A decision to acquire a title is SAV's, with CRD's credit
+
+- **Areas:** SAV, CRD, AGT
+- **Raised:** 2026-11-14, `spec-land.md` 18.1 (a), plan 3-lnd Phase 1.
+- **Note:** The decision to buy a title calls `TransferTitles` and is made by SAV; a loan of CRD funds the money of the call, and no title is pledged in version 1 (`spec-credit.md` 3.5). It needs a field in the plan a `Strategy` returns, and `TradePlan` has none (see N-156).
+
+### N-359 MIG's estimate of a destination's income reads neither rent nor title
+
+- **Areas:** MIG, INF
+- **Raised:** 2026-11-14, `spec-land.md` 7.2.2 and 18.1 (b), plan 3-lnd Phase 1.
+- **Note:** A rumoured rent would be a second kind of rumour (INF) and a destination's estimate would then have to read it (MIG). Version 1 has neither.
+
+### N-360 The steady-state programme has one row per endowment, with no split among roles and no rent circuit
+
+- **Areas:** VIA, CLB
+- **Raised:** 2026-11-14, `spec-land.md` 12 and 18.1 (c), plan 3-lnd Phase 1.
+- **Note:** The split of an endowment's row among roles and the money circuit of a rent are not in the programme; the dual `Rent` is the guide of the posted rent only (`spec-land.md` 5.6). Same family as N-158, N-146 and N-165.
 
 ## Read receipt
 
@@ -2276,4 +2303,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: c7b9e596d70af02e60d7d893
+NOTES-TAG: addedbea835aefa3f9836cb9
