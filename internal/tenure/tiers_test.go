@@ -290,6 +290,7 @@ func TestTiers_Refusals(t *testing.T) {
 		edit func(*tenure.Params, *[]tenure.Holder, *[]tenure.Request)
 	}{
 		{"negative stock", func(p *tenure.Params, _ *[]tenure.Holder, _ *[]tenure.Request) { p.Stock = -1 }},
+		{"negative commons", func(p *tenure.Params, _ *[]tenure.Holder, _ *[]tenure.Request) { p.Stock, p.Commons = 4, -1 }},
 		{"negative rent", func(p *tenure.Params, _ *[]tenure.Holder, _ *[]tenure.Request) { p.Rent = -1 }},
 		{"entitlements above stock", func(p *tenure.Params, _ *[]tenure.Holder, _ *[]tenure.Request) { p.Commons = 5 }},
 		{"negative entitlement", func(_ *tenure.Params, h *[]tenure.Holder, _ *[]tenure.Request) { (*h)[0].Entitled = -1 }},
