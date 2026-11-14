@@ -473,6 +473,8 @@ func TestAlloc_SkillsNoOp(t *testing.T) {
 	s.enqueue(s.cell(0, 1), applicant{agent: c.homeMillers[2], applied: 2})
 	a := &w.agents[c.yonderMillers[0]]
 	var row RegionAgent
+	rows := make([]RoleRow, len(w.cfg.Roles))
+	w.skillsRoleRows(rows, 0) // grows the scratch once
 	for _, tt := range []struct {
 		name string
 		f    func()
@@ -491,6 +493,7 @@ func TestAlloc_SkillsNoOp(t *testing.T) {
 		{"the view rows", func() { w.fillRoleSkills(0); w.fillAgentSkills(&row, a) }},
 		{"the removal step of an agent in no traineeship", func() { w.dropAgent(a) }},
 		{"the places of a role", func() { _ = w.trainersOf(0, 1) }},
+		{"the snapshot rows of the places", func() { w.skillsRoleRows(rows, 0) }},
 	} {
 		if n := testing.AllocsPerRun(50, tt.f); n != 0 {
 			t.Errorf("AllocsPerRun(%s) = %v, want 0", tt.name, n)

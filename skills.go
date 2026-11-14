@@ -83,6 +83,8 @@ type skills struct {
 	// (NFR-SKL-001).
 	slots []trainerSlot
 	drop  []AgentID
+	// open is the scratch of the snapshot's places, valid until the next call.
+	open []skill.Trainer
 }
 
 // newSkills returns the state of the traineeships, or nil when no role of the

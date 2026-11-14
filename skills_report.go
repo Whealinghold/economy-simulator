@@ -105,11 +105,11 @@ func (w *World) skillsRoleRows(rows []RoleRow, g RegionID) {
 			continue
 		}
 		slots, max := w.trainersOf(g, RoleID(r)), w.cfg.Roles[r].MaxTrainees
-		places := make([]skill.Trainer, len(slots))
-		for i, t := range slots {
-			places[i] = skill.Trainer{Held: t.held, Max: max}
+		s.open = s.open[:0]
+		for _, t := range slots {
+			s.open = append(s.open, skill.Trainer{Held: t.held, Max: max})
 		}
-		rows[r].Places, rows[r].Trainers = skill.Open(places), int64(len(slots))
+		rows[r].Places, rows[r].Trainers = skill.Open(s.open), int64(len(slots))
 		rows[r].Queue = int64(len(s.queue[s.cell(g, RoleID(r))]))
 	}
 	for id, rec := range s.trainee {
