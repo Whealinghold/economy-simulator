@@ -376,7 +376,9 @@ func (w *World) Snapshot() (Snapshot, error) {
 	}
 	w.snapshotMigration(&s)
 	w.snapshotContracts(&s)
-	w.snapshotTreasuries(&s)
+	if err := w.snapshotTreasuries(&s); err != nil {
+		return Snapshot{}, fmt.Errorf("snapshot at tick %d: %w", w.Tick(), err)
+	}
 	w.snapshotOutside(&s)
 	w.dropOutsideRows(&s)
 	return s, nil
@@ -443,7 +445,9 @@ func (w *World) Region(g RegionID) (RegionState, error) {
 	}
 	w.snapshotMigration(&s)
 	w.snapshotContracts(&s)
-	w.snapshotTreasuries(&s)
+	if err := w.snapshotTreasuries(&s); err != nil {
+		return RegionState{}, fmt.Errorf("Region: region %d: %w", g, err)
+	}
 	out := RegionState{Region: s.Regions[g], Jobs: s.Jobs}
 	if !w.isOutsideNode(g) {
 		out.Roles = slices.Clone(s.Roles[int(g)*nr : (int(g)+1)*nr])

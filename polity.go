@@ -677,10 +677,9 @@ func (w *World) attachTreasuries() error {
 // auditTreasuries is the hook of the audit (architecture.md 2.10.1).
 func (w *World) auditTreasuries() error { return w.polity.audit(w.ledger) }
 
-// rows returns the JurisdictionRow of each treasury in ascending JurisdictionID, nil
-// with none. With start true the money is the StartMoney (WorldCreated), else the
-// balance of the account (the snapshot).
-func (p *polity) rows(l *ledger.Ledger, start bool) []JurisdictionRow {
+// startRows returns the JurisdictionRow of each treasury in ascending JurisdictionID
+// with the StartMoney as its money (WorldCreated), nil with none. It reads no ledger.
+func (p *polity) startRows() []JurisdictionRow {
 	if p.treasuryCount() == 0 {
 		return nil
 	}
@@ -688,24 +687,39 @@ func (p *polity) rows(l *ledger.Ledger, start bool) []JurisdictionRow {
 	for i := range p.tr {
 		t := &p.tr[i]
 		out[i] = JurisdictionRow{Jurisdiction: t.j, Seat: t.seat, Agent: t.agent, Money: t.start}
-		if !start {
-			v, _ := l.Account(t.account)
-			out[i].Money = Money(v.Balance)
-		}
 	}
 	return out
+}
+
+// balanceRows is startRows with the balance of the account as the money (the
+// snapshot). It returns an error for an account the ledger cannot read, never a 0.
+func (p *polity) balanceRows(l *ledger.Ledger) ([]JurisdictionRow, error) {
+	out := p.startRows()
+	for i := range out {
+		v, err := l.Account(p.tr[i].account)
+		if err != nil {
+			return nil, fmt.Errorf("read the treasury account of jurisdiction %d: %w", p.tr[i].j, err)
+		}
+		out[i].Money = Money(v.Balance)
+	}
+	return out, nil
 }
 
 // snapshotTreasuries fills the polity rows of a snapshot: the treasuries' rows, the
 // money of each seat region's treasuries, and the money of the world (spec-polity.md
 // 10.5). It leaves the snapshot alone with no treasury.
-func (w *World) snapshotTreasuries(s *Snapshot) {
-	s.Jurisdictions = w.polity.rows(w.ledger, false)
-	for _, r := range s.Jurisdictions {
+func (w *World) snapshotTreasuries(s *Snapshot) error {
+	rows, err := w.polity.balanceRows(w.ledger)
+	if err != nil {
+		return err
+	}
+	s.Jurisdictions = rows
+	for _, r := range rows {
 		row := &s.Regions[r.Seat]
 		row.MoneyTreasury = satMoney(row.MoneyTreasury, r.Money, 0)
 		s.Money = satMoney(s.Money, r.Money, 0)
 	}
+	return nil
 }
 
 // TreasuryAgent returns the treasury pseudo-agent of a governed jurisdiction

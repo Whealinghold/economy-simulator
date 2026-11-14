@@ -323,3 +323,22 @@ func TestPolity_TreasuryAgentAllocatesNothing(t *testing.T) {
 		t.Errorf("TreasuryAgent allocated %v times per run, want 0", n)
 	}
 }
+
+// TestPolity_SnapshotRefusesAnUnreadableTreasury verifies that a snapshot and a region
+// state report a treasury account the ledger cannot read as an error, and not as a
+// treasury holding 0.
+//
+// Fix: defensive review of POL phases 5 and 6. The snapshot rows read the balance with
+// the error of Ledger.Account discarded, so a lost account showed as 0 money and the
+// snapshot of the world stopped adding up without any error.
+func TestPolity_SnapshotRefusesAnUnreadableTreasury(t *testing.T) {
+	t.Parallel()
+	w := newMill(t, treasuryConfig())
+	w.polity.tr[0].account = w.ledger.Len() // one past the last account
+	if _, err := w.Snapshot(); err == nil {
+		t.Error("Snapshot() with an unreadable treasury account error = nil, want an error")
+	}
+	if _, err := w.Region(0); err == nil {
+		t.Error("Region(0) with an unreadable treasury account error = nil, want an error")
+	}
+}

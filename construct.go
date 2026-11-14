@@ -364,7 +364,7 @@ func (b *builder) announce(warnings []Warning) {
 		return
 	}
 	_, present := warmCountsOf(&w.cfg)
-	w.obs.deliver(WorldCreated{Seed: w.state.seed, ConfigHash: w.hash, WarmStart: present, Names: namesOf(&w.cfg), Jurisdictions: w.polity.rows(w.ledger, true)})
+	w.obs.deliver(WorldCreated{Seed: w.state.seed, ConfigHash: w.hash, WarmStart: present, Names: namesOf(&w.cfg), Jurisdictions: w.polity.startRows()})
 	for _, e := range b.spawned {
 		w.obs.deliver(e)
 	}
