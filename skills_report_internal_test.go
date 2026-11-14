@@ -24,6 +24,56 @@ func linesOf(h capture) []logRec {
 	return out
 }
 
+// checkGainLines checks the lines of one entry-step call of the weaver role in region 0
+// kept waiting by the gain: the Debug "traineeship refused" names the head of the queue,
+// the Warn "no places open" names the region and the role, and no other line is above
+// Debug. It returns how many of each it saw.
+func checkGainLines(t *testing.T, call int, head AgentID, lines []logRec) (refused, warns int) {
+	t.Helper()
+	for _, l := range lines {
+		switch {
+		case l.msg == "traineeship refused":
+			refused++
+			if !gainAttrs(l, int64(head)) {
+				t.Errorf("call %d: Debug line = %+v, want agent %d, region 0, role 1, reason gain_negative", call, l, head)
+			}
+		case l.msg == "no places open":
+			warns++
+			if l.level != slog.LevelWarn || !gainAttrs(l, -1) {
+				t.Errorf("call %d: Warn = %+v, want level Warn, region 0, role 1, reason gain_negative", call, l)
+			}
+		case l.level > slog.LevelDebug:
+			t.Errorf("call %d: line %q at level %v, want nothing above Debug but the one Warn", call, l.msg, l.level)
+		}
+	}
+	return refused, warns
+}
+
+// gainAttrs reports whether l names region 0, role 1 and the reason gain_negative, and
+// the agent when agent is not -1.
+func gainAttrs(l logRec, agent int64) bool {
+	if agent >= 0 && l.attrs["agent"] != agent {
+		return false
+	}
+	return l.attrs["region"] == 0 && l.attrs["role"] == 1 && l.strs["reason"] == "gain_negative"
+}
+
+// checkWarnCounterpart checks the snapshot row of the weaver role after 25 blocked
+// calls: two queued, three places open, the trainer, none taken, and the run at 25.
+func checkWarnCounterpart(t *testing.T, w *World) {
+	t.Helper()
+	s, err := w.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot() error = %v, want nil", err)
+	}
+	if row := s.Roles[1]; row.Queue != 2 || row.Places != 3 || row.Trainers != 1 || row.PlacesTaken != 0 {
+		t.Errorf("snapshot row (home, weaver) = queue %d, places %d, trainers %d, taken %d, want 2, 3, 1, 0: the counterpart of the Warn", row.Queue, row.Places, row.Trainers, row.PlacesTaken)
+	}
+	if got := w.skills.warnRun[w.skills.cell(0, 1)]; got != 25 {
+		t.Errorf("run after 25 blocked calls = %d, want 25", got)
+	}
+}
+
 // TestWarn_NoPlacesOpenTenthTick verifies the bounded Warn of the incentive
 // cliff: with two applicants queued and a negative gain, "no places open" is
 // logged once per region and role at the tenth consecutive tick and at the twentieth,
@@ -52,23 +102,7 @@ func TestWarn_NoPlacesOpenTenthTick(t *testing.T) {
 		if err := w.skillsEntry(0); err != nil {
 			t.Fatalf("call %d: skillsEntry error = %v, want nil", call, err)
 		}
-		refused, warns := 0, 0
-		for _, l := range linesOf(h) {
-			switch {
-			case l.msg == "traineeship refused":
-				refused++
-				if l.attrs["agent"] != int64(a) || l.attrs["region"] != 0 || l.attrs["role"] != 1 || l.strs["reason"] != "gain_negative" {
-					t.Errorf("call %d: Debug line = %+v, want agent %d, region 0, role 1, reason gain_negative", call, l, a)
-				}
-			case l.msg == "no places open":
-				warns++
-				if l.level != slog.LevelWarn || l.attrs["region"] != 0 || l.attrs["role"] != 1 || l.strs["reason"] != "gain_negative" {
-					t.Errorf("call %d: Warn = %+v, want level Warn, region 0, role 1, reason gain_negative", call, l)
-				}
-			case l.level > slog.LevelDebug:
-				t.Errorf("call %d: line %q at level %v, want nothing above Debug but the one Warn", call, l.msg, l.level)
-			}
-		}
+		refused, warns := checkGainLines(t, call, a, linesOf(h))
 		if refused != 1 {
 			t.Errorf("call %d: %d Debug lines of \"traineeship refused\", want 1 per region and role, not per applicant", call, refused)
 		}
@@ -82,22 +116,26 @@ func TestWarn_NoPlacesOpenTenthTick(t *testing.T) {
 	if want := []int{10, 20}; !slices.Equal(warnAt, want) {
 		t.Errorf("Warn at calls %v, want %v: the tenth tick and every tenth after", warnAt, want)
 	}
-	s, err := w.Snapshot()
-	if err != nil {
-		t.Fatalf("Snapshot() error = %v, want nil", err)
-	}
-	if row := s.Roles[1]; row.Queue != 2 || row.Places != 3 || row.Trainers != 1 || row.PlacesTaken != 0 {
-		t.Errorf("snapshot row (home, weaver) = queue %d, places %d, trainers %d, taken %d, want 2, 3, 1, 0: the counterpart of the Warn", row.Queue, row.Places, row.Trainers, row.PlacesTaken)
-	}
-	if got := w.skills.warnRun[w.skills.cell(0, 1)]; got != 25 {
-		t.Errorf("run after 25 blocked calls = %d, want 25", got)
-	}
+	checkWarnCounterpart(t, w)
 	w.cfg.Recipes[kneadOf(t, w)].TraineeYield = 10_000
 	if err := w.skillsEntry(0); err != nil {
 		t.Fatalf("skillsEntry error = %v, want nil", err)
 	}
 	if got := w.skills.warnRun[w.skills.cell(0, 1)]; got != 0 || len(w.skills.queue[w.skills.cell(0, 1)]) != 0 {
 		t.Errorf("after the gain turned positive: run %d, queue %v, want 0 and the queue placed", got, queueIDs(w.skills, 0, 1))
+	}
+}
+
+// checkNoTrainerRow checks the snapshot row of a queue with no trainer: the only signal
+// of it besides the Debug line.
+func checkNoTrainerRow(t *testing.T, w *World) {
+	t.Helper()
+	s, err := w.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot() error = %v, want nil", err)
+	}
+	if row := s.Roles[1]; row.Trainers != 0 || row.Places != 0 || row.Queue != 1 {
+		t.Errorf("snapshot row = trainers %d, places %d, queue %d, want 0, 0, 1: the only signal of a queue with no trainer", row.Trainers, row.Places, row.Queue)
 	}
 }
 
@@ -134,16 +172,25 @@ func TestWarn_NoTrainerIsDebugOnly(t *testing.T) {
 			}
 		}
 	}
-	s, err := w.Snapshot()
-	if err != nil {
-		t.Fatalf("Snapshot() error = %v, want nil", err)
-	}
-	if row := s.Roles[1]; row.Trainers != 0 || row.Places != 0 || row.Queue != 1 {
-		t.Errorf("snapshot row = trainers %d, places %d, queue %d, want 0, 0, 1: the only signal of a queue with no trainer", row.Trainers, row.Places, row.Queue)
-	}
+	checkNoTrainerRow(t, w)
 	if got := w.skills.warnRun[w.skills.cell(0, 1)]; got != 0 {
 		t.Errorf("run = %d, want 0: no trainer is not a negative gain", got)
 	}
+}
+
+// endedLines returns the "traineeship ended" lines among lines and fails on any line
+// above Debug.
+func endedLines(t *testing.T, lines []logRec) (ended []logRec) {
+	t.Helper()
+	for _, l := range lines {
+		if l.msg == "traineeship ended" {
+			ended = append(ended, l)
+		}
+		if l.level > slog.LevelDebug {
+			t.Errorf("line %q at level %v, want Debug only", l.msg, l.level)
+		}
+	}
+	return ended
 }
 
 // TestLog_TraineeshipEnded verifies the Debug line "traineeship ended" of both ways
@@ -169,15 +216,7 @@ func TestLog_TraineeshipEnded(t *testing.T) {
 	if err := w.removeAgent(&w.agents[trainer], CauseConsumer); err != nil {
 		t.Fatalf("removeAgent(trainer) error = %v, want nil", err)
 	}
-	var ended []logRec
-	for _, l := range linesOf(h) {
-		if l.msg == "traineeship ended" {
-			ended = append(ended, l)
-		}
-		if l.level > slog.LevelDebug {
-			t.Errorf("line %q at level %v, want Debug only", l.msg, l.level)
-		}
-	}
+	ended := endedLines(t, linesOf(h))
 	want := []logRec{
 		{msg: "traineeship ended", attrs: map[string]int64{"agent": int64(b), "trainer": int64(trainer), "region": 0, "role": 1, "served": 3}, strs: map[string]string{"reason": "agent_left"}},
 		{msg: "traineeship ended", attrs: map[string]int64{"agent": int64(a), "trainer": int64(trainer), "region": 0, "role": 1, "served": 2}, strs: map[string]string{"reason": "trainer_left"}},

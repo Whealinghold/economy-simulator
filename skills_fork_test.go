@@ -68,6 +68,27 @@ func TestFork_Skills(t *testing.T) {
 	forkAtN(t, forkCase{Name: "skills inside a run of the Warn", Cfg: lose, Seed: 1, N: 12, M: forkM, Logs: true, Opts: opts})
 }
 
+// skillWarnTicks steps a world of cfg, seed 1, for ticks ticks and returns the ticks at which
+// it logged the Warn "no places open".
+func skillWarnTicks(t testing.TB, cfg economysim.Config, ticks int) []int {
+	t.Helper()
+	h := newCaptureHandler()
+	w := newPackWorld(t, cfg, 1, economysim.WithLogger(slog.New(h)))
+	var warns []int
+	for i := range ticks {
+		if err := w.Step(); err != nil {
+			t.Fatalf("Step() at tick %d error = %v, want nil", i, err)
+		}
+		for _, l := range h.sink.lines {
+			if l.msg == "no places open" {
+				warns = append(warns, i)
+			}
+		}
+		h.sink.lines = nil
+	}
+	return warns
+}
+
 // TestFork_SkillsWarnRunsAfterTheBoundary verifies the design of the last cell of
 // TestFork_Skills: with the yield cut to 1 basis point the world logs the Warn "no
 // places open" at the tenth consecutive tick after the first application and again ten
@@ -83,21 +104,7 @@ func TestFork_SkillsWarnRunsAfterTheBoundary(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test, skipped with -short")
 	}
-	cfg := loadPackBytes(t, []byte(loseYield), packOneSkills...)
-	h := newCaptureHandler()
-	w := newPackWorld(t, cfg, 1, economysim.WithLogger(slog.New(h)))
-	var warns []int
-	for i := range 42 {
-		if err := w.Step(); err != nil {
-			t.Fatalf("Step() at tick %d error = %v, want nil", i, err)
-		}
-		for _, l := range h.sink.lines {
-			if l.msg == "no places open" {
-				warns = append(warns, i)
-			}
-		}
-		h.sink.lines = nil
-	}
+	warns := skillWarnTicks(t, loadPackBytes(t, []byte(loseYield), packOneSkills...), 42)
 	if len(warns) < 2 || warns[0] > 12+forkM || warns[0] <= 12 {
 		t.Errorf("Warn \"no places open\" at ticks %v, want the first after tick 12 (inside the window of the fork) and a second ten ticks after", warns)
 	}
