@@ -663,6 +663,24 @@ func TestWarnings_StorageFlowScope(t *testing.T) {
 	}
 }
 
+// TestWarnings_StorageGrantIsNotALevy verifies that a stores flow of the kind grant
+// draws no store_levy_below_upkeep (an Exempt means something only for a levy), though
+// it still counts as using its class.
+//
+// Requirement: FR-STO-038
+func TestWarnings_StorageGrantIsNotALevy(t *testing.T) {
+	t.Parallel()
+	c := storageConfig()
+	storageLevy(&c, economysim.FlowTarget{Kind: "stores", Store: "shed"})
+	c.Modules.MoneySupply.Flows[0].Kind = economysim.FlowGrant
+	for _, w := range c.Warnings() {
+		unusedShed := w.Rule == "store_class_unused" && strings.HasSuffix(w.Path[len(w.Path)-1], "[1]")
+		if w.Rule == "store_levy_below_upkeep" || unusedShed {
+			t.Errorf("Warnings() has %v, want no levy warning for a grant and shed used by it", w)
+		}
+	}
+}
+
 // FuzzValidateStorage verifies, for any base room, class capacities, store list and
 // class ID written into the valid configuration, that Validate and Warnings never
 // panic, that every error of the module is a *ValidationError whose path starts at
