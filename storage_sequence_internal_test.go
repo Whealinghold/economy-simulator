@@ -7,9 +7,28 @@ import (
 	"testing"
 )
 
-// seqOps are the calls and events of the seeded sequences, in the order a draw picks
-// them.
-var seqOps = [...]string{"add_store", "remove_store", "add_agent", "remove_agent", "relocate", "reduce", "grow", "switch", "step", "step3"}
+// seqOp is one call or act of the seeded sequences.
+type seqOp struct {
+	name string
+	run  func(r *seqRun)
+}
+
+// seqOps are the calls and acts of the seeded sequences, in the order a draw picks them.
+// The ops of the first three are the calls that need no household, so index 2 is the
+// one a sequence falls back to when none is left.
+var seqOps = [...]seqOp{
+	{"add_store", (*seqRun).addStore}, {"remove_store", (*seqRun).removeStore}, {"add_agent", (*seqRun).addAgent},
+	{"remove_agent", (*seqRun).removeAgent}, {"relocate", (*seqRun).relocate}, {"reduce", (*seqRun).reduce},
+	{"grow", (*seqRun).grow}, {"switch", (*seqRun).switchRole}, {"step", (*seqRun).step1}, {"step3", (*seqRun).step3},
+}
+
+// seqAddAgent is the index of add_agent in seqOps.
+const seqAddAgent = 2
+
+// seqNeedsAgent says whether an op acts on a household that exists.
+func seqNeedsAgent(k int) bool {
+	return seqOps[k].name != "step" && seqOps[k].name != "step3" && k != seqAddAgent
+}
 
 // seqSeeds is the number of seeds of the sequences: each is 60 calls on a world of four
 // households, so a run is a few milliseconds and the same count serves under -race.
@@ -119,71 +138,100 @@ func (r *seqRun) check() {
 	}
 }
 
-// op runs the draw k.
+// op runs the draw k; a draw that needs a household when none is left adds one.
 func (r *seqRun) op(k int) {
 	r.t.Helper()
-	w := r.w
-	if seqOps[k] != "step" && seqOps[k] != "step3" && len(r.live()) == 0 {
-		k = 2 // no household is left to act on: add one
+	if seqNeedsAgent(k) && len(r.live()) == 0 {
+		k = seqAddAgent
 	}
-	switch seqOps[k] {
-	case "add_store":
-		r.call("add_store", w.AddStore(r.pick(), StoreClassID(r.rng.IntN(2))))
-	case "remove_store":
-		r.call("remove_store", w.RemoveStore(r.pick(), StoreClassID(r.rng.IntN(2))))
-	case "add_agent":
-		grain := commodityOf(r.t, w, "grain")
-		_, err := w.AddAgent(NewAgent{Region: RegionID(r.rng.IntN(2)), Role: 0, Strategy: "script", Money: 5,
-			Stock: []StockItem{{Commodity: grain, Quantity: Quantity(r.rng.IntN(30))}}})
-		r.call("add_agent", err)
-	case "remove_agent":
-		r.call("remove_agent", w.RemoveAgent(r.pick()))
-	case "relocate":
-		r.call("relocate", w.Relocate(r.pick(), RegionID(r.rng.IntN(2))))
-	case "reduce":
-		a := &w.agents[r.pick()]
-		if a.weight < 2 {
-			return
-		}
-		r.log = append(r.log, "reduce")
-		r.done["reduce"]++
-		if a.hasJob() {
-			r.done["reduce_job"]++ // a reduction that re-weighs a running job
-		}
-		if err := w.execReduce(w.regionOf(a), a, Decision{Agent: a.id, Households: 1, Cause: CauseStarved}); err != nil {
-			r.fail("execReduce() = %v, want nil: a reduction is never refused for room", err)
-		}
-	case "grow":
-		a := &w.agents[r.pick()]
-		r.log = append(r.log, "grow")
-		r.done["grow"]++
-		a.weight++
-		w.weightChangedStorage(a)
-	case "switch":
-		a := &w.agents[r.pick()]
-		to := r.roles[r.rng.IntN(3)]
-		if a.role == to {
-			return
-		}
-		r.log = append(r.log, "switch")
-		r.done["switch"]++
-		if err := w.execSwitch(w.regionOf(a), a, Decision{Agent: a.id, Role: to, Cause: CauseReview}); err != nil {
-			r.fail("execSwitch() = %v, want nil: a role change is never refused for room", err)
-		}
-	default:
-		n := 1
-		if seqOps[k] == "step3" {
-			n = 3
-		}
-		for range n {
-			r.log = append(r.log, "step")
-			r.done["step"]++
-			if err := w.Step(); err != nil {
-				r.fail("Step() = %v, want nil (WithAudit)", err)
-			}
+	seqOps[k].run(r)
+}
+
+func (r *seqRun) addStore() {
+	r.t.Helper()
+	r.call("add_store", r.w.AddStore(r.pick(), StoreClassID(r.rng.IntN(2))))
+}
+
+func (r *seqRun) removeStore() {
+	r.t.Helper()
+	r.call("remove_store", r.w.RemoveStore(r.pick(), StoreClassID(r.rng.IntN(2))))
+}
+
+func (r *seqRun) addAgent() {
+	r.t.Helper()
+	grain := commodityOf(r.t, r.w, "grain")
+	_, err := r.w.AddAgent(NewAgent{Region: RegionID(r.rng.IntN(2)), Role: 0, Strategy: "script", Money: 5,
+		Stock: []StockItem{{Commodity: grain, Quantity: Quantity(r.rng.IntN(30))}}})
+	r.call("add_agent", err)
+}
+
+func (r *seqRun) removeAgent() {
+	r.t.Helper()
+	r.call("remove_agent", r.w.RemoveAgent(r.pick()))
+}
+
+func (r *seqRun) relocate() {
+	r.t.Helper()
+	r.call("relocate", r.w.Relocate(r.pick(), RegionID(r.rng.IntN(2))))
+}
+
+// reduce takes one household from a household of weight 2 or more; a reduction is never
+// refused for room.
+func (r *seqRun) reduce() {
+	r.t.Helper()
+	a := &r.w.agents[r.pick()]
+	if a.weight < 2 {
+		return
+	}
+	r.log = append(r.log, "reduce")
+	r.done["reduce"]++
+	if a.hasJob() {
+		r.done["reduce_job"]++ // a reduction that re-weighs a running job
+	}
+	if err := r.w.execReduce(r.w.regionOf(a), a, Decision{Agent: a.id, Households: 1, Cause: CauseStarved}); err != nil {
+		r.fail("execReduce() = %v, want nil: a reduction is never refused for room", err)
+	}
+}
+
+// grow adds one household to an agent, as a birth does.
+func (r *seqRun) grow() {
+	r.t.Helper()
+	a := &r.w.agents[r.pick()]
+	r.log = append(r.log, "grow")
+	r.done["grow"]++
+	a.weight++
+	r.w.weightChangedStorage(a)
+}
+
+// switchRole moves a household to another of the three roles; a role change is never
+// refused for room.
+func (r *seqRun) switchRole() {
+	r.t.Helper()
+	a := &r.w.agents[r.pick()]
+	to := r.roles[r.rng.IntN(3)]
+	if a.role == to {
+		return
+	}
+	r.log = append(r.log, "switch")
+	r.done["switch"]++
+	if err := r.w.execSwitch(r.w.regionOf(a), a, Decision{Agent: a.id, Role: to, Cause: CauseReview}); err != nil {
+		r.fail("execSwitch() = %v, want nil: a role change is never refused for room", err)
+	}
+}
+
+func (r *seqRun) steps(n int) {
+	r.t.Helper()
+	for range n {
+		r.log = append(r.log, "step")
+		r.done["step"]++
+		if err := r.w.Step(); err != nil {
+			r.fail("Step() = %v, want nil (WithAudit)", err)
 		}
 	}
 }
+
+func (r *seqRun) step1() { r.t.Helper(); r.steps(1) }
+func (r *seqRun) step3() { r.t.Helper(); r.steps(3) }
 
 // TestStorage_SeededCallSequencesKeepThePledge verifies the pledge lifecycle at the
 // level of the world: over seeded sequences of 60 calls and steps (add and remove a

@@ -3,6 +3,7 @@ package economysim
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -43,7 +44,7 @@ func TestComplete_CutRoomIsSharedAcrossOutputLines(t *testing.T) {
 		}
 	}
 	wantDisposed := []Amount{{Commodity: flour, Quantity: 2}, {Commodity: perish, Quantity: 2}}
-	if len(got.Disposed) != len(wantDisposed) || got.Disposed[0] != wantDisposed[0] || got.Disposed[1] != wantDisposed[1] {
+	if !slices.Equal(got.Disposed, wantDisposed) {
 		t.Errorf("RecipeExecuted.Disposed of the cut completion = %+v, want %+v (2 flour, 2 perish)", got.Disposed, wantDisposed)
 	}
 	account := w.agents[shipHome].account
@@ -53,11 +54,8 @@ func TestComplete_CutRoomIsSharedAcrossOutputLines(t *testing.T) {
 	if held, _, _ := w.ledger.Holding(account, int(perish)); held != 0 {
 		t.Errorf("perish held after the completion = %d, want 0: the flour took the room left", held)
 	}
-	if st := roomOfAgent(t, w, shipHome); st.Load.Mass > st.Room.Mass || st.Load.Bulk > st.Room.Bulk {
-		t.Errorf("load %+v above room %+v after the completion", st.Load, st.Room)
-	}
 	if err := w.Audit(); err != nil {
-		t.Errorf("Audit() = %v, want nil", err)
+		t.Errorf("Audit() = %v, want nil (the load is within the room)", err)
 	}
 }
 
@@ -179,14 +177,12 @@ func TestArrival_LinesShareTheRoomLeftInLineOrder(t *testing.T) {
 	}
 	step(t, w, 3)
 	arr := of[ShipmentArrived](rec)
-	if len(arr) != 1 || len(arr[0].Lines) != 2 {
-		t.Fatalf("ShipmentArrived = %+v, want one arrival with two lines", arr)
+	if len(arr) != 1 {
+		t.Fatalf("ShipmentArrived events = %d, want 1", len(arr))
 	}
-	if l := arr[0].Lines[0]; l.Commodity != grain || l.Delivered != 4 || l.Diverted != 1 {
-		t.Errorf("first line = %+v, want grain, 4 delivered, 1 diverted", l)
-	}
-	if l := arr[0].Lines[1]; l.Commodity != hay || l.Delivered != 0 || l.Diverted != 4 {
-		t.Errorf("second line = %+v, want hay, 0 delivered, 4 diverted", l)
+	want := []ArrivedLine{{Commodity: grain, Shipped: 5, Delivered: 4, Diverted: 1}, {Commodity: hay, Shipped: 4, Delivered: 0, Diverted: 4}}
+	if !slices.Equal(arr[0].Lines, want) {
+		t.Errorf("ShipmentArrived.Lines = %+v, want %+v (grain takes the room left, hay none)", arr[0].Lines, want)
 	}
 	if st := roomOfAgent(t, w, shipFar); st.Pledge != (Capacity{}) {
 		t.Errorf("pledge after the arrival = %+v, want (0, 0): the whole of both lines", st.Pledge)
