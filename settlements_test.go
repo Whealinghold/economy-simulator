@@ -586,3 +586,40 @@ func FuzzValidateSettlements(f *testing.F) {
 		}
 	})
 }
+
+// TestValidateSettlements_ClassListsAreBounded verifies that a class with more flags
+// or limits than the module may hold is ErrTooMany at the module's list, without a finding
+// per element.
+//
+// Requirement: FR-SET-002
+func TestValidateSettlements_ClassListsAreBounded(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name string
+		set  func(c *economysim.SettlementClass)
+		key  string
+		n    int
+	}{
+		{"flags", func(c *economysim.SettlementClass) { c.Flags = make([]string, economysim.MaxClassFlags+1) }, "flags", economysim.MaxClassFlags + 1},
+		{"limits", func(c *economysim.SettlementClass) {
+			c.Limits = make([]economysim.ClassLimit, economysim.MaxClassLimits+1)
+		}, "limits", economysim.MaxClassLimits + 1},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := settlementsConfig()
+			tt.set(&c.Modules.Settlements.Classes[1])
+			err := c.Validate()
+			if !errors.Is(err, economysim.ErrTooMany) {
+				t.Fatalf("Validate() = %v, want ErrTooMany", err)
+			}
+			var ve *economysim.ValidationError
+			if !errors.As(err, &ve) || strings.Join(ve.Path, ".") != strings.Join(setPath(tt.key), ".") || ve.Value != strconv.Itoa(tt.n) {
+				t.Errorf("Validate() first error = %+v, want ErrTooMany at %v with value %d", ve, setPath(tt.key), tt.n)
+			}
+			if strings.Count(err.Error(), "invalid") > 1 {
+				t.Errorf("Validate() reported a finding per element: %v", err)
+			}
+		})
+	}
+}

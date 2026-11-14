@@ -83,6 +83,10 @@ func (v *validator) distinctCount(p []string, n, hi int) {
 
 // classFlags checks the flags of one class (a name, once) and records them in all.
 func (v *validator) classFlags(p []string, c *SettlementClass, all map[string]bool) {
+	if len(c.Flags) > MaxClassFlags { // more than the module may hold: reported as distinctCount does, without a finding per element
+		v.rep.add(ErrTooMany, path(p[:2], "flags"), itoa(len(c.Flags)), itoa(MaxClassFlags))
+		return
+	}
 	own := make(map[string]bool, len(c.Flags))
 	for j, f := range c.Flags {
 		fp := path(p, "flags["+itoa(j)+"]")
@@ -99,6 +103,10 @@ func (v *validator) classFlags(p []string, c *SettlementClass, all map[string]bo
 // classLimits checks the limits of one class (a name, once, a value in 0 .. MaxQuantity)
 // and records the names in all.
 func (v *validator) classLimits(p []string, c *SettlementClass, all map[string]bool) {
+	if len(c.Limits) > MaxClassLimits {
+		v.rep.add(ErrTooMany, path(p[:2], "limits"), itoa(len(c.Limits)), itoa(MaxClassLimits))
+		return
+	}
 	own := make(map[string]bool, len(c.Limits))
 	for j, l := range c.Limits {
 		lp := path(p, "limits["+itoa(j)+"]")
