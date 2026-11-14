@@ -175,7 +175,7 @@ func (s *storage) grow(id AgentID) {
 		s.stores = append(s.stores, nil)
 		s.inbound = append(s.inbound, room.Pair{})
 		s.jobLoad = append(s.jobLoad, room.Pair{})
-		s.jobPrin = append(s.jobPrin, 0)
+		s.jobPrin = append(s.jobPrin, AgentID(len(s.jobPrin)))
 		s.held = append(s.held, room.Pair{})
 	}
 }
@@ -294,6 +294,9 @@ func (w *World) joinedStorage(a *agent) {
 func (w *World) roleChangedStorage(a *agent, region RegionID) {
 	s := w.sto
 	s.ended = s.ended[:0]
+	if err := s.apply(w.ledger, a); err != nil {
+		invariant("the room of an agent that changed role is below its goods: " + err.Error())
+	}
 	if !s.limited(a) {
 		for c := range s.classes {
 			for s.count(a.id, c) > 0 {
@@ -303,9 +306,6 @@ func (w *World) roleChangedStorage(a *agent, region RegionID) {
 				}
 			}
 		}
-	}
-	if err := s.apply(w.ledger, a); err != nil {
-		invariant("the room of an agent that changed role is below its goods: " + err.Error())
 	}
 	w.syncJob(a)
 }
@@ -536,8 +536,8 @@ func (w *World) finishStorage() error {
 	for i := w.firstHousehold; i < len(w.agents); i++ {
 		a := &w.agents[i]
 		if err := s.apply(w.ledger, a); err != nil {
-			return fmt.Errorf("agent %d of role %s: the goods it starts with do not fit its room: %w",
-				a.id, w.cfg.Roles[a.role].ID, ErrRoomShape)
+			return fmt.Errorf("agent %d of role %s: the goods it starts with do not fit its room: %w: %w",
+				a.id, w.cfg.Roles[a.role].ID, ErrRoomShape, err)
 		}
 		w.syncJob(a)
 		if s.limited(a) && !w.roomHolds(a, s.roomFor(a)) {

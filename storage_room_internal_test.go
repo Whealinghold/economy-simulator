@@ -400,6 +400,11 @@ func TestRoleChange_ToUnlimitedEndsStoresInClassOrderAfterRoleChanged(t *testing
 		if e.Kind != KindRemoved || e.Cause != CauseRoleChanged || e.Role != 1 {
 			t.Errorf("StoreChanged[%d] = %+v, want kind removed, cause role_changed, role 1 (the new one)", i, e)
 		}
+		// Fix: the events were built before the account was made unlimited and carried the
+		// old role's room and load; the account's room after the change is 0 (FR-STO-035).
+		if e.Room != (Capacity{}) || e.Load != (Capacity{}) {
+			t.Errorf("StoreChanged[%d] room %+v load %+v, want both zero for the unlimited account after the change", i, e.Room, e.Load)
+		}
 	}
 	if !slices.Equal(classes, []StoreClassID{0, 0, 1}) || !slices.Equal(counts, []int64{1, 0, 0}) {
 		t.Errorf("ended stores by class %v with counts %v, want classes [0 0 1] (class order) and counts [1 0 0]", classes, counts)
