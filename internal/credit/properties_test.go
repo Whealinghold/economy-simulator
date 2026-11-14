@@ -1,6 +1,7 @@
 package credit_test
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"slices"
 	"testing"
@@ -21,25 +22,34 @@ func TestInterest_Property(t *testing.T) {
 	for seed := uint64(1); seed <= 500; seed++ {
 		r := rand.New(rand.NewPCG(seed, 13))
 		x, rate, term := r.Int64N(maxMoney+1), r.Int64N(maxRateBP+1), r.Int64N(maxTerm+1)
-		got, ok := credit.Interest(x, rate, term, ticksYear)
-		// A quotient above int64 is reported, never wrapped: ok is false and the
-		// interest 0; otherwise it is the exact quotient.
-		want := exactInterest(x, rate, term, ticksYear)
-		if fits := want.IsInt64(); ok != fits || (fits && got != want.Int64()) || (!fits && got != 0) {
-			t.Fatalf("seed %d: Interest(%d, %d, %d, %d) = %d, %v, want %s (fits int64: %v)", seed, x, rate, term, ticksYear, got, ok, want, fits)
-		}
-		if zero, _ := credit.Interest(x, 0, term, ticksYear); zero != 0 {
-			t.Fatalf("seed %d: Interest(%d, 0, %d) = %d, want 0 (interest-free)", seed, x, term, zero)
-		}
-		if zero, _ := credit.Interest(x, rate, 0, ticksYear); zero != 0 {
-			t.Fatalf("seed %d: Interest(%d, %d, 0) = %d, want 0 (no term)", seed, x, rate, zero)
-		}
-		for name, up := range map[string][3]int64{"principal": {x + 1, rate, term}, "rate": {x, rate + 1, term}, "term": {x, rate, term + 1}} {
-			if more, ok := credit.Interest(up[0], up[1], up[2], ticksYear); ok && more < got {
-				t.Fatalf("seed %d: Interest fell from %d to %d when the %s rose (%d, %d, %d)", seed, got, more, name, x, rate, term)
-			}
+		if msg := interestProblem(x, rate, term); msg != "" {
+			t.Fatalf("seed %d: Interest(%d, %d, %d, %d): %s", seed, x, rate, term, ticksYear, msg)
 		}
 	}
+}
+
+// interestProblem returns what is wrong with Interest at the input, or "": the
+// quotient against the oracle, the zero cases and the monotonicity.
+func interestProblem(x, rate, term int64) string {
+	got, ok := credit.Interest(x, rate, term, ticksYear)
+	// A quotient above int64 is reported, never wrapped: ok is false and the
+	// interest 0; otherwise it is the exact quotient.
+	want := exactInterest(x, rate, term, ticksYear)
+	if fits := want.IsInt64(); ok != fits || (fits && got != want.Int64()) || (!fits && got != 0) {
+		return fmt.Sprintf("= %d, %v, want %s (fits int64: %v)", got, ok, want, fits)
+	}
+	if zero, _ := credit.Interest(x, 0, term, ticksYear); zero != 0 {
+		return fmt.Sprintf("with a rate of 0 = %d, want 0 (interest-free)", zero)
+	}
+	if zero, _ := credit.Interest(x, rate, 0, ticksYear); zero != 0 {
+		return fmt.Sprintf("with a term of 0 = %d, want 0", zero)
+	}
+	for name, up := range map[string][3]int64{"principal": {x + 1, rate, term}, "rate": {x, rate + 1, term}, "term": {x, rate, term + 1}} {
+		if more, ok := credit.Interest(up[0], up[1], up[2], ticksYear); ok && more < got {
+			return fmt.Sprintf("fell from %d to %d when the %s rose", got, more, name)
+		}
+	}
+	return ""
 }
 
 // TestPay_Property verifies, over 500 random cases with a seed of their own, that a
@@ -87,28 +97,38 @@ func TestWaterfall_Property(t *testing.T) {
 			total += owed[i]
 		}
 		balance := r.Int64N(2*total + 2)
-		shares, left, ok := s.Waterfall(nil, balance, owed, tie)
-		if !ok {
-			t.Fatalf("seed %d: Waterfall(%d, %v) refused", seed, balance, owed)
-		}
-		var paid int64
-		for i, sh := range shares {
-			if sh < 0 || sh > owed[i] {
-				t.Fatalf("seed %d: share %d of claim %d = %d, want within [0, %d]", seed, i, i, sh, owed[i])
-			}
-			paid += sh
-		}
-		if want := min(balance, total); paid != want {
-			t.Fatalf("seed %d: Waterfall(%d, %v) paid %d, want min(balance, owed) = %d", seed, balance, owed, paid, want)
-		}
-		if paid+left != balance || left < 0 {
-			t.Fatalf("seed %d: paid %d + left %d != balance %d (or left < 0)", seed, paid, left, balance)
-		}
-		again, leftAgain, _ := s.Waterfall(nil, balance, owed, tie)
-		if !slices.Equal(again, shares) || leftAgain != left {
-			t.Fatalf("seed %d: a second Waterfall gave %v, %d, want %v, %d", seed, again, leftAgain, shares, left)
+		if msg := waterfallProblem(&s, balance, owed, tie); msg != "" {
+			t.Fatalf("seed %d: Waterfall(%d, %v): %s", seed, balance, owed, msg)
 		}
 	}
+}
+
+// waterfallProblem returns what is wrong with Waterfall at the input, or "": the
+// shares within their claims, summing to what can be paid, the rest completing the
+// balance, and the answer repeating.
+func waterfallProblem(s *credit.Scratch, balance int64, owed []int64, tie []uint64) string {
+	shares, left, ok := s.Waterfall(nil, balance, owed, tie)
+	if !ok {
+		return "refused"
+	}
+	var paid, total int64
+	for i, sh := range shares {
+		if sh < 0 || sh > owed[i] {
+			return fmt.Sprintf("share %d = %d, want within [0, %d]", i, sh, owed[i])
+		}
+		paid += sh
+		total += owed[i]
+	}
+	if want := min(balance, total); paid != want {
+		return fmt.Sprintf("paid %d, want min(balance, owed) = %d", paid, want)
+	}
+	if paid+left != balance || left < 0 {
+		return fmt.Sprintf("paid %d + left %d != balance (or left < 0)", paid, left)
+	}
+	if again, leftAgain, _ := s.Waterfall(nil, balance, owed, tie); !slices.Equal(again, shares) || leftAgain != left {
+		return fmt.Sprintf("a second call gave %v, %d, want %v, %d", again, leftAgain, shares, left)
+	}
+	return ""
 }
 
 // TestRound_ArrivalOrderIsIrrelevant verifies, over 500 random rounds with a seed of
