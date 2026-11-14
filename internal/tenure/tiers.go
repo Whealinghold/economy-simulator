@@ -87,9 +87,9 @@ type Scratch struct {
 //
 // It reorders holders and reqs in place, so the caller reads the results by Ref
 // and ID, and the result does not depend on how they were listed. Unit sums are
-// checked. ok is false, and every output is 0, for a negative number, a Draw
-// below 1, a repeated holder or executor ID, entitlements that sum beyond
-// p.Stock, or a sum beyond int64.
+// checked. ok is false, and every output is 0, for a negative number (a Balance
+// included), a Draw below 1, a repeated holder or executor ID, entitlements that
+// sum beyond p.Stock, or a sum beyond int64.
 func (s *Scratch) Tiers(p Params, holders []Holder, reqs []Request) (Result, bool) {
 	res, ok := s.run(p, holders, reqs)
 	if !ok {
@@ -157,7 +157,7 @@ func prepareHolders(p Params, holders []Holder) bool {
 func prepareRequests(reqs []Request) bool {
 	for i := range reqs {
 		r := &reqs[i]
-		if r.Executions < 0 || r.Draw < 1 || (i > 0 && reqs[i-1].ID == r.ID) {
+		if r.Executions < 0 || r.Draw < 1 || r.Balance < 0 || (i > 0 && reqs[i-1].ID == r.ID) {
 			return false
 		}
 		r.Own, r.Commons, r.Let, r.PricedOut, r.asked = 0, 0, 0, 0, 0

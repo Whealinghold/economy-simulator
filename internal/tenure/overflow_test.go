@@ -137,3 +137,18 @@ func TestLargestOverCap_NegativeCapIsRefused(t *testing.T) {
 		t.Errorf("LargestOverCap(negative cap) = found %v, ok %v, want refused", found, ok)
 	}
 }
+
+// TestTiers_NegativeBalanceIsRefused verifies a negative balance is refused, not
+// clipped to nothing or ignored for an exempt request.
+//
+// Requirement: FR-LND-014, NFR-LND-003
+func TestTiers_NegativeBalanceIsRefused(t *testing.T) {
+	t.Parallel()
+	for _, exempt := range []bool{false, true} {
+		var s tenure.Scratch
+		reqs := []tenure.Request{{ID: 1, Principal: 9, Executions: 2, Draw: 1, Balance: -1, Exempt: exempt}}
+		if res, ok := s.Tiers(tenure.Params{Stock: 10, Rent: 1}, nil, reqs); ok || res != (tenure.Result{}) {
+			t.Errorf("Tiers(exempt %v, Balance -1) = %+v, %v, want refused", exempt, res, ok)
+		}
+	}
+}

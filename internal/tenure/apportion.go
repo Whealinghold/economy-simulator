@@ -51,6 +51,7 @@ func Apportion(stock int64, parts []Part, out []int64) (ok bool) {
 	given := int64(0)
 	for i := range parts {
 		p := &parts[i]
+		p.rem = 0
 		if p.Share == 0 {
 			continue
 		}
