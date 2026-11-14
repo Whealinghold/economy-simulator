@@ -262,8 +262,7 @@ func (w *World) readQueues(rs *restoreCtx, r *codec.Reader) {
 			if !ok {
 				return
 			}
-			if q := s.queue[key]; len(q) > 0 && !skill.Requeue(q[len(q)-1].rule(), ap.rule()) {
-				r.Failf("applicant %d is not after applicant %d in the queue order of cell (region %d, role %d)", ap.agent, q[len(q)-1].agent, region, role)
+			if !queueOrdered(r, s.queue[key], ap, RegionID(region), RoleID(role)) {
 				return
 			}
 			s.queue[key] = append(s.queue[key], ap)
@@ -319,4 +318,14 @@ func (w *World) skillsCross() error {
 		}
 	}
 	return nil
+}
+
+// queueOrdered reports whether applicant ap comes after the last of q in the order
+// of skill.Requeue, recording the failure on r when it does not.
+func queueOrdered(r *codec.Reader, q []applicant, ap applicant, region RegionID, role RoleID) bool {
+	if len(q) == 0 || skill.Requeue(q[len(q)-1].rule(), ap.rule()) {
+		return true
+	}
+	r.Failf("applicant %d is not after applicant %d in the queue order of cell (region %d, role %d)", ap.agent, q[len(q)-1].agent, region, role)
+	return false
 }
