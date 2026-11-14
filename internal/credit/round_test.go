@@ -38,6 +38,35 @@ func TestOrder_Offers(t *testing.T) {
 	}
 }
 
+// TestOrder_TotalOrder verifies that rows equal in rate, key and agent are ordered by
+// Ref, whatever order they arrive in, so the order never depends on how the sort
+// breaks a tie.
+//
+// Requirement: FR-CRD-022
+//
+// Fix: dp3-crd-1. The comparators ended at the agent, so two rows of one agent with
+// equal rate and key kept the order of the input, and the input order is not part of
+// the round (architecture.md 7.6).
+func TestOrder_TotalOrder(t *testing.T) {
+	t.Parallel()
+	for name, sortRows := range map[string]func([]credit.Row){"offers": credit.SortOffers, "requests": credit.SortRequests} {
+		for _, in := range [][]int{{0, 1, 2}, {2, 1, 0}, {1, 2, 0}} {
+			rows := make([]credit.Row, len(in))
+			for i, ref := range in {
+				rows[i] = credit.Row{Ref: ref, Agent: 4, RateBP: 600, Key: 7}
+			}
+			sortRows(rows)
+			var refs []int
+			for _, r := range rows {
+				refs = append(refs, r.Ref)
+			}
+			if want := []int{0, 1, 2}; !slices.Equal(refs, want) {
+				t.Errorf("%s sorted from refs %v = %v, want %v", name, in, refs, want)
+			}
+		}
+	}
+}
+
 // TestOrder_Requests verifies that requests are ordered by limit descending,
 // equal limits by key ascending, then by agent.
 //

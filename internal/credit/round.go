@@ -28,18 +28,21 @@ type Row struct {
 }
 
 // SortOffers orders offers by effective rate ascending, equal rates by Key
-// ascending, then by Agent (spec-credit.md 6.3.1, FR-CRD-022).
+// ascending, then by Agent (spec-credit.md 6.3.1, FR-CRD-022). Rows equal in all
+// three, which the round never builds, end in Ref order so the order is total
+// (architecture.md 7.6).
 func SortOffers(offers []Row) {
 	slices.SortFunc(offers, func(a, b Row) int {
-		return cmp.Or(cmp.Compare(a.RateBP, b.RateBP), cmp.Compare(a.Key, b.Key), cmp.Compare(a.Agent, b.Agent))
+		return cmp.Or(cmp.Compare(a.RateBP, b.RateBP), cmp.Compare(a.Key, b.Key), cmp.Compare(a.Agent, b.Agent), cmp.Compare(a.Ref, b.Ref))
 	})
 }
 
 // SortRequests orders requests by highest rate descending, equal limits by Key
-// ascending, then by Agent (spec-credit.md 6.3.1, FR-CRD-022).
+// ascending, then by Agent (spec-credit.md 6.3.1, FR-CRD-022), and by Ref as
+// SortOffers does.
 func SortRequests(requests []Row) {
 	slices.SortFunc(requests, func(a, b Row) int {
-		return cmp.Or(cmp.Compare(b.RateBP, a.RateBP), cmp.Compare(a.Key, b.Key), cmp.Compare(a.Agent, b.Agent))
+		return cmp.Or(cmp.Compare(b.RateBP, a.RateBP), cmp.Compare(a.Key, b.Key), cmp.Compare(a.Agent, b.Agent), cmp.Compare(a.Ref, b.Ref))
 	})
 }
 
