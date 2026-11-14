@@ -684,3 +684,59 @@ func TestValidateCredit_BoundEdges(t *testing.T) {
 		})
 	}
 }
+
+// TestCreditWarnings_UnvalidatedShapes verifies that Warnings, which runs on a
+// configuration that does not validate, reads the shapes the validator would refuse
+// as "cannot tell" and stays quiet, never as a warning and never as a panic: a
+// borrower with no recipe, a recipe of duration 0, an upkeep of an undeclared
+// commodity, an upkeep whose cost overflows, and a negative upkeep against a start
+// money at the top of int64 (the balance reads as ample, not wrapped).
+//
+// Requirement: FR-CRD-076
+//
+// Guard: the warnings run before the structural check (Config.Warnings), so a
+// malformed file reaches them; a branch that assumed a valid recipe or a computed
+// cost would panic or warn about a role that Validate is about to refuse.
+func TestCreditWarnings_UnvalidatedShapes(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		set  func(c *economysim.Config)
+		not  []string
+	}{
+		{"a borrower with no recipe", func(c *economysim.Config) { creditRole(c, "grower").Recipes = nil },
+			[]string{"term_exceeds_lenders", "cap_below_horizon"}},
+		{"a recipe of duration 0", func(c *economysim.Config) {
+			for i := range c.Recipes {
+				c.Recipes[i].Duration = 0
+			}
+		}, []string{"term_exceeds_lenders", "cap_below_horizon"}},
+		{"an upkeep of an undeclared commodity", func(c *economysim.Config) {
+			r := creditRole(c, "cook")
+			r.Upkeep, r.StartMoney = []economysim.Item{{Commodity: "undeclared", Quantity: 1}}, 0
+		}, []string{"lender_without_cash"}},
+		{"an upkeep whose cost overflows", func(c *economysim.Config) {
+			r := creditRole(c, "cook")
+			item := economysim.Item{Commodity: c.World.Upkeep[0].Commodity, Quantity: math.MaxInt64}
+			r.Upkeep, r.StartMoney = []economysim.Item{item, item}, 0
+		}, []string{"lender_without_cash"}},
+		{"a negative upkeep against the largest start money", func(c *economysim.Config) {
+			r := creditRole(c, "cook")
+			r.Upkeep = []economysim.Item{{Commodity: c.World.Upkeep[0].Commodity, Quantity: -1}}
+			r.StartMoney = math.MaxInt64
+		}, []string{"lender_without_cash"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := creditConfig()
+			tt.set(&c)
+			got := creditWarningRules(c)
+			for _, rule := range tt.not {
+				if got[rule] {
+					t.Errorf("Warnings() = %v, want no %s for %s", got, rule, tt.name)
+				}
+			}
+		})
+	}
+}
