@@ -62,21 +62,27 @@ func TestTrainerRemoved_TraineesRequeue(t *testing.T) {
 		"ended:" + idStr(idb) + ":trainer_left",
 		"bankrupted:" + idStr(idt), "estate:" + idStr(idt),
 	}
-	if got := endOrder(rec.events[before:]); !slices.Equal(got, want) {
-		t.Errorf("events of the removal = %v, want %v", got, want)
-	}
-	if got, want := queueIDs(w.skills, 0, 1), []AgentID{b, a, queued}; !slices.Equal(got, want) {
-		t.Errorf("queue after the removal = %v, want %v (ticks served 3, 1, 0)", got, want)
-	}
-	if q := w.skills.queue[w.skills.cell(0, 1)]; q[0].served != 3 || q[0].applied != 5 || q[1].served != 1 || q[1].applied != 2 {
-		t.Errorf("returned trainees = %+v, want their ticks served and application ticks kept", q[:2])
-	}
-	if w.skills.isTrainee(a) || w.skills.isTrainee(b) || w.agents[a].role != 0 || w.agents[b].role != 0 {
-		t.Errorf("returned trainees: trainee %v, %v, roles %d, %d, want none and their own role 0", w.skills.isTrainee(a), w.skills.isTrainee(b), w.agents[a].role, w.agents[b].role)
-	}
-	if len(w.skills.trainer) > int(trainer) && (w.skills.trainer[trainer].acc != 0 || len(w.skills.trainer[trainer].trainees) != 0) {
-		t.Errorf("record of the removed trainer = %+v, want zero", w.skills.trainer[trainer])
-	}
+	t.Run("events in ascending trainee ID, then the removal's", func(t *testing.T) {
+		if got := endOrder(rec.events[before:]); !slices.Equal(got, want) {
+			t.Errorf("events of the removal = %v, want %v", got, want)
+		}
+	})
+	t.Run("the trainees rejoin the queue with what they served", func(t *testing.T) {
+		if got, want := queueIDs(w.skills, 0, 1), []AgentID{b, a, queued}; !slices.Equal(got, want) {
+			t.Errorf("queue after the removal = %v, want %v (ticks served 3, 1, 0)", got, want)
+		}
+		if q := w.skills.queue[w.skills.cell(0, 1)]; q[0].served != 3 || q[0].applied != 5 || q[1].served != 1 || q[1].applied != 2 {
+			t.Errorf("returned trainees = %+v, want their ticks served and application ticks kept", q[:2])
+		}
+	})
+	t.Run("the trainees keep their role and the trainer's record is gone", func(t *testing.T) {
+		if w.skills.isTrainee(a) || w.skills.isTrainee(b) || w.agents[a].role != 0 || w.agents[b].role != 0 {
+			t.Errorf("returned trainees: trainee %v, %v, roles %d, %d, want none and their own role 0", w.skills.isTrainee(a), w.skills.isTrainee(b), w.agents[a].role, w.agents[b].role)
+		}
+		if len(w.skills.trainer) > int(trainer) && (w.skills.trainer[trainer].acc != 0 || len(w.skills.trainer[trainer].trainees) != 0) {
+			t.Errorf("record of the removed trainer = %+v, want zero", w.skills.trainer[trainer])
+		}
+	})
 }
 
 // TestTraineeRemoved_EndsAndGoesToEstate verifies the removal of a trainee: its job

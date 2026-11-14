@@ -212,24 +212,29 @@ func TestPlaces_MaxTraineesAndQueueOrder(t *testing.T) {
 	if err := w.skillsEntry(0); err != nil {
 		t.Fatalf("skillsEntry error = %v, want nil", err)
 	}
-	if got, want := w.skills.trainer[c.homeWeaver].trainees, []AgentID{m[0], m[1]}; !slices.Equal(got, want) {
-		t.Errorf("trainees of the weaver = %v, want %v (first two of the queue, MaxTrainees 2)", got, want)
-	}
-	if got, want := queueIDs(w.skills, 0, 1), []AgentID{m[2]}; !slices.Equal(got, want) {
-		t.Errorf("queue after the step = %v, want %v", got, want)
-	}
-	started := of[TraineeshipStarted](rec)
-	if len(started) != 2 || started[0].Trainee != m[0] || started[0].Trainer != c.homeWeaver || started[0].Role != 1 || started[0].Region != 0 || started[1].Trainee != m[1] {
-		t.Errorf("TraineeshipStarted = %+v, want m[0] then m[1] for the weaver", started)
-	}
-	// Served: placed in the step, so 1 tick after the advance.
-	if rec := w.skills.trainee[m[0]]; rec.served != 1 || rec.role != 1 || !rec.live {
-		t.Errorf("trainee row = %+v, want served 1 of role 1", rec)
-	}
-	// Full: another entry step places nobody more.
-	if err := w.skillsEntry(0); err != nil || len(w.skills.trainer[c.homeWeaver].trainees) != 2 {
-		t.Errorf("second step: error %v, trainees %v, want nil and still 2", err, w.skills.trainer[c.homeWeaver].trainees)
-	}
+	t.Run("the first two of the queue fill the places", func(t *testing.T) {
+		if got, want := w.skills.trainer[c.homeWeaver].trainees, []AgentID{m[0], m[1]}; !slices.Equal(got, want) {
+			t.Errorf("trainees of the weaver = %v, want %v (first two of the queue, MaxTrainees 2)", got, want)
+		}
+		if got, want := queueIDs(w.skills, 0, 1), []AgentID{m[2]}; !slices.Equal(got, want) {
+			t.Errorf("queue after the step = %v, want %v", got, want)
+		}
+		started := of[TraineeshipStarted](rec)
+		if len(started) != 2 || started[0].Trainee != m[0] || started[0].Trainer != c.homeWeaver || started[0].Role != 1 || started[0].Region != 0 || started[1].Trainee != m[1] {
+			t.Errorf("TraineeshipStarted = %+v, want m[0] then m[1] for the weaver", started)
+		}
+	})
+	t.Run("a placed trainee has served one tick", func(t *testing.T) {
+		// Placed in the step, so 1 tick after the advance.
+		if rec := w.skills.trainee[m[0]]; rec.served != 1 || rec.role != 1 || !rec.live {
+			t.Errorf("trainee row = %+v, want served 1 of role 1", rec)
+		}
+	})
+	t.Run("a full trainer takes nobody more", func(t *testing.T) {
+		if err := w.skillsEntry(0); err != nil || len(w.skills.trainer[c.homeWeaver].trainees) != 2 {
+			t.Errorf("second step: error %v, trainees %v, want nil and still 2", err, w.skills.trainer[c.homeWeaver].trainees)
+		}
+	})
 }
 
 // TestPlaceOpening_NegativeGainKeepsStarted verifies that a negative gain closes

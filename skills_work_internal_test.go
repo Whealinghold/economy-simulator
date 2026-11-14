@@ -15,6 +15,17 @@ func halfYieldConfig() Config {
 	return c
 }
 
+// executedBy counts the RecipeExecuted events of agent id in events.
+func executedBy(events []Event, id AgentID) int64 {
+	n := int64(0)
+	for _, e := range events {
+		if x, ok := e.(RecipeExecuted); ok && x.Agent == id {
+			n++
+		}
+	}
+	return n
+}
+
 // kneadOf is the recipe ID of knead, which sorts before mill in the canonical order.
 func kneadOf(t testing.TB, w *World) RecipeID {
 	t.Helper()
@@ -76,34 +87,40 @@ func TestBoard_ConsumedFromTrainerAccount(t *testing.T) {
 	if err := w.p61Upkeep(); err != nil {
 		t.Fatalf("p61Upkeep error = %v, want nil", err)
 	}
-	if got := holding(t, w, trainee, grain); got != own {
-		t.Errorf("trainee grain = %d after P6.1, want %d: its board is the trainer's", got, own)
-	}
-	if got := holding(t, w, trainer, grain); got != boss-2 {
-		t.Errorf("trainer grain = %d after P6.1, want %d (its own upkeep and its trainee's)", got, boss-2)
-	}
-	if w.agents[trainee].unfed != 0 {
-		t.Errorf("trainee unfed = %d, want 0 while boarded", w.agents[trainee].unfed)
-	}
-	var v AgentView
-	if err := w.fillAgentView(&v, &w.agents[trainer], viewWork); err != nil {
-		t.Fatalf("fillAgentView error = %v, want nil", err)
-	}
-	if want := []UpkeepRow{{Commodity: grain, Quantity: 1}}; !slices.Equal(v.Board, want) {
-		t.Errorf("Board of the trainer = %v, want %v", v.Board, want)
-	}
-	tc := tradeCtx{v: &v}
-	v.Weight = 1
-	if u, isUpkeep, ok := tc.upkeepUnits(grain); u != 2 || !isUpkeep || !ok {
-		t.Errorf("upkeepUnits(grain) = %d, %v, %v, want 2, true, true (own 1 and 1 boarded)", u, isUpkeep, ok)
-	}
-	if u, isUpkeep, _ := tc.upkeepUnits(flour); u != 0 || isUpkeep {
-		t.Errorf("upkeepUnits(flour) = %d, %v, want 0, false", u, isUpkeep)
-	}
-	var other AgentView
-	if err := w.fillAgentView(&other, &w.agents[c.homeMillers[1]], viewWork); err != nil || len(other.Board) != 0 {
-		t.Errorf("Board of an agent with no trainee = %v, %v, want none", other.Board, err)
-	}
+	t.Run("the grain is the trainer's", func(t *testing.T) {
+		if got := holding(t, w, trainee, grain); got != own {
+			t.Errorf("trainee grain = %d after P6.1, want %d: its board is the trainer's", got, own)
+		}
+		if got := holding(t, w, trainer, grain); got != boss-2 {
+			t.Errorf("trainer grain = %d after P6.1, want %d (its own upkeep and its trainee's)", got, boss-2)
+		}
+		if w.agents[trainee].unfed != 0 {
+			t.Errorf("trainee unfed = %d, want 0 while boarded", w.agents[trainee].unfed)
+		}
+	})
+	t.Run("the trainer's view carries the board", func(t *testing.T) {
+		var v AgentView
+		if err := w.fillAgentView(&v, &w.agents[trainer], viewWork); err != nil {
+			t.Fatalf("fillAgentView error = %v, want nil", err)
+		}
+		if want := []UpkeepRow{{Commodity: grain, Quantity: 1}}; !slices.Equal(v.Board, want) {
+			t.Errorf("Board of the trainer = %v, want %v", v.Board, want)
+		}
+		tc := tradeCtx{v: &v}
+		v.Weight = 1
+		if u, isUpkeep, ok := tc.upkeepUnits(grain); u != 2 || !isUpkeep || !ok {
+			t.Errorf("upkeepUnits(grain) = %d, %v, %v, want 2, true, true (own 1 and 1 boarded)", u, isUpkeep, ok)
+		}
+		if u, isUpkeep, _ := tc.upkeepUnits(flour); u != 0 || isUpkeep {
+			t.Errorf("upkeepUnits(flour) = %d, %v, want 0, false", u, isUpkeep)
+		}
+	})
+	t.Run("an agent with no trainee has no board", func(t *testing.T) {
+		var other AgentView
+		if err := w.fillAgentView(&other, &w.agents[c.homeMillers[1]], viewWork); err != nil || len(other.Board) != 0 {
+			t.Errorf("Board of an agent with no trainee = %v, %v, want none", other.Board, err)
+		}
+	})
 }
 
 // TestBoard_WelfareRatioTenThousandAndNettedFromTrainer verifies that the board
@@ -175,26 +192,25 @@ func TestTraineeWork_EligibleOnlyExecutorPrincipal(t *testing.T) {
 	if len(ran) != 1 || ran[0].Recipe != kneadOf(t, w) || ran[0].Executions != 1 || ran[0].EffectiveYield != 5_000 {
 		t.Fatalf("trainee executions = %+v, want one of knead at yield 5 000", ran)
 	}
-	if len(ran[0].Outputs) != 1 || int64(ran[0].Outputs[0].Quantity) != wantUnits {
-		t.Errorf("trainee output = %+v, want %d flour (residue %d)", ran[0].Outputs, wantUnits, residue)
-	}
-	if got := holding(t, w, trainee, grain); got != traineeGrain {
-		t.Errorf("trainee grain = %d, want %d: the input comes from the trainer", got, traineeGrain)
-	}
-	// The trainer's own job of the tick takes 1 grain too and makes 3 flour; the
-	// trainee's job took 1 more grain and added wantUnits.
-	ownJob := int64(0)
-	for _, e := range rec.events[before:] {
-		if x, ok := e.(RecipeExecuted); ok && x.Agent == trainer {
-			ownJob++
+	t.Run("the output is the half yield with the trainer's residue", func(t *testing.T) {
+		if len(ran[0].Outputs) != 1 || int64(ran[0].Outputs[0].Quantity) != wantUnits {
+			t.Errorf("trainee output = %+v, want %d flour (residue %d)", ran[0].Outputs, wantUnits, residue)
 		}
-	}
-	if got, want := holding(t, w, trainer, grain), trainerGrain-1-ownJob; got != want {
-		t.Errorf("trainer grain = %d, want %d (the trainee's input and %d own job(s))", got, want, ownJob)
-	}
-	if got, want := holding(t, w, trainer, flour), trainerFlour+wantUnits+3*ownJob; got != want {
-		t.Errorf("trainer flour = %d, want %d (the trainee's %d units and %d own job(s) of 3)", got, want, wantUnits, ownJob)
-	}
+	})
+	t.Run("inputs and outputs are the trainer's", func(t *testing.T) {
+		if got := holding(t, w, trainee, grain); got != traineeGrain {
+			t.Errorf("trainee grain = %d, want %d: the input comes from the trainer", got, traineeGrain)
+		}
+		// The trainer's own job of the tick takes 1 grain too and makes 3 flour; the
+		// trainee's job took 1 more grain and added wantUnits.
+		ownJob := executedBy(rec.events[before:], trainer)
+		if got, want := holding(t, w, trainer, grain), trainerGrain-1-ownJob; got != want {
+			t.Errorf("trainer grain = %d, want %d (the trainee's input and %d own job(s))", got, want, ownJob)
+		}
+		if got, want := holding(t, w, trainer, flour), trainerFlour+wantUnits+3*ownJob; got != want {
+			t.Errorf("trainer flour = %d, want %d (the trainee's %d units and %d own job(s) of 3)", got, want, wantUnits, ownJob)
+		}
+	})
 }
 
 // TestTrainee_KeepsRoleAndRunsNoOwnRecipe verifies that over several ticks a trainee
@@ -245,37 +261,40 @@ func TestTeaching_BarsStartNotJob(t *testing.T) {
 	for _, m := range c.homeMillers {
 		w.skills.start(m, c.homeWeaver, 1, 0, 0)
 	}
-	n, pattern := 0, make([]bool, 0, 10)
-	for range 10 {
-		w.p22Teaching()
-		teaching := w.skills.teachingTick(c.homeWeaver)
-		pattern = append(pattern, teaching)
-		if teaching {
-			n++
+	t.Run("the accumulator teaches on every third tick", func(t *testing.T) {
+		n, pattern := 0, make([]bool, 0, 10)
+		for range 10 {
+			w.p22Teaching()
+			teaching := w.skills.teachingTick(c.homeWeaver)
+			pattern = append(pattern, teaching)
+			if teaching {
+				n++
+			}
 		}
-	}
-	if want := []bool{false, false, false, true, false, false, true, false, false, true}; !slices.Equal(pattern, want) || n != 3 {
-		t.Errorf("teaching ticks over ten = %v (%d), want %v (the 4th, 7th and 10th)", pattern, n, want)
-	}
-	// A start is barred on a teaching tick and made on another.
-	if err := w.beginStep(); err != nil {
-		t.Fatalf("beginStep error = %v, want nil", err)
-	}
-	w.p21Complete()
-	w.p23Snapshot()
-	for _, teaching := range []bool{true, false} {
-		w.skills.trainer[c.homeWeaver].teaching = teaching
-		if err := w.p25Work(); err != nil {
-			t.Fatalf("p25Work error = %v, want nil", err)
+		if want := []bool{false, false, false, true, false, false, true, false, false, true}; !slices.Equal(pattern, want) || n != 3 {
+			t.Errorf("teaching ticks over ten = %v (%d), want %v (the 4th, 7th and 10th)", pattern, n, want)
 		}
-		if got := w.pr.asks[c.homeWeaver].set; got == teaching {
-			t.Errorf("teaching %v: the trainer's request is set = %v, want %v", teaching, got, !teaching)
+	})
+	t.Run("a start is barred on a teaching tick and made on another", func(t *testing.T) {
+		if err := w.beginStep(); err != nil {
+			t.Fatalf("beginStep error = %v, want nil", err)
 		}
-		if w.pr.asks[c.homeMillers[0]].set != true {
-			t.Errorf("teaching %v: the trainee's request is not set, want it admitted whatever the trainer does", teaching)
+		w.p21Complete()
+		w.p23Snapshot()
+		for _, teaching := range []bool{true, false} {
+			w.skills.trainer[c.homeWeaver].teaching = teaching
+			if err := w.p25Work(); err != nil {
+				t.Fatalf("p25Work error = %v, want nil", err)
+			}
+			if got := w.pr.asks[c.homeWeaver].set; got == teaching {
+				t.Errorf("teaching %v: the trainer's request is set = %v, want %v", teaching, got, !teaching)
+			}
+			if w.pr.asks[c.homeMillers[0]].set != true {
+				t.Errorf("teaching %v: the trainee's request is not set, want it admitted whatever the trainer does", teaching)
+			}
+			w.pr.asks[c.homeWeaver].set, w.pr.asks[c.homeMillers[0]].set = false, false
 		}
-		w.pr.asks[c.homeWeaver].set, w.pr.asks[c.homeMillers[0]].set = false, false
-	}
+	})
 }
 
 // TestEntryStep_OrderCompleteFillAdvance verifies the order of P7.1(a) of
@@ -309,29 +328,33 @@ func TestEntryStep_OrderCompleteFillAdvance(t *testing.T) {
 	if err := w.skillsEntry(0); err != nil {
 		t.Fatalf("call 5: skillsEntry error = %v, want nil", err)
 	}
-	var order []string
-	for _, e := range rec.events[before:] {
-		switch x := e.(type) {
-		case TraineeshipCompleted:
-			order = append(order, "completed")
-			if x.Agent != a || x.Region != 0 || x.From != 0 || x.To != 1 {
-				t.Errorf("TraineeshipCompleted = %+v, want agent %d in region 0 from role 0 to role 1", x, a)
+	t.Run("the events come in the order of the step", func(t *testing.T) {
+		var order []string
+		for _, e := range rec.events[before:] {
+			switch x := e.(type) {
+			case TraineeshipCompleted:
+				order = append(order, "completed")
+				if x.Agent != a || x.Region != 0 || x.From != 0 || x.To != 1 {
+					t.Errorf("TraineeshipCompleted = %+v, want agent %d in region 0 from role 0 to role 1", x, a)
+				}
+			case RoleChanged:
+				order = append(order, "changed:"+string(x.Cause))
+			case TraineeshipStarted:
+				order = append(order, "started")
 			}
-		case RoleChanged:
-			order = append(order, "changed:"+string(x.Cause))
-		case TraineeshipStarted:
-			order = append(order, "started")
 		}
-	}
-	if want := []string{"completed", "changed:traineeship", "started"}; !slices.Equal(order, want) {
-		t.Errorf("events of the fifth entry step = %v, want %v", order, want)
-	}
-	if w.skills.isTrainee(a) || w.agents[a].role != 1 {
-		t.Errorf("agent a: trainee %v, role %d, want no trainee and the role it trained for", w.skills.isTrainee(a), w.agents[a].role)
-	}
-	if rec := w.skills.trainee[b]; !rec.live || rec.served != 1 {
-		t.Errorf("agent b = %+v, want a trainee that has served 1 tick, placed and advanced in the step", rec)
-	}
+		if want := []string{"completed", "changed:traineeship", "started"}; !slices.Equal(order, want) {
+			t.Errorf("events of the fifth entry step = %v, want %v", order, want)
+		}
+	})
+	t.Run("a completed, b placed and advanced", func(t *testing.T) {
+		if w.skills.isTrainee(a) || w.agents[a].role != 1 {
+			t.Errorf("agent a: trainee %v, role %d, want no trainee and the role it trained for", w.skills.isTrainee(a), w.agents[a].role)
+		}
+		if rec := w.skills.trainee[b]; !rec.live || rec.served != 1 {
+			t.Errorf("agent b = %+v, want a trainee that has served 1 tick, placed and advanced in the step", rec)
+		}
+	})
 }
 
 // TestCompletion_KeepsMoneyAndGoods verifies that a completion keeps the agent's
@@ -365,25 +388,26 @@ func TestCompletion_KeepsMoneyAndGoods(t *testing.T) {
 	if err := w.skillsEntry(0); err != nil {
 		t.Fatalf("skillsEntry error = %v, want nil", err)
 	}
-	acct, _ = w.ledger.Account(w.agents[a].account)
-	if acct.Balance != money || holding(t, w, a, grain) != grains || holding(t, w, a, pan) != 0 {
-		t.Errorf("after the completion: money %d, grain %d, pans %d, want %d, %d and 0", acct.Balance, holding(t, w, a, grain), holding(t, w, a, pan), money, grains)
-	}
-	var changed []RoleChanged
-	for _, e := range rec.events[before:] {
-		if x, ok := e.(RoleChanged); ok {
-			changed = append(changed, x)
+	t.Run("money and tradable goods stay", func(t *testing.T) {
+		acct, _ = w.ledger.Account(w.agents[a].account)
+		if acct.Balance != money || holding(t, w, a, grain) != grains || holding(t, w, a, pan) != 0 {
+			t.Errorf("after the completion: money %d, grain %d, pans %d, want %d, %d and 0", acct.Balance, holding(t, w, a, grain), holding(t, w, a, pan), money, grains)
 		}
-	}
-	if len(changed) != 1 || changed[0].GoodsListed != 1 || changed[0].Cause != CauseTraineeship || changed[0].From != 0 || changed[0].To != 1 {
-		t.Errorf("RoleChanged = %+v, want one from role 0 to 1 by traineeship listing 1 lot", changed)
-	}
-	if w.live.inRole[0] != inMiller-1 || w.live.inRole[1] != inWeaver+1 {
-		t.Errorf("agents per role = %d, %d, want %d, %d", w.live.inRole[0], w.live.inRole[1], inMiller-1, inWeaver+1)
-	}
-	if w.skills.isTrainer(trainer) || w.skills.trainer[trainer].acc != 0 {
-		t.Errorf("trainer = %+v, want no trainee and a zero accumulator", w.skills.trainer[trainer])
-	}
+	})
+	t.Run("the role change lists the pan", func(t *testing.T) {
+		changed := of[RoleChanged](&evLog{events: rec.events[before:]})
+		if len(changed) != 1 || changed[0].GoodsListed != 1 || changed[0].Cause != CauseTraineeship || changed[0].From != 0 || changed[0].To != 1 {
+			t.Errorf("RoleChanged = %+v, want one from role 0 to 1 by traineeship listing 1 lot", changed)
+		}
+	})
+	t.Run("the counters and the trainer follow", func(t *testing.T) {
+		if w.live.inRole[0] != inMiller-1 || w.live.inRole[1] != inWeaver+1 {
+			t.Errorf("agents per role = %d, %d, want %d, %d", w.live.inRole[0], w.live.inRole[1], inMiller-1, inWeaver+1)
+		}
+		if w.skills.isTrainer(trainer) || w.skills.trainer[trainer].acc != 0 {
+			t.Errorf("trainer = %+v, want no trainee and a zero accumulator", w.skills.trainer[trainer])
+		}
+	})
 }
 
 // TestCompletion_AbandonsJobRoleChanged verifies that a job in progress at the
