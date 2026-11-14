@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
@@ -202,11 +203,24 @@ func lateCan1(c *Config, lk lookup, ro *Role, rc *Recipe) bool {
 		g := &c.Regions[i]
 		u, ok1 := itemsCost(lk, g.ID, effectiveUpkeep(c, ro), g.ExtraUpkeep)
 		in, ok2 := itemsCost(lk, g.ID, rc.Inputs)
-		if ok1 && ok2 && int64(ro.StartMoney)-u < in {
+		if ok1 && ok2 && roomAfter(int64(ro.StartMoney), u) < in {
 			return true
 		}
 	}
 	return false
+}
+
+// roomAfter is start less cost, cut to the int64 bounds where the difference would
+// wrap. Warnings runs on a configuration that does not validate, so a StartMoney far
+// below 0 must read as short, not as a huge balance.
+func roomAfter(start, cost int64) int64 {
+	if r, ok := checked.Sub(start, cost); ok {
+		return r
+	}
+	if cost > 0 {
+		return math.MinInt64
+	}
+	return math.MaxInt64
 }
 
 // itemsCost is the cost of the lists at the reference prices of a region: the sum of
@@ -260,7 +274,7 @@ func lenderWithoutCash(c *Config, lk lookup, m *Credit, ro *Role) bool {
 			continue
 		}
 		computed = true
-		if int64(ro.StartMoney)-keep >= m.MinPrincipal {
+		if roomAfter(int64(ro.StartMoney), keep) >= m.MinPrincipal {
 			return false
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"log/slog"
+	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -351,6 +352,31 @@ func TestCreditWarnings_Late(t *testing.T) {
 	creditRole(&c, "grower").StartMoney = 1_000 // below one tick of upkeep and the inputs: Late can be 1, H = 66
 	if got := creditWarningRules(c); !got["term_exceeds_lenders"] {
 		t.Errorf("a grower that can be late and a lender term of 65 do not warn term_exceeds_lenders, want the horizon 66")
+	}
+}
+
+// TestCreditWarnings_UnvalidatedStartMoney verifies that a start money far below 0,
+// which Warnings accepts because it runs on a configuration that does not validate,
+// is read as short of the keep and of the inputs, not wrapped to a huge balance: the
+// lender warns lender_without_cash and the grower can be late, so its horizon is 66
+// and a lender term of 65 warns term_exceeds_lenders.
+//
+// Requirement: FR-CRD-076
+//
+// Fix: dp3-crd-1. StartMoney less the cost was a bare subtraction, so math.MinInt64
+// less one tick of upkeep wrapped to a large positive and both warnings stayed quiet.
+func TestCreditWarnings_UnvalidatedStartMoney(t *testing.T) {
+	t.Parallel()
+	c := creditConfig()
+	creditRole(&c, "cook").StartMoney = math.MinInt64
+	if got := creditWarningRules(c); !got["lender_without_cash"] {
+		t.Errorf("a lender with StartMoney MinInt64 does not warn lender_without_cash: %v", got)
+	}
+	c = creditConfig()
+	creditRole(&c, "cook").Credit.Lend.MaxTermTicks = 65 // H = 60 + 1 + 4 fits exactly, unless Late is 1
+	creditRole(&c, "grower").StartMoney = math.MinInt64
+	if got := creditWarningRules(c); !got["term_exceeds_lenders"] {
+		t.Errorf("a grower with StartMoney MinInt64 does not warn term_exceeds_lenders: %v", got)
 	}
 }
 
