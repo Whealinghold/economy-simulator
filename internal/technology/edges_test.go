@@ -260,3 +260,40 @@ func TestStep_AMissedHitDoesNotEndTheScan(t *testing.T) {
 		t.Errorf("results %+v, want only the second cell to discover (key %d)", out, key)
 	}
 }
+
+// TestStep_RegionCountIsBoundedByTheInput verifies that the region count cannot
+// make the step allocate more than the input holds: a count whose product with the
+// number of fields wraps to the length of the cells, and a huge count with no field,
+// are refused or cost nothing, and a negative tick is refused (a hit on it would
+// read as no discovery).
+//
+// The arithmetic: 4 fields * 2^62 regions = 2^64, which wraps to 0, the length of
+// empty cells.
+//
+// Requirement: NFR-TEC-005
+func TestStep_RegionCountIsBoundedByTheInput(t *testing.T) {
+	t.Parallel()
+	fields := []technology.Field{{CapBP: 1}, {CapBP: 1}, {CapBP: 1}, {CapBP: 1}}
+	tests := map[string]technology.Input{
+		"count wraps with the fields": {
+			TrendCarry: make([]int64, 4), Fields: fields, Regions: 1 << 62, TicksPerYear: 1,
+		},
+		"negative tick": {
+			Cells: make([]technology.Cell, 4), Counters: make([]int64, 4), TrendCarry: make([]int64, 4),
+			Fields: fields, Regions: 1, Tick: -1, TicksPerYear: 1,
+		},
+	}
+	for name, in := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var s technology.Scratch
+			if technology.Step(in, &s, make([]technology.Result, len(in.Cells))) {
+				t.Errorf("Step accepted the %s case", name)
+			}
+		})
+	}
+	var s technology.Scratch
+	if !technology.Step(technology.Input{Regions: 1 << 62, TicksPerYear: 1}, &s, nil) {
+		t.Error("Step refused a world with no field")
+	}
+}

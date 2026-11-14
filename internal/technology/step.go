@@ -101,6 +101,9 @@ func Step(in Input, s *Scratch, out []Result) bool {
 		return false
 	}
 	nf := len(in.Fields)
+	if nf == 0 {
+		return true // no cell and nothing to size
+	}
 	s.size(len(out), in.Regions, nf)
 	for i := range out {
 		out[i] = Result{Experience: in.Cells[i].Experience, Advance: in.Cells[i].Advance, CatchUpCarry: in.Cells[i].CatchUp}
@@ -120,9 +123,9 @@ func Step(in Input, s *Scratch, out []Result) bool {
 // fields and that every field is valid.
 func shapeOK(in Input, outLen int) bool {
 	nf := len(in.Fields)
-	n := in.Regions * nf
-	if in.Regions < 0 || len(in.Cells) != n || len(in.Counters) != n ||
-		len(in.TrendCarry) != nf || outLen != n || in.TicksPerYear < 1 {
+	n := len(in.Cells)
+	if !countsOK(in, nf, n) || len(in.Counters) != n || len(in.TrendCarry) != nf ||
+		outLen != n || in.TicksPerYear < 1 || in.Tick < 0 {
 		return false
 	}
 	if slices.ContainsFunc(in.Fields, func(f Field) bool { return !f.valid() }) {
@@ -131,6 +134,18 @@ func shapeOK(in Input, outLen int) bool {
 	// a field with diffusion on reads the distances, so Dist must be set
 	return in.Dist != nil || in.Regions < 2 ||
 		!slices.ContainsFunc(in.Fields, func(f Field) bool { return f.CatchUpBP > 0 })
+}
+
+// countsOK checks the region count against the n cells and the nf fields by
+// division: the product of a huge count and nf can wrap to n.
+func countsOK(in Input, nf, n int) bool {
+	if in.Regions < 0 {
+		return false
+	}
+	if nf == 0 {
+		return n == 0
+	}
+	return n%nf == 0 && in.Regions == n/nf
 }
 
 // phases runs the six sub-steps of 4.6.1 in order and stops at the first
