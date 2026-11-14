@@ -197,6 +197,7 @@ func (v *validator) settlementRowRegion(p []string, region string, seen map[stri
 // some class carries (ErrUnknownSettlementFlag) and the limit one some class carries
 // (ErrUnknownLimit).
 func (v *validator) settlementRoleFields(m *Settlements) {
+	var limits map[string]bool // built once, on the first Ceiling
 	for i := range v.c.Roles {
 		r := &v.c.Roles[i]
 		rb := []string{"roles", r.ID}
@@ -206,10 +207,13 @@ func (v *validator) settlementRoleFields(m *Settlements) {
 		if r.Ceiling == "" {
 			continue
 		}
+		if m != nil && limits == nil {
+			limits = m.limitSet()
+		}
 		switch {
 		case m == nil:
 			v.rep.add(ErrModuleDependency, path(rb, "ceiling"), r.Ceiling, "settlements")
-		case !m.limitSet()[r.Ceiling]:
+		case !limits[r.Ceiling]:
 			v.rep.add(ErrUnknownLimit, path(rb, "ceiling"), r.Ceiling, "")
 		}
 	}

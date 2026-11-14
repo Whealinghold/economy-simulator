@@ -1427,6 +1427,7 @@
 //   - Treasury sector: the non-boundary sector of the money identity that holds the
 //     treasury accounts (RegionRow.MoneyTreasury).
 //   - Combining mode: how the rows of a table keyed by jurisdiction combine along a
+//     chain: innermost (the first row), added (the sum) or scaled (the product, rounded
 //     once).
 //   - Settlement class: the size class of a region, derived from its households and
 //     ordered by its enter threshold; SettlementClassID is its index in that order and
