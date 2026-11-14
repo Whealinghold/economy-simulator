@@ -125,6 +125,7 @@ func (v *validator) structural() {
 	v.validateExternal()
 	v.validatePolity()
 	v.validateStorage()
+	v.validateTechnology()
 	v.overflow()
 }
 
@@ -1500,7 +1501,7 @@ func (v *validator) yieldMax(entry map[string]int64, rc *Recipe) int64 {
 	if !rc.Sited {
 		top = max(top, wholeBP)
 	}
-	return top * MaxYieldBP / wholeBP
+	return v.withTech(rc.ID, top*MaxYieldBP/wholeBP)
 }
 
 // overflow is phase 5: the derived products of spec-config.md 4.2 that the
@@ -2104,6 +2105,7 @@ func warnings(c *Config) []Warning {
 	out = append(out, externalWarnings(c, lk)...)
 	out = append(out, polityWarnings(c)...)
 	out = append(out, storageWarnings(c)...)
+	out = append(out, technologyWarnings(c, lk)...)
 	sortWarnings(out)
 	return out
 }
