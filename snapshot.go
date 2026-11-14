@@ -33,8 +33,8 @@ type Snapshot struct {
 	Modules []string
 	// Agents is the live agents and Households the sum of their weights.
 	Agents, Households int64
-	// Money is the money of the non-boundary accounts: the households and the
-	// estates (escrow and treasuries are 0 in the slice).
+	// Money is the money of the non-boundary accounts: the households, the
+	// estates and the treasuries (escrow is 0 in the slice).
 	Money Money
 	// Regions has one row per region, by RegionID.
 	Regions []RegionRow
