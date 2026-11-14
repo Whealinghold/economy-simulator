@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -301,6 +302,82 @@ func TestCreditWarnings(t *testing.T) {
 				t.Errorf("the quiet configuration has %s", tt.rule)
 			}
 		})
+	}
+}
+
+// TestCredit_WarningsAreLogged verifies that each credit warning reaches the injected
+// logger once, at Warn, with the constant message and the rule and the dotted path
+// of the warning, before "world created", that the lines are the ones
+// World.Warnings returns, and that a configuration that draws none logs none.
+//
+// Requirement: FR-CRD-076
+//
+// Guard: the log is the only signal of a credit configuration that is valid but
+// does nothing (no shield, interest that rounds to 0) to a consumer that never calls
+// Warnings; without this test a change to the construction line could drop them.
+func TestCredit_WarningsAreLogged(t *testing.T) {
+	t.Parallel()
+	isCredit := func(path string) bool {
+		return strings.HasPrefix(path, "modules.credit") || strings.Contains(path, ".credit.")
+	}
+	c := creditConfig()
+	c.Modules.Credit.ShieldTicks = 0
+	c.Modules.Credit.MinPrincipal = 100
+	creditRole(&c, "grower").Credit.Borrow.MaxDebtTicks = 60
+	h := newCaptureHandler()
+	w, err := economysim.NewWorld(c, economysim.WithLogger(slog.New(h)))
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil (a warning never fails construction)", err)
+	}
+	var want []string
+	for _, wn := range w.Warnings() {
+		if p := strings.Join(wn.Path, "."); isCredit(p) {
+			want = append(want, wn.Rule+"@"+p)
+		}
+	}
+	for _, rule := range []string{"no_shield", "interest_rounds_to_zero", "cap_below_horizon"} {
+		if !slices.ContainsFunc(want, func(s string) bool { return strings.HasPrefix(s, rule+"@") }) {
+			t.Fatalf("Warnings() = %v, want a %s warning for the scenario to mean anything", want, rule)
+		}
+	}
+	var got []string
+	created := -1
+	for i, l := range h.sink.lines {
+		if l.msg == "world created" {
+			created = i
+		}
+		if l.level == slog.LevelError {
+			t.Errorf("log line %v at Error, want none", l)
+		}
+		if l.level != slog.LevelWarn {
+			continue
+		}
+		attrs := map[string]string{}
+		for _, a := range l.attrs {
+			attrs[a.Key] = a.Value.String()
+		}
+		if !isCredit(attrs["path"]) {
+			continue // the reference chain's own warnings
+		}
+		if l.msg != "configuration warning" || created >= 0 {
+			t.Errorf("credit warning line %v (after \"world created\": %v), want message %q before the summary", l, created >= 0, "configuration warning")
+		}
+		got = append(got, attrs["rule"]+"@"+attrs["path"])
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("logged credit warnings = %v, want World.Warnings() = %v", got, want)
+	}
+
+	quiet := newCaptureHandler()
+	if _, err := economysim.NewWorld(creditConfig(), economysim.WithLogger(slog.New(quiet))); err != nil {
+		t.Fatalf("NewWorld(valid credit) error = %v, want nil", err)
+	}
+	for _, l := range quiet.sink.lines {
+		for _, a := range l.attrs {
+			if a.Key == "path" && isCredit(a.Value.String()) {
+				t.Errorf("a clean credit configuration logged %v, want no credit warning", l)
+			}
+		}
 	}
 }
 
