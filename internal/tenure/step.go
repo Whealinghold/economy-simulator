@@ -56,12 +56,7 @@ func Step(in StepIn) (next int64, ok bool) {
 
 // valid reports whether no field is negative.
 func (in StepIn) valid() bool {
-	for _, v := range []int64{in.Posted, in.Base, in.StepBP, in.FloorBP, in.CeilBP, in.Unserved, in.Idle, in.Cut} {
-		if v < 0 {
-			return false
-		}
-	}
-	return true
+	return min(in.Posted, in.Base, in.StepBP, in.FloorBP, in.CeilBP, in.Unserved, in.Idle, in.Cut) >= 0
 }
 
 // band returns the step, the floor and the ceiling of the posted rent.

@@ -110,7 +110,10 @@ func (s *Scratch) run(p Params, holders []Holder, reqs []Request) (Result, bool)
 	if res.CommonsUnits, ok = s.commons(p.Commons, reqs); !ok {
 		return Result{}, false
 	}
-	return res, s.let(p, holders, reqs, &res)
+	if !s.let(p, holders, reqs, &res) {
+		return Result{}, false
+	}
+	return res, true
 }
 
 // prepare validates the input, zeroes the outputs and sizes the scratch.
