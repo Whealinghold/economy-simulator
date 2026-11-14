@@ -602,3 +602,85 @@ type fieldRange struct {
 	name          string
 	value, lo, hi int64
 }
+
+// TestValidateCredit_BoundEdges verifies both edges of every bounded field of the
+// module and its blocks: the smallest and the largest valid value validate, and the
+// value one step outside refuses with ErrOutOfBounds at the field's path. The field
+// cases of TestValidateCredit_Errors hold one failing side of each field; this holds
+// the other side and the accepted edges, so an off-by-one in a bound is caught.
+//
+// Requirement: FR-CRD-010
+func TestValidateCredit_BoundEdges(t *testing.T) {
+	t.Parallel()
+	const maxTerm, maxRate = economysim.MaxCreditTerm, economysim.MaxCreditRateBP
+	lend := func(f func(l *economysim.LendTerms)) func(c *economysim.Config) {
+		return func(c *economysim.Config) { f(creditRole(c, "cook").Credit.Lend) }
+	}
+	borrow := func(f func(b *economysim.BorrowTerms)) func(c *economysim.Config) {
+		return func(c *economysim.Config) { f(creditRole(c, "grower").Credit.Borrow) }
+	}
+	module := func(f func(m *economysim.Credit)) func(c *economysim.Config) {
+		return func(c *economysim.Config) { f(c.Modules.Credit) }
+	}
+	tests := []struct {
+		name string
+		path string
+		set  func(c *economysim.Config)
+		ok   bool
+	}{
+		{"MinPrincipal at 1", "modules.credit.min_principal", module(func(m *economysim.Credit) { m.MinPrincipal = 1 }), true},
+		{"MinPrincipal at MaxMoney", "modules.credit.min_principal", module(func(m *economysim.Credit) { m.MinPrincipal = economysim.MaxMoney }), true},
+		{"ShieldTicks at 0", "modules.credit.shield_ticks", module(func(m *economysim.Credit) { m.ShieldTicks = 0 }), true},
+		{"ShieldTicks at the maximum", "modules.credit.shield_ticks", module(func(m *economysim.Credit) { m.ShieldTicks = maxTerm }), true},
+		{"ShieldTicks below 0", "modules.credit.shield_ticks", module(func(m *economysim.Credit) { m.ShieldTicks = -1 }), false},
+		{"WriteOffTicks at the maximum", "modules.credit.write_off_ticks", module(func(m *economysim.Credit) { m.WriteOffTicks = maxTerm }), true},
+		{"WriteOffTicks above the maximum", "modules.credit.write_off_ticks", module(func(m *economysim.Credit) { m.WriteOffTicks = maxTerm + 1 }), false},
+		{"MaxClaims at 1", "modules.credit.max_claims", module(func(m *economysim.Credit) { m.MaxClaims = 1 }), true},
+		{"MaxClaims at MaxOpenClaims", "modules.credit.max_claims", module(func(m *economysim.Credit) { m.MaxClaims = economysim.MaxOpenClaims }), true},
+		{"RateBP at 0", "roles.cook.credit.lend.rate_bp", lend(func(l *economysim.LendTerms) { l.RateBP = 0 }), true},
+		{"RateBP at the maximum", "roles.cook.credit.lend.rate_bp", lend(func(l *economysim.LendTerms) { l.RateBP = maxRate }), true},
+		{"RateBP below 0", "roles.cook.credit.lend.rate_bp", lend(func(l *economysim.LendTerms) { l.RateBP = -1 }), false},
+		{"MaxTermTicks at 1", "roles.cook.credit.lend.max_term_ticks", lend(func(l *economysim.LendTerms) { l.MaxTermTicks = 1 }), true},
+		{"MaxTermTicks at the maximum", "roles.cook.credit.lend.max_term_ticks", lend(func(l *economysim.LendTerms) { l.MaxTermTicks = maxTerm }), true},
+		{"MaxTermTicks above the maximum", "roles.cook.credit.lend.max_term_ticks", lend(func(l *economysim.LendTerms) { l.MaxTermTicks = maxTerm + 1 }), false},
+		{"KeepTicks at 0", "roles.cook.credit.lend.keep_ticks", lend(func(l *economysim.LendTerms) { l.KeepTicks = 0 }), true},
+		{"KeepTicks at the maximum", "roles.cook.credit.lend.keep_ticks", lend(func(l *economysim.LendTerms) { l.KeepTicks = maxTerm }), true},
+		{"KeepTicks below 0", "roles.cook.credit.lend.keep_ticks", lend(func(l *economysim.LendTerms) { l.KeepTicks = -1 }), false},
+		{"ShareBP at 1", "roles.cook.credit.lend.share_bp", lend(func(l *economysim.LendTerms) { l.ShareBP = 1 }), true},
+		{"ShareBP at 10 000", "roles.cook.credit.lend.share_bp", lend(func(l *economysim.LendTerms) { l.ShareBP = 10_000 }), true},
+		{"MaxRateBP at 0", "roles.grower.credit.borrow.max_rate_bp", borrow(func(b *economysim.BorrowTerms) { b.MaxRateBP = 0 }), true},
+		{"MaxRateBP at the maximum", "roles.grower.credit.borrow.max_rate_bp", borrow(func(b *economysim.BorrowTerms) { b.MaxRateBP = maxRate }), true},
+		{"MaxRateBP above the maximum", "roles.grower.credit.borrow.max_rate_bp", borrow(func(b *economysim.BorrowTerms) { b.MaxRateBP = maxRate + 1 }), false},
+		{"MaxDebtTicks at 1", "roles.grower.credit.borrow.max_debt_ticks", borrow(func(b *economysim.BorrowTerms) { b.MaxDebtTicks = 1 }), true},
+		{"MaxDebtTicks at the maximum", "roles.grower.credit.borrow.max_debt_ticks", borrow(func(b *economysim.BorrowTerms) { b.MaxDebtTicks = maxTerm }), true},
+		{"MaxDebtTicks above the maximum", "roles.grower.credit.borrow.max_debt_ticks", borrow(func(b *economysim.BorrowTerms) { b.MaxDebtTicks = maxTerm + 1 }), false},
+		{"SlackTicks at 0", "roles.grower.credit.borrow.slack_ticks", borrow(func(b *economysim.BorrowTerms) { b.SlackTicks = 0 }), true},
+		{"SlackTicks at the maximum", "roles.grower.credit.borrow.slack_ticks", borrow(func(b *economysim.BorrowTerms) { b.SlackTicks = maxTerm }), true},
+		{"SlackTicks below 0", "roles.grower.credit.borrow.slack_ticks", borrow(func(b *economysim.BorrowTerms) { b.SlackTicks = -1 }), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := creditConfig()
+			tt.set(&c)
+			err := c.Validate()
+			if tt.ok {
+				if err != nil {
+					t.Errorf("Validate(%s) = %v, want nil", tt.name, err)
+				}
+				return
+			}
+			if !errors.Is(err, economysim.ErrOutOfBounds) {
+				t.Fatalf("Validate(%s) = %v, want ErrOutOfBounds", tt.name, err)
+			}
+			var at bool
+			for _, e := range unwrapAll(err) {
+				var ve *economysim.ValidationError
+				at = at || (errors.As(e, &ve) && strings.Join(ve.Path, ".") == tt.path)
+			}
+			if !at {
+				t.Errorf("Validate(%s) = %v, want the error at %s", tt.name, err, tt.path)
+			}
+		})
+	}
+}
