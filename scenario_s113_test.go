@@ -27,44 +27,66 @@ func TestScenarioS113_Treasury(t *testing.T) {
 	for seed := uint64(1); seed <= uint64(scenarioSeedCount()); seed++ {
 		t.Run("seed "+strconv.FormatUint(seed, 10), func(t *testing.T) {
 			t.Parallel()
-			a := runPack(t, free, runSpec{Seed: seed, Ticks: 200, Observe: true, Audit: true})
-			b := runPack(t, gov, runSpec{Seed: seed, Ticks: 200, Observe: true, Audit: true, Snapshots: snapEvery, Drive: driveStep})
-			checkTreasuryHeld(t, seed, b)
-			checkIDShift(t, seed, a, b)
+			a, b := &firstSpawn{}, &firstSpawn{}
+			wa := mustWorld(t, free, economysim.WithSeed(seed), economysim.WithAudit(), economysim.WithObserver(a))
+			wb := mustWorld(t, gov, economysim.WithSeed(seed), economysim.WithAudit(), economysim.WithObserver(b))
+			for i := 0; i < 200; i++ {
+				if err := wa.Step(); err != nil {
+					t.Fatalf("seed %d: Step() of the ungoverned world error = %v, want nil", seed, err)
+				}
+				if err := wb.Step(); err != nil {
+					t.Fatalf("seed %d: Step() of the governed world error = %v, want nil", seed, err)
+				}
+				checkTreasuryHeld(t, seed, wb)
+			}
+			if b.id != a.id+1 {
+				t.Errorf("seed %d: first household ID = %d with a treasury, want %d (one more than without)", seed, b.id, a.id+1)
+			}
+			sa, _ := wa.Snapshot()
+			sb, _ := wb.Snapshot()
 			t.Logf("seed %d: households %d (ungoverned) and %d (governed), money %d and %d: reported, not compared (POL-A1)",
-				seed, a.Final.Households, b.Final.Households, a.Final.Money, b.Final.Money)
+				seed, sa.Households, sb.Households, sa.Money, sb.Money)
 		})
 	}
 }
 
-// checkTreasuryHeld checks that the treasury row and region money equal the
-// StartMoney at every sampled boundary of res.
-func checkTreasuryHeld(t *testing.T, seed uint64, res result) {
-	t.Helper()
-	const start, seat = 50_000, 0 // overlay/polity-governed.toml: seat "centre", the first region by ID
-	for tick, s := range res.Samples {
-		if len(s.Jurisdictions) != 1 || s.Jurisdictions[0].Money != start || s.Jurisdictions[0].Seat != seat {
-			t.Fatalf("seed %d tick %d: Jurisdictions = %+v, want one row holding %d in the seat", seed, tick, s.Jurisdictions, start)
-		}
-		if got := s.Regions[seat].MoneyTreasury; got != start {
-			t.Fatalf("seed %d tick %d: MoneyTreasury = %d, want %d", seed, tick, got, start)
-		}
+// firstSpawn is an observer that keeps the ID of the first AgentSpawned only, so the
+// ten parallel runs hold no event log.
+type firstSpawn struct {
+	id   economysim.AgentID
+	seen bool
+}
+
+// Observe keeps the first spawned agent's ID.
+func (f *firstSpawn) Observe(e economysim.Event) {
+	if s, ok := e.(economysim.AgentSpawned); ok && !f.seen {
+		f.id, f.seen = s.Agent, true
 	}
 }
 
-// checkIDShift checks that the agents of the governed run are those of the ungoverned
-// run with each household's ID one higher, from the AgentSpawned events of construction.
-func checkIDShift(t *testing.T, seed uint64, free, gov result) {
+// mustWorld builds a world of cfg or fails the test.
+func mustWorld(t testing.TB, cfg economysim.Config, opts ...economysim.Option) *economysim.World {
 	t.Helper()
-	first := func(r result) economysim.AgentID {
-		for _, e := range r.Events {
-			if s, ok := e.(economysim.AgentSpawned); ok {
-				return s.Agent
-			}
-		}
-		return economysim.NoAgent
+	w, err := economysim.NewWorld(cfg, opts...)
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil", err)
 	}
-	if got, want := first(gov), first(free)+1; got != want {
-		t.Errorf("seed %d: first household ID = %d with a treasury, want %d (one more than without)", seed, got, want)
+	return w
+}
+
+// checkTreasuryHeld checks that the treasury row and the seat's region money equal the
+// StartMoney at the boundary of w.
+func checkTreasuryHeld(t *testing.T, seed uint64, w *economysim.World) {
+	t.Helper()
+	const start, seat = 50_000, 0 // overlay/polity-governed.toml: seat "centre", the first region by ID
+	s, err := w.Snapshot()
+	if err != nil {
+		t.Fatalf("seed %d: Snapshot() error = %v, want nil", seed, err)
+	}
+	if len(s.Jurisdictions) != 1 || s.Jurisdictions[0].Money != start || s.Jurisdictions[0].Seat != seat {
+		t.Fatalf("seed %d tick %d: Jurisdictions = %+v, want one row holding %d in the seat", seed, s.Tick, s.Jurisdictions, start)
+	}
+	if got := s.Regions[seat].MoneyTreasury; got != start {
+		t.Fatalf("seed %d tick %d: MoneyTreasury = %d, want %d", seed, s.Tick, got, start)
 	}
 }
