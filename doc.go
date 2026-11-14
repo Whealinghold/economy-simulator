@@ -1436,7 +1436,8 @@
 //   - Enter threshold: the households at or above which a class is reached from below.
 //   - Leave threshold: the count below which a class is given up; the enter threshold
 //     less the band.
-//   - Band: the basis points of an enter threshold between it and its leave threshold.
+//   - Band (of a class): the basis points of an enter threshold between it and its leave
+//     threshold (BandBP); the settlements module's own term, not a band of stylised facts.
 //   - Dwell: the least ticks between two changes of a region's class.
 //   - Settlement review: the one step, at P7.2a, that gives a region its class from its
 //     household count.
@@ -1445,7 +1446,8 @@
 //   - Flag: a name a class carries; a permission that a reader asks for.
 //   - Limit: a name with a count per class (ClassLimit); no row means no limit and 0
 //     means a closed gate.
-//   - Gate: a role field (Role.Needs, Role.Ceiling) that a class opens or bounds.
+//   - Class gate: a role field (Role.Needs, Role.Ceiling) that a class opens or bounds; not
+//     the gate region of an outside node.
 //   - Class floor: the lowest class a region may have (RegionSettlement.Floor); not the
 //     price floor or the belief floor.
 //   - Held change: a class change the review found due that the dwell holds; it leaves
