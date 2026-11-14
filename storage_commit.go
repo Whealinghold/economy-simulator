@@ -312,7 +312,7 @@ func (s *storage) fitRoom(l *ledger.Ledger, account int, c CommodityID, fit int6
 	if err != nil || !rm.Limited {
 		return fit
 	}
-	left, _ := s.roomLeftPair(l, account)
+	left := s.roomLeftPair(l, account)
 	for _, ln := range cut {
 		sz := s.sizes[ln.Commodity]
 		m, okm := checked.Mul(ln.Quantity, sz.Mass)
@@ -332,10 +332,14 @@ func (s *storage) fitRoom(l *ledger.Ledger, account int, c CommodityID, fit int6
 	return fit
 }
 
-// roomLeftPair is RoomLeft of the account as a pair, 0 where it would be negative.
-func (s *storage) roomLeftPair(l *ledger.Ledger, account int) (room.Pair, bool) {
+// roomLeftPair is RoomLeft of the account of a limited agent as a pair, 0 where it
+// would be negative; an unreadable room is a violated invariant.
+func (s *storage) roomLeftPair(l *ledger.Ledger, account int) room.Pair {
 	m, b, err := l.RoomLeft(account)
-	return room.Pair{Mass: m, Bulk: b}, err == nil
+	if err != nil {
+		invariant("the room left of a limited account is unreadable: " + err.Error())
+	}
+	return room.Pair{Mass: m, Bulk: b}
 }
 
 // startedStorage is the step of a start that the module takes (spec-storage.md 5.3.3):
@@ -463,7 +467,7 @@ func (s *storage) cargoFit(l *ledger.Ledger, account int, c CommodityID, have in
 	if err != nil || !rm.Limited {
 		return have
 	}
-	left, _ := s.roomLeftPair(l, account)
+	left := s.roomLeftPair(l, account)
 	sz := s.sizes[c]
 	if sz.Mass > 0 {
 		have = min(have, left.Mass/sz.Mass)
