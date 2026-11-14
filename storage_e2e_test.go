@@ -183,7 +183,7 @@ func TestFork_Storage(t *testing.T) {
 	if testing.Short() {
 		t.Skip("end-to-end test, skipped with -short")
 	}
-	t.Skip("plan 3-sto Phase 8 (the checkpoint of the module): RestoreWorld of a storage world panics in auditBooks, the module's books are not rebuilt (reported in the Stage 6 testing report of PR 3)")
+	t.Skip("plan 3-sto Phase 8 (PR 5), the checkpoint of the stores: until then RestoreWorld of a storage world returns ErrCheckpointCorrupt (TestRestoreWorld_StorageWorldIsRefusedNotPanicked)")
 	cfg := loadValidPack(t, packOneStorage...)
 	for _, cell := range storageForkCells {
 		t.Run(cell.name, func(t *testing.T) {

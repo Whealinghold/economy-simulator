@@ -97,6 +97,11 @@ func restoreShell(cfg Config, f frame, opts []Option) (*World, options, error) {
 // load their state. A failure at any step before the last touches nothing the
 // consumer owns.
 func (w *World) restoreState(rs *restoreCtx, sections []byte) error {
+	if w.cfg.Modules.Storage != nil {
+		// The stores are not saved until plan 3-sto Phase 8 (PR 5): a restore would
+		// drop the stores of the role rows and change the room of every account.
+		return fmt.Errorf("%w: the storage module is on and its stores are not in the checkpoint yet (plan 3-sto Phase 8)", ErrCheckpointCorrupt)
+	}
 	bodies, err := splitSections(&w.cfg, sections)
 	if err != nil {
 		return err
