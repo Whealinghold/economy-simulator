@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/ledger"
+	"github.com/Whealinghold/economy-sim/internal/room"
 )
 
 // The world of the commitment tests is shipConfig with the storage module and the
@@ -504,5 +505,23 @@ func TestInvariant_StorageNamesTheAgentAndTheTick(t *testing.T) {
 	want := fmt.Sprintf("(agent %d, tick %d)", shipHome, w.Tick())
 	if !strings.Contains(msg, "an arrival is larger than the cargo in flight") || !strings.HasSuffix(msg, want) {
 		t.Errorf("arrival larger than the cargo in flight: panic = %q, want the cause then %q", msg, want)
+	}
+}
+
+// TestAudit_PledgeBookMessageLabelsMassAndBulk verifies that a drifted pledge book is
+// reported with its pairs labelled, so the reader sees which dimension differs.
+//
+// Arithmetic: the book is set to (5, 3) while no job names the agent, so the jobs imply
+// (0, 0).
+//
+// Requirement: FR-STO-040
+func TestAudit_PledgeBookMessageLabelsMassAndBulk(t *testing.T) {
+	t.Parallel()
+	w, _ := stoMillWorld(t, 120, 80, stoMiller{}, nil)
+	w.sto.held[shipHome] = room.Pair{Mass: 5, Bulk: 3}
+	err := w.auditStorage()
+	want := "storage: agent 3: the pledge held for the jobs that name it is (mass 5, bulk 3), the jobs imply (mass 0, bulk 0)"
+	if err == nil || err.Error() != want {
+		t.Errorf("auditStorage() = %v, want %q", err, want)
 	}
 }

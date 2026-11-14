@@ -124,6 +124,10 @@ func (w *World) fillRoomState(st *AgentState, a *agent) {
 	}
 }
 
+// pairText writes a pair of room as "(mass M, bulk B)": the audit says which dimension
+// differs, which "{5 3}" does not.
+func pairText(p room.Pair) string { return fmt.Sprintf("(mass %d, bulk %d)", p.Mass, p.Bulk) }
+
 // auditStorage is the storage part of the audit (spec-storage.md 4.4, FR-STO-040),
 // run after the ledger's own identities of the room (the load is the sum of the lots
 // and the load plus the reserved room is within the room): for every household, in
@@ -166,7 +170,7 @@ func (w *World) auditAgent(a *agent, jobs []room.Pair) error {
 // at the next change of the job.
 func (s *storage) auditBooks(a *agent, jobs []room.Pair) error {
 	if s.held[a.id] != jobs[a.id] {
-		return fmt.Errorf("the pledge held for the jobs that name it is %v, the jobs imply %v", s.held[a.id], jobs[a.id])
+		return fmt.Errorf("the pledge held for the jobs that name it is %s, the jobs imply %s", pairText(s.held[a.id]), pairText(jobs[a.id]))
 	}
 	load, ok := s.pendingLoad(&a.job)
 	prin := a.id
@@ -174,7 +178,7 @@ func (s *storage) auditBooks(a *agent, jobs []room.Pair) error {
 		prin = a.job.principal
 	}
 	if !ok || s.jobLoad[a.id] != load || s.jobPrin[a.id] != prin {
-		return fmt.Errorf("its job's pledge is %v on agent %d, its job implies %v on agent %d", s.jobLoad[a.id], s.jobPrin[a.id], load, prin)
+		return fmt.Errorf("its job's pledge is %s on agent %d, its job implies %s on agent %d", pairText(s.jobLoad[a.id]), s.jobPrin[a.id], pairText(load), prin)
 	}
 	return nil
 }
@@ -209,13 +213,13 @@ func (w *World) auditRoom(a *agent, jobs []room.Pair) error {
 		return nil
 	}
 	if rm.ReservedMass != 0 || rm.ReservedBulk != 0 {
-		return fmt.Errorf("reserved room (%d, %d) at a boundary", rm.ReservedMass, rm.ReservedBulk)
+		return fmt.Errorf("reserved room %s at a boundary", pairText(room.Pair{Mass: rm.ReservedMass, Bulk: rm.ReservedBulk}))
 	}
 	if err := s.auditPledge(rm, a, jobs); err != nil {
 		return err
 	}
 	if r := s.roomFor(a); rm.Mass != r.Mass || rm.Bulk != r.Bulk {
-		return fmt.Errorf("room (%d, %d), its role, weight and stores give (%d, %d)", rm.Mass, rm.Bulk, r.Mass, r.Bulk)
+		return fmt.Errorf("room %s, its role, weight and stores give %s", pairText(room.Pair{Mass: rm.Mass, Bulk: rm.Bulk}), pairText(r))
 	}
 	return nil
 }
@@ -228,7 +232,7 @@ func (s *storage) auditPledge(rm ledger.Room, a *agent, jobs []room.Pair) error 
 		return errors.New("the pledge its job and cargo imply does not fit int64")
 	}
 	if rm.PledgeMass != want.Mass || rm.PledgeBulk != want.Bulk {
-		return fmt.Errorf("pledge (%d, %d), its job and cargo imply (%d, %d)", rm.PledgeMass, rm.PledgeBulk, want.Mass, want.Bulk)
+		return fmt.Errorf("pledge %s, its job and cargo imply %s", pairText(room.Pair{Mass: rm.PledgeMass, Bulk: rm.PledgeBulk}), pairText(want))
 	}
 	return nil
 }
@@ -245,7 +249,7 @@ func (s *storage) auditInbound(w *World) error {
 	}
 	for id := range s.inbound {
 		if w.liveAgent(AgentID(id)) && s.inbound[id] != want[id] {
-			return fmt.Errorf("storage: agent %d expects cargo of load %v, the shipments in flight carry %v", id, s.inbound[id], want[id])
+			return fmt.Errorf("storage: agent %d expects cargo of load %s, the shipments in flight carry %s", id, pairText(s.inbound[id]), pairText(want[id]))
 		}
 	}
 	return nil
