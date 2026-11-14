@@ -24,6 +24,32 @@ func TestBlockReasonAt_UnknownReasonIsTheLast(t *testing.T) {
 	}
 }
 
+// TestBlocksOwnUse_RefusalsOfCase verifies that a start refused for an endowment or
+// for room blocks an own-use household and that a refusal of case (a) or any other
+// does not, and that the blocking reasons are listed in blockReasons.
+//
+// Requirement: FR-SUB-023
+//
+// Fix: the no_room refusal of the storage module did not block the household:
+// blockedStart tested no_endowment alone, so a household refused for room was not
+// counted in Blocked and its flag logic read it as not blocked.
+func TestBlocksOwnUse_RefusalsOfCase(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		reason Reason
+		want   bool
+	}{
+		{ReasonNoEndowment, true}, {ReasonNoRoom, true}, {ReasonZeroYield, false}, {ReasonNoInput, false},
+	} {
+		if got := blocksOwnUse(tc.reason); got != tc.want {
+			t.Errorf("blocksOwnUse(%v) = %t, want %t", tc.reason, got, tc.want)
+		}
+	}
+	if got, want := blockReasonAt(ReasonNoRoom), 3; got != want {
+		t.Errorf("blockReasonAt(no_room) = %d, want %d (before the last, any other)", got, want)
+	}
+}
+
 // TestFigures_UnformableFigureSaturates verifies that a figure that cannot be
 // formed (no good, a cost beyond int64, a negative balance) reads as the
 // largest, as Step reads it, and that a formable one is the cover plus what the

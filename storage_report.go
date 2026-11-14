@@ -92,13 +92,15 @@ func (w *World) addRoomRow(row *RoleRow, a *agent) {
 // region's view.
 func (w *World) storeRows(rows []StoreRow, g RegionID, v *RegionView) []StoreRow {
 	s := w.sto
-	for c := range s.classes {
-		var n int64
-		for i := range v.Agents {
-			n += int64(s.count(v.Agents[i].Agent, c)) // at most MaxStoresPerAgent each
+	n := make([]int64, len(s.classes))
+	for i := range v.Agents {
+		for c := range n {
+			n[c] += int64(s.count(v.Agents[i].Agent, c)) // at most MaxStoresPerAgent each
 		}
-		if n > 0 {
-			rows = append(rows, StoreRow{Region: g, Class: StoreClassID(c), Stores: n})
+	}
+	for c, k := range n {
+		if k > 0 {
+			rows = append(rows, StoreRow{Region: g, Class: StoreClassID(c), Stores: k})
 		}
 	}
 	return rows

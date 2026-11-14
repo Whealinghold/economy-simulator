@@ -541,6 +541,11 @@ func (w *World) finishStorage() error {
 				a.id, w.cfg.Roles[a.role].ID, ErrRoomShape, err)
 		}
 		w.syncJob(a)
+	}
+	// The fit is tested once every job has pledged on its principal, so a trainer's
+	// pledge holds the output of all its trainees whatever their order.
+	for i := w.firstHousehold; i < len(w.agents); i++ {
+		a := &w.agents[i]
 		if s.limited(a) && !w.roomHolds(a, s.roomFor(a)) {
 			return fmt.Errorf("agent %d of role %s: its warm job's output and its goods do not fit its room: %w",
 				a.id, w.cfg.Roles[a.role].ID, ErrRoomShape)

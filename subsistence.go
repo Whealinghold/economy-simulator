@@ -130,7 +130,7 @@ func (m *viaModel) ownUseOnly() []bool {
 // blockReasons are the reasons a household in the mode is blocked, the last being
 // any other; the Warn "own use blocked" names the commonest (spec-subsistence.md
 // 14.2). A later module that adds a refusal appends its reason here (D418).
-var blockReasons = [...]Reason{ReasonZeroYield, ReasonNoSite, ReasonNoEndowment, ReasonNoRecipe}
+var blockReasons = [...]Reason{ReasonZeroYield, ReasonNoSite, ReasonNoEndowment, ReasonNoRoom, ReasonNoRecipe}
 
 // blockReasonAt is the index of a reason in blockReasons, the last for any other.
 func blockReasonAt(r Reason) int {
@@ -475,11 +475,17 @@ func (s *subsistence) noteStart(w *World, a *agent, cell int, recipe RecipeID, k
 	s.ownUseJobs[a.id] = 0
 }
 
+// blocksOwnUse reports whether a start refused for the reason blocks an own-use
+// household (FR-SUB-023, case b). The reasons that later modules add are appended
+// here and to blockReasons (D418).
+func blocksOwnUse(reason Reason) bool {
+	return reason == ReasonNoEndowment || reason == ReasonNoRoom
+}
+
 // blockedStart counts an own-use request that the start refused for want of an
-// endowment (FR-SUB-023, case b). The reasons that later modules add are
-// appended to the test here (D418).
+// endowment or of room (FR-SUB-023, case b).
 func (s *subsistence) blockedStart(w *World, a *agent, cell int, recipe RecipeID, reason Reason) {
-	if reason == ReasonNoEndowment && s.on(a) && isOwn(w.roles.row(a.role), recipe) {
+	if blocksOwnUse(reason) && s.on(a) && isOwn(w.roles.row(a.role), recipe) {
 		s.blocked[cell] += a.weight
 		s.blockedBy[cell][blockReasonAt(reason)] += a.weight
 		s.debug(w, "own use blocked", a, string(reason))

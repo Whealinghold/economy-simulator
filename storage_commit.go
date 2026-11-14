@@ -16,14 +16,19 @@ import (
 func (s *storage) loadOfLots(lots []ledger.Lot) (load room.Pair, ok bool) {
 	ok = true
 	for _, lt := range lots {
-		sz := s.sizes[lt.Commodity]
-		m, okm := checked.Mul(lt.Quantity, sz.Mass)
-		b, okb := checked.Mul(lt.Quantity, sz.Bulk)
-		var sum bool
-		load, sum = addPair(load, room.Pair{Mass: m, Bulk: b})
-		ok = ok && okm && okb && sum
+		load, ok = s.addUnits(load, ok, lt.Commodity, lt.Quantity)
 	}
 	return load, ok
+}
+
+// addUnits adds the load of qty units of commodity c to load, quantity times size per
+// dimension with checked arithmetic; ok stays false once any step overflowed.
+func (s *storage) addUnits(load room.Pair, ok bool, c int, qty int64) (room.Pair, bool) {
+	sz := s.sizes[c]
+	m, okm := checked.Mul(qty, sz.Mass)
+	b, okb := checked.Mul(qty, sz.Bulk)
+	sum, oks := addPair(load, room.Pair{Mass: m, Bulk: b})
+	return sum, ok && okm && okb && oks
 }
 
 // pendingLoad is the load of the pending output of a job: the outputs that sit in the
@@ -39,12 +44,7 @@ func (s *storage) pendingLoad(j *job) (load room.Pair, ok bool) {
 		if o.discard {
 			continue
 		}
-		sz := s.sizes[o.commodity]
-		m, okm := checked.Mul(j.pending[i], sz.Mass)
-		b, okb := checked.Mul(j.pending[i], sz.Bulk)
-		var sum bool
-		load, sum = addPair(load, room.Pair{Mass: m, Bulk: b})
-		ok = ok && okm && okb && sum
+		load, ok = s.addUnits(load, ok, int(o.commodity), j.pending[i])
 	}
 	return load, ok
 }
@@ -180,12 +180,7 @@ func (s *storage) candidates(lots []ledger.Lot) (cands []room.Candidate, at [][]
 func (s *storage) linesLoad(lines []Line) (load room.Pair, ok bool) {
 	ok = true
 	for _, ln := range lines {
-		sz := s.sizes[ln.Commodity]
-		m, okm := checked.Mul(int64(ln.Quantity), sz.Mass)
-		b, okb := checked.Mul(int64(ln.Quantity), sz.Bulk)
-		var sum bool
-		load, sum = addPair(load, room.Pair{Mass: m, Bulk: b})
-		ok = ok && okm && okb && sum
+		load, ok = s.addUnits(load, ok, int(ln.Commodity), int64(ln.Quantity))
 	}
 	return load, ok
 }
