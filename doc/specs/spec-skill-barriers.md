@@ -593,11 +593,21 @@ constructed only when an observer was supplied (4.5 there). The reasons of
 8.2. **Snapshot.** Per region and role: the places, the places taken, the queue length,
 the trainers, the trainees held for want of headroom (`Held`, 4.2.1), and the observed premium (`spec-welfare-and-wages.md` 4.3). The
 throttle and the queue are therefore observable (FR-STB-013). All are bounded by the
-configuration.
+configuration. The snapshot also lists the traineeships in progress, one row per trainee in
+ascending agent ID (trainee, trainer, role trained for, region, ticks served, application
+tick): the one number that says a trainee is progressing is its ticks served against
+`TrainingTicks`. `Held` is 0 while no module limits the headroom of a role (the completion
+is never held); the module that sets the headroom fills it.
 
 8.3. **Logs.** Nothing above `Debug`. At `Debug`, guarded by `Enabled`: "traineeship
 refused" with `agent`, `role` and `reason` (`weight`, `no_trainer`, `gain_negative`,
-`queue_too_long`), and "place not open" with `agent`, `role`, `region` and the reason `not_member` (a place a non-member trainer does not have, `spec-institutions.md` 11.2; the line "traineeship refused" is an applicant's and is unchanged). One `Warn`, bounded by the configuration: "no places open", per
+`queue_too_long`; the world writes `no_trainer` and `gain_negative`, once per region, role and
+tick, from the filling of the places and naming the applicant it ended on, and the other two
+are the spawner's own decisions not to apply, which are no refusal and write nothing: an
+applicant of weight above 1 is refused `needs_weight_one`, a line of "decision refused"), "traineeship
+ended" with `agent` (the trainee), `trainer`, `role` (the role it trained for), `region`, `served`
+(the ticks served) and `reason` (the reason of the event), which carry what `TraineeshipEnded`
+does not, and "place not open" with `agent`, `role`, `region` and the reason `not_member` (a place a non-member trainer does not have, `spec-institutions.md` 11.2; the line "traineeship refused" is an applicant's and is unchanged). One `Warn`, bounded by the configuration: "no places open", per
 region and role, emitted when a role with applicants has had no place open for 10
 consecutive ticks because `gain` is negative (STB-L37), at the tenth tick and every
 tenth after, with `region`, `role` and `reason`. It is the counter of the incentive

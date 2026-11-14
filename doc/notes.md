@@ -83,8 +83,8 @@ PR description.
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226, N-327 |
 | SAV | N-145, N-156, N-195, N-197 |
 | SCL | N-030, N-198, N-222, N-300 |
-| SET | N-140, N-192, N-268, N-348 |
-| SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-264, N-268, N-244, N-317 |
+| SET | N-140, N-192, N-268, N-348, N-358 |
+| SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-264, N-268, N-244, N-317, N-358 |
 | SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357 |
@@ -2264,6 +2264,13 @@ PR description.
 - **Raised:** 2026-11-13, plan 3-sto Phase 1 (E1, measured with `lizard -l go -C 10 -a 8 -L 100 -w`).
 - **Note:** `fillAgentView` and `removeAgent` of `fanin.go` are at CCN 10 today, one guarded call (`if w.x != nil`) from the limit of N-243; `ckLines` of `transport_request.go` is at 9, `plannedRecipe` of `strategy_default.go` at 9, `limitList` of `production.go` at 9, and `ckProvisioned` of `transport_request.go` is already at 11. Every Stage 3 module that adds a guarded call to one of them, as ADR 0010 allows, forces a refactor first (a fixed-order table of module fillers called in a loop, or a split by concern) in the same change. The first module to need it makes it, in its own commit before the hook; the others reuse it.
 
+### N-358 SKL: the Warn covers a negative gain only, and `Held` waits for the headroom
+
+- **Areas:** SKL, SET
+- **Raised:** 2026-11-14, plan 3-skl PR B2 (observability review of PR B1).
+- **Note:** The `Warn` "no places open" of `spec-skill-barriers.md` 8.3 is emitted for a queue kept waiting by a negative gain only (FR-SKL-022). A queue kept waiting for want of a trainer (no agent of the role holds a free place) has no `Warn`: it is the Debug line "traineeship refused" with the reason `no_trainer` and the snapshot (`Trainers` 0 or `Places` 0 with `Queue` above 0). Widening the `Warn` to `no_trainer` is a spec decision for the owner. `RoleRow.Held` is 0 until a module limits the headroom of a role (`skills.headroom`, SET and ORG): the module that sets the hook computes it, and must restore it (a held trainee is saved, so a restore can derive it).
+- **Update (2026-11-14, plan 3-skl PR B2):** built as the spec says; the owner has not decided on the widening. Left open.
+
 ## Read receipt
 
 If you are an agent about to write or change a spec, you quote the tag below in
@@ -2276,4 +2283,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: c7b9e596d70af02e60d7d893
+NOTES-TAG: 537270a6017034a2246bd729

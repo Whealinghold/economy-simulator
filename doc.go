@@ -338,7 +338,9 @@
 //     its trainer's place, while the target role has no headroom for it.
 //   - TraineeshipStarted, TraineeshipCompleted, TraineeshipEnded: the events of a
 //     place filled, a course completed (the agent changes role) and a course that
-//     ends without completing (the reason names why).
+//     ends without completing (the reason names why). TraineeRow is the snapshot
+//     row of a traineeship in progress: the trainee, its trainer, the role it
+//     trains for, the region, the ticks served and the tick it applied.
 //   - Upkeep: the goods one household must consume each tick to stay alive.
 //   - Warning: a configuration that is legal but probably a mistake; Warnings
 //     returns it as a value with a path and a rule and it never fails
