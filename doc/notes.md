@@ -51,7 +51,7 @@ PR description.
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
 | CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349 |
-| CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
+| CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339 |
 | CLR | N-113, N-137, N-241 |
 | CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354 |
@@ -84,8 +84,8 @@ PR description.
 | SAV | N-145, N-156, N-195, N-197 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-140, N-192, N-268, N-348, N-358 |
-| SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-264, N-268, N-244, N-317, N-358 |
-| SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-352 |
+| SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-358 |
+| SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357 |
 | STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356 |
@@ -1841,17 +1841,6 @@ PR description.
 - **Note:** With the demand module the goods rows are `>= lambda * D + W` and the right-hand side is negative, so the slice's simplex (every right-hand side non-negative) has no basic feasible start. `internal/steady` takes the fixed term per goods row and rejects a non-zero one until the demand row adds the first phase in its own PR. `one-demand` is DEM's pack.
 - **Update (2026-10-17, viability edits):** read; unchanged. Left open for the demand row.
 
-
-
-### N-264 Stage 3 `skills.go` appends the queue rule and the `Apply` emission
-
-- **Areas:** SPN, SKL
-- **Raised:** 2026-10-17, `plan-phase-1-9.md` (git history, `2abbe62^`) (D111, coordinator ruling Q2).
-- **Note:** The slice builds only the tool half of SKL: the inequality of `spec-skill-barriers.md` 2.5 (`ToolPrice`, `CapitalReturn` in the view) is in `internal/occupation`. `DecideApply` is not declared in the slice (SPN 3.3, plan 1-9 O10); a role with `TrainingTicks` above 0 is never entered by review, rung 1 or replacement, which is what SPN 6.2 says when no queue exists. `skills.go` (Stage 3) appends the queue-discounted rule of SKL 4.5 (`C_train`, `q_w`), the view fields `Surplus`, `QueueAhead`, `Trainers`, `MaxTrainees`, `InTraineeship`, the `Apply` emission for a weight-1 agent, the refusals `in_traineeship` and `needs_weight_one`, and the cause `traineeship`, all appended in module order.
-- **Update (2026-10-17, spawner edits):** the tool half is written in `spec-spawner.md` and `spec-skill-barriers.md`; `DecideApply` is not declared in the slice, and SKL appends it with the `Apply` emission (O10, ruled (a)). Left open for Stage 3 `skills.go`.
-- **Update (2026-10-18, plan 1-9 exit gate):** built as planned: `internal/occupation.CapitalOK` is the tool half, `DecideApply` is not declared, a role with `TrainingTicks` above 0 is never entered. Left open for Stage 3 `skills.go`.
-- **Update (2026-11-13, plan 3-skl Phase 1):** applied by plan 3-skl: `internal/occupation.ApplyOK` and the refusals in Phase 2, `DecideApply` and the types in Phase 3, the `Apply` emission in Phase 4 (2026-11-13, PR B1: built, `DecideApply` is executed, the default `Decide` applies). Remove at the gate.
-
 ### N-265 The renewal carry and the three runs are the world's state
 
 - **Areas:** SPN, WLD, CHK
@@ -1873,7 +1862,7 @@ PR description.
 
 - **Areas:** SPN, SET, SUB, POP, MIG, SKL
 - **Raised:** 2026-10-17, `plan-phase-1-9.md` (git history, `2abbe62^`) (D112).
-- **Note:** The slice view and decision hold only what the slice uses. Appended by their module, in module order: SET `Role.Needs` (folded into `Closed`), `Headroom`, `NoLimit` and `EntryLimited.RoleCeiling`; SUB `OwnUse` (read-only) and the reset of `OwnUseJobs`; POP `PopBirths`, `PopDeaths`, the births and deaths entries and the effective `Renewal` of 0; MIG the refusal `on_journey` and the `RoleSince` of an arrival; SKL as N-264. The `Cause` constants `population`, `births` and `traineeship` are appended after the existing six in `event.go`, and the reasons `in_traineeship`, `on_journey`, `needs_weight_one` after the six of the slice; nothing is inserted (architecture.md 2.10.5).
+- **Note:** The slice view and decision hold only what the slice uses. Appended by their module, in module order: SET `Role.Needs` (folded into `Closed`), `Headroom`, `NoLimit` and `EntryLimited.RoleCeiling`; SUB `OwnUse` (read-only) and the reset of `OwnUseJobs`; POP `PopBirths`, `PopDeaths`, the births and deaths entries and the effective `Renewal` of 0; MIG the refusal `on_journey` and the `RoleSince` of an arrival; SKL as built in plan 3-skl (N-264, settled). The `Cause` constants `population`, `births` and `traineeship` are appended after the existing six in `event.go`, and the reasons `in_traineeship`, `on_journey`, `needs_weight_one` after the six of the slice; nothing is inserted (architecture.md 2.10.5).
 - **Update (2026-10-18, plan 1-9 exit gate):** the slice view, decision, `Refusal` and `Facts` carry only slice fields; module fields are appended with their module. Left open.
 - **Update (2026-11-09, plan 2-14 Phase 1):** MIG: `on_journey` (a `Refusal` after the existing values, a `region_bound` obligation) and the `RoleSince` of an arrival are built in plan 2-14 Phase 5; the tree has `offStage`, `regionBounds.add` and `reseedAtArrival` for it. Left open for SET, SUB, POP, SKL.
 - **Update (2026-11-11, plan 2-11):** POP fields `PopBirths`, `PopDeaths` and the effective `Renewal` 0 are appended in plan 2-11. Left open.
@@ -1958,14 +1947,6 @@ PR description.
 - **Raised:** 2026-10-23, plan 2-2 D243.
 - **Note:** A module's checkpoint section is appended to `checkpointSections` (`checkpoint_sections.go`) at its tag, with its `saveX` and `loadX` in its own root file over `internal/codec`; its tag is deleted from `notBuiltSections`; its cross-checks are appended to `checkpointCross` in the order of step 7 of CHK 6.2; its fork-at-N test calls `forkAtN` (D258) with its overlay; its restore-failure cases are added to the restore tests. Nothing already in the table is renumbered or moved, and the layout follows CHK 4.1.4 (sparse) and R10 (one spelling). A test compares the table with the tags, names and "Present when" cells of CHK 4.2.
 
-### N-317 Tags 10 and 11 are written as zero-row skeletons
-
-- **Areas:** CHK, SKL
-- **Raised:** 2026-10-23, plan 2-2 D244.
-- **Note:** The checkpoint change writes tag 10 as four counts of 0 (trainees, trainers, queued rows, warn-run rows) and tag 11 as one count of 0 (CHK 4.2.8, applied). The owner (SKL, REG) replaces the writer and the reader and keeps the skeleton as the prefix of its layout, so a world with no row keeps its bytes and the digest does not move when the owner lands.
-- **Update (2026-10-25, plan 2-3 Phase 8):** REG's half is done and settled: `saveRegions` and `loadRegions` (`regions_status.go`) replace the tag 11 skeleton with the real layout (count, then `From`, `To`, `Closed`, `FactorBP` in ascending `EdgeID`), the count 0 being its prefix, so no fixture and no digest moved. The decoder refuses an unknown edge, a row not above the one before, a default row and a factor outside `[1, MaxEdgeFactorBP]`. Tag 10 (SKL) stays open.
-- **Update (2026-11-13, plan 3-skl Phase 1):** the tag-10 half is built in plan 3-skl Phase 3 with the layout of `spec-checkpoint.md` 4.2 row 10 (count then rows, four times). The zero-row skeleton equals that layout only when all four counts are 0, so the skeleton is not a prefix of it (only the first count is); a world with no row writes the same bytes. Remove the tag-10 leg at the gate.
-
 ### N-318 The golden digest moves with every rebalance of a pack
 
 - **Areas:** CHK, CLB, REF
@@ -2032,7 +2013,6 @@ PR description.
 - **Ruling (owner, 2026-10-28, E1):** the stability claim rides on `one-demand`; `one` stays the upkeep-only control that S19 needs. Applied in `spec-reference-chain.md` C09, FR-REF-018 and FR-REF-042 and in `spec-viability.md` 4.7. Caveats: `one-demand` does not meet FR-REF-042 (unchanged or with R1 it ends at 0 households), so the requirement is stated and unmet; a pack that survives is a new work package. E0 has no consequence (no rung that moves C04 was accepted: C04, S04, S05, S11, S12, FR-REF-002 and `overlay/seasonal.toml` are untouched). `TestPacks_IncomeBalance` and `TestScenarioStable_OneWarm` stay skipped with this note's ID.
 - **Reading of D367 and what resumes the ladder:** "equal with the median households at least 10% of the start higher" was read as higher by 10% of the start (60 households). Under the relative reading R1 improves, the counter is 2 after R4, and the ladder resumes at R5 on R1: data as in the R1 row above, then `world.upkeep` staple 3 with every `reference_price` and `reference_basket` re-derived so FR-CUR-020 holds. D369 says it is not re-run without an owner ruling that names it; the harness was a scratch test (not kept). R1 needs E0 (the spring-only crop leaves the pack for `overlay/seasonal.toml`).
 - **Also open from the stop:** `expected/one.scenarios.txt` is stale (Stage 1 sign-off exception, `roadmap-v1.md`); the Stage 2 criterion "passes the version 1 bands of STY on `five.toml`" has no rebalanced `five` behind it (`five` collapses, `expected/five.toml` records it); plans 9 onward run on the unchanged packs. N-312 points (1) and (2) and N-314 stay open and point here.
-
 
 ### N-327 Presets 22 to 25 of the indicators are built with EMP and RSK/STO
 
@@ -2283,4 +2263,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 537270a6017034a2246bd729
+NOTES-TAG: fb00ca7d8a01ed84ea04854f
