@@ -126,6 +126,7 @@ func (v *validator) structural() {
 	v.validatePolity()
 	v.validateStorage()
 	v.validateTechnology()
+	v.validateCredit()
 	v.overflow()
 }
 
@@ -2106,6 +2107,7 @@ func warnings(c *Config) []Warning {
 	out = append(out, polityWarnings(c)...)
 	out = append(out, storageWarnings(c)...)
 	out = append(out, technologyWarnings(c, lk)...)
+	out = append(out, creditWarnings(c, lk)...)
 	sortWarnings(out)
 	return out
 }

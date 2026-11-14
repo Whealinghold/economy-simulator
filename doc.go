@@ -1466,4 +1466,53 @@
 //   - Combining mode: how the rows of a table keyed by jurisdiction combine along a
 //     chain: innermost (the first row), added (the sum) or scaled (the product, rounded
 //     once).
+//   - Credit: the optional module that puts the ledger's claims to use: a role with a Lend or
+//     Borrow block posts offers and requests, a round matches them at a posted rate, and a
+//     debtor repays at the due tick; its presence in Config.Modules switches it on
+//     (spec-credit.md 4.1). A credit of goods is the ledger's posting of goods, not this.
+//   - CreditTerms: the credit block of a role: exactly one of Lend and Borrow.
+//   - LendTerms: what a lender posts and keeps: the posted rate, the longest term, the ticks
+//     of its upkeep it keeps out of its offers and the share of its lendable money it offers.
+//   - BorrowTerms: what a borrower accepts and may owe: its highest rate, its exposure cap in
+//     ticks of upkeep and the slack added to the horizon of its gap.
+//   - CreditRequest: a plan field that asks for a loan of a principal, a term and a highest
+//     rate; it lasts one tick.
+//   - CreditOffer: a plan field that offers money on a longest term at a posted rate; it lasts
+//     one tick.
+//   - ClaimFilter: the region and role filter of the call that forgives claims.
+//   - ClaimRow: the snapshot row of an open claim.
+//   - CreditTotals: the seven cumulative totals of the claim list in the snapshot.
+//   - Loan: a claim formed by the credit round: the lender's principal moves to the borrower
+//     at formation and the interest is fixed then.
+//   - Lender, Borrower: a role with a Lend block and a role with a Borrow block; the agents of
+//     the role are the households that offer and request. No role has both.
+//   - Posted rate: the yearly rate in basis points a lender offers at, simple interest; 0
+//     lends at no interest.
+//   - Effective rate: the posted rate times the rate scale of the lane, half to even, clamped
+//     to the bound; the rate a loan is formed at.
+//   - Rate scale: the world state, per region, that scales the posted rates of a round; 10 000
+//     leaves them as posted. It is not configuration and is not hashed.
+//   - Term (of a loan): the ticks from formation to the due tick.
+//   - Interest (of a claim): the amount fixed at formation, simple, paid at the end with the
+//     principal; it never grows, there is no penalty and no interest on arrears.
+//   - Owed: what is left to pay of a claim: its principal owed and its interest owed.
+//   - Due tick: the tick at which a claim falls due, the tick of formation plus the term.
+//   - Overdue: a claim with an amount owed after its due tick; it is paid on every later
+//     tick as money above the shield allows.
+//   - Arrears: the state of a debtor with an overdue claim; it is refused a new request.
+//   - Shield: the ticks of a debtor's upkeep cost that credit settlement leaves with it.
+//   - Credit settlement: the pass at P1.7a in which each debtor with a claim due or overdue
+//     pays pro rata with the largest remainder, interest first.
+//   - Waterfall: the payment of a removed debtor's whole balance, with no shield, to its
+//     claims before the rest goes to the estate.
+//   - Passed (claim): a claim whose creditor was removed; it becomes the estate account's
+//     with no money moved.
+//   - Written off (claim): a claim ended with its owed lost, after the write-off ticks or at
+//     the removal of its debtor.
+//   - Forgiven (claim): a loan ended by the call that forgives claims; no money moves.
+//   - Exposure cap: the most principal a borrower may owe, in ticks of its upkeep cost.
+//   - Credit room: the principal a borrower may still ask for under its exposure cap.
+//   - Cash gap: the money a borrower's job needs before the job pays, over its horizon.
+//   - Round (of credit): the matching at P3.3b of the admitted requests and offers of a
+//     region at the lenders' posted rates; a lane of it is a region.
 package economysim
