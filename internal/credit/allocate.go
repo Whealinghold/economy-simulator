@@ -29,6 +29,10 @@ type remainder struct {
 // parts by tie ascending and then by index. tie has one key per claim. No share
 // exceeds owed_i and the shares sum to pay.
 //
+// dst may be owed itself (the total is summed before the first share is written and
+// element i is read before it is written), but it must not overlap owed or tie in any
+// other way; a refusal writes nothing.
+//
 // ok is false, and the shares are nil, for a negative pay or owed, a tie of a
 // different length from owed, a total of the owed that overflows, or a pay above
 // the total. A pay of 0 or no claim gives all-zero shares.

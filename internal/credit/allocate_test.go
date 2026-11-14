@@ -226,6 +226,35 @@ func TestAllocate_StaleDst(t *testing.T) {
 	}
 }
 
+// TestAllocate_DstIsOwed verifies that dst may be the very slice of owed: the shares
+// are the same as into a separate buffer, owed ends up holding them, and a refusal
+// leaves owed untouched.
+//
+// Requirement: FR-CRD-032
+//
+// Guard: the caller of a settlement pass may reuse the owed buffer for the shares. The
+// total is summed before the first share is written and element i is read before it
+// is written, so the call is safe; a change that wrote a share early or read owed
+// again after the loop would corrupt every later share.
+func TestAllocate_DstIsOwed(t *testing.T) {
+	t.Parallel()
+	var s credit.Scratch
+	tie := []uint64{3, 1, 2, 0}
+	want, ok := s.Allocate(nil, 1_001, []int64{600, 900, 7, 400}, tie)
+	if !ok {
+		t.Fatalf("Allocate into a fresh buffer refused")
+	}
+	owed := []int64{600, 900, 7, 400}
+	got, ok := s.Allocate(owed, 1_001, owed, tie)
+	if !ok || !slices.Equal(got, want) || !slices.Equal(owed, want) {
+		t.Errorf("Allocate(dst = owed) = %v, %v with owed %v, want %v in both", got, ok, owed, want)
+	}
+	owed = []int64{5, 5}
+	if got, ok := s.Allocate(owed, 11, owed, []uint64{0, 0}); ok || got != nil || !slices.Equal(owed, []int64{5, 5}) {
+		t.Errorf("refused Allocate(dst = owed) = %v, %v with owed %v, want nil, false and owed unchanged", got, ok, owed)
+	}
+}
+
 // TestSplit_InterestFirst verifies the split of a share: interest first, then
 // principal, and the refusal of a negative operand.
 //

@@ -24,9 +24,12 @@ func Pay(balance, shieldTicks, upkeep, owed, maxMoney int64) (pay int64, ok bool
 // for a negative balance or owed, a tie of a different length or a sum of the owed
 // that overflows.
 func (s *Scratch) Waterfall(dst []int64, balance int64, owed []int64, tie []uint64) (shares []int64, left int64, ok bool) {
-	total, _ := sumOwed(owed) // a sum or a pay that Allocate cannot take is refused there
+	total, ok := sumOwed(owed)
+	if !ok || balance < 0 {
+		return nil, 0, false
+	}
 	pay := min(balance, total)
-	shares, ok = s.Allocate(dst, pay, owed, tie)
+	shares, ok = s.Allocate(dst, pay, owed, tie) // refuses a tie of the wrong length
 	if !ok {
 		return nil, 0, false
 	}
