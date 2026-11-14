@@ -538,6 +538,131 @@ func TestWarnings_StorageLevyBelowUpkeep(t *testing.T) {
 	}
 }
 
+// TestValidateStorage_LargestAndSmallestValid verifies the edges that are still valid:
+// a base room of exactly MaxRoom and of exactly one tick's upkeep, a class of
+// exactly MaxRoom with the other capacity 0, MaxStoresPerAgent stores of one class
+// and MaxStoreClasses classes. Each is one step inside the bound that the failing
+// cases of TestValidateStorage_Errors step over.
+//
+// Requirement: FR-STO-038, FR-STO-002
+//
+// Guard: a bound written as >= instead of > would reject the largest valid value and
+// pass every failing case.
+func TestValidateStorage_LargestAndSmallestValid(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		build func(c *economysim.Config, m *economysim.Storage)
+	}{
+		{"a base room of MaxRoom", func(_ *economysim.Config, m *economysim.Storage) {
+			m.Base = &economysim.Capacity{Mass: economysim.MaxRoom, Bulk: economysim.MaxRoom}
+		}},
+		{"a base room of exactly one tick's upkeep", func(c *economysim.Config, m *economysim.Storage) {
+			onlyForester(c, m, 4, 4, true) // staple 2 + prepared 1 + fuel 1, each mass and bulk 1
+		}},
+		{"a class of MaxRoom mass and 0 bulk", func(_ *economysim.Config, m *economysim.Storage) {
+			m.Classes[0].Mass, m.Classes[0].Bulk = economysim.MaxRoom, 0
+		}},
+		{"a class of 0 mass and 1 bulk", func(_ *economysim.Config, m *economysim.Storage) {
+			m.Classes[1].Mass, m.Classes[1].Bulk = 0, 1
+		}},
+		{"MaxStoresPerAgent stores of one class", func(_ *economysim.Config, m *economysim.Storage) {
+			m.Roles[1].Stores = slices.Repeat([]string{"bin"}, economysim.MaxStoresPerAgent)
+		}},
+		{"MaxStoreClasses classes", func(_ *economysim.Config, m *economysim.Storage) {
+			for i := len(m.Classes); i < economysim.MaxStoreClasses; i++ {
+				m.Classes = append(m.Classes, economysim.StoreClass{ID: "k" + strconv.Itoa(i), Mass: 1})
+			}
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := storageConfig()
+			tt.build(&c, c.Modules.Storage)
+			if err := c.Validate(); err != nil {
+				t.Errorf("Validate() = %v, want nil", err)
+			}
+		})
+	}
+}
+
+// TestValidateStorage_StoresTargetShapes verifies the shape rules of a flow whose
+// target is the stores kind that the field cases do not reach: a Level or a RateBP on
+// the flow (a stores flow is an amount per store), a region that is not defined, and
+// that each is reported at the key it names and not as the last-rule ErrModuleDependency.
+//
+// Requirement: FR-STO-038, FR-STO-026
+func TestValidateStorage_StoresTargetShapes(t *testing.T) {
+	t.Parallel()
+	flow := []string{"modules", "money_supply", "flows", "store_levy"}
+	tests := []struct {
+		name   string
+		mutate func(f *economysim.MoneyFlow)
+		rule   error
+		path   []string
+	}{
+		{"a Level", func(f *economysim.MoneyFlow) { f.Level = 1 }, economysim.ErrFlowShape, append(slices.Clone(flow), "level")},
+		{"a RateBP", func(f *economysim.MoneyFlow) { f.RateBP = 1 }, economysim.ErrFlowShape, append(slices.Clone(flow), "rate_bp")},
+		{"a region that is not defined", func(f *economysim.MoneyFlow) { f.Target.Region = "nowhere" }, economysim.ErrUnknownRegion, append(slices.Clone(flow), "target", "region")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := storageConfig()
+			storageLevy(&c, economysim.FlowTarget{Kind: "stores", Store: "bin"})
+			tt.mutate(&c.Modules.MoneySupply.Flows[0])
+			err := c.Validate()
+			ok := false
+			for _, e := range unwrapAll(err) {
+				var ve *economysim.ValidationError
+				ok = ok || errors.As(e, &ve) && errors.Is(ve, tt.rule) && slices.Equal(ve.Path, tt.path)
+			}
+			if !ok {
+				t.Errorf("Validate() = %v, want %v at %v", err, tt.rule, tt.path)
+			}
+			if errors.Is(err, economysim.ErrModuleDependency) {
+				t.Errorf("Validate() = %v, want no ErrModuleDependency while another rule of the flow fails", err)
+			}
+		})
+	}
+}
+
+// TestWarnings_StorageFlowScope verifies how a stores flow counts for the warnings:
+// a flow that names no class uses every class, a flow scoped to a region with no
+// limited group draws no store_levy_below_upkeep, and one scoped to the region of a
+// limited group does.
+//
+// Requirement: FR-STO-038
+func TestWarnings_StorageFlowScope(t *testing.T) {
+	t.Parallel()
+	rules := func(c economysim.Config) []string {
+		var out []string
+		for _, w := range c.Warnings() {
+			out = append(out, w.Rule+"@"+strings.Join(w.Path, "."))
+		}
+		return out
+	}
+	c := storageConfig()
+	c.Modules.Storage.Classes = append(c.Modules.Storage.Classes, economysim.StoreClass{ID: "vault", Mass: 9})
+	if got := rules(c); !slices.Contains(got, "store_class_unused@modules.storage.classes[2]") {
+		t.Fatalf("Warnings() = %q, want vault unused before any flow", got)
+	}
+	path := storageLevy(&c, economysim.FlowTarget{Kind: "stores"})
+	if got := rules(c); slices.Contains(got, "store_class_unused@modules.storage.classes[2]") {
+		t.Errorf("Warnings() = %q, want every class used by a flow that names none", got)
+	}
+	want := "store_levy_below_upkeep@" + strings.Join(path, ".")
+	c.Modules.MoneySupply.Flows[0].Target.Region = "nowhere"
+	if got := rules(c); slices.Contains(got, want) {
+		t.Errorf("Warnings() = %q, want no %q for a region with no group", got, want)
+	}
+	c.Modules.MoneySupply.Flows[0].Target.Region = "north"
+	if got := rules(c); !slices.Contains(got, want) {
+		t.Errorf("Warnings() = %q, want %q for the region of a limited group", got, want)
+	}
+}
+
 // FuzzValidateStorage verifies, for any base room, class capacities, store list and
 // class ID written into the valid configuration, that Validate and Warnings never
 // panic, that every error of the module is a *ValidationError whose path starts at

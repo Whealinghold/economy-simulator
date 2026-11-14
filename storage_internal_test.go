@@ -293,3 +293,137 @@ func TestStorageWarnings_RecipeLoadOverflowWarns(t *testing.T) {
 		t.Errorf("storageWarnings = %v, want room_below_recipe for an output load that overflows", storageWarnings(&c))
 	}
 }
+
+// TestCohortRoom verifies the room of a cohort (spec-storage.md 3.3.2, FR-STO-004):
+// the weight times the base room, plus the capacity of each store of the row, a
+// store not multiplied by the weight; a class that is not configured adds nothing;
+// and a figure that does not fit in int64 is reported, not wrapped.
+//
+// Requirement: FR-STO-004
+func TestCohortRoom(t *testing.T) {
+	t.Parallel()
+	m := &Storage{
+		Roles:   []RoleRoom{{Role: "r", Stores: []string{"a", "a", "gone", "b"}}},
+		Classes: []StoreClass{{ID: "a", Mass: 10, Bulk: 1}, {ID: "b", Mass: math.MaxInt64 - 1, Bulk: 0}},
+	}
+	tests := []struct {
+		name       string
+		row        int
+		w          int64
+		room       Capacity
+		mass, bulk int64
+		ok         bool
+	}{
+		// 3 * 5 = 15 and 3 * 2 = 6, no row, no store.
+		{"no row: the weight times the base", -1, 3, Capacity{5, 2}, 15, 6, true},
+		// Half of MaxInt64, plus one, times 2 does not fit.
+		{"the weight times the base overflows", -1, 2, Capacity{math.MaxInt64/2 + 1, 0}, 0, 0, false},
+		// Row 0 holds a, a, an unknown class and b: 5 + 10 + 10 fits, adding b's
+		// MaxInt64 - 1 does not.
+		{"the stores overflow the sum", 0, 1, Capacity{5, 0}, 0, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mass, bulk, ok := cohortRoom(m, tt.row, tt.w, &tt.room)
+			if mass != tt.mass || bulk != tt.bulk || ok != tt.ok {
+				t.Errorf("cohortRoom(row %d, w %d, %+v) = %d, %d, %v, want %d, %d, %v", tt.row, tt.w, tt.room, mass, bulk, ok, tt.mass, tt.bulk, tt.ok)
+			}
+		})
+	}
+	// A store is not multiplied by the weight, and an unknown class adds nothing:
+	// base 5 * 3 = 15, plus a (10) twice = 35 mass; bulk 0 * 3 + 1 + 1 = 2.
+	small := &Storage{Roles: []RoleRoom{{Role: "r", Stores: []string{"a", "gone", "a"}}}, Classes: m.Classes[:1]}
+	if mass, bulk, ok := cohortRoom(small, 0, 3, &Capacity{Mass: 5}); mass != 35 || bulk != 2 || !ok {
+		t.Errorf("cohortRoom(a, gone, a at weight 3) = %d, %d, %v, want 35, 2, true", mass, bulk, ok)
+	}
+}
+
+// TestRoomLoad_OverflowIsReported verifies that the load of a list of items whose sum
+// does not fit in int64 is reported as not ok, never wrapped, and that an undeclared
+// commodity adds nothing.
+//
+// Requirement: FR-STO-038
+//
+// Guard: a wrapped load is a small or negative figure that passes a room check the
+// real load fails.
+func TestRoomLoad_OverflowIsReported(t *testing.T) {
+	t.Parallel()
+	c := Config{Commodities: []Commodity{{ID: "big", Mass: math.MaxInt64 / 2, Bulk: 1}, {ID: "one", Mass: 1, Bulk: 1}}}
+	lk := newLookup(&c)
+	tests := []struct {
+		name       string
+		items      []Item
+		mass, bulk int64
+		ok         bool
+	}{
+		{"an undeclared commodity adds nothing", []Item{{Commodity: "none", Quantity: 5}, {Commodity: "one", Quantity: 2}}, 2, 2, true},
+		{"one product overflows", []Item{{Commodity: "big", Quantity: 3}}, 0, 0, false},
+		{"the sum overflows", []Item{{Commodity: "big", Quantity: 1}, {Commodity: "big", Quantity: 1}, {Commodity: "one", Quantity: 2}}, 0, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			mass, bulk, ok := roomLoad(lk, tt.items)
+			if mass != tt.mass || bulk != tt.bulk || ok != tt.ok {
+				t.Errorf("roomLoad(%v) = %d, %d, %v, want %d, %d, %v", tt.items, mass, bulk, ok, tt.mass, tt.bulk, tt.ok)
+			}
+		})
+	}
+}
+
+// TestStorageWarnings_UpkeepOverflowWarnsAndNeverFails verifies that an upkeep whose
+// load does not fit in int64 reads as the largest figure: the room is below its
+// cover, the warning is given, and validation of the room reports ErrRoomShape rather
+// than accepting a wrapped load.
+//
+// Requirement: FR-STO-038
+func TestStorageWarnings_UpkeepOverflowWarnsAndNeverFails(t *testing.T) {
+	t.Parallel()
+	c := Config{
+		World:       WorldParams{Upkeep: []Item{{Commodity: "u", Quantity: 3}}, CoverTicks: 2},
+		Commodities: []Commodity{{ID: "u", Mass: math.MaxInt64 / 2, Bulk: 1}},
+		Regions:     []Region{{ID: "a"}},
+		Roles:       []Role{{ID: "x"}},
+		Modules:     Modules{Storage: &Storage{Base: &Capacity{Mass: MaxRoom, Bulk: MaxRoom}}},
+	}
+	got := map[string]bool{}
+	for _, w := range storageWarnings(&c) {
+		got[w.Rule] = true
+	}
+	if !got["room_below_cover"] {
+		t.Errorf("storageWarnings = %v, want room_below_cover for an upkeep load that overflows", got)
+	}
+	if mass, bulk := regionsUpkeepLoad(&c, newLookup(&c), &c.Roles[0]); mass != math.MaxInt64 || bulk != math.MaxInt64 {
+		t.Errorf("regionsUpkeepLoad = %d, %d, want the largest int64 for both", mass, bulk)
+	}
+}
+
+// TestStorageWarnings_RecipeRoomOverflowGivesNone verifies that room_below_recipe is
+// not reported for a role whose own room does not fit in int64: that case is not a
+// recipe finding, and the sum is never wrapped.
+//
+// Requirement: FR-STO-038
+func TestStorageWarnings_RecipeRoomOverflowGivesNone(t *testing.T) {
+	t.Parallel()
+	c := Config{
+		Commodities: []Commodity{{ID: "g", Mass: 1, Bulk: 1}},
+		Recipes:     []Recipe{{ID: "r", Outputs: []Output{{Commodity: "g", Quantity: 1}}}},
+		Roles:       []Role{{ID: "x", Recipes: []string{"r", "undeclared"}}},
+	}
+	m := &Storage{
+		Roles:   []RoleRoom{{Role: "x", Stores: []string{"k", "k"}}},
+		Classes: []StoreClass{{ID: "k", Mass: math.MaxInt64/2 + 1}},
+	}
+	lk := newLookup(&c)
+	if got := recipeWarnings(lk, m, &c.Roles[0], 0, &Capacity{Mass: 1, Bulk: 1}, nil, 0, 0); got != nil {
+		t.Errorf("recipeWarnings with a room that overflows = %v, want none", got)
+	}
+	// The same role with a room that fits and holds nothing: the declared recipe warns,
+	// the undeclared one is skipped.
+	fits := &Storage{Roles: []RoleRoom{{Role: "x"}}}
+	got := recipeWarnings(lk, fits, &c.Roles[0], 0, &Capacity{}, []string{"p"}, 0, 0)
+	if len(got) != 1 || got[0].Rule != "room_below_recipe" || got[0].Path[len(got[0].Path)-1] != "r" {
+		t.Errorf("recipeWarnings = %v, want one room_below_recipe for r", got)
+	}
+}
