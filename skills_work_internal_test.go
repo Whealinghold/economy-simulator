@@ -481,3 +481,26 @@ func TestObservedPremium_ExcludesTrainees(t *testing.T) {
 		t.Errorf("the trainee's view row has InTraineeship %v, want true", after.Agents[0].InTraineeship)
 	}
 }
+
+// TestBoard_FilledWithSubsistenceOn verifies that the Board of a trainer's view is
+// filled when the subsistence module is on too: the module's view fill returns the
+// view, so the board is set before it.
+//
+// Requirement: FR-AGT-068
+func TestBoard_FilledWithSubsistenceOn(t *testing.T) {
+	t.Parallel()
+	cfg := trainingConfig(3)
+	sub := DefaultSubsistence()
+	cfg.Modules.Subsistence = &sub
+	w := newMill(t, cfg, WithSeed(exitSeed), WithAudit())
+	step(t, w, 1)
+	c := castOf(t, w)
+	w.skills.start(c.homeMillers[0], c.homeWeaver, 1, 0, 0)
+	var v AgentView
+	if err := w.fillAgentView(&v, &w.agents[c.homeWeaver], viewWork); err != nil {
+		t.Fatalf("fillAgentView error = %v, want nil", err)
+	}
+	if want := []UpkeepRow{{Commodity: grain, Quantity: 1}}; !slices.Equal(v.Board, want) {
+		t.Errorf("Board of the trainer with subsistence on = %v, want %v", v.Board, want)
+	}
+}

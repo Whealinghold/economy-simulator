@@ -333,3 +333,25 @@ func TestStart_RefusesATrainerWithTrainees(t *testing.T) {
 		t.Errorf("loadSkills accepted two trainees for a trainer of MaxTrainees 1, want a refusal")
 	}
 }
+
+// TestFillPlaces_TrainerApplicantWaits verifies that a queued agent that is itself
+// a trainer with trainees is skipped, not started: start refuses a trainer, so the
+// filling must not reach it, and the next applicant takes the place.
+//
+// Requirement: FR-SKL-017, FR-SKL-027
+func TestFillPlaces_TrainerApplicantWaits(t *testing.T) {
+	t.Parallel()
+	w, c := trainingWorld(t, 3)
+	s := w.skills
+	// A miller trains a trainee of its own, then is queued for the weaver role.
+	s.start(c.homeMillers[1], c.homeMillers[0], 0, 0, 0)
+	s.enqueue(s.cell(0, 1), applicant{agent: c.homeMillers[0], applied: 1})
+	s.enqueue(s.cell(0, 1), applicant{agent: c.homeMillers[2], applied: 2})
+	w.fillPlaces(0, 1)
+	if _, ok := s.trainerOf(c.homeMillers[0]); ok {
+		t.Errorf("trainer %d became a trainee, want it to wait", c.homeMillers[0])
+	}
+	if !s.queued(c.homeMillers[0]) {
+		t.Errorf("trainer applicant left the queue, want it queued")
+	}
+}

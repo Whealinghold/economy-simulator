@@ -148,8 +148,8 @@ func (w *World) fillPlaces(g RegionID, r RoleID) {
 		}
 		ap := s.queue[cell][i]
 		a := &w.agents[ap.agent]
-		if w.onJourney(a) || w.offStage(a) {
-			i++
+		if w.onJourney(a) || w.offStage(a) || w.skills.isTrainer(a.id) {
+			i++ // a trainer with trainees waits: start refuses it, and a trainer is never a trainee
 			continue
 		}
 		if !gain.ok(a) {
