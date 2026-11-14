@@ -42,6 +42,15 @@ func TestPay_Shield(t *testing.T) {
 			t.Errorf("%s: Pay(%d, %d, %d, %d) = %d, %v, want %d, %v", tt.name, tt.balance, tt.ticks, tt.upkeep, tt.owed, got, ok, tt.want, tt.ok)
 		}
 	}
+}
+
+// TestPay_MaxMoney verifies the saturation of the shield at MaxMoney and the
+// refusal of a negative MaxMoney: with MaxMoney 100 a shield of 1 000 is 100, so a
+// balance of 150 has a pot of 50.
+//
+// Requirement: FR-CRD-031
+func TestPay_MaxMoney(t *testing.T) {
+	t.Parallel()
 	if _, ok := credit.Pay(1, 0, 0, 1, -1); ok {
 		t.Errorf("Pay with a negative MaxMoney = ok, want refused")
 	}

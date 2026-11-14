@@ -208,6 +208,24 @@ func TestAllocate_ReusesDst(t *testing.T) {
 	}
 }
 
+// TestAllocate_StaleDst verifies that the shares of a payment of nothing are 0 even
+// when dst holds old values in its capacity, so a reused buffer never leaks a share,
+// and that a single claim of 1 is paid in full.
+//
+// Requirement: FR-CRD-032
+func TestAllocate_StaleDst(t *testing.T) {
+	t.Parallel()
+	var s credit.Scratch
+	stale := []int64{9, 9, 9}
+	got, ok := s.Allocate(stale[:0], 0, []int64{0, 0}, []uint64{0, 0})
+	if !ok || !slices.Equal(got, []int64{0, 0}) {
+		t.Errorf("Allocate over a stale buffer = %v, %v, want [0 0]", got, ok)
+	}
+	if got, ok := s.Allocate(nil, 1, []int64{1}, []uint64{0}); !ok || !slices.Equal(got, []int64{1}) {
+		t.Errorf("Allocate(1, [1]) = %v, %v, want [1]", got, ok)
+	}
+}
+
 // TestSplit_InterestFirst verifies the split of a share: interest first, then
 // principal, and the refusal of a negative operand.
 //

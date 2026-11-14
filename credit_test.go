@@ -184,6 +184,37 @@ func creditBorrowCases(field creditField) []fieldCase {
 	}
 }
 
+// TestValidateCredit_Errors verifies each row of 15.1 that Validate checks: every case
+// of creditFieldCases, which breaks only its own field of a valid configuration, is
+// refused with its rule (errors.Is) at its path with its value and bound, and with
+// no other credit error.
+//
+// Requirement: FR-CRD-010, FR-CRD-011
+func TestValidateCredit_Errors(t *testing.T) {
+	t.Parallel()
+	for _, tc := range creditFieldCases() {
+		t.Run(tc.field+" "+tc.name, func(t *testing.T) {
+			t.Parallel()
+			var c economysim.Config
+			tc.mutate(&c)
+			err := c.Validate()
+			if !errors.Is(err, tc.rules[0]) {
+				t.Fatalf("Validate() = %v, want %v", err, tc.rules[0])
+			}
+			var found bool
+			for _, e := range unwrapAll(err) {
+				var ve *economysim.ValidationError
+				if errors.As(e, &ve) && errors.Is(e, tc.rules[0]) && strings.Join(ve.Path, ".") == strings.Join(tc.paths[0], ".") {
+					found = found || (ve.Value == tc.value && ve.Bound == tc.bound)
+				}
+			}
+			if !found {
+				t.Errorf("Validate() = %v, want %v at %v with value %q and bound %q", err, tc.rules[0], tc.paths[0], tc.value, tc.bound)
+			}
+		})
+	}
+}
+
 // TestValidateCredit_Order verifies the order of 15.1: two mistakes at once report
 // the earlier rule only, the bounds before the shape and the shape before the
 // dependency, and the module's dependency error never hides a bounds error.

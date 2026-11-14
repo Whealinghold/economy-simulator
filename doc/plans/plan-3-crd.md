@@ -345,3 +345,24 @@ Each has a recommendation. The questions file is `/tmp/claude-1000/dp3-crd-quest
 8. **Q8. The rate-cap seam of ORG (5.2.3)?** Recommend build the call and the counter field now with a nil cap function, so ORG only supplies the function.
 9. **Q9. Typed IDs in the new `Snapshot.Claims` rows and the new events?** The new event types are free of the "never a typed ID" rule (it binds fields appended to existing rows); the new snapshot slice is empty when the module is off. Recommend typed `ClaimID` and `AgentID` fields, as `Contracts` rows have, and a Phase 1 check against architecture.md 2.10.5 and the golden renderer (the same reading POL's Q9 asked for).
 10. **Q10. Defaults.** Recommend no default is set from a source (N-018, N-027): `credit.toml` carries labelled placeholders (`MinPrincipal`, `ShieldTicks` 2, `MaxClaims`, rates) and the PR says so.
+
+## PR 1 result (Phases 1 to 3, recorded when PR 1 was built)
+
+Rule tags read: architecture=354c9304a17403fb4bd93ae8 (replaced by a fresh tag in Phase 1), observability=f215753306fac0bc7607c4c4, testing=66af7645b01fef4e2796c367. Notes tag read: c7b9e596d70af02e60d7d893 (unchanged: PR 1 adds and removes no note).
+
+Phase 1, with the breadth of Q7 (only what the code needs):
+
+- 1.1 done: the terms of CRD 21.3 and the type names are in `doc.go`; the name grep found no clash (`Credit`, `Lend`, `Borrow`, `ClaimFilter`, `ClaimRow`, `CreditTotals`, `CreditRequest`, `CreditOffer` are free in the root).
+- 1.2 done: the five continuation files are in `architecture.md` 2.6 and `AGENTS.md`, `architecture.md` 2.10.1 names `dropClaims` beside `dropAgent`, and the rule file has a fresh tag.
+- 1.3 deferred to PR 2 and PR 3, which add the keys and events: PR 1 adds no log key and no event.
+- 1.4 applied: `spec-config.md` 8.2.2 (hash ids); the other rows of CRD 21.2 are already true or belong to the PR that builds the behaviour (the P1.7a and P3.3b rows of `spec-world.md` are present; OBS, INT and STB wait for PR 2 to PR 4).
+- 1.5 nothing to add: the five new notes of CRD 21.1 are N-164 to N-168.
+- 1.6 to 1.8 checked: `spec-checkpoint.md` 4.2 has tag 26 for `Modules.Credit`, `Close` refuses an open claim last, the audit has the claim identities, and the event order of `spec-world.md` 6.11 matches CRD 12.1.1.
+- 1.9 notes read: the index and every note tagged CRD, and the ALL notes that bind code, not the whole file (see the implementation log).
+- 1.10 done: `Modules.Credit` is id 15, `Role.Credit` id 25 and the block fields by declaration order.
+
+Deviations from the plan text:
+
+- `internal/credit` takes the scratch of the allocation as a `Scratch` value (methods `Allocate` and `Waterfall`, a `dst` slice, an `ok` result) so that the settlement allocates nothing once it has grown (NFR-CRD-001), and adds `Interest`, `Effective`, `Pay`, `Split` and `Fit` beside the matching functions; the order is `SortOffers`, `SortRequests` and `Match` with a formation callback that answers `Formed`, `Dropped` or `Halted`.
+- The validator reports paths as `roles.<id>.credit.borrow.max_debt_ticks` (the validator's own form), and the loader paths as `role.<id>...`.
+- A phase of `validateCredit` that finds an error ends the run, as `validateStorage` does: bounds, then shape, then dependency.
