@@ -337,8 +337,8 @@ func TestPolity_NewPolity(t *testing.T) {
 
 // TestPolity_NoRegionFieldRead verifies by a text check that no field of a region
 // is read from a jurisdiction (spec-polity.md 6.1.4): no root Go file other than
-// polity.go and its tests mentions the polity types or the jurisdiction queries in
-// a rule path, and polity.go reads none of the region tunables of
+// polity.go, its continuation polity_validate.go and their tests mentions the polity types or the jurisdiction queries in
+// a rule path, and neither polity file reads any of the region tunables of
 // spec-regions.md 5.1.3.
 //
 // Requirement: FR-POL-024
@@ -352,7 +352,7 @@ func TestPolity_NoRegionFieldRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	allowed := map[string]bool{"polity.go": true, "config.go": true, "construct.go": true, "event.go": true, "world.go": true, "snapshot.go": true, "validate.go": true,
+	allowed := map[string]bool{"polity.go": true, "polity_validate.go": true, "config.go": true, "construct.go": true, "event.go": true, "world.go": true, "snapshot.go": true, "validate.go": true,
 		"hash.go": true, "errors.go": true, "bounds.go": true, "defaults.go": true, "doc.go": true}
 	for _, f := range files {
 		if strings.HasSuffix(f, "_test.go") || allowed[f] {
@@ -367,27 +367,29 @@ func TestPolity_NoRegionFieldRead(t *testing.T) {
 		}
 	}
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "polity.go", nil, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
 	region := map[string]bool{"ReferencePrice": true, "ExtraUpkeep": true, "ReferenceBasket": true, "Yields": true, "StartMoney": false}
-	ast.Inspect(file, func(n ast.Node) bool {
-		if sel, ok := n.(*ast.SelectorExpr); ok && region[sel.Sel.Name] {
-			t.Errorf("polity.go:%d reads %s: a jurisdiction inherits no region field", fset.Position(sel.Pos()).Line, sel.Sel.Name)
+	for _, name := range []string{"polity.go", "polity_validate.go"} {
+		file, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatal(err)
 		}
-		return true
-	})
+		ast.Inspect(file, func(n ast.Node) bool {
+			if sel, ok := n.(*ast.SelectorExpr); ok && region[sel.Sel.Name] {
+				t.Errorf("%s:%d reads %s: a jurisdiction inherits no region field", name, fset.Position(sel.Pos()).Line, sel.Sel.Name)
+			}
+			return true
+		})
+	}
 }
 
-// TestPolity_NoDraws verifies by a text check that the module draws nothing: neither
-// polity.go nor internal/polity imports a random source, and neither calls the
+// TestPolity_NoDraws verifies by a text check that the module draws nothing: none of
+// polity.go, polity_validate.go and internal/polity imports a random source, and neither calls the
 // world's. The equal results of the neutrality proof (S112) are the behavioural half.
 //
 // Requirement: FR-POL-020
 func TestPolity_NoDraws(t *testing.T) {
 	t.Parallel()
-	for _, f := range []string{"polity.go", "internal/polity/polity.go"} {
+	for _, f := range []string{"polity.go", "polity_validate.go", "internal/polity/polity.go"} {
 		b, err := os.ReadFile(f)
 		if err != nil {
 			t.Fatal(err)
