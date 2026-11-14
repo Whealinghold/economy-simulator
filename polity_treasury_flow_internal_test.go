@@ -234,3 +234,73 @@ func TestPolity_StartMoneyAtMaxMoney(t *testing.T) {
 		t.Errorf("Step() with a treasury of MaxMoney error = %v, want nil", err)
 	}
 }
+
+// TestFork_TreasuryWithOutside verifies the treasury with the external module on, the
+// one world in which the counterparties' IDs, the treasury's and the households' sit
+// next to each other (spec-polity.md 12.2): the miner at the shifted ID trades with a
+// counterparty for 4 ticks, the audit holds, the treasury keeps its StartMoney, and a
+// world restored from a checkpoint of tick 3 and run on for 4 ticks has the same
+// checkpoint bytes and snapshot as the uninterrupted one.
+//
+// Arithmetic: capConfig has 2 regions (estates 0, 1) and 2 counterparties (2, 3); the
+// treasury of the one governed jurisdiction is agent 4, so the first household is 5.
+//
+// Requirement: FR-POL-016, FR-POL-030, FR-POL-032, FR-EXT-016
+func TestFork_TreasuryWithOutside(t *testing.T) {
+	t.Parallel()
+	cfg := func() Config {
+		c := capConfig()
+		c.Modules.Polity = &PolityConfig{
+			Jurisdictions: []Jurisdiction{{ID: "realm", Seat: "ring", StartMoney: 900}},
+			Members:       []Member{{Region: "inner_system", Jurisdiction: "realm"}, {Region: "ring", Jurisdiction: "realm"}},
+		}
+		return c
+	}
+	run := func(t *testing.T, w *World, s *extScript, n int) {
+		t.Helper()
+		ore := commodityOf(t, w, "ore")
+		miner := AgentID(w.firstHousehold)
+		s.plan[miner] = []Intent{{Commodity: ore, Side: Ask, Quantity: 200, Limit: 90}}
+		for range n {
+			give(t, w, miner, ore, 200)
+			step(t, w, 1)
+		}
+	}
+	w, s, rec := extWorld(t, cfg())
+	if w.firstHousehold != 5 {
+		t.Fatalf("firstHousehold = %d, want 5 (2 estates, 2 counterparties, 1 treasury)", w.firstHousehold)
+	}
+	run(t, w, s, 3)
+	cp, err := w.Checkpoint()
+	if err != nil {
+		t.Fatalf("Checkpoint() error = %v, want nil", err)
+	}
+	rs := &extScript{plan: map[AgentID][]Intent{}}
+	r, err := RestoreWorld(cfg(), cp, WithStrategy("script", rs), WithAudit())
+	if err != nil {
+		t.Fatalf("RestoreWorld() error = %v, want nil", err)
+	}
+	run(t, w, s, 4)
+	run(t, r, rs, 4)
+	traded := 0
+	for _, e := range rec.events {
+		if tr, ok := e.(TradeExecuted); ok && (tr.Buyer == 2 || tr.Buyer == 3 || tr.Seller == 2 || tr.Seller == 3) {
+			traded++
+		}
+	}
+	if traded == 0 {
+		t.Error("no trade with a counterparty, want the miner's ore sold to the outside")
+	}
+	for _, x := range []*World{w, r} {
+		if v, _ := x.ledger.Account(x.polity.tr[0].account); v.Balance != 900 {
+			t.Errorf("treasury holds %d after the run, want 900", v.Balance)
+		}
+	}
+	a, errA := w.Checkpoint()
+	b, errB := r.Checkpoint()
+	sa, _ := w.Snapshot()
+	sb, _ := r.Snapshot()
+	if errA != nil || errB != nil || !reflect.DeepEqual(a, b) || !reflect.DeepEqual(sa, sb) {
+		t.Errorf("after the restore and 4 more ticks: checkpoints equal %v (%v, %v), snapshots equal %v, want both equal", reflect.DeepEqual(a, b), errA, errB, reflect.DeepEqual(sa, sb))
+	}
+}
