@@ -194,6 +194,15 @@ type StoreClass struct {
 	Label string
 }
 
+// clone returns a copy that shares nothing with c, nil for nil.
+func (c *Capacity) clone() *Capacity {
+	if c == nil {
+		return nil
+	}
+	out := *c
+	return &out
+}
+
 // canonical returns a copy of the module with the role rows by role, each row's
 // stores in class order and the classes by ID (spec-config.md 3.4,
 // spec-storage.md 12.1), nil for nil.
@@ -202,8 +211,10 @@ func (m *Storage) canonical() *Storage {
 		return nil
 	}
 	out := *m
+	out.Base = m.Base.clone()
 	out.Roles = sortedBy(m.Roles, func(a, b RoleRoom) int { return cmp.Compare(a.Role, b.Role) })
 	for i := range out.Roles {
+		out.Roles[i].Base = out.Roles[i].Base.clone()
 		out.Roles[i].Stores = sortedBy(out.Roles[i].Stores, cmp.Compare[string])
 	}
 	out.Classes = sortedBy(m.Classes, func(a, b StoreClass) int { return cmp.Compare(a.ID, b.ID) })

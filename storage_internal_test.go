@@ -249,3 +249,19 @@ func TestStorage_NoRegionKeyedField(t *testing.T) {
 		}
 	}
 }
+
+// TestStorageCanonical_SharesNoRoom verifies that the canonical copy of the module
+// holds its own base rooms, so a change of the consumer's Config does not reach it.
+//
+// Requirement: FR-STO-003
+//
+// Guard: a shallow copy shares the Base pointers of the module and of each row.
+func TestStorageCanonical_SharesNoRoom(t *testing.T) {
+	t.Parallel()
+	m := &Storage{Base: &Capacity{Mass: 1, Bulk: 2}, Roles: []RoleRoom{{Role: "a", Base: &Capacity{Mass: 3, Bulk: 4}}}}
+	cc := m.canonical()
+	m.Base.Mass, m.Roles[0].Base.Mass = 90, 91
+	if cc.Base.Mass != 1 || cc.Roles[0].Base.Mass != 3 {
+		t.Errorf("canonical bases = %+v, %+v, want {1 2} and {3 4} unmoved", *cc.Base, *cc.Roles[0].Base)
+	}
+}

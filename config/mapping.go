@@ -327,9 +327,10 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 // storage reads [modules.storage] (spec-config.md 6.2.1, spec-storage.md 12.5): the
 // base room as [base] (keys mass, bulk), a role row as [role.<id>] (key stores, and
 // a [role.<id>.base] table), and a class as [class.<id>] (keys mass, bulk, needs,
-// label). A key-less table switches the module on; a base table with no key is a
-// base room of 0, and an absent one is unlimited. The rows come out in ID order
-// because every level is read in the order of the keys.
+// label). A key-less table switches the module on; a key-less base table is a
+// base room of 0 (one key without the other is ErrMissingField), and an absent one
+// is unlimited. The rows come out in ID order because every level is read in the
+// order of the keys.
 func (l *loader) storage(t *tbl) *economysim.Storage {
 	var m economysim.Storage
 	m.Base = capacity(t.sub("base"))
@@ -341,7 +342,8 @@ func (l *loader) storage(t *tbl) *economysim.Storage {
 	})
 	t.entities("class", func(id string, e *tbl) {
 		c := economysim.StoreClass{ID: id}
-		readInts(e, []intField{{"mass", &c.Mass}, {"bulk", &c.Bulk}})
+		e.need("mass", integer(e, "mass", &c.Mass))
+		e.need("bulk", integer(e, "bulk", &c.Bulk))
 		e.text("needs", &c.Needs)
 		e.text("label", &c.Label)
 		m.Classes = append(m.Classes, c)
@@ -356,7 +358,11 @@ func capacity(t *tbl) *economysim.Capacity {
 		return nil
 	}
 	var c economysim.Capacity
-	readInts(t, []intField{{"mass", &c.Mass}, {"bulk", &c.Bulk}})
+	hasMass, hasBulk := integer(t, "mass", &c.Mass), integer(t, "bulk", &c.Bulk)
+	if hasMass || hasBulk { // a key-less table is the zero room; a lone key is a typo
+		t.need("mass", hasMass)
+		t.need("bulk", hasBulk)
+	}
 	t.finish()
 	return &c
 }

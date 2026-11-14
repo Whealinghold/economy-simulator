@@ -131,6 +131,9 @@ func TestLoad_StorageRejections(t *testing.T) {
 		{"a float mass", minimal + "[modules.storage.class.a]\nmass = 1.5\n", economysim.ErrNotInteger, []string{"modules", "storage", "class", "a", "mass"}},
 		{"a string bulk of a base", minimal + "[modules.storage.base]\nbulk = \"1\"\n", economysim.ErrWrongType, []string{"modules", "storage", "base", "bulk"}},
 		{"a number in stores", minimal + "[modules.storage.role.a]\nstores = [ 1 ]\n", economysim.ErrWrongType, []string{"modules", "storage", "role", "a", "stores", "[0]"}},
+		{"a base with only bulk", minimal + "[modules.storage.base]\nbulk = 300\n", economysim.ErrMissingField, []string{"modules", "storage", "base", "mass"}},
+		{"a role base with only mass", minimal + "[modules.storage.role.a.base]\nmass = 3\n", economysim.ErrMissingField, []string{"modules", "storage", "role", "a", "base", "bulk"}},
+		{"a class with no bulk", minimal + "[modules.storage.class.a]\nmass = 3\n", economysim.ErrMissingField, []string{"modules", "storage", "class", "a", "bulk"}},
 		{"a scalar where a class table", minimal + "[modules.storage.class]\na = 1\n", economysim.ErrWrongType, []string{"modules", "storage", "class", "a"}},
 	}
 	for _, tt := range tests {
