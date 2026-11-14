@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"errors"
+	"log/slog"
 	"slices"
 	"strconv"
 	"strings"
@@ -621,5 +622,93 @@ func TestValidateSettlements_ClassListsAreBounded(t *testing.T) {
 				t.Errorf("Validate() reported a finding per element: %v", err)
 			}
 		})
+	}
+}
+
+// isSettlementsRule reports whether rule is one of the eight warnings of
+// spec-settlements.md 9.2.
+func isSettlementsRule(rule string) bool {
+	switch rule {
+	case "needs_unmet_at_start", "ceiling_below_start", "dwell_below_window", "band_one_household",
+		"threshold_collapsed", "class_unreachable", "flag_unused", "limit_unused":
+		return true
+	}
+	return false
+}
+
+// TestSettlements_WarningsAreLogged verifies that each configuration warning of the
+// settlements module reaches the injected logger once, at Warn, with the constant
+// message and the rule and the dotted path of the warning, before "world created",
+// that the lines are the ones World.Warnings returns, and that a configuration that
+// draws none logs none of them.
+//
+// Guard: the warnings are the only signal of a settlements configuration that is valid
+// but leaves a role without its class flag or above its ceiling, and a consumer that
+// never calls Warnings sees them only in the log; without this test a change to the
+// construction line could drop them silently.
+//
+// Requirement: FR-SET-028
+func TestSettlements_WarningsAreLogged(t *testing.T) {
+	t.Parallel()
+	c := settlementsConfig()
+	c.Modules.Settlements.Classes[2].Flags = nil
+	roleOf(&c, "grower").Needs = "fair"
+	c.Modules.Settlements.Classes[2].Limits[0].Value = 20
+	c.Modules.Settlements.Dwell = 1
+	c.Modules.Settlements.Classes[1].Flags = append(c.Modules.Settlements.Classes[1].Flags, "hall")
+	h := newCaptureHandler()
+	w, err := economysim.NewWorld(c, economysim.WithLogger(slog.New(h)))
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil (a warning never fails construction)", err)
+	}
+	var want []string
+	for _, wn := range w.Warnings() {
+		if isSettlementsRule(wn.Rule) {
+			want = append(want, wn.Rule+"@"+strings.Join(wn.Path, "."))
+		}
+	}
+	for _, rule := range []string{"needs_unmet_at_start", "ceiling_below_start", "dwell_below_window", "flag_unused"} {
+		if !slices.ContainsFunc(want, func(s string) bool { return strings.HasPrefix(s, rule+"@") }) {
+			t.Fatalf("Warnings() = %v, want a %s warning for the scenario to mean anything", want, rule)
+		}
+	}
+	var got []string
+	created := -1
+	for i, l := range h.sink.lines {
+		if l.msg == "world created" {
+			created = i
+		}
+		if l.level == slog.LevelError {
+			t.Errorf("log line %v at Error, want none", l)
+		}
+		if l.level != slog.LevelWarn {
+			continue
+		}
+		attrs := map[string]string{}
+		for _, a := range l.attrs {
+			attrs[a.Key] = a.Value.String()
+		}
+		if !isSettlementsRule(attrs["rule"]) {
+			continue
+		}
+		if l.msg != "configuration warning" || created >= 0 {
+			t.Errorf("settlements warning line %v (after \"world created\": %v), want message %q before the summary", l, created >= 0, "configuration warning")
+		}
+		got = append(got, attrs["rule"]+"@"+attrs["path"])
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("logged settlements warnings = %v, want World.Warnings() = %v", got, want)
+	}
+
+	quiet := newCaptureHandler()
+	if _, err := economysim.NewWorld(settlementsConfig(), economysim.WithLogger(slog.New(quiet))); err != nil {
+		t.Fatalf("NewWorld(valid settlements) error = %v, want nil", err)
+	}
+	for _, l := range quiet.sink.lines {
+		for _, a := range l.attrs {
+			if a.Key == "rule" && isSettlementsRule(a.Value.String()) {
+				t.Errorf("a clean settlements configuration logged %v, want no settlements warning", l)
+			}
+		}
 	}
 }
