@@ -13,12 +13,14 @@ import "github.com/Whealinghold/economy-sim/internal/ledger"
 
 // claimsLimit is the most open claims the ledger takes: the module's MaxClaims, and
 // 0 for the module off, which makes the ledger refuse any claim (nil-safe, so the
-// call in newLedger holds no branch).
+// call in newLedger holds no branch). Validate holds MaxClaims to MaxOpenClaims; the
+// cut here keeps the narrowing to int from wrapping on a value it refused, and a
+// negative one reaches the ledger, which refuses it.
 func (m *Credit) claimsLimit() int {
 	if m == nil {
 		return 0
 	}
-	return int(m.MaxClaims)
+	return int(min(m.MaxClaims, MaxOpenClaims))
 }
 
 // creditReasons are the ledger reasons the credit module declares, in the order of

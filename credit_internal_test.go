@@ -222,3 +222,35 @@ func TestClaimsLimit(t *testing.T) {
 		t.Errorf("claimsLimit = %d, want 42", got)
 	}
 }
+
+// TestClaimsLimit_Saturates verifies that a MaxClaims above MaxOpenClaims, which
+// Validate refuses, is cut to the bound rather than narrowed to an int that could
+// wrap on a 32-bit platform, and that a negative one reaches the ledger as it is, to
+// be refused there.
+//
+// Requirement: FR-CRD-002
+//
+// Fix: dp3-crd-1. The conversion int(MaxClaims) was unbounded: on a 32-bit int,
+// 1<<32 + 5 became 5, a limit that no configuration had asked for.
+func TestClaimsLimit_Saturates(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		max  int64
+		want int
+	}{
+		{"at the bound", MaxOpenClaims, MaxOpenClaims},
+		{"above the bound", MaxOpenClaims + 1, MaxOpenClaims},
+		{"far above the bound", 1<<32 + 5, MaxOpenClaims},
+		{"largest int64", 1<<63 - 1, MaxOpenClaims},
+		{"negative", -1, -1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := (&Credit{MaxClaims: tt.max}).claimsLimit(); got != tt.want {
+				t.Errorf("claimsLimit(MaxClaims %d) = %d, want %d", tt.max, got, tt.want)
+			}
+		})
+	}
+}
