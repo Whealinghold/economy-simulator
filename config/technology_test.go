@@ -3,6 +3,7 @@ package config_test
 import (
 	"os"
 	"reflect"
+	"strconv"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -190,4 +191,41 @@ func TestLoad_TechnologyOverlays(t *testing.T) {
 			t.Errorf("technology-four on three with the trade edges raises %v, want none of the module's", w)
 		}
 	}
+}
+
+// FuzzLoadTechnology verifies, for random field tables, that the loader never
+// panics, that a rejected document returns an error, that an accepted one loads
+// again to an equal Config with an equal hash, that Validate does not panic, and that
+// a field that validates has a recipe, a cap above 0 and no value an off mechanism
+// does not use (spec-technology.md 3.1.2).
+//
+// Requirement: FR-TEC-002, FR-TEC-003, FR-CFG-024
+func FuzzLoadTechnology(f *testing.F) {
+	f.Add("farming", "grow_staple", int64(3000), int64(1000), int64(300), int64(100), int64(0), int64(0), int64(0), int64(0))
+	f.Add("crafts", "make_tool_a", int64(2000), int64(0), int64(0), int64(0), int64(5000), int64(100), int64(2000), int64(250))
+	f.Add("", "", int64(0), int64(-1), int64(-1), int64(-1), int64(-1), int64(-1), int64(-1), int64(-1))
+	f.Add("x", "nowhere", int64(1)<<62, int64(1)<<62, int64(1)<<62, int64(1)<<62, int64(1)<<62, int64(1)<<62, int64(1)<<62, int64(1)<<62)
+	f.Fuzz(func(t *testing.T, id, recipe string, capBP, base, doubling, trend, discovery, step, catchUp, reach int64) {
+		doc := minimal + "[modules.technology.field." + strconv.Quote(id) + "]\nrecipes = [ " + strconv.Quote(recipe) + " ]\ncap_bp = " + strconv.FormatInt(capBP, 10) +
+			"\nbase = " + strconv.FormatInt(base, 10) + "\ndoubling_bp = " + strconv.FormatInt(doubling, 10) + "\ntrend_bp = " + strconv.FormatInt(trend, 10) +
+			"\ndiscovery_bp = " + strconv.FormatInt(discovery, 10) + "\nstep_bp = " + strconv.FormatInt(step, 10) +
+			"\ncatch_up_bp = " + strconv.FormatInt(catchUp, 10) + "\nreach = " + strconv.FormatInt(reach, 10) + "\n"
+		got, err := parseStrings(doc)
+		if err != nil {
+			return
+		}
+		again, err := parseStrings(doc)
+		if err != nil || !reflect.DeepEqual(got, again) || economysim.HashConfig(got) != economysim.HashConfig(again) {
+			t.Fatalf("Parse(%q) is not repeatable: %v", doc, err)
+		}
+		if got.Validate() != nil || got.Modules.Technology == nil {
+			return
+		}
+		for _, fd := range got.Modules.Technology.Fields {
+			if len(fd.Recipes) == 0 || fd.CapBP <= 0 || (fd.DoublingBP == 0) != (fd.Base == 0) ||
+				(fd.DiscoveryBP == 0) != (fd.StepBP == 0) || (fd.CatchUpBP == 0) != (fd.Reach == 0) {
+				t.Fatalf("Validate accepted the field %+v of %q, want a shape that 3.1.2 allows", fd, doc)
+			}
+		}
+	})
 }
