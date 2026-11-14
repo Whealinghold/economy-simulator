@@ -14,6 +14,7 @@ internal/calibration 90
 internal/checked 90
 internal/clearing 90
 internal/codec 90
+internal/credit 90
 internal/curve 90
 internal/design 90
 internal/employment 90

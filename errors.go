@@ -592,3 +592,14 @@ var (
 	// ErrUnknownLimit is a Role.Ceiling naming a limit that no class carries.
 	ErrUnknownLimit = errors.New("unknown settlement limit")
 )
+
+// The sentinels of the credit module (spec-credit.md 15.1, FR-CRD-010). The module
+// reuses ErrOutOfBounds, ErrModuleDependency, ErrReasonCollision, ErrMissingField,
+// ErrUnknownRole, ErrDuplicateID and ErrModuleOff. The ledger's ErrOpenClaim and
+// ErrTooManyClaims are mapped at the call that raises them, with the module's
+// calls (N-075).
+var (
+	// ErrCreditShape is a CreditTerms with both Lend and Borrow, or with neither: a
+	// role lends or borrows, never both.
+	ErrCreditShape = errors.New("credit block has the wrong shape")
+)

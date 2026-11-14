@@ -316,3 +316,10 @@ func DefaultSettlements() Settlements { return Settlements{BandBP: 1_000, Dwell:
 func DefaultRegionSettlement(region string) RegionSettlement {
 	return RegionSettlement{Region: region, ThresholdBP: 10_000}
 }
+
+// The credit module (spec-credit.md 4.1.2, 14) has no tunable with a non-nil
+// default and no default macro constant (N-027): MinPrincipal and MaxClaims are
+// required, ShieldTicks, WriteOffTicks, KeepTicks and SlackTicks default to 0 (no
+// shield, never written off, no keep, no slack), and a rate is required and never
+// defaulted, 0 being interest-free. Its bounds are in bounds.go (MaxCreditRateBP,
+// MaxCreditTerm, MaxOpenClaims).

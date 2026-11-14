@@ -56,7 +56,7 @@ func TestCanonical_ClassesSortedByEnterNotID(t *testing.T) {
 // TestHash_SettlementsFieldIds verifies the bytes of the module under id 11 of the
 // Modules row (between Merchants 10 and Storage 12), that the pointer is written
 // even when empty, that the fields have the ids spec-config.md 8.2.2 gives and that
-// Role.Needs and Role.Ceiling take 25 and 26.
+// Role.Needs and Role.Ceiling take 26 and 27.
 //
 // Requirement: FR-SET-030
 //
@@ -95,7 +95,7 @@ func TestHash_SettlementsFieldIds(t *testing.T) {
 
 	e = &encoder{}
 	pairsRole(e, Role{ID: "x", Needs: "n", Ceiling: "k"}, false, false)
-	tail := bytes.Join([][]byte{id(25), str("n"), id(26), str("k")}, nil)
+	tail := bytes.Join([][]byte{id(26), str("n"), id(27), str("k")}, nil)
 	if !bytes.HasSuffix(e.buf, tail) {
 		t.Errorf("pairsRole(Needs, Ceiling) = % x, want it to end with % x", e.buf, tail)
 	}

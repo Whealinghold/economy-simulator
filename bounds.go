@@ -556,3 +556,18 @@ const (
 	// basis points: ten times, as MaxYieldBP.
 	MaxThresholdBP = 100_000
 )
+
+// The bounds of the credit module (spec-credit.md 14). All three are placeholders
+// (N-015, N-027).
+const (
+	// MaxCreditRateBP is the largest yearly rate of a lender, of a borrower's limit
+	// and of an effective rate: ten times the principal a year. A rate above it is a
+	// typing error, and with MaxCreditTerm and MaxMoney the interest product fits 128
+	// bits.
+	MaxCreditRateBP = 100_000
+	// MaxCreditTerm is the longest term, shield, write-off, keep and slack, in ticks:
+	// ten years of daily ticks. spec-insurance.md reuses it for PayoutTicks.
+	MaxCreditTerm = 3_650
+	// MaxOpenClaims is the most open claims at once, the bound of Credit.MaxClaims.
+	MaxOpenClaims = 1_000_000
+)

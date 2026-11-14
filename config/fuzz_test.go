@@ -132,3 +132,22 @@ func classified(err error) bool {
 	}
 	return len(ves)+len(vias) > 0
 }
+
+// FuzzLoadCredit is FuzzLoad with the seeds of the credit module: a [modules.credit]
+// table and the Lend and Borrow blocks in every shape the loader reads, and
+// documents that break each key of them. It asserts the same properties, so the
+// module and its blocks never panic the loader or leave a Config that does not load
+// again equal.
+//
+// Fix: the corpus file testdata/fuzz/FuzzLoadCredit/fbadeaa91c3b9758, a role with an
+// empty credit table, is ErrCreditShape from Validate, which the sentinels the
+// property accepts did not name.
+//
+// Requirement: FR-CFG-024, FR-CRD-011, NFR-CFG-002
+func FuzzLoadCredit(f *testing.F) {
+	f.Add([]byte(creditDoc), []byte(minimal+"[modules.credit]\n"), []byte(nil))
+	f.Add([]byte(creditSame), []byte("[modules.credit]\nmax_claims = 1.5\n"), []byte("[role.cook.credit.lend]\nrate_bp = \"1\"\n"))
+	f.Add([]byte(minimal+"[role.a.credit.lend]\nmax_term_ticks = 1\n"), []byte("[role.a.credit.borrow]\n"), []byte("[role]\na = 1\n"))
+	f.Add([]byte(minimal+"[role.a.credit]\n"), []byte("[role.a]\ncredit = 1\n"), []byte("[modules]\ncredit = 1\n"))
+	f.Fuzz(loadProperties)
+}
