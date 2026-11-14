@@ -55,6 +55,10 @@ var skipFields = []string{
 	// lots of the account being read, exitTick.sets, sums and unskilled the role
 	// summaries it fills through fillRoles. All are rebuilt before each use.
 	"World.lotBuf", "estates.lots", "exitTick.sets", "exitTick.sums", "exitTick.unskilled",
+	// storage.world is the back pointer to the world, and storage.jobLoad, jobPrin and
+	// held are the pledge of the jobs, derived from the jobs the walk already hashes
+	// and never saved (storage_commit.go).
+	"storage.world", "storage.jobLoad", "storage.jobPrin", "storage.held",
 	// popState.snap is the snapshot's scratch, rebuilt before each use, and
 	// popState.figures is derived from cfg alone (population.go).
 	"popState.snap", "popState.figures",

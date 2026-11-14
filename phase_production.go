@@ -416,6 +416,17 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 		}
 		return nil
 	}
+	w.noteStarted(a, region, ask, res)
+	if done, _ := a.job.advance(); done {
+		w.finishJob(a, region)
+	}
+	return nil
+}
+
+// noteStarted is what the world records of a start that began: the draws on the
+// endowments, the own-use count, the wear of the tools, the working ticks and the
+// pledge of the storage module.
+func (w *World) noteStarted(a *agent, region RegionID, ask *jobAsk, res startResult) {
 	if w.res != nil {
 		w.takeDraws(ask.first, ask.draws, res.k)
 	}
@@ -429,10 +440,6 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 	if w.sto != nil {
 		w.startedStorage(a, region, res)
 	}
-	if done, _ := a.job.advance(); done {
-		w.finishJob(a, region)
-	}
-	return nil
 }
 
 // p28aHalted is P2.8a: the aggregates of the work decision, only when an
