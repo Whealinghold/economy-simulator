@@ -126,8 +126,12 @@ func decide(r, o *Row, minPrincipal int64) verdict {
 	case o.RateBP > r.RateBP:
 		return verdict{what: stepEnd} // ascending rates: no lender at the price
 	}
-	if x := min(r.Principal, o.Principal); x >= minPrincipal {
+	x := min(r.Principal, o.Principal)
+	switch {
+	case x >= minPrincipal:
 		return verdict{what: stepFill, x: x}
+	case x == r.Principal:
+		return verdict{what: stepEnd} // the remainder is below the minimum for every later offer too
 	}
 	return verdict{what: stepSkip}
 }

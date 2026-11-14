@@ -294,12 +294,13 @@ func pairsSeasonYield(e *encoder, s SeasonYield) {
 	e.num(2, s.BP)
 }
 
-// pairsRole writes the pairs of a Role: ids 1 to 24. Label is presentation only
+// pairsRole writes the pairs of a Role: ids 1 to 25. Label is presentation only
 // and has no id. Informed 19 is the information module's and is a pair only
 // while it is on (informationOn) and the flag is true; Fixed 20 is the migration
 // module's, on the same terms (migrationOn); MerchantFeeShare 21 and Merchant 22
 // are the merchants', pairs only when the block is non-nil; Hireable 23 is a pair
-// only when true and Employer 24 only when non-nil (the employment module's).
+// only when true and Employer 24 only when non-nil (the employment module's);
+// Credit 25 only when non-nil (the credit module's).
 func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	e.text(1, r.ID)
 	e.texts(2, r.Recipes)
