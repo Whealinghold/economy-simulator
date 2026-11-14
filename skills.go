@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
@@ -142,7 +143,7 @@ func (s *skills) holds(a *agent, skip []string) bool {
 // admits an agent once and takes it out of the queue first.
 func (s *skills) start(trainee, trainer AgentID, role RoleID, served, applied int64) {
 	if trainee == trainer || s.isTrainee(trainee) || s.isTrainer(trainee) || s.isTrainee(trainer) {
-		invariant("a traineeship was started for an agent that is a trainee, a trainer with trainees or its own trainer")
+		invariant(fmt.Sprintf("a traineeship was started for an agent that is a trainee, a trainer with trainees or its own trainer (trainee %d, trainer %d)", trainee, trainer))
 	}
 	s.grow(max(trainee, trainer))
 	s.trainee[trainee] = traineeRec{trainer: trainer, role: role, served: served, applied: applied, live: true}
@@ -223,7 +224,7 @@ func (s *skills) dequeue(id AgentID) bool {
 			return true
 		}
 	}
-	invariant("an agent marked as queued is in no queue")
+	invariant(fmt.Sprintf("agent %d is marked as queued but is in no queue (cell %d)", id, cell))
 	return false
 }
 

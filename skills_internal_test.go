@@ -3,6 +3,7 @@ package economysim
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -203,6 +204,29 @@ func TestSkills_StartEndKeepTrainersInOrder(t *testing.T) {
 		if msg := invariantMessage(f); msg == "" {
 			t.Errorf("start with %s did not panic, want a violated invariant", name)
 		}
+	}
+	want := fmt.Sprintf("(trainee %d, trainer %d)", c.homeMillers[0], c.homeWeaver)
+	if msg := invariantMessage(func() { s.start(c.homeMillers[0], c.homeWeaver, 1, 0, 1) }); !strings.Contains(msg, want) {
+		t.Errorf("start invariant message = %q, want it to name %q", msg, want)
+	}
+}
+
+// TestSkills_InvariantsNameTheAgent verifies that the violated invariants of the
+// queue and of a completion say which agent they concern, so a panic in a large
+// run is localised without a replay.
+//
+// Requirement: FR-SKL-012
+func TestSkills_InvariantsNameTheAgent(t *testing.T) {
+	t.Parallel()
+	w, c := skillsWorld(t, 8)
+	id := c.homeMillers[0]
+	w.skills.grow(id)
+	w.skills.queuedIn[id] = 1 // marked as queued, but in no queue
+	if msg := invariantMessage(func() { w.skills.dequeue(id) }); !strings.Contains(msg, fmt.Sprintf("agent %d is marked as queued", id)) {
+		t.Errorf("dequeue invariant message = %q, want it to name agent %d", msg, id)
+	}
+	if msg := invariantMessage(func() { w.traineeshipCompleted(&w.agents[id], 0, 1) }); !strings.Contains(msg, fmt.Sprintf("agent %d, which is no trainee", id)) {
+		t.Errorf("completion invariant message = %q, want it to name agent %d", msg, id)
 	}
 }
 

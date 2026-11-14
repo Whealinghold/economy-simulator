@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
@@ -88,7 +89,7 @@ func (w *World) completeReady(g RegionID) error {
 // is the order of spec-observability.md 4.4.8.
 func (w *World) traineeshipCompleted(a *agent, g RegionID, to RoleID) {
 	if _, ok := w.skills.end(a.id); !ok {
-		invariant("a traineeship completed for an agent that is no trainee")
+		invariant(fmt.Sprintf("a traineeship completed for agent %d, which is no trainee", a.id))
 	}
 	if w.obs.supplied {
 		w.obs.deliver(TraineeshipCompleted{Tick: w.Tick(), Agent: a.id, Region: g, From: a.role, To: to})
