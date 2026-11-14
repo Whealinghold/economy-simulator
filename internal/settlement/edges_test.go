@@ -151,3 +151,19 @@ func TestEdges_HeadroomLargestNegative(t *testing.T) {
 		t.Errorf("Headroom(MinInt64, 1) = %d, want 0", got)
 	}
 }
+
+// TestEdges_DecideHeldHasATickLeft verifies that a held change always has at least 1
+// tick left, also for a dwell of 0 with a tick before since (a state a restore
+// refuses) and for a negative dwell, which counts as 0.
+func TestEdges_DecideHeldHasATickLeft(t *testing.T) {
+	t.Parallel()
+	for _, dwell := range []int64{0, -5} {
+		got, ok := settlement.Decide(0, 1, 10, 4, dwell)
+		if !ok || got.Kind != settlement.Held || got.TicksLeft != 1 {
+			t.Errorf("Decide(tick before since, dwell %d) = %v, %v, want Held with 1 tick left", dwell, got, ok)
+		}
+	}
+	if got, ok := settlement.Decide(0, 1, 7, 7, -5); !ok || got.Kind != settlement.Changed {
+		t.Errorf("Decide(negative dwell, same tick) = %v, %v, want Changed", got, ok)
+	}
+}
