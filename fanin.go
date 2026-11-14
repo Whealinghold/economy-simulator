@@ -16,6 +16,19 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if err := w.views.fillCore(v, a, &w.tk.vctx); err != nil {
 		return err
 	}
+	w.fillSharedViews(v, a)
+	if kind == viewTrade {
+		w.fillTradeViews(v, a)
+	}
+	if w.sub != nil {
+		return w.sub.fillView(w, v, a, &w.tk.vctx)
+	}
+	return nil
+}
+
+// fillSharedViews is the part of fillAgentView that Work and Trade both see: the
+// groups of the demand, resources and transport modules, in module order.
+func (w *World) fillSharedViews(v *AgentView, a *agent) {
 	if w.demand != nil {
 		w.fillWants(v, a)
 	}
@@ -25,17 +38,19 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if w.transport != nil {
 		w.fillTransport(v, a)
 	}
-	if w.info != nil && kind == viewTrade {
+}
+
+// fillTradeViews is the part of fillAgentView that Trade alone sees: the rumours
+// of the information module and the lanes of a merchant (spec-information.md
+// 6.2.1).
+func (w *World) fillTradeViews(v *AgentView, a *agent) {
+	if w.info != nil {
 		w.fillRumours(v, a)
 		w.recordRumours(v, a)
 	}
-	if w.mer != nil && kind == viewTrade {
+	if w.mer != nil {
 		w.fillMerchantView(v, a)
 	}
-	if w.sub != nil {
-		return w.sub.fillView(w, v, a, &w.tk.vctx)
-	}
-	return nil
 }
 
 // viewKind says which call a view is built for: the rumours of the information
@@ -103,6 +118,15 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 		w.obs.deliver(AgentBankrupted{Tick: tick, Agent: a.id, Region: region, Role: a.role, Weight: a.weight, Cause: cause, Money: money, GoodsListed: lots})
 		w.obs.deliver(EstateOpened{Tick: tick, Agent: a.id, Region: region, Balance: w.estates.pool(w.ledger, region), GoodsListed: lots})
 	}
+	w.dropModules(a)
+	w.logRemoval(a, cause)
+	w.forget(a, region)
+	return nil
+}
+
+// dropModules is the step of a removal that each module takes for the agent it
+// held state for, in module order, after the events (spec-agents.md 3.6).
+func (w *World) dropModules(a *agent) {
 	if w.demand != nil {
 		w.demand.dropAgent(a)
 	}
@@ -113,9 +137,6 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 		w.sub.drop(a.id)
 	}
 	w.dropExternal(a)
-	w.logRemoval(a, cause)
-	w.forget(a, region)
-	return nil
 }
 
 // agentJoined is the first agent-lifecycle fan-in (architecture.md 2.10.4, ADR

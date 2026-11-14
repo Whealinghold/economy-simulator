@@ -64,7 +64,9 @@ func composition(t *testing.T, src, fn string) (calls, problems []string) {
 
 // TestFanIns_AreCompositionsOfTheExpectedCalls verifies the shape of the fan-ins
 // that are built (D195, architecture.md 2.10.4): the body of fillAgentView, checkTradePlan, removeAgent,
-// relocationRefusal and tradableItems is only calls, guards and literals, with no loop and no
+// relocationRefusal and tradableItems, and of the three helpers that split the
+// first and the third below the Lizard limits (N-357: fillSharedViews,
+// fillTradeViews, dropModules), is only calls, guards and literals, with no loop and no
 // arithmetic, and the calls are the expected ones in the expected order. A
 // fan-in has no list to append a test fake to and no hook is allowed (D166), so its
 // composition is tested by shape. What the shape cannot show, that a module step
@@ -85,9 +87,12 @@ func TestFanIns_AreCompositionsOfTheExpectedCalls(t *testing.T) {
 		fn   string
 		want []string
 	}{
-		{"fillAgentView", []string{"fillCore", "fillWants", "fillEndowments", "fillTransport", "fillRumours", "recordRumours", "fillMerchantView", "fillView"}},
+		{"fillAgentView", []string{"fillCore", "fillSharedViews", "fillTradeViews", "fillView"}},
+		{"fillSharedViews", []string{"fillWants", "fillEndowments", "fillTransport"}},
+		{"fillTradeViews", []string{"fillRumours", "recordRumours", "fillMerchantView"}},
 		{"checkTradePlan", []string{"normalisePlan", "checkDiscards", "checkWants", "checkMerchantPlan"}},
-		{"removeAgent", []string{"Tick", "regionOf", "hasJob", "abandonJob", "dropTraveller", "dropJourney", "dropContracts", "Errorf", "receive", "Errorf", "mustClose", "Close", "deliver", "deliver", "pool", "dropAgent", "dropAgent", "drop", "dropExternal", "logRemoval", "forget"}},
+		{"removeAgent", []string{"Tick", "regionOf", "hasJob", "abandonJob", "dropTraveller", "dropJourney", "dropContracts", "Errorf", "receive", "Errorf", "mustClose", "Close", "deliver", "deliver", "pool", "dropModules", "logRemoval", "forget"}},
+		{"dropModules", []string{"dropAgent", "dropAgent", "drop", "dropExternal"}},
 		{"relocationRefusal", []string{"refusal"}},
 		{"tradableItems", []string{"demandItems", "subsistenceItems"}},
 	} {

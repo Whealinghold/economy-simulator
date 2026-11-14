@@ -205,13 +205,19 @@ func ckLines(c *shipCtx) Reason {
 			return ReasonVehicleInCargo
 		}
 	}
-	for i := 1; i < len(c.lines); i++ { // insertion sort: at most MaxShipmentLines
+	c.sortLines()
+	c.t.sorted = c.lines
+	return ""
+}
+
+// sortLines puts the lines in commodity order by insertion sort: at most
+// MaxShipmentLines.
+func (c *shipCtx) sortLines() {
+	for i := 1; i < len(c.lines); i++ {
 		for j := i; j > 0 && c.lines[j].Commodity < c.lines[j-1].Commodity; j-- {
 			c.lines[j], c.lines[j-1] = c.lines[j-1], c.lines[j]
 		}
 	}
-	c.t.sorted = c.lines
-	return ""
 }
 
 // lineCount is rows 12 to 14: lines only where the kind of request takes them, at
