@@ -225,7 +225,8 @@ func (w *World) consigneeAccount(s *shipment) int {
 }
 
 // consigneeHolds reports whether the account can take qty more units of the
-// commodity within MaxQuantity (the room of the storage module is its own seam, 11a).
+// commodity within MaxQuantity (the room of the storage module is checked apart, by
+// cargoFit in deliverLine).
 func (w *World) consigneeHolds(account int, c CommodityID, qty int64) bool {
 	held, _, err := w.ledger.Holding(account, int(c))
 	if err != nil {

@@ -43,7 +43,9 @@ type restoreCtx struct {
 // already hold the checkpoint's state. The error is ErrCheckpointVersion, ErrCheckpointCorrupt,
 // ErrCheckpointConfig, ErrCheckpointExtension, ErrOptionContext (WithSeed is refused:
 // the checkpoint holds the seed, and WithReseed is the way to another continuation)
-// or what NewWorld returns for the configuration.
+// or what NewWorld returns for the configuration. A checkpoint of a world with the
+// storage module on is refused with ErrCheckpointCorrupt until its stores are saved
+// (plan 3-sto Phase 8): the bytes are not damaged, but a restore would lose the stores.
 //
 // The world is at the tick of the checkpoint with the effective seed of its
 // header, or of the reseed. It emits no WorldCreated and no AgentSpawned; an
