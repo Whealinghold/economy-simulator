@@ -405,9 +405,8 @@ func (s *storage) tolerantLoad(lines []Line) (load room.Pair, ok bool) {
 		if ln.Commodity < 0 || int(ln.Commodity) >= len(s.sizes) || ln.Quantity < 1 || ln.Quantity > MaxQuantity {
 			continue
 		}
-		one, okl := s.linesLoad([]Line{ln})
-		var oks bool
-		if load, oks = addPair(load, one); !okl || !oks {
+		var okl bool
+		if load, okl = s.addUnits(load, true, int(ln.Commodity), int64(ln.Quantity)); !okl {
 			return room.Pair{}, false
 		}
 	}

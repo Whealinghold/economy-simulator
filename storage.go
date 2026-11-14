@@ -308,6 +308,7 @@ func (w *World) roleChangedStorage(a *agent, region RegionID) {
 		}
 	}
 	w.syncJob(a)
+	w.repledge(a) // syncJob derives only its job's principals; a's own held and inbound load too
 }
 
 // dropStorage is the step of a removal for the module (spec-storage.md 3.5.1): the
