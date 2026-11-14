@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"errors"
 	"reflect"
 	"strconv"
 	"testing"
@@ -142,6 +143,78 @@ func TestLoad_StorageRejections(t *testing.T) {
 			_, err := parseStrings(tt.doc)
 			if err == nil || !hasError(err, tt.rule, tt.path) {
 				t.Errorf("Parse(%q) errors = %s, want %v at %q", tt.doc, describe(err), tt.rule, tt.path)
+			}
+		})
+	}
+}
+
+// TestLoad_StorageDuplicateClass verifies that a class written twice in one document
+// is a syntax error, and that two layered documents naming one class give one class,
+// the later document's, with the classes of both documents kept.
+//
+// Requirement: FR-CFG-085
+//
+// Guard: the classes are a table keyed by ID, so a repeat can only be a typo in one
+// file or an override in a layer; a loader that appended would give a list with a
+// duplicate ID for the validator to report on a file that has none.
+func TestLoad_StorageDuplicateClass(t *testing.T) {
+	t.Parallel()
+	const a = "[modules.storage.class.a]\nmass = 1\nbulk = 1\n"
+	if _, err := parseStrings(minimal + a + a); !errors.Is(err, economysim.ErrSyntax) {
+		t.Errorf("Parse(class a twice) error = %v, want errors.Is ErrSyntax", err)
+	}
+	got, err := parseStrings(minimal+a, "[modules.storage.class.a]\nmass = 2\nbulk = 2\n[modules.storage.class.b]\nmass = 3\nbulk = 3\n")
+	if err != nil {
+		t.Fatalf("Parse(two layers) error = %v, want nil", err)
+	}
+	want := []economysim.StoreClass{{ID: "a", Mass: 2, Bulk: 2}, {ID: "b", Mass: 3, Bulk: 3}}
+	if !reflect.DeepEqual(got.Modules.Storage.Classes, want) {
+		t.Errorf("Parse(two layers).Classes = %+v, want %+v", got.Modules.Storage.Classes, want)
+	}
+}
+
+// TestLoad_StorageOverBounds verifies that a document that loads and breaks a rule of
+// spec-storage.md 13.1 is reported by Validate with the rule and the path of the key
+// at its path (rows and classes by index in the order written): the loader checks the shape of the file, not the
+// bounds, so a value over MaxRoom or a list over MaxStoresPerAgent is a validation
+// error and not a load error.
+//
+// Requirement: FR-STO-038, FR-STO-002
+func TestLoad_StorageOverBounds(t *testing.T) {
+	t.Parallel()
+	const class = "[modules.storage.class.a]\nmass = 1\nbulk = 1\n"
+	tests := []struct {
+		name string
+		doc  string
+		rule error
+		path []string
+	}{
+		{"a class mass over MaxRoom", minimal + "[modules.storage.class.a]\nmass = 1000000000001\nbulk = 1\n",
+			economysim.ErrStoreShape, []string{"modules", "storage", "classes[0]", "mass"}},
+		{"a class with both capacities 0", minimal + "[modules.storage.class.a]\nmass = 0\nbulk = 0\n",
+			economysim.ErrStoreShape, []string{"modules", "storage", "classes[0]"}},
+		{"a negative base mass", minimal + class + "[modules.storage.base]\nmass = -1\nbulk = 1\n",
+			economysim.ErrOutOfBounds, []string{"modules", "storage", "base", "mass"}},
+		{"a row base bulk over MaxRoom", minimal + class + "[modules.storage.role.x.base]\nmass = 1\nbulk = 1000000000001\n",
+			economysim.ErrOutOfBounds, []string{"modules", "storage", "roles[0]", "base", "bulk"}},
+		{"nine stores", minimal + class + "[modules.storage.role.x]\nstores = [\"a\",\"a\",\"a\",\"a\",\"a\",\"a\",\"a\",\"a\",\"a\"]\n[modules.storage.role.x.base]\nmass = 1\nbulk = 1\n",
+			economysim.ErrOutOfBounds, []string{"modules", "storage", "roles[0]", "stores"}},
+		{"a store class that is not defined", minimal + class + "[modules.storage.role.x]\nstores = [\"b\"]\n[modules.storage.role.x.base]\nmass = 1\nbulk = 1\n",
+			economysim.ErrUnknownStoreClass, []string{"modules", "storage", "roles[0]", "stores[0]"}},
+		{"stores on a row with no base", minimal + class + "[modules.storage.role.x]\nstores = [\"a\"]\n",
+			economysim.ErrNotLimited, []string{"modules", "storage", "roles[0]", "stores"}},
+		{"a row for a role that is not defined", minimal + class + "[modules.storage.role.x]\n",
+			economysim.ErrUnknownRole, []string{"modules", "storage", "roles[0]", "role"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cfg, err := parseStrings(tt.doc)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v, want nil: the bounds are Validate's", tt.doc, err)
+			}
+			if err := cfg.Validate(); !hasError(err, tt.rule, tt.path) {
+				t.Errorf("Validate() errors = %s, want %v at %q", describe(err), tt.rule, tt.path)
 			}
 		})
 	}
