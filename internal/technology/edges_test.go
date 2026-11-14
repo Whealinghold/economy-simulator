@@ -187,3 +187,76 @@ func TestStep_OneCellOfTwoDiscovers(t *testing.T) {
 		t.Errorf("discoveries = %v, want %v (cell 0 idle, cell 1 field with the rate off, cell 2 practises, cell 3 field with the rate off)", got, want)
 	}
 }
+
+// TestFrontier_ScansPastARegionOutOfContact verifies that a region with no weight (at
+// or past the reach) does not end the scan: the frontier still reads the regions after
+// it.
+//
+// Requirement: FR-TEC-013
+func TestFrontier_ScansPastARegionOutOfContact(t *testing.T) {
+	t.Parallel()
+	dist := func(a, b int) (int64, bool) { return map[int]int64{0: 500, 1: 10}[a], true }
+	// Region 0 is 500 away (reach 100: no weight) and region 1 is 10 away (w 9 000).
+	if got := technology.Frontier(2, []int64{9000, 2000, 0}, 100, dist); got != 1800 {
+		t.Errorf("Frontier(2) = %d, want 1800 (2000 * 9000 / 10000): the region out of reach must not stop the scan", got)
+	}
+}
+
+// TestStep_FieldsAreIndependent verifies that a field with a mechanism off does not end
+// the pass of the mechanisms over the fields after it: the first field has no trend,
+// no discovery and no diffusion, the second has all three, and the second's cells
+// receive them.
+//
+// Requirement: FR-TEC-008, FR-TEC-009, FR-TEC-015
+func TestStep_FieldsAreIndependent(t *testing.T) {
+	t.Parallel()
+	fields := []technology.Field{
+		{CapBP: 1000},
+		{CapBP: 100_000, TrendBP: 365, DiscoveryBP: 10_000 * 365, StepBP: 5, CatchUpBP: 10_000, Reach: 100},
+	}
+	in := technology.Input{
+		Cells:    []technology.Cell{{}, {Advance: 4000}, {}, {}},
+		Counters: []int64{0, 0, 0, 1}, TrendCarry: make([]int64, 2), Fields: fields,
+		Regions: 2, TicksPerYear: 365, MaxExperience: 1 << 50,
+		Dist: func(a, b int) (int64, bool) { return 10, true },
+	}
+	out := make([]technology.Result, 4)
+	var s technology.Scratch
+	if !technology.Step(in, &s, out) {
+		t.Fatalf("Step refused")
+	}
+	// Field 1: the trend adds 365 / 365 = 1 to both cells; the practising cell (region
+	// 1) discovers 5; region 0 starts at 4 000 and region 1 at 0. The frontier of
+	// region 1 is 4 001 * 9 000 / 10 000 = 3 600 and its gap 3 600 - 6 = 3 594; at 10 000
+	// bp a year the carry is 3 594 * 10 000 = 35 940 000 over 3 650 000, so it adds 9.
+	if out[1].Trend != 1 || out[3].Trend != 1 || out[3].Discovery != 5 || out[3].CatchUp != 9 || out[0].Trend != 0 {
+		t.Errorf("results %+v, want the second field's mechanisms applied to its cells and none to the first", out)
+	}
+}
+
+// TestStep_AMissedHitDoesNotEndTheScan verifies that a practising cell that does not
+// discover leaves the cells after it their chance: for a key at which the first of two
+// practising cells misses and the second hits at a rate of one half, only the second
+// discovers.
+//
+// Requirement: FR-TEC-009
+func TestStep_AMissedHitDoesNotEndTheScan(t *testing.T) {
+	t.Parallel()
+	const rate, tpy = 10_000 * 365 / 2, 365
+	key := uint64(0)
+	for ; technology.Hit(key, 0, 0, 2, rate, tpy) || !technology.Hit(key, 0, 1, 2, rate, tpy); key++ {
+		if key > 1000 {
+			t.Fatalf("no key below 1000 misses on cell 0 and hits on cell 1")
+		}
+	}
+	in := technology.Input{
+		Cells: make([]technology.Cell, 2), Counters: []int64{1, 1}, TrendCarry: make([]int64, 1),
+		Fields: []technology.Field{{CapBP: 1000, DiscoveryBP: rate, StepBP: 3}}, Regions: 2,
+		TicksPerYear: tpy, MaxExperience: 1 << 50, Key: key,
+	}
+	out := make([]technology.Result, 2)
+	var s technology.Scratch
+	if !technology.Step(in, &s, out) || out[0].Discoveries != 0 || out[1].Discoveries != 1 {
+		t.Errorf("results %+v, want only the second cell to discover (key %d)", out, key)
+	}
+}
