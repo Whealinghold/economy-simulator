@@ -355,10 +355,11 @@ func (w *World) fillAgentSkills(row *RegionAgent, a *agent) {
 //
 // It draws nothing.
 func (w *World) dropAgent(a *agent) {
-	s, region := w.skills, w.regionOf(a)
+	s := w.skills
 	if s == nil {
 		return
 	}
+	region := w.regionOf(a)
 	s.dequeue(a.id)
 	if s.isTrainer(a.id) {
 		s.drop = append(s.drop[:0], s.trainer[a.id].trainees...)
