@@ -128,7 +128,7 @@ func (v *validator) storageStores(p []string, r RoleRoom, classes map[string]boo
 	}
 }
 
-// storageBasePath is the path of the base room that storageBaseOf resolved.
+// storageBasePath is the path of the base room that Storage.baseOf resolved.
 func storageBasePath(row int) []string {
 	if row < 0 {
 		return []string{"modules", "storage", "base"}
