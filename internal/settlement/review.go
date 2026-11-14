@@ -83,11 +83,9 @@ func Decide(c, target int, since, t, dwell int64) (o Outcome, ok bool) {
 	if elapsed >= dwell {
 		return Outcome{Kind: Changed}, true
 	}
-	left, ok := checked.Sub(dwell, max(elapsed, 0))
-	if !ok {
-		return Outcome{}, false
-	}
-	return Outcome{Kind: Held, TicksLeft: left}, true
+	// elapsed < dwell here, so dwell is above 0 and dwell less a non-negative
+	// elapsed cannot overflow.
+	return Outcome{Kind: Held, TicksLeft: dwell - max(elapsed, 0)}, true
 }
 
 // clampClass limits a class index to 0 through n-1 (0 for no class).
