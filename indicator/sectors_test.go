@@ -73,6 +73,23 @@ func TestSectors_MoneyByHolderAndNetWorth(t *testing.T) {
 	}
 }
 
+// TestSectors_TreasuryMoneyInRow verifies that the treasury money of a region's
+// snapshot row reaches the sector row and its total.
+//
+// Requirement: FR-IND-018
+func TestSectors_TreasuryMoneyInRow(t *testing.T) {
+	w, open, closing := workedWindow(t)
+	withMoney(&open, &closing, [4]economysim.Money{4900, 800, 2000, 0}, [4]economysim.Money{5000, 800, 1980, 0}, 100)
+	closing.Regions[0].MoneyTreasury = 300
+	got, err := indicator.Sectors(w, open, closing, valleyTable(t, w, alphaP, alphaP))
+	if err != nil {
+		t.Fatalf("Sectors() error = %v, want nil", err)
+	}
+	if a := got.Regions[0]; a.MoneyTreasury != 300 || a.Money != 6100 {
+		t.Errorf("Sectors().alpha treasury = %d (total %d), want 300 (6100)", a.MoneyTreasury, a.Money)
+	}
+}
+
 // TestSectors_Misuse verifies that snapshots with a different number of regions
 // than the window are refused.
 //

@@ -613,14 +613,14 @@ func (p *polity) fundTreasuries(l *ledger.Ledger) error {
 	if p == nil {
 		return nil
 	}
+	from, ok := l.Boundary(ledger.Initial, ledger.Money)
+	if !ok {
+		return errors.New("the ledger has no boundary account for the reason initial")
+	}
 	for i := range p.tr {
 		t := &p.tr[i]
 		if t.start <= 0 {
 			continue
-		}
-		from, ok := l.Boundary(ledger.Initial, ledger.Money)
-		if !ok {
-			return errors.New("the ledger has no boundary account for the reason initial")
 		}
 		if err := l.Transfer(from, t.account, int64(t.start), ledger.Initial); err != nil {
 			return fmt.Errorf("fund the treasury of jurisdiction %d: %w", t.j, err)
