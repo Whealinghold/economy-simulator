@@ -408,3 +408,39 @@ func TestGatherHosts_SkipsAgentsOfTheTraineeships(t *testing.T) {
 		t.Errorf("hosts of the weaver role = %v, want none (a trainer with trainees)", w.ex.hostAt)
 	}
 }
+
+// TestView_SkillFields verifies the traineeship fields of the region view of a
+// world that holds some: the queue ahead of a role, the trainers that can still take
+// a trainee and the places each holds, and for each agent whether it is a trainee, in
+// a traineeship (a trainee, or a trainer with trainees) or queued.
+//
+// Arithmetic: home has the weaver (4) with the trainee miller 1 and the queued
+// millers 2 and 3, so for the weaver role QueueAhead is 2, MaxTrainees 3 and Trainers
+// 1 (the weaver; a trainee or a queued agent is no trainer). A weaver with trainees
+// still counts as a trainer, its places being what it has left.
+//
+// Requirement: FR-SPN-002
+func TestView_SkillFields(t *testing.T) {
+	t.Parallel()
+	w, c := trainingWorld(t, 3)
+	m := c.homeMillers
+	w.skills.start(m[0], c.homeWeaver, 1, 0, 0)
+	w.skills.enqueue(w.skills.cell(0, 1), applicant{agent: m[1], applied: 1})
+	w.skills.enqueue(w.skills.cell(0, 1), applicant{agent: m[2], applied: 2})
+	v := w.buildRegionView(0)
+	if r := v.Roles[1]; r.QueueAhead != 2 || r.MaxTrainees != 3 || r.Trainers != 1 {
+		t.Errorf("weaver role view = queue ahead %d, max trainees %d, trainers %d, want 2, 3, 1", r.QueueAhead, r.MaxTrainees, r.Trainers)
+	}
+	if r := v.Roles[0]; r.QueueAhead != 0 || r.MaxTrainees != 0 || r.Trainers != 0 {
+		t.Errorf("miller role view = queue ahead %d, max trainees %d, trainers %d, want none: no training", r.QueueAhead, r.MaxTrainees, r.Trainers)
+	}
+	want := map[AgentID][3]bool{ // trainee, in a traineeship, queued
+		m[0]: {true, true, false}, m[1]: {false, false, true}, m[2]: {false, false, true},
+		c.homeWeaver: {false, true, false},
+	}
+	for _, a := range v.Agents {
+		if got := [3]bool{a.Trainee, a.InTraineeship, a.Queued}; got != want[a.Agent] {
+			t.Errorf("agent %d: trainee, in traineeship, queued = %v, want %v", a.Agent, got, want[a.Agent])
+		}
+	}
+}

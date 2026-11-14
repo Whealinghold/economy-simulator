@@ -289,3 +289,56 @@ func TestSkills_SeededOpSequencesKeepTheInvariants(t *testing.T) {
 		t.Errorf("over 5 seeds: %+v, want each of started, completed, trainer_left and agent_left endings and the removal of a trainer, of a trainee and of an applicant above 0", all)
 	}
 }
+
+// TestSkills_QueueOrderIsInsertionIndependent verifies, over 50 seeded shuffles of
+// 12 applicants with ties in ticks served and application tick, that enqueue gives
+// the order of skill.Requeue whatever the insertion order, that the queue marker of
+// each agent names its cell, and that taking agents out in a random order leaves the
+// rest in that order.
+//
+// Arithmetic: ticks served come from {0, 2}, application ticks from {1, 2, 3}, so
+// with 12 agents many entries tie on both and only the agent ID separates them.
+//
+// Requirement: FR-SKL-017, FR-SKL-020
+func TestSkills_QueueOrderIsInsertionIndependent(t *testing.T) {
+	t.Parallel()
+	for seed := uint64(1); seed <= 50; seed++ {
+		rng := rand.New(rand.NewPCG(seed, 0x0de5))
+		s := &skills{roles: 2, queue: make([][]applicant, 4)}
+		aps := make([]applicant, 12)
+		for i := range aps {
+			aps[i] = applicant{agent: AgentID(i + 1), applied: int64(1 + rng.IntN(3)), served: int64(2 * rng.IntN(2))}
+		}
+		want := slices.Clone(aps)
+		slices.SortFunc(want, func(a, b applicant) int {
+			switch {
+			case skill.Requeue(a.rule(), b.rule()):
+				return -1
+			case skill.Requeue(b.rule(), a.rule()):
+				return 1
+			}
+			return 0
+		})
+		rng.Shuffle(len(aps), func(i, j int) { aps[i], aps[j] = aps[j], aps[i] })
+		for _, ap := range aps {
+			s.enqueue(3, ap)
+		}
+		if !slices.Equal(s.queue[3], want) {
+			t.Fatalf("seed %d: queue = %+v, want %+v", seed, s.queue[3], want)
+		}
+		for _, i := range rng.Perm(len(want))[:5] {
+			s.dequeue(want[i].agent)
+			if s.queued(want[i].agent) {
+				t.Errorf("seed %d: agent %d is still marked as queued after dequeue", seed, want[i].agent)
+			}
+		}
+		if !slices.IsSortedFunc(s.queue[3], func(a, b applicant) int {
+			if skill.Requeue(a.rule(), b.rule()) {
+				return -1
+			}
+			return 1
+		}) || len(s.queue[3]) != 7 {
+			t.Errorf("seed %d: queue after 5 removals = %+v, want 7 entries in queue order", seed, s.queue[3])
+		}
+	}
+}
