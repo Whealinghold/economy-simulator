@@ -32,10 +32,12 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if w.mer != nil && kind == viewTrade {
 		w.fillMerchantView(v, a)
 	}
-	w.fillBoard(v, a)
 	if w.sub != nil {
-		return w.sub.fillView(w, v, a, &w.tk.vctx)
+		if err := w.sub.fillView(w, v, a, &w.tk.vctx); err != nil {
+			return err
+		}
 	}
+	w.fillBoard(v, a)
 	return nil
 }
 
