@@ -266,7 +266,7 @@ default is **corrupt** (the one-spelling rule of 5.2, R10).
 | 30 | Fiscal | FIS 17 | for each flow in the order of the six lists (taxes, duties, tolls, payouts, purchases, releases, each by ID): for a tax, a duty or a payout with a rate shape the (account ID, carry) pairs in ascending account ID for every open account on which the flow has acted, zeros included; for a purchase or a release one carry, always written; then the scales that are not 10 000 as (flow position, scale), sparse. The treasury's money and goods are the ledger's | `Modules.Fiscal` |
 | 31 | Institutions | ORG 12.2 | the levels that differ from the configured ones as (`ControlID`, `CapBP`, `FloorBP`) in ascending `ControlID`; the suspended rights as `RightID` in ascending order; the run of consecutive ticks with waiting households per (region, body) that has one, sparse. Zero rows when nothing differs. The membership is in section 3 | `Modules.Institutions` |
 | 32 | Policy | PLC 13.1 | for each `directed` actor with a non-empty mailbox, in ascending `ActorID`: the actor, the count of settings, then each setting in ascending `LeverID` as the lever, the value and the closed flag. Sparse | `Modules.Policy` |
-| 33 | Technology | TEC 12.1 | for each (region, field) cell in ascending (`RegionID`, `TechFieldID`): `Experience`, `Advance`, `CatchUp` (the count is `R * F` from the configuration and is not written); for each field in ascending order: `TrendCarry`; then `Key` (unsigned, 64 bits), **present only when some field has `DiscoveryBP` above 0** | `Modules.Technology` |
+| 33 | Technology | TEC 12.1 | for each (region, field) cell in ascending (`RegionID`, `TechFieldID`): `Experience`, `Advance`, `CatchUp` (the count is `R * F` from the configuration and is not written); for each field in ascending order: `TrendCarry`; **no key**: the technology key is derived from the effective seed (`spec-technology.md` 4.4.1) | `Modules.Technology` |
 | 34 | Extensions | CHK 7 | for each registered `Stateful` extension in (kind, name) order: kind, name, version, state bytes | always (a count; the built-in **strategy** `directed`, which `spec-integration.md` 4.2.2 builds in as `Directed` over the default, has an entry in every world, empty unless its fallback is `Stateful`; the built-in policy `directed` has none, 7.5) |
 
 4.2.1. **Order.** The tag order is the write order and the restore order. Sections 12
@@ -419,7 +419,7 @@ parameter registry test does for configuration fields.
 | FIS | the dues, the lists of trades of the tick, the cached tolls, the per-agent tax and payout sums and the carry of a closed account (`spec-fiscal.md` 17) |
 | ORG | the resolved rights, the legal ranges in minor units, the scope regions of a body, the headroom and the scratch counts of the tick (`spec-institutions.md` 12.4) |
 | SAV | nothing: the target, the goal, the test and the request are functions of state that other sections hold (4.2.6) |
-| TEC | the gain of a cell, the contact weights and the per-tick counters (`spec-technology.md` 12.1) |
+| TEC | the key, the gain of a cell, the contact weights and the per-tick counters (`spec-technology.md` 12.1) |
 | PLC | the due ticks and buckets, the expanded key lists, the views and the gauges (`spec-policy.md` 13.3) |
 | VIA | nothing: the warm start is configuration and its effect is ordinary state after tick 0 (`spec-viability.md` 18) |
 | WLD | the rotation positions and counts, the failed flag (a failed world is not checkpointed), the in-step guard, the module scratch cleared at P8.6 |
