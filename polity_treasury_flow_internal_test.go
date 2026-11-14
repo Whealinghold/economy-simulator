@@ -67,6 +67,9 @@ func TestPolity_StartMoneyIsExactlyTheInitialIssue(t *testing.T) {
 		}
 		return out
 	}
+	// The base is read once here: Snapshot prepares the anchors of its world, so the
+	// parallel subtests must not call it on a shared world.
+	baseIssued, baseByRegion := base.boundaryFlowMoney(ledger.Initial), initialByRegion(base)
 	zero := treasuryConfig()
 	zero.Modules.Polity.Jurisdictions[0].StartMoney, zero.Modules.Polity.Jurisdictions[1].StartMoney = 0, 0
 	for _, tt := range []struct {
@@ -82,10 +85,10 @@ func TestPolity_StartMoneyIsExactlyTheInitialIssue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			w := newMill(t, tt.cfg, WithAudit())
-			if got, want := w.boundaryFlowMoney(ledger.Initial), base.boundaryFlowMoney(ledger.Initial)+tt.issued; got != want {
+			if got, want := w.boundaryFlowMoney(ledger.Initial), baseIssued+tt.issued; got != want {
 				t.Errorf("initial money issued = %d, want %d (the base's plus %d)", got, want, tt.issued)
 			}
-			got, want := initialByRegion(w), initialByRegion(base)
+			got, want := initialByRegion(w), baseByRegion
 			if got[1]-want[1] != tt.home || got[0]-want[0] != tt.away {
 				t.Errorf("initial money by region differs from the base by home %d, away %d, want %d and %d", got[1]-want[1], got[0]-want[0], tt.home, tt.away)
 			}
