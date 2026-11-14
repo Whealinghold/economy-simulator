@@ -169,6 +169,12 @@ func (w *World) cellOf(region RegionID, a *agent) int {
 	return int(region)*len(w.cfg.Roles) + int(a.role)
 }
 
+// broke raises the violated invariant what for agent id, naming the agent and the
+// tick: a panic deep in a run is otherwise a text with no account to look at.
+func (s *storage) broke(id AgentID, what string) {
+	invariant(fmt.Sprintf("%s (agent %d, tick %d)", what, id, s.world.Tick()))
+}
+
 // grow makes the per-agent slices cover the agent ID.
 func (s *storage) grow(id AgentID) {
 	for len(s.stores) <= int(id) {
@@ -254,14 +260,14 @@ func (s *storage) apply(l *ledger.Ledger, a *agent) error {
 func (s *storage) roomState(l *ledger.Ledger, a *agent) (rm ledger.Room, free room.Pair, ok bool) {
 	rm, err := l.RoomOf(a.account)
 	if err != nil {
-		invariant("the room of an agent's account is unreadable: " + err.Error())
+		s.broke(a.id, "the room of an agent's account is unreadable: "+err.Error())
 	}
 	if !rm.Limited {
 		return rm, room.Pair{}, false
 	}
 	m, b, err := l.FreeRoom(a.account)
 	if err != nil {
-		invariant("the free room of a limited account is unreadable: " + err.Error())
+		s.broke(a.id, "the free room of a limited account is unreadable: "+err.Error())
 	}
 	return rm, room.Pair{Mass: m, Bulk: b}, true
 }
@@ -282,7 +288,7 @@ func (w *World) joinedStorage(a *agent) {
 		return
 	}
 	if err := s.apply(w.ledger, a); err != nil {
-		invariant("the room of a created agent is below its goods: " + err.Error())
+		s.broke(a.id, "the room of a created agent is below its goods: "+err.Error())
 	}
 }
 
@@ -295,7 +301,7 @@ func (w *World) roleChangedStorage(a *agent, region RegionID) {
 	s := w.sto
 	s.ended = s.ended[:0]
 	if err := s.apply(w.ledger, a); err != nil {
-		invariant("the room of an agent that changed role is below its goods: " + err.Error())
+		s.broke(a.id, "the room of an agent that changed role is below its goods: "+err.Error())
 	}
 	if !s.limited(a) {
 		for c := range s.classes {
@@ -395,7 +401,7 @@ func (w *World) addStore(a *agent, class StoreClassID, cause Cause) error {
 	}
 	s.give(a.id, int(class))
 	if err := s.apply(w.ledger, a); err != nil {
-		invariant("a store lowered the room of an account: " + err.Error())
+		s.broke(a.id, "a store lowered the room of an account: "+err.Error())
 	}
 	w.emitStore(a, int(class), KindAdded, cause)
 	return nil
@@ -430,7 +436,7 @@ func (w *World) removeStore(a *agent, class StoreClassID, cause Cause, forced bo
 		}
 	}
 	if err := s.apply(w.ledger, a); err != nil {
-		invariant("the room of an account after a removed store is below its load: " + err.Error())
+		s.broke(a.id, "the room of an account after a removed store is below its load: "+err.Error())
 	}
 	w.emitStore(a, int(class), KindRemoved, cause)
 	return lots, nil

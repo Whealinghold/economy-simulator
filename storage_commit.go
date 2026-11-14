@@ -61,7 +61,7 @@ func (w *World) syncJob(a *agent) {
 	old, op := s.jobLoad[a.id], s.jobPrin[a.id]
 	rest, ok := subPair(s.held[op], old)
 	if !ok {
-		invariant("the pledge of a principal is below the load of a job it pledged")
+		s.broke(a.id, "the pledge of a principal is below the load of a job it pledged")
 	}
 	s.held[op] = rest
 	load, okj := s.pendingLoad(&a.job)
@@ -71,7 +71,7 @@ func (w *World) syncJob(a *agent) {
 	}
 	sum, oks := addPair(s.held[np], load)
 	if !okj || !oks {
-		invariant("the pledge of a principal does not fit int64")
+		s.broke(a.id, "the pledge of a principal does not fit int64")
 	}
 	s.held[np], s.jobLoad[a.id], s.jobPrin[a.id] = sum, load, np
 	w.repledge(&w.agents[op])
@@ -100,10 +100,10 @@ func (w *World) repledge(a *agent) {
 	}
 	p, ok := addPair(s.held[a.id], s.inbound[a.id])
 	if !ok {
-		invariant("the pledge of an account does not fit int64")
+		s.broke(a.id, "the pledge of an account does not fit int64")
 	}
 	if err := w.ledger.SetPledge(a.account, p.Mass, p.Bulk); err != nil {
-		invariant("the ledger refused the pledge of a limited account: " + err.Error())
+		s.broke(a.id, "the ledger refused the pledge of a limited account: "+err.Error())
 	}
 }
 
@@ -133,11 +133,11 @@ func (w *World) cutLoad(a *agent, region RegionID, to room.Pair) (int64, error) 
 	s := w.sto
 	lots, err := w.ledger.AppendLots(nil, a.account)
 	if err != nil {
-		invariant("the account of an agent that loses room is unreadable: " + err.Error())
+		s.broke(a.id, "the account of an agent that loses room is unreadable: "+err.Error())
 	}
 	load, ok := s.loadOfLots(lots)
 	if !ok {
-		invariant("the load of an account does not fit int64")
+		s.broke(a.id, "the load of an account does not fit int64")
 	}
 	if load.Mass <= to.Mass && load.Bulk <= to.Bulk {
 		return 0, nil
@@ -145,7 +145,7 @@ func (w *World) cutLoad(a *agent, region RegionID, to room.Pair) (int64, error) 
 	cands, at := s.candidates(lots)
 	steps, met := room.ExcessOrder(load, to, cands)
 	if !met {
-		invariant("a load above the room has no commodity of a size to move")
+		s.broke(a.id, "a load above the room has no commodity of a size to move")
 	}
 	var n int64
 	for _, st := range steps {
@@ -256,7 +256,7 @@ func (s *storage) boundExecutions(l *ledger.Ledger, q *startReq, k0 int64, reaso
 	}
 	view, err := l.Account(q.account)
 	if err != nil {
-		invariant("the account of a principal is unreadable: " + err.Error())
+		s.broke(q.principal, "the account of a principal is unreadable: "+err.Error())
 	}
 	m, b, _ := l.FreeRoom(q.account)
 	up, ok := s.upkeepRoom(&s.world.agents[q.principal], RegionID(view.Region))
@@ -358,7 +358,7 @@ func (w *World) startedStorage(a *agent, region RegionID, res startResult) {
 // credit.
 func (w *World) weightChangedStorage(a *agent) {
 	if err := w.sto.apply(w.ledger, a); err != nil {
-		invariant("a change of weight took the room of an account below its load: " + err.Error())
+		w.sto.broke(a.id, "a change of weight took the room of an account below its load: "+err.Error())
 	}
 	w.syncJob(a)
 }
@@ -434,7 +434,7 @@ func (w *World) shippedStorage(sh *shipment) {
 	load, ok := s.linesLoad(sh.lines)
 	sum, ok2 := addPair(s.inbound[sh.consignee], load)
 	if !ok || !ok2 {
-		invariant("the load of the cargo in flight to an agent does not fit int64")
+		s.broke(sh.consignee, "the load of the cargo in flight to an agent does not fit int64")
 	}
 	s.inbound[sh.consignee] = sum
 	w.repledge(&w.agents[sh.consignee])
@@ -453,7 +453,7 @@ func (w *World) arrivedStorage(sh *shipment) {
 	left, ok2 := checked.Sub(s.inbound[sh.consignee].Mass, load.Mass)
 	leftB, ok3 := checked.Sub(s.inbound[sh.consignee].Bulk, load.Bulk)
 	if !ok || !ok2 || !ok3 || left < 0 || leftB < 0 {
-		invariant("an arrival is larger than the cargo in flight to its consignee")
+		s.broke(sh.consignee, "an arrival is larger than the cargo in flight to its consignee")
 	}
 	s.inbound[sh.consignee] = room.Pair{Mass: left, Bulk: leftB}
 	w.repledge(&w.agents[sh.consignee])

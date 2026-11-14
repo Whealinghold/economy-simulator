@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"math/rand/v2"
 	"strings"
@@ -483,5 +484,25 @@ func TestStarted_CutCountSaturates(t *testing.T) {
 	w.startedStorage(a, regHome, startResult{cut: 5})
 	if got := w.sto.counts[w.cellOf(regHome, a)].startsCut; got != math.MaxInt64 {
 		t.Errorf("startsCut after cuts of MaxInt64-1 and 5 = %d, want %d (saturated)", got, int64(math.MaxInt64))
+	}
+}
+
+// TestInvariant_StorageNamesTheAgentAndTheTick verifies that a violated invariant of
+// the module's commitments says which agent's books broke and at which tick, so a
+// panic deep in a run points at an account (observability-and-logging.md 3.2.4).
+//
+// Arithmetic: no cargo is in flight to the agent, so an arrival of one grain is larger
+// than it.
+//
+// Requirement: FR-STO-016
+func TestInvariant_StorageNamesTheAgentAndTheTick(t *testing.T) {
+	t.Parallel()
+	w, _ := stoMillWorld(t, 120, 80, stoMiller{}, nil)
+	grain := commodityOf(t, w, "grain")
+	sh := &shipment{consignee: shipHome, lines: []Line{{Commodity: grain, Quantity: 1}}}
+	msg := invariantMessage(func() { w.arrivedStorage(sh) })
+	want := fmt.Sprintf("(agent %d, tick %d)", shipHome, w.Tick())
+	if !strings.Contains(msg, "an arrival is larger than the cargo in flight") || !strings.HasSuffix(msg, want) {
+		t.Errorf("arrival larger than the cargo in flight: panic = %q, want the cause then %q", msg, want)
 	}
 }
