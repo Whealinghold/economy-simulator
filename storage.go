@@ -527,7 +527,7 @@ func (w *World) finishStorage() error {
 				a.id, w.cfg.Roles[a.role].ID, ErrRoomShape)
 		}
 		w.repledge(a)
-		if !w.roomHolds(a, s.roomFor(a)) {
+		if s.limited(a) && !w.roomHolds(a, s.roomFor(a)) {
 			return fmt.Errorf("agent %d of role %s: its warm job's output and its goods do not fit its room: %w",
 				a.id, w.cfg.Roles[a.role].ID, ErrRoomShape)
 		}
