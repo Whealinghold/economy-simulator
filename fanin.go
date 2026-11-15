@@ -80,9 +80,9 @@ func (w *World) checkTradePlan(a *agent, p *TradePlan) {
 
 // removeAgent is the one removal path of an agent (spec-agents.md 3.6,
 // architecture.md 2.10.4): the job abandoned with agent_removed, the steps of the
-// modules (2b to 2g: the credit claims, 2d and 2e, are the only ones built), the money and the lots to the estate of
-// the region the account is in (steps 3 and 4, counted in lots), the account
-// closed, the events in the order of spec-world.md 6.11 item 8 (RecipeAbandoned,
+// modules (2b to 2g; the ones built include the credit claims, 2d and 2e), the money
+// and the lots to the estate of the region the account is in (steps 3 and 4, counted
+// in lots), the account closed, the events in the order of spec-world.md 6.11 item 8 (RecipeAbandoned,
 // then AgentBankrupted, then EstateOpened) and the counters. The cause is the
 // caller's and is never recomputed here. The error is the estate's balance
 // overflow, which fails the step; every other refusal is a violated invariant.

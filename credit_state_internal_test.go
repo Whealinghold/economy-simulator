@@ -182,3 +182,22 @@ func TestFigures_OfAnAgentsClaims(t *testing.T) {
 		t.Errorf("creditRoom(a role with no Borrow block) = %d, want 0", room)
 	}
 }
+
+// TestClaimIndex_ReassignGrowsTheTableOnce verifies that passing a claim to a creditor
+// whose account is past the end of the creditor table still takes the claim off the
+// old creditor's list: the growth must not strand the pointer to the old list.
+//
+// Requirement: FR-CRD-082
+func TestClaimIndex_ReassignGrowsTheTableOnce(t *testing.T) {
+	t.Parallel()
+	a := claimOf(0, 1, 10, 5, -1)
+	x := newClaimIndex()
+	x.byCreditor = [][]int64{nil, nil} // no spare capacity: any growth reallocates
+	x.add(a)
+	x.reassign(a, 40)
+	a.Creditor = 40
+	wantIndex(t, &x, []ledger.Claim{a}, "a claim passed past the end of the table")
+	if len(x.byCreditor[1]) != 0 {
+		t.Errorf("old creditor's list = %v, want empty", x.byCreditor[1])
+	}
+}

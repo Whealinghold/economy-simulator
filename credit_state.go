@@ -88,6 +88,7 @@ func (x *claimIndex) remove(c ledger.Claim) {
 
 // reassign moves a claim from its creditor's list to the new creditor's.
 func (x *claimIndex) reassign(c ledger.Claim, creditor int) {
+	ofAccount(&x.byCreditor, max(c.Creditor, creditor)) // grow once: a second growth would strand the first pointer
 	old, now := ofAccount(&x.byCreditor, c.Creditor), ofAccount(&x.byCreditor, creditor)
 	*old, *now = removeID(*old, c.ID), insertID(*now, c.ID)
 }
@@ -339,7 +340,8 @@ func (w *World) creditAgents() (lenders, borrowers int64) {
 		if t := w.cfg.Roles[a.role].Credit; t != nil {
 			if t.Lend != nil {
 				lenders++
-			} else {
+			}
+			if t.Borrow != nil {
 				borrowers++
 			}
 		}
