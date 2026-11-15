@@ -202,3 +202,21 @@ const (
 	Fields = "fields"
 	Gain   = "gain"
 )
+
+// The keys of the credit module (spec-credit.md 16.2): a claim ID and a count of
+// claims, a yearly rate in basis points and a term in ticks (int64), money in
+// minor units (int64) for the principal of a claim, the amount owed, the owed on
+// overdue claims and the amount lost, and counts of lenders and of borrowers in the
+// construction summary. The key amount stays the line of a refused transfer.
+const (
+	Claim     = "claim"
+	Claims    = "claims"
+	Rate      = "rate"
+	Term      = "term"
+	Principal = "principal"
+	Owed      = "owed"
+	Arrears   = "arrears"
+	Lost      = "lost"
+	Lenders   = "lenders"
+	Borrowers = "borrowers"
+)
