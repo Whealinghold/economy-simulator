@@ -232,7 +232,7 @@ func (sc *viewScratch) appendRecipe(v *AgentView, a *agent, c *viewCtx, id Recip
 	// Untested: the yield, shock and profile bounds of validation keep the
 	// effective yield in range, and an unknown account is refused in fillCore
 	// before this loop, so neither error below is reachable from a built world.
-	e, has, ok := c.yields.effectiveAt(c.shocks, region, id, c.moment.Season, cr.Sited, c.prod.abundance(region, id, false))
+	e, has, ok := c.yields.effectiveAt(c.shocks, region, id, c.moment.Season, cr.Sited, c.prod.abundance(region, id, false), c.prod.techFactor(region, id))
 	if !ok {
 		return fmt.Errorf("fill view of agent %d: effective yield of recipe %d does not fit", a.id, id)
 	}

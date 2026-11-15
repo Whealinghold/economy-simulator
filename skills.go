@@ -308,7 +308,7 @@ func (w *World) traineeRequest(q *startReq, a *agent, region RegionID) {
 		return
 	}
 	cr := &w.cfg.Recipes[q.recipe]
-	e, has, ok := w.yields.effectiveFor(&w.shocks, region, q.recipe, w.tk.moment.Season, cr.Sited, w.prod.abundance(region, q.recipe, false), cr.TraineeYield)
+	e, has, ok := w.yields.effectiveFor(&w.shocks, region, q.recipe, w.tk.moment.Season, cr.Sited, w.prod.abundance(region, q.recipe, false), w.prod.techFactor(region, q.recipe), cr.TraineeYield)
 	if !ok {
 		invariant("the effective yield of a trainee does not fit after validation")
 	}

@@ -151,26 +151,28 @@ func (s *yieldShocks) ordered() []shockEntry { return s.entries }
 // effective returns the effective factor of a recipe in a region at a season
 // (spec-production.md 6.3) and whether a profile row exists for the pair: the
 // site factor, the shock, then the technology, trainee and abundance terms,
-// which are neutral (10 000) in the slice. ok is false when a step does not
-// fit int64, which validation of the bounds makes unreachable.
+// which are neutral (10 000) here: the warm start, the solver and the viability
+// check cannot see a gain (spec-technology.md 3.3.2, FR-TEC-034). ok is false
+// when a step does not fit int64, which validation of the bounds makes
+// unreachable.
 func (t *yieldTable) effective(sh *yieldShocks, region RegionID, recipe RecipeID, season int, sited bool) (e int64, has, ok bool) {
-	return t.effectiveAt(sh, region, recipe, season, sited, production.BP)
+	return t.effectiveAt(sh, region, recipe, season, sited, production.BP, production.BP)
 }
 
 // effectiveAt is effective with the abundance term of a recipe that draws on an
 // endowment, in basis points (spec-resources.md 4.7, spec-production.md 6.3). The
 // callers that read a stock pass the abundance of their moment; effective is the
 // neutral term and is what the warm start and the solver read.
-func (t *yieldTable) effectiveAt(sh *yieldShocks, region RegionID, recipe RecipeID, season int, sited bool, abundance int64) (e int64, has, ok bool) {
-	return t.effectiveFor(sh, region, recipe, season, sited, abundance, production.BP)
+func (t *yieldTable) effectiveAt(sh *yieldShocks, region RegionID, recipe RecipeID, season int, sited bool, abundance, tech int64) (e int64, has, ok bool) {
+	return t.effectiveFor(sh, region, recipe, season, sited, abundance, tech, production.BP)
 }
 
 // effectiveFor is effectiveAt with the trainee term of the effective factor, in
 // basis points: TraineeYield for the job of a trainee, 10 000 for any other
 // (spec-production.md 6.3, 8.2).
-func (t *yieldTable) effectiveFor(sh *yieldShocks, region RegionID, recipe RecipeID, season int, sited bool, abundance, trainee int64) (e int64, has, ok bool) {
+func (t *yieldTable) effectiveFor(sh *yieldShocks, region RegionID, recipe RecipeID, season int, sited bool, abundance, tech, trainee int64) (e int64, has, ok bool) {
 	site, has := t.site(region, recipe, season, sited)
-	e, ok = production.Effective(site, sh.factor(region, recipe), production.BP, trainee, abundance)
+	e, ok = production.Effective(site, sh.factor(region, recipe), tech, trainee, abundance)
 	return e, has, ok
 }
 
@@ -262,6 +264,9 @@ type productionScratch struct {
 	// roomCut is the executions the room took off the last maxExecutions (k0 less
 	// the executions the room allows), 0 when it cut none.
 	roomCut int64
+	// tec is the technology module's state, nil when it is off: the technology term
+	// of the effective factor is read through it (techFactor).
+	tec *technology
 
 	terms   []production.Term
 	wears   []production.Wear

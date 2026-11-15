@@ -148,6 +148,9 @@ func (w *World) finishJob(a *agent, region RegionID) {
 	if w.sub != nil {
 		w.sub.completed(w, a, int(region)*len(w.cfg.Roles)+int(a.role), &c)
 	}
+	if w.tec != nil {
+		w.tec.count(region, c.recipe, c.executions)
+	}
 	w.warnOverflow(&c)
 }
 
@@ -308,7 +311,7 @@ func (w *World) admitJob(a *agent, region RegionID, req JobRequest) {
 // the weight of the agent.
 func (w *World) startReq(a *agent, region RegionID, recipe RecipeID, maximum int64) startReq {
 	e, has, ok := w.yields.effectiveAt(&w.shocks, region, recipe, w.tk.moment.Season, w.cfg.Recipes[recipe].Sited,
-		w.prod.abundance(region, recipe, false))
+		w.prod.abundance(region, recipe, false), w.prod.techFactor(region, recipe))
 	if !ok {
 		// Excluded from coverage (testing.md 9.5): the bounds of validation keep
 		// the effective yield in range.

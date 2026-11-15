@@ -98,6 +98,26 @@ type Snapshot struct {
 	// (spec-polity.md 10.5). Empty with the polity module off or with no jurisdiction
 	// governed.
 	Jurisdictions []JurisdictionRow
+	// Tech has one row for each technology cell with experience or advance above 0,
+	// in ascending (Region, Field) order (spec-technology.md 11.4). Empty with the
+	// technology module off.
+	Tech []TechRow
+}
+
+// TechRow is the state of one technology cell (spec-technology.md 11.4): the
+// executions counted, the advance and the gain, which is derived from the two and
+// the field's cap.
+type TechRow struct {
+	// Region is the ordinary region of the cell and Field its technology field.
+	Region RegionID
+	Field  TechFieldID
+	// Experience is the executions counted in the cell.
+	Experience int64
+	// AdvanceBP is the gain added by the trend, discoveries, contact and calls, in
+	// basis points.
+	AdvanceBP int64
+	// GainBP is the gain G of the cell in basis points over 10 000.
+	GainBP int64
 }
 
 // EndowmentRow is the state of one endowment (spec-observability.md 5.3.6).
@@ -387,6 +407,7 @@ func (w *World) Snapshot() (Snapshot, error) {
 	}
 	w.snapshotMigration(&s)
 	w.snapshotContracts(&s)
+	w.snapshotTechnology(&s)
 	if err := w.snapshotTreasuries(&s); err != nil {
 		return Snapshot{}, fmt.Errorf("snapshot at tick %d: %w", w.Tick(), err)
 	}

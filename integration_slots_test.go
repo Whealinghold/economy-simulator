@@ -892,6 +892,7 @@ func inStepCalls(w *economysim.World) map[string]error {
 		"SetCapacityScales": w.SetCapacityScales(nil),
 		"SetRegenScales":    w.SetRegenScales(nil),
 		"AdjustEndowments":  w.AdjustEndowments(nil),
+		"AdjustTechnology":  w.AdjustTechnology(nil),
 		"SetOutsideShocks":  w.SetOutsideShocks([]economysim.OutsideShock{{Node: slotOther, Commodity: slotFuel, BP: 1}}),
 		"Slots":             slotsErr,
 	}
@@ -928,8 +929,8 @@ func TestInStep_Calls(t *testing.T) {
 			t.Fatalf("Step() = %v, want nil", err)
 		}
 	}
-	if len(called) != 15 {
-		t.Fatalf("the observer made %d calls, want 15", len(called))
+	if len(called) != 16 {
+		t.Fatalf("the observer made %d calls, want 16", len(called))
 	}
 	for name, err := range called {
 		if !errors.Is(err, economysim.ErrInStep) {
