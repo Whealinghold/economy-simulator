@@ -72,6 +72,7 @@ func (w *World) construct(warnings []Warning) error {
 	b := w.beginConstruction()
 	b.createAgents()
 	checkCensus(b.plans, &b.w.cfg, b.w.live.agents, b.w.live.households)
+	b.w.set.found(b.w)
 	if err := b.warm(); err != nil {
 		return err
 	}
@@ -153,6 +154,7 @@ func (w *World) allocate() {
 		w.sto.world = w
 	}
 	w.credit = newCredit(&w.cfg)
+	w.set = newSettlements(&w.cfg)
 	w.registerBounds()
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
@@ -345,6 +347,7 @@ func namesOf(c *Config) Names {
 	n.Jurisdictions = polityNames(c)
 	n.StoreClasses = storeClassNames(c)
 	n.TechFields = techNames(c)
+	n.SettlementClasses = settlementNames(c)
 	return n
 }
 
@@ -364,6 +367,7 @@ func modulesOn(c *Config) []string {
 		{"storage", m.Storage != nil},
 		{"credit", m.Credit != nil},
 		{"technology", m.Technology != nil},
+		{"settlements", m.Settlements != nil},
 	}
 	on := []string{}
 	for _, t := range table {
@@ -387,9 +391,16 @@ func (b *builder) announce(warnings []Warning) {
 	if w.log.Enabled(ctx, slog.LevelInfo) {
 		w.log.LogAttrs(ctx, slog.LevelInfo, "world created", w.summary()...)
 	}
-	if !w.obs.supplied {
-		return
+	if w.obs.supplied {
+		b.deliverCreated()
 	}
+	w.set.announce(w) // after the AgentSpawned events; the events only with an observer
+}
+
+// deliverCreated delivers WorldCreated and the AgentSpawned events of the initial
+// agents, in ascending ID.
+func (b *builder) deliverCreated() {
+	w := b.w
 	_, present := warmCountsOf(&w.cfg)
 	w.obs.deliver(WorldCreated{Seed: w.state.seed, ConfigHash: w.hash, WarmStart: present, Names: namesOf(&w.cfg), Jurisdictions: w.polity.startRows()})
 	for _, e := range b.spawned {
@@ -458,6 +469,9 @@ func (w *World) summary() []slog.Attr {
 	if w.credit != nil {
 		lenders, borrowers := w.creditAgents()
 		attrs = append(attrs, slog.Int64(logkeys.Lenders, lenders), slog.Int64(logkeys.Borrowers, borrowers))
+	}
+	if w.set != nil {
+		attrs = append(attrs, slog.Int(logkeys.SettlementClasses, w.set.n))
 	}
 	return attrs
 }

@@ -39,6 +39,8 @@ RoleChanged
 RumoursServed
 RunEnded
 RunStarted
+SettlementClassChanged
+SettlementHeld
 ShipmentArrived
 ShipmentDispatched
 ShipmentRejected

@@ -355,6 +355,11 @@ var stepSites = []site{
 			w.p72Migration()
 		}
 	})},
+	{"P7.2a", noError(func(w *World) {
+		if w.set != nil {
+			w.p72aSettlement()
+		}
+	})},
 	{"P8.1", (*World).p81Age},
 	{"P8.2", noError((*World).p82Flows)},
 	{"P8.3", noError((*World).p83Regen)},

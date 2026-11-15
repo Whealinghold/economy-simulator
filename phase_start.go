@@ -52,6 +52,33 @@ func (w *World) regionOf(a *agent) RegionID {
 	return RegionID(v.Region)
 }
 
+// householdRegion is the one definition of which agents are households of which
+// region: an agent that is not a pseudo-agent (the caller walks the agents from
+// firstHousehold) and has a weight of at least 1 is a household of the region of
+// its account, whatever it is doing (a migrant on a journey or an away traveller
+// stays in the region of departure, spec-settlements.md 4.1.1). The scan of the
+// spawner's region view, the household counts of the snapshot and the settlement
+// review all read it, so they cannot disagree.
+func (w *World) householdRegion(a *agent) (RegionID, bool) {
+	if a.weight < 1 {
+		return 0, false
+	}
+	return w.regionOf(a), true
+}
+
+// householdCounts sets dst[g] to the sum of the weights of the households of region
+// g, for every region, in one pass over the agents (spec-settlements.md 4.1.3). A
+// region with none, and an outside node, counts 0. dst has one entry per region.
+func (w *World) householdCounts(dst []int64) {
+	clear(dst)
+	for i := w.firstHousehold; i < len(w.agents); i++ {
+		a := &w.agents[i]
+		if g, ok := w.householdRegion(a); ok {
+			dst[g] = satAdd(dst[g], a.weight)
+		}
+	}
+}
+
 // p02aBucket is P0.2a, run inside beginStep at the entry of the first step of a
 // world still in its construction phase (spec-world.md 6.2, D160): it ends the
 // construction phase and then, only when an observer was supplied, delivers the

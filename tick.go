@@ -68,6 +68,7 @@ var positionList = [...]position{
 	{"P6.4", "AGT", line},
 	{"P7.1", "SPN", line},
 	{"P7.2", "MIG", line},
+	{"P7.2a", "SET", line},
 	{"P8.1", "LED", line},
 	{"P8.2", "LED", line},
 	{"P8.3", "RES", line},
@@ -87,7 +88,7 @@ var notBuiltPositions = [...]string{
 	"P2.5a", "P2.8b",
 	"P3.1a", "P3.3b", "P3.3c", "P3.4a", "P3.6a", "P3.6b", "P3.6c",
 	"P4.1a",
-	"P7.2a", "P7.2b",
+	"P7.2b",
 	"P8.1a", "P8.1b", "P8.3a", "P8.3b",
 }
 
@@ -247,6 +248,9 @@ func (w *World) positionsTail() error {
 	}
 	if w.migration != nil {
 		w.p72Migration()
+	}
+	if w.set != nil {
+		w.p72aSettlement()
 	}
 	if err := w.p81Age(); err != nil {
 		return err
