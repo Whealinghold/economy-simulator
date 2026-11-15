@@ -32,6 +32,11 @@ type credit struct {
 	capRun     int64
 	// pass is the scratch of the settlement and of a waterfall.
 	pass settleScratch
+	// vs is the storage of the credit group of the view and valuedAt the tick plus one
+	// at which the prices were last valued for the upkeep cost (0: never). Both are
+	// scratch, not saved.
+	vs       creditScratch
+	valuedAt int64
 }
 
 // newCredit builds the state of the module for a canonical configuration, or nil

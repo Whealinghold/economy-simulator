@@ -130,6 +130,11 @@ type TradePlan struct {
 	Offers []DeliveryOffer
 	Takes  []DeliveryTake
 	Notes  PlanNotes
+	// Borrow and Lend are the request and the offer of the credit round
+	// (spec-credit.md 5.1), admitted at P3.3b after every agent's plan; at most one
+	// of each is admitted, and both are empty for a strategy that does not use them.
+	Borrow []CreditRequest
+	Lend   []CreditOffer
 }
 
 // ShipmentRequest asks the world to move goods, or the agent itself
@@ -491,6 +496,10 @@ type AgentView struct {
 	// tick and a strategy must treat it as read-only.
 	HasMerchant bool
 	Merchant    MerchantView
+	// Credit is the credit group of the view passed to Trade, present only for an
+	// agent whose role has a credit block and nil for every other
+	// (spec-credit.md 10.1). It is a scratch copy valid for the call only.
+	Credit *CreditView
 	// scratch is the working arrays of DefaultStrategy.Trade, set by the world's
 	// filler and nil in a view built by hand, for which Trade allocates its own
 	// (spec-agents.md 6.4.1; NFR-AGT-001 binds the world's views only).

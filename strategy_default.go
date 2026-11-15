@@ -174,8 +174,12 @@ func (DefaultStrategy) TradeWith(v *AgentView, rng *rand.Rand, p *TradePlan, tri
 	for i := range v.Commodities {
 		t.consider(i, rng)
 	}
+	tier2 := t.tier2Cost() // before allocate lowers a limit to the money
 	t.allocate(cost, savings)
 	t.emit(p)
+	if v.Credit != nil {
+		DefaultCredit(v, p, tier2, t.plannedDuration())
+	}
 }
 
 // plannedRecipe is the index of the recipe the agent expects to run next

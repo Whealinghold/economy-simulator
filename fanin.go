@@ -47,6 +47,9 @@ func (w *World) fillTradeOnly(v *AgentView, a *agent) {
 	if w.mer != nil {
 		w.fillMerchantView(v, a)
 	}
+	if w.credit != nil {
+		w.fillCreditView(v, a)
+	}
 }
 
 // viewKind says which call a view is built for: the rumours of the information

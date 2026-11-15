@@ -82,6 +82,7 @@ func (sc *viewScratch) tradePlan() *TradePlan {
 	sc.plan.Intents, sc.plan.Discards, sc.plan.WantFunded = sc.plan.Intents[:0], sc.plan.Discards[:0], sc.plan.WantFunded[:0]
 	sc.plan.Shipments = sc.plan.Shipments[:0]
 	sc.plan.Offers, sc.plan.Takes, sc.plan.Notes = sc.plan.Offers[:0], sc.plan.Takes[:0], PlanNotes{}
+	sc.plan.Borrow, sc.plan.Lend = sc.plan.Borrow[:0], sc.plan.Lend[:0]
 	return &sc.plan
 }
 
