@@ -301,11 +301,28 @@ func DefaultEmployer() Employer { return Employer{PayrollBP: 5_000} }
 // (config.go) and its bounds are in bounds.go (MaxRoom, MaxStoresPerAgent,
 // MaxStoreClasses).
 
+// DefaultSettlements returns the tunables of the settlements module with their
+// defaults (spec-settlements.md 8): a band of 1 000 basis points and a dwell of 30
+// ticks, both placeholders (N-015, N-027). The classes and the region rows are
+// structure and have no default: a module with no class is ErrTooMany. The sorts of
+// its lists are in Settlements.canonical (config.go) and its bounds are in
+// bounds.go.
+func DefaultSettlements() Settlements { return Settlements{BandBP: 1_000, Dwell: 30} }
+
+// DefaultRegionSettlement returns a region row of the settlements module with its
+// defaults (spec-settlements.md 3.5): a scale of 10 000 basis points, which leaves
+// the thresholds as written, and no floor. A row written in Go must set
+// ThresholdBP, whose zero is out of bounds; the loader starts from this value.
+func DefaultRegionSettlement(region string) RegionSettlement {
+	return RegionSettlement{Region: region, ThresholdBP: 10_000}
+}
+
 // The technology module (spec-technology.md 9.1.2) has no tunable of its own and no
 // default field: every rate of a field defaults to 0, which turns its mechanism off,
 // and CapBP is required, because a default would be a claim about how much a
 // technique may grow. The sorts of its lists are in Technology.canonical (config.go)
 // and its bounds are in bounds.go (MaxTechFields to MaxExperience).
+
 // The credit module (spec-credit.md 4.1.2, 14) has no tunable with a non-nil
 // default and no default macro constant (N-027): MinPrincipal and MaxClaims are
 // required, ShieldTicks, WriteOffTicks, KeepTicks and SlackTicks default to 0 (no
