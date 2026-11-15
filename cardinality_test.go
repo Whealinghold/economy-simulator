@@ -109,9 +109,20 @@ func (c *cardChecker) recipe(ev string, tick int64, v economysim.RecipeID) {
 	c.id(ev, tick, "Recipe", int(v), len(c.names.Recipes))
 }
 
+// jurisdictions checks the rows of WorldCreated or of a snapshot: the jurisdiction is
+// below len(Names.Jurisdictions) and the seat is a region (spec-polity.md 10.5, 10.7).
+func (c *cardChecker) jurisdictions(ev string, tick int64, rows []economysim.JurisdictionRow) {
+	for _, r := range rows {
+		c.id(ev, tick, "Jurisdiction", int(r.Jurisdiction), len(c.names.Jurisdictions))
+		c.region(ev, tick, r.Seat)
+	}
+}
+
 // check applies the closed-set checks of OBS 6.2.1 to one event.
 func (c *cardChecker) check(e economysim.Event) {
 	switch e := e.(type) {
+	case economysim.WorldCreated:
+		c.jurisdictions("WorldCreated", e.Tick, e.Jurisdictions)
 	case economysim.OrderPlaced:
 		c.region("OrderPlaced", e.Tick, e.Region)
 		c.commodity("OrderPlaced", e.Tick, e.Commodity)
@@ -357,6 +368,38 @@ func TestCardinality_ExternalAttributesTakeClosedValues(t *testing.T) {
 	}
 }
 
+// TestCardinality_PolityAttributesTakeConfiguredValues runs the warm five with the
+// governed polity overlay for 30 ticks and checks that the Jurisdiction and Seat of
+// each row of WorldCreated and of the final snapshot are IDs of the names table: the
+// metric attributes economysim.region (and a jurisdiction label an adapter derives
+// from the names table) stay bounded by the configuration.
+//
+// Requirement: FR-OBS-005, FR-OBS-006, FR-POL-028, FR-POL-035
+//
+// Guard: a jurisdiction or seat index out of range in a row would be an unresolvable
+// attribute value.
+func TestCardinality_PolityAttributesTakeConfiguredValues(t *testing.T) {
+	t.Parallel()
+	skipFiveSized(t)
+	cfg := loadValidPack(t, fivePolityGoverned...)
+	res := runPack(t, cfg, runSpec{Seed: 1, Ticks: 30, Observe: true})
+	c := &cardChecker{t: t, seed: 1, names: res.Final.Names, consts: eventConstants(t), seen: map[string]int{}}
+	rows := 0
+	for _, e := range res.Events {
+		c.check(e)
+		if wc, ok := e.(economysim.WorldCreated); ok {
+			rows += len(wc.Jurisdictions)
+		}
+	}
+	c.jurisdictions("Snapshot", res.Final.Tick, res.Final.Jurisdictions)
+	if rows == 0 || len(res.Final.Jurisdictions) != rows {
+		t.Errorf("WorldCreated rows = %d, snapshot rows = %d, want the same non-zero count: the run exercised nothing", rows, len(res.Final.Jurisdictions))
+	}
+	if c.seen["Jurisdiction"] != 2*rows {
+		t.Errorf("Jurisdiction ids checked %d times, want %d", c.seen["Jurisdiction"], 2*rows)
+	}
+}
+
 // errCount counts the Errorf calls of a checker under test.
 type errCount struct{ n int }
 
@@ -372,7 +415,7 @@ func (e *errCount) Errorf(string, ...any) { e.n++ }
 // stopped comparing IDs to the names table.
 func TestCardChecker_FlagsOutOfRangeAndOutsideSet(t *testing.T) {
 	t.Parallel()
-	names := economysim.Names{Regions: []string{"r"}, Commodities: []string{"c"}, Roles: []string{"o"}, Recipes: []string{"a", "b"}}
+	names := economysim.Names{Regions: []string{"r"}, Commodities: []string{"c"}, Roles: []string{"o"}, Recipes: []string{"a", "b"}, Jurisdictions: []string{"j"}}
 	consts := map[string]map[string]bool{"Reason": {"ok": true}, "Cause": {}, "Kind": {}}
 	tests := []struct {
 		name string
@@ -389,6 +432,10 @@ func TestCardChecker_FlagsOutOfRangeAndOutsideSet(t *testing.T) {
 		{"outside side in set", economysim.OutsideTraded{Side: economysim.Ask}, false},
 		{"outside side out of set", economysim.OutsideTraded{Side: economysim.Side(2)}, true},
 		{"outside node out of range", economysim.OutsideShocked{Node: 1}, true},
+		{"world created row in range", economysim.WorldCreated{Jurisdictions: []economysim.JurisdictionRow{{Jurisdiction: 0, Seat: 0}}}, false},
+		{"world created jurisdiction at len", economysim.WorldCreated{Jurisdictions: []economysim.JurisdictionRow{{Jurisdiction: 1}}}, true},
+		{"world created jurisdiction negative", economysim.WorldCreated{Jurisdictions: []economysim.JurisdictionRow{{Jurisdiction: -1}}}, true},
+		{"world created seat out of range", economysim.WorldCreated{Jurisdictions: []economysim.JurisdictionRow{{Seat: 1}}}, true},
 		{"outside cause outside set", economysim.OutsideEnded{Cause: economysim.CauseUnits}, true},
 	}
 	for _, tt := range tests {

@@ -613,9 +613,23 @@ type ShortRow struct {
 	Units int64
 }
 
+// JurisdictionRow is a governed jurisdiction's treasury (spec-polity.md 10.5, 10.7):
+// the jurisdiction, its seat region, the treasury pseudo-agent and the treasury's
+// money. In WorldCreated the money is the StartMoney; in a snapshot it is the
+// balance at the boundary.
+type JurisdictionRow struct {
+	// Jurisdiction is the governed jurisdiction.
+	Jurisdiction JurisdictionID
+	// Seat is the region the treasury is in.
+	Seat RegionID
+	// Agent is the treasury pseudo-agent's ID (World.TreasuryAgent).
+	Agent AgentID
+	// Money is the treasury's money in minor units.
+	Money Money
+}
+
 // WorldCreated is the first event of a constructed world, with Tick 0. It
-// precedes the AgentSpawned event of each initial agent. The jurisdictions of
-// the polity module are appended with that module.
+// precedes the AgentSpawned event of each initial agent.
 type WorldCreated struct {
 	Tick int64
 	// Seed is the world's seed.
@@ -626,6 +640,12 @@ type WorldCreated struct {
 	WarmStart bool
 	// Names maps every typed ID to its string ID.
 	Names Names
+	// Jurisdictions has one row for each governed jurisdiction, in ascending
+	// JurisdictionID, with the StartMoney as its money: an observer that keeps no
+	// configuration subtracts it from the initial money of the seat's region
+	// (spec-observability.md 4.3.3). Empty with the polity module off or with no
+	// jurisdiction governed.
+	Jurisdictions []JurisdictionRow
 }
 
 // RunStarted is emitted when Run begins, before its first tick.

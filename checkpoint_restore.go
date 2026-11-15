@@ -322,9 +322,11 @@ func (w *World) loadLedger(rs *restoreCtx, r *codec.Reader) error {
 	}
 	w.estates = e
 	if w.external != nil {
-		return w.external.attachAccounts(w.ledger, w.estates)
+		if err := w.external.attachAccounts(w.ledger, w.estates); err != nil {
+			return err
+		}
 	}
-	return nil
+	return w.attachTreasuries()
 }
 
 // checkpointCross is step 7, the checks that need two sections. Modules append

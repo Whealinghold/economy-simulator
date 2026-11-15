@@ -208,11 +208,12 @@ func (a sectorAcc) row(w Window, open, closing economysim.Snapshot, r economysim
 // fillMoney sums the money and households of the region's cells into row and returns the
 // open-to-close deltas of the household and pool money.
 func (row *SectorRow) fillMoney(w Window, open, closing economysim.Snapshot, r economysim.RegionID) (dh, dp acc, err error) {
-	var mh, mp, hh acc
+	var mh, mp, mt, hh acc
 	for _, g := range regionsOf(w, r) {
 		cr, or := closing.Regions[g], open.Regions[g]
 		mh.addInt(measure.FromInt64(int64(cr.MoneyHouseholds)))
 		mp.addInt(measure.FromInt64(int64(cr.MoneyPool)))
+		mt.addInt(measure.FromInt64(int64(cr.MoneyTreasury)))
 		hh.addInt(measure.FromInt64(cr.Households))
 		dh.addInt(measure.FromInt64(int64(cr.MoneyHouseholds)))
 		dh.addInt(measure.FromInt64(int64(or.MoneyHouseholds)).Neg())
@@ -231,8 +232,10 @@ func (row *SectorRow) fillMoney(w Window, open, closing economysim.Snapshot, r e
 	if row.Households, err = hh.int64("Sectors", "households"); err != nil {
 		return dh, dp, err
 	}
-	// The contract and treasury money are not in the snapshot yet (plans 2-15, POL):
-	// MoneyContract and MoneyTreasury stay 0 and are read from RegionRow when it has them.
+	if row.MoneyTreasury, err = mt.int64("Sectors", "money_treasury"); err != nil {
+		return dh, dp, err
+	}
+	// The contract money is not in the snapshot yet (plan 2-15): MoneyContract stays 0.
 	if row.Money, err = net("Sectors", "money", []int64{row.MoneyHouseholds, row.MoneyPool, row.MoneyContract, row.MoneyTreasury}); err != nil {
 		return dh, dp, err
 	}
@@ -287,6 +290,8 @@ func account(w Window, open, closing economysim.Snapshot, r economysim.RegionID,
 		change.addInt(measure.FromInt64(int64(cr.MoneyPool)))
 		change.addInt(neg(int64(or.MoneyHouseholds)))
 		change.addInt(neg(int64(or.MoneyPool)))
+		change.addInt(measure.FromInt64(int64(cr.MoneyTreasury)))
+		change.addInt(neg(int64(or.MoneyTreasury)))
 		for _, x := range f.rows {
 			if x.Region != g || x.Commodity != economysim.NoCommodity {
 				continue

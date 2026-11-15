@@ -95,6 +95,8 @@ func (w *World) beginConstruction() *builder {
 	if w.external != nil {
 		mustBuild(w.external.openAccounts(w.ledger), "the opening of the counterparty accounts")
 	}
+	mustBuild(w.polity.openTreasuries(w.ledger), "the opening of the treasury accounts")
+	mustBuild(w.polity.fundTreasuries(w.ledger), "the start money of the treasuries")
 	widest := 0
 	for i := range w.roles.rows {
 		widest = max(widest, len(w.roles.rows[i].tradable))
@@ -156,11 +158,12 @@ func (w *World) allocate() {
 	}
 	w.external = newExternal(&w.cfg)
 	w.outside = outsideMarks(&w.cfg)
-	w.firstHousehold = regions + w.external.counterpartyCount()
+	w.firstHousehold = regions + w.external.counterpartyCount() + w.polity.treasuryCount()
 	if w.external != nil {
 		w.external.assignAgents(regions)
 	}
-	w.agents = make([]agent, w.firstHousehold) // the estate pseudo-agents and the counterparties have no household
+	w.polity.assignAgents(regions + w.external.counterpartyCount())
+	w.agents = make([]agent, w.firstHousehold) // the estate, counterparty and treasury pseudo-agents have no household
 	w.state.nextAgent = AgentID(w.firstHousehold)
 	w.live = liveCounts{inRole: make([]int64, regions*roles)}
 	w.bp = beliefParams(w.cfg.World)
@@ -382,7 +385,7 @@ func (b *builder) announce(warnings []Warning) {
 		return
 	}
 	_, present := warmCountsOf(&w.cfg)
-	w.obs.deliver(WorldCreated{Seed: w.state.seed, ConfigHash: w.hash, WarmStart: present, Names: namesOf(&w.cfg)})
+	w.obs.deliver(WorldCreated{Seed: w.state.seed, ConfigHash: w.hash, WarmStart: present, Names: namesOf(&w.cfg), Jurisdictions: w.polity.startRows()})
 	for _, e := range b.spawned {
 		w.obs.deliver(e)
 	}

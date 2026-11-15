@@ -1,0 +1,23 @@
+# The polity module on the warm five, with one governed jurisdiction (spec-polity.md 12.4.2, spec-reference-chain.md
+# 4.5, plan 3-pol). Layer it after the pack: base.toml, lines.toml, five.toml, warm-five.toml, this file.
+# overlay/polity.toml plus a seat and a start_money on the root: one treasury account in the region centre, one
+# pseudo-agent after the five estates, and every household's agent ID one higher than without it (FR-POL-015 to 018,
+# scenarios S112 and S113). The treasury holds its start money and nothing moves it, so a run differs from the
+# ungoverned one by the ID shift alone. A test double, not a design.
+
+[modules.polity.jurisdiction.root]
+seat = "centre"
+start_money = 50000
+
+[modules.polity.jurisdiction.group_a]
+parent = "root"
+
+[modules.polity.jurisdiction.group_b]
+parent = "root"
+
+[modules.polity.member]
+centre = "group_a"
+north = "group_a"
+west = "group_a"
+east = "group_b"
+south = "group_b"

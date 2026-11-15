@@ -69,6 +69,8 @@ func (n namer) idName(v reflect.Value) (string, bool) {
 		table = n.names.Roles
 	case "RecipeID":
 		table = n.names.Recipes
+	case "JurisdictionID":
+		table = n.names.Jurisdictions
 	default: // AgentID and any ID with no names table is its integer
 		return strconv.FormatInt(i, 10), true
 	}
@@ -450,9 +452,13 @@ func renderSample(t int64, s economysim.Snapshot, anchors map[goldenMarketKey]in
 			addKV(&l, "mean_money", int64(r.MoneyHouseholds)/r.Households)
 		}
 		addKV(&l, "pool", int64(r.MoneyPool))
+		addKV(&l, "treasury", int64(r.MoneyTreasury))
 		if l.Len() > 0 {
 			fmt.Fprintf(&b, "region %s%s\n", tableName(s.Names.Regions, int(r.Region)), l.String())
 		}
+	}
+	for _, j := range s.Jurisdictions {
+		fmt.Fprintf(&b, "jurisdiction %s seat=%s agent=%d money=%d\n", tableName(s.Names.Jurisdictions, int(j.Jurisdiction)), tableName(s.Names.Regions, int(j.Seat)), j.Agent, j.Money)
 	}
 	return b.String()
 }

@@ -113,7 +113,6 @@ var deferredCore = map[string]string{}
 // has not appended the field to its declared event yet (D3 of the plan of
 // Stage 0). The change that appends one deletes its entry.
 var notBuiltFields = []string{
-	"WorldCreated.Jurisdictions",      // polity module, POL 10.7
 	"EntryLimited.RoleCeiling",        // settlements module, SET 6.4
 	"PopulationChanged.BirthsCeiling", // settlements module, SET 6.4.2
 	"ShipmentDispatched.Toll",         // fiscal module, FIS 16.1
