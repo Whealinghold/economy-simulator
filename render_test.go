@@ -289,7 +289,7 @@ func renderSnapshot(s economysim.Snapshot) string {
 		for j := 0; j < v.Field(i).Len(); j++ {
 			row := v.Field(i).Index(j)
 			line := row.Type().Name()
-			if parts := n.fields(row, offSettlementIDs(s)); len(parts) > 0 {
+			if parts := n.fields(row, offSettlementIDs(s, row)); len(parts) > 0 {
 				line += " " + strings.Join(parts, " ")
 			}
 			out += line + "\n"

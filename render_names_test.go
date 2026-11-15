@@ -34,9 +34,9 @@ func (n namer) table(name string) ([]string, bool) {
 // module (RegionRow.Class and ClassTarget): zero is a valid class, so with the module
 // off the golden writer omits them, and the files of golden/off/ do not move
 // (architecture.md 2.10.5, spec-observability.md 9.5.2). With the module on they are
-// written.
-func offSettlementIDs(s economysim.Snapshot) func(reflect.StructField) bool {
-	if slices.Contains(s.Modules, "settlements") {
+// written. The skip is for RegionRow alone: another row's Class (StoreRow's) is its own.
+func offSettlementIDs(s economysim.Snapshot, row reflect.Value) func(reflect.StructField) bool {
+	if row.Type().Name() != "RegionRow" || slices.Contains(s.Modules, "settlements") {
 		return nil
 	}
 	return func(f reflect.StructField) bool { return f.Name == "Class" || f.Name == "ClassTarget" }
