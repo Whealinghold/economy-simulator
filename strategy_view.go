@@ -236,7 +236,7 @@ func (sc *viewScratch) appendRecipe(v *AgentView, a *agent, c *viewCtx, id Recip
 	if !ok {
 		return fmt.Errorf("fill view of agent %d: effective yield of recipe %d does not fit", a.id, id)
 	}
-	q := startReq{recipe: id, account: a.account, principal: a.id, weight: a.weight, effective: e, hasProfile: has}
+	q := startReq{recipe: id, account: a.account, principal: a.id, weight: a.weight, effective: e, hasProfile: has, exec: a}
 	if c.prod.res != nil {
 		q.drawCap, q.capped = c.prod.res.viewCap(region, id)
 	}

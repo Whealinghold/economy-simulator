@@ -6,10 +6,11 @@ import "github.com/Whealinghold/economy-sim/internal/checked"
 // the failure of a list (Check). Zero means admitted or valid.
 type Code uint8
 
-// Admission codes, numbered in the order of the table of CLR 3.2. The rows of
-// the modules (not_permitted after NotTradable; no_room after
-// InsufficientStock) and the legal clamp of 3.2.1 (between ReceiptLimit and
-// InsufficientFunds) have their positions marked in Admit and no code yet.
+// Admission codes, numbered in the order of the table of CLR 3.2, then the rows of
+// the modules in the order they were built. The row of not_permitted (after
+// NotTradable) and the legal clamp of 3.2.1 (between ReceiptLimit and
+// InsufficientFunds) have their positions marked in Admit and no code yet;
+// no_room of the storage module is the last row, after InsufficientStock.
 //
 // Overflow is the product of limit and quantity not fitting int64. HoldingLimit
 // and ReceiptLimit are the two settlement bounds of CLR 3.2.2 (a bid that would
@@ -30,6 +31,7 @@ const (
 	ReceiptLimit
 	InsufficientFunds
 	InsufficientStock
+	NoRoom
 )
 
 // Facts is what the root resolved for one order. The bounds are passed in so
@@ -49,6 +51,12 @@ type Facts struct {
 	Held           int64 // a bid: the buyer's holding of the commodity (D34)
 	Balance        int64 // an ask: the seller's money balance (D34)
 	Tally          int64 // an ask: worst-case receipt of its asks admitted so far
+	// Limited says the bidder's account has a room (storage module): FreeMass and
+	// FreeBulk are its free room and SizeMass and SizeBulk the size of one unit of
+	// the commodity. They are read for a bid only.
+	Limited            bool
+	FreeMass, FreeBulk int64
+	SizeMass, SizeBulk int64
 }
 
 // Admit returns the code of the first failing row of CLR 3.2, in the order of
@@ -70,8 +78,27 @@ func Admit(f Facts) Code {
 		return c
 	}
 	// Position of the legal clamp (3.2.1, institutions module): no code yet.
-	// Position of no_room (storage module): no code yet, after the funds row.
-	return fundsRow(f, product)
+	if c := fundsRow(f, product); c != Admitted {
+		return c
+	}
+	return roomRow(f)
+}
+
+// roomRow is the no_room row of CLR 3.2 (spec-storage.md 5.2.1, FR-STO-008): a bid
+// of a limited account whose quantity times each size exceeds the free room in
+// either dimension. It is the last row, so a bid that fails for two reasons reports
+// the older one. An ask and an account that is not limited are not tested. A load
+// that does not fit int64 is above any room.
+func roomRow(f Facts) Code {
+	if !f.Bid || !f.Limited {
+		return Admitted
+	}
+	mass, okm := checked.Mul(f.Qty, f.SizeMass)
+	bulk, okb := checked.Mul(f.Qty, f.SizeBulk)
+	if !okm || !okb || mass > f.FreeMass || bulk > f.FreeBulk {
+		return NoRoom
+	}
+	return Admitted
 }
 
 // limitsRow is the price, quantity and duplicate rows of the table of CLR 3.2.

@@ -195,11 +195,17 @@ func (w *World) submit(a *agent, region RegionID, in Intent) {
 			Account: a.account, AgentKnown: true, SideAllowed: true, CommodityKnown: true,
 			Tradable: w.roles.row(a.role).isTradable(o.Commodity), Tally: &w.receipts,
 		}
+		if w.sto != nil {
+			w.sto.roomFacts(w.ledger, a, o, &f)
+		}
 		var ok bool
 		if reason, ok = b.admit(w.ledger, f, o); ok {
 			b.emitPlaced(&w.obs, o)
 			w.markets.record(mi, intentRec{purpose: in.Purpose, target: in.Target, reserve: in.Reserve, unitCost: in.UnitCost})
 			return
+		}
+		if w.sto != nil {
+			w.sto.bidRejected(w.cellOf(region, a), reason)
 		}
 	}
 	b.emitRejected(&w.obs, w.log, o, reason)

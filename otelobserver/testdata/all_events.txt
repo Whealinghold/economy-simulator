@@ -39,6 +39,7 @@ RunStarted
 ShipmentArrived
 ShipmentDispatched
 ShipmentRejected
+StoreChanged
 TechnologyAdjusted
 TechnologyAdvanced
 TickEnded

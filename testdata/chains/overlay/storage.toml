@@ -1,0 +1,23 @@
+# The storage module alone on pack one (plan 3-sto D14, spec-reference-chain.md 4.4): every household has a base
+# room of 200 mass and 200 bulk, which holds one tick's upkeep (4 units, mass and bulk 1 each) and the stock a
+# household starts with and buys, and the growers have 2 600 each, above their warm stock of 714 units and the
+# 1 800 units of staple one job of theirs pledges (2 514, and one tick's upkeep), with a 1 000 barn each. The barn
+# is one store class, so the stores of the module are a store a role row gives, not a call.
+# The base room is per household, so an agent of weight w has w times it, and the barn is not multiplied.
+# Layer it after the pack: base.toml, one.toml, warm-one.toml, this file.
+
+[modules.storage.base]
+mass = 200
+bulk = 200
+
+[modules.storage.role.grower]
+stores = [ "barn" ]
+
+[modules.storage.role.grower.base]
+mass = 2600
+bulk = 2600
+
+[modules.storage.class.barn]
+mass = 1000
+bulk = 1000
+label = "a grain barn"

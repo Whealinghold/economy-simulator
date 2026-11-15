@@ -81,6 +81,7 @@ var declaredEvents = []economysim.Event{
 	economysim.TraineeshipStarted{},
 	economysim.TraineeshipCompleted{},
 	economysim.TraineeshipEnded{},
+	economysim.StoreChanged{},
 	economysim.TechnologyAdvanced{},
 	economysim.TechnologyAdjusted{},
 }
@@ -91,7 +92,7 @@ var declaredEvents = []economysim.Event{
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
 	"RoomLimited",
-	"StoreChanged", "StoreLoss",
+	"StoreLoss",
 	"RouteRiskScaled", "StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound", "LoanFormed", "LoanEnded",
 	"LoanPassed", "CreditRound", "CreditSettled", "CreditRateScaled",
@@ -114,7 +115,6 @@ var deferredCore = map[string]string{}
 // has not appended the field to its declared event yet (D3 of the plan of
 // Stage 0). The change that appends one deletes its entry.
 var notBuiltFields = []string{
-	"AgentSpawned.StoresLocked",       // storage module, STO 14.1
 	"EntryLimited.RoleCeiling",        // settlements module, SET 6.4
 	"PopulationChanged.BirthsCeiling", // settlements module, SET 6.4.2
 	"ShipmentDispatched.Toll",         // fiscal module, FIS 16.1
@@ -457,7 +457,7 @@ func TestEvents_CatalogueStaged(t *testing.T) {
 			t.Errorf("declared event %s is not a row of 4.1", n)
 			continue
 		}
-		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && row.gate != "resources" && row.gate != "subsistence" && row.gate != "population" && row.gate != "transport" && row.gate != "information" && row.gate != "migration" && row.gate != "merchant block" && row.gate != "merchants" && row.gate != "external" && row.gate != "employment" && row.gate != "technology" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
+		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && row.gate != "resources" && row.gate != "subsistence" && row.gate != "population" && row.gate != "transport" && row.gate != "information" && row.gate != "migration" && row.gate != "merchant block" && row.gate != "merchants" && row.gate != "external" && row.gate != "employment" && row.gate != "storage" && row.gate != "technology" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
 			t.Errorf("declared event %s has gate %q in 4.1, want core: a module's event is declared with its module", n, row.gate)
 		}
 		if !rules[n] {

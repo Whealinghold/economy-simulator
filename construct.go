@@ -75,6 +75,11 @@ func (w *World) construct(warnings []Warning) error {
 	if err := b.warm(); err != nil {
 		return err
 	}
+	if b.w.sto != nil {
+		if err := b.w.finishStorage(); err != nil {
+			return err
+		}
+	}
 	b.draws()
 	return b.finish(warnings)
 }
@@ -143,6 +148,10 @@ func (w *World) allocate() {
 	w.employment = newEmployment(&w.cfg)
 	w.polity = newPolity(&w.cfg)
 	w.skills = newSkills(&w.cfg)
+	w.sto = newStorage(&w.cfg, &w.roles, &w.recipes)
+	if w.sto != nil {
+		w.sto.world = w
+	}
 	w.registerBounds()
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
@@ -162,6 +171,7 @@ func (w *World) allocate() {
 	w.clr = &clearScratch{}
 	w.prod = newProductionScratch(&w.cfg, &w.recipes)
 	w.prod.res = w.res
+	w.prod.sto = w.sto
 	w.prod.tec = w.tec
 	w.refused = newRefusalTally(regions, len(w.cfg.Recipes))
 	w.reads = newReadBuf(len(w.cfg.Commodities))
@@ -189,6 +199,9 @@ func (w *World) registerBounds() {
 	}
 	if w.skills != nil {
 		w.bounds.add(inTraineeshipName, w.skills.holds)
+	}
+	if w.sto != nil {
+		w.bounds.add(hasStoreName, w.sto.holds)
 	}
 }
 
@@ -329,6 +342,7 @@ func namesOf(c *Config) Names {
 	n.Resources = resourceNames(c)
 	n.Modes = modeNames(c)
 	n.Jurisdictions = polityNames(c)
+	n.StoreClasses = storeClassNames(c)
 	n.TechFields = techNames(c)
 	return n
 }
@@ -346,6 +360,7 @@ func modulesOn(c *Config) []string {
 		{"resources", m.Resources != nil}, {"subsistence", m.Subsistence != nil}, {"population", m.Population != nil},
 		{"transport", m.Transport != nil}, {"information", m.Information != nil}, {"migration", m.Migration != nil},
 		{"merchants", m.Merchants != nil}, {"external", m.External != nil}, {"polity", m.Polity != nil},
+		{"storage", m.Storage != nil},
 		{"technology", m.Technology != nil},
 	}
 	on := []string{}

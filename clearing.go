@@ -2,7 +2,6 @@ package economysim
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"math/rand/v2" // nosemgrep: go.lang.security.audit.crypto.math_random.math-random-used -- seeded simulation PRNG, never a secret
 
@@ -73,8 +72,7 @@ func (AverageClearing) Clear(bids, asks []Order, rng *rand.Rand) []Trade {
 
 // codeReasons maps the admission codes of internal/clearing to the rejection
 // reasons of event.go, indexed by code (spec-clearing.md 3.2). It is never
-// mutated. The rows of the modules (not_permitted, no_room) are added with
-// their codes.
+// mutated. The rows of the modules (not_permitted) are added with their codes.
 var codeReasons = [...]Reason{
 	clearing.UnknownAgent:      ReasonUnknownAgent,
 	clearing.SideNotAllowed:    ReasonSideNotAllowed,
@@ -88,6 +86,7 @@ var codeReasons = [...]Reason{
 	clearing.ReceiptLimit:      ReasonReceiptLimit,
 	clearing.InsufficientFunds: ReasonInsufficientFunds,
 	clearing.InsufficientStock: ReasonInsufficientStock,
+	clearing.NoRoom:            ReasonNoRoom,
 }
 
 // reasonOfCode returns the Reason of a rejection code, and false for Admitted
@@ -172,6 +171,13 @@ type orderFacts struct {
 	Tradable bool
 	// Tally is the world's receipt tally; required for an ask.
 	Tally *receiptTally
+	// Limited, FreeMass, FreeBulk, SizeMass and SizeBulk are the room facts of the
+	// storage module for a bid (spec-storage.md 5.2.1): whether the account has a
+	// room, its free room and the size of one unit of the commodity. They stay at
+	// their zero value with the module off.
+	Limited            bool
+	FreeMass, FreeBulk int64
+	SizeMass, SizeBulk int64
 }
 
 // bookEntry is one admitted order and the reservation it holds.
@@ -185,6 +191,10 @@ type bookEntry struct {
 	// slot is the position of the order in Sums for the current clearing:
 	// bids first, then asks.
 	slot int
+	// roomed says the bid reserved room with its cash, sizeMass and sizeBulk being
+	// the size of one unit of the commodity (storage module, spec-storage.md 5.2).
+	roomed             bool
+	sizeMass, sizeBulk int64
 }
 
 // clearScratch is the working memory of one market step, owned by the world
@@ -307,6 +317,7 @@ func (b *book) admit(l *ledger.Ledger, f orderFacts, o Order) (Reason, bool) {
 		Bid: bid, Price: int64(o.Price), Qty: int64(o.Quantity),
 		MaxPrice: MaxPrice, MaxQuantity: MaxQuantity, MaxMoney: MaxMoney,
 		Duplicate: b.duplicate(o),
+		Limited:   f.Limited && bid, FreeMass: f.FreeMass, FreeBulk: f.FreeBulk, SizeMass: f.SizeMass, SizeBulk: f.SizeBulk,
 	}
 	if f.AgentKnown {
 		b.readFacts(l, f, o, &cf)
@@ -325,6 +336,7 @@ func (b *book) admit(l *ledger.Ledger, f orderFacts, o Order) (Reason, bool) {
 	b.entries = append(b.entries, bookEntry{
 		agent: o.Agent, account: f.Account, side: o.Side,
 		price: o.Price, qty: o.Quantity, lot: o.Lot,
+		roomed: cf.Limited, sizeMass: f.SizeMass, sizeBulk: f.SizeBulk,
 	})
 	return "", true
 }
@@ -393,6 +405,9 @@ func (b *book) reserve(l *ledger.Ledger, f orderFacts, o Order, tally int64) (Re
 		if err := l.ReserveMoney(f.Account, cost); err != nil {
 			invariant("the ledger refused the reservation of an admitted bid: " + err.Error())
 		}
+		if f.Limited {
+			b.reserveRoom(l, f, o)
+		}
 		return "", true
 	}
 	worst, ok := checked.Mul(int64(o.Quantity), MaxPrice)
@@ -411,6 +426,20 @@ func (b *book) reserve(l *ledger.Ledger, f orderFacts, o Order, tally int64) (Re
 	}
 	f.Tally.set(f.Account, sum)
 	return "", true
+}
+
+// reserveRoom reserves the room of an admitted bid of a limited account with its
+// cash (spec-storage.md 5.2.1, FR-STO-009). Admission tested the room, so a refusal
+// is a violated invariant.
+func (b *book) reserveRoom(l *ledger.Ledger, f orderFacts, o Order) {
+	mass, okm := checked.Mul(int64(o.Quantity), f.SizeMass)
+	bulk, okb := checked.Mul(int64(o.Quantity), f.SizeBulk)
+	if !okm || !okb {
+		invariant("a bid that passed the room row has a load that overflows")
+	}
+	if err := l.ReserveRoom(f.Account, mass, bulk); err != nil {
+		invariant("the ledger refused the room of an admitted bid: " + err.Error())
+	}
 }
 
 // emitPlaced delivers OrderPlaced for an admitted order, when an observer was
@@ -473,87 +502,6 @@ func (sc *clearScratch) load(b *book) {
 		if e := &b.entries[i]; e.side != Bid {
 			e.slot += nb
 		}
-	}
-}
-
-// release returns the remainder of every reservation of the book: the money of
-// a bid not spent and the units of an ask not sold, given the units filled per
-// slot (nil: nothing was filled). A remainder of 0 is not released, because
-// the ledger refuses an amount below 1 (D33).
-func (b *book) release(l *ledger.Ledger, sums []int64) {
-	for i := range b.entries {
-		e := &b.entries[i]
-		var filled int64
-		if sums != nil {
-			filled = sums[e.slot]
-		}
-		rem := int64(e.qty) - filled
-		if rem < 1 {
-			continue
-		}
-		var err error
-		switch {
-		case e.side == Bid:
-			// limit * remaining <= limit * quantity, which fit at admission.
-			money, ok := checked.Mul(int64(e.price), rem)
-			if !ok {
-				invariant("the remainder of an admitted bid has a product that overflows")
-			}
-			err = l.ReleaseMoney(e.account, money)
-		case e.lot.Named:
-			err = l.ReleaseLot(e.account, ledger.Key{Commodity: int(b.commodity), Born: e.lot.Born, Durability: e.lot.Durability}, rem)
-		default:
-			err = l.ReleaseGoods(e.account, int(b.commodity), rem)
-		}
-		if err != nil {
-			invariant("the ledger refused the release of a reservation the book holds: " + err.Error())
-		}
-	}
-}
-
-// tradeListError is the error of a list of trades that fails the check of
-// spec-clearing.md 8.2. It wraps ErrInvalidTrade and names the market.
-type tradeListError struct {
-	tick      int64
-	region    RegionID
-	commodity CommodityID
-	what      string
-}
-
-// Error describes the market and the rule broken.
-func (e *tradeListError) Error() string {
-	return fmt.Sprintf("%s: tick %d region %d commodity %d: %s",
-		ErrInvalidTrade.Error(), e.tick, e.region, e.commodity, e.what)
-}
-
-// Unwrap returns ErrInvalidTrade.
-func (e *tradeListError) Unwrap() error { return ErrInvalidTrade }
-
-// listFailure describes a failure code of clearing.Check.
-func listFailure(c clearing.Code) string {
-	switch c {
-	case clearing.BadCommodity:
-		return "a trade names another commodity than the market's"
-	case clearing.NoOrder:
-		return "a trade names a buyer with no bid or a seller with no ask"
-	case clearing.BadQuantity:
-		return "a trade has a quantity below 1"
-	case clearing.BadPrice:
-		return "a trade price is outside the limits of its orders"
-	case clearing.SameOwner:
-		return "a trade has one agent as buyer and seller"
-	case clearing.OverFilled:
-		return "the trades of an order exceed its quantity"
-	}
-	return "unknown failure" // a Code Check does not return; kept so a new code is not silent
-}
-
-// mustSettle panics when the ledger refuses a step of settlement. The list
-// passed the check and admission closed the overflow cases (D33, D34), so a
-// refusal is a violated invariant, never an input.
-func mustSettle(err error, step string) {
-	if err != nil {
-		invariant("the ledger refused " + step + " of a checked trade: " + err.Error())
 	}
 }
 
@@ -656,11 +604,15 @@ func (b *book) settle(l *ledger.Ledger, m clearing.Match, tick int64, obs *obser
 	if refund := (int64(bid.price) - m.Price) * m.Qty; refund > 0 { // <= limit * qty, fits
 		mustSettle(l.ReleaseMoney(bid.account, refund), "the refund")
 	}
+	form := ledger.CreditFree
+	if bid.roomed {
+		form = ledger.CreditReserved // the goods draw on the room the bid reserved
+	}
 	if ask.lot.Named {
 		key := ledger.Key{Commodity: int(b.commodity), Born: ask.lot.Born, Durability: ask.lot.Durability}
-		mustSettle(l.MoveLotReserved(ask.account, bid.account, key, m.Qty, ledger.Trade), "the delivery of a lot")
+		mustSettle(l.MoveLotCredited(ask.account, bid.account, key, m.Qty, ledger.Trade, true, form), "the delivery of a lot")
 	} else {
-		mustSettle(l.MoveReserved(ask.account, bid.account, int(b.commodity), m.Qty, ledger.Trade), "the delivery")
+		mustSettle(l.MoveCredited(ask.account, bid.account, int(b.commodity), m.Qty, ledger.Trade, true, form), "the delivery")
 	}
 	t := Trade{
 		Commodity: b.commodity, Buyer: bid.agent, Seller: ask.agent,

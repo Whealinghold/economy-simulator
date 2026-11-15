@@ -117,6 +117,8 @@ type World struct {
 	external *external
 	// polity is the state of the polity module, nil when it is off (polity.go).
 	polity *polity
+	// sto is the state of the storage module, nil when it is off (storage.go).
+	sto *storage
 	// tec is the state of the technology module, nil when it is off
 	// (technology.go).
 	tec *technology
@@ -486,6 +488,9 @@ func (w *World) endStep(err error) error {
 		}
 		if w.res != nil {
 			w.res.clearTick()
+		}
+		if w.sto != nil {
+			w.sto.clearTick()
 		}
 	}
 	w.stepping = false
