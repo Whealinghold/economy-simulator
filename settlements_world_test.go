@@ -49,8 +49,9 @@ func runSettlementsWorld(t *testing.T, c economysim.Config, seed uint64, ticks i
 // with the module on (three classes, a flag, a limit, a gated grower and refiner, a
 // region row) builds a world, runs 40 ticks and gives the same events, other than the
 // module's two, and the same final snapshot, other than the module's fields, as the
-// same world with the module off, for three seeds. The review draws nothing, moves
-// nothing and, until a reader reads the class (the next pull request), gates nothing.
+// same world with the module off, for three seeds. The review draws nothing and moves
+// nothing, and the gate and the ceiling of the roles do not bind here: the region is a
+// town from the start and its limit of 900 workers is above its households.
 //
 // Requirement: FR-SET-001, FR-SET-015, FR-SET-016
 //

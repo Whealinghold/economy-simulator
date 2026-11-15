@@ -23,13 +23,12 @@ import (
 // hooks the executor calls and the scale slot.
 
 // popCount is the counts of one (region, role) in the tick being stepped: the
-// fields of PopulationChanged (spec-population.md 10.1). BirthsCeiling is SET's
-// and has no counter here.
+// fields of PopulationChanged (spec-population.md 10.1).
 type popCount struct {
 	exposed, unfed, noRatio                     int64
 	birthsDue, deathsDue, deathsCut, deathsHeld int64
 	birthsCapped, birthsUnfunded, clamped       int64
-	birthsDone, deathsDone                      int64
+	birthsDone, deathsDone, birthsCeiling       int64
 }
 
 // popState is the state of the module, nil on the world when it is off (spec-
@@ -505,9 +504,10 @@ func (p *popState) births(g RegionID, v *RegionView, households int64) {
 		cell := int(g)*p.roles + r
 		events := p.step(&p.birthCarry[cell], 1, p.num[r])
 		allowed, dropped := population.Allow(events, households, p.cap[g])
+		allowed, ceiled := population.Ceil(allowed, roomOf(&v.Roles[r]))
 		households += allowed
 		v.Roles[r].PopBirths = allowed
-		p.cnt[r].birthsDue, p.cnt[r].birthsCapped = events, dropped
+		p.cnt[r].birthsDue, p.cnt[r].birthsCapped, p.cnt[r].birthsCeiling = events, dropped, ceiled
 	}
 }
 
@@ -571,7 +571,7 @@ func (c *decider) popDeaths() {
 // (spec-population.md 4.3, 4.8).
 func (c *decider) popBirths() {
 	for r := range c.v.Roles {
-		if n := c.v.Roles[r].PopBirths; n > 0 {
+		if n := c.fitRoom(r, c.v.Roles[r].PopBirths); n > 0 {
 			c.d.List = append(c.d.List, Decision{Kind: DecideEnter, Role: c.v.Roles[r].Role, Households: n, Cause: CauseBirths})
 		}
 	}
@@ -666,7 +666,7 @@ func (w *World) setPopulationScale(region RegionID, kind ScaleKind, bp int64) (b
 // households is non-zero: the rule of emission of PopulationChanged
 // (spec-population.md 10.1, FR-POP-031).
 func (c *popCount) changed() bool {
-	return c.birthsDue|c.deathsDue|c.deathsCut|c.deathsHeld|c.birthsCapped|c.birthsUnfunded|c.clamped|c.birthsDone|c.deathsDone != 0
+	return c.birthsDue|c.deathsDue|c.deathsCut|c.deathsHeld|c.birthsCapped|c.birthsUnfunded|c.clamped|c.birthsDone|c.deathsDone|c.birthsCeiling != 0
 }
 
 // popReport is the module's report of region g, called after the region's plan and
@@ -685,7 +685,7 @@ func (w *World) popReport(g RegionID, households int64) {
 				Tick: w.Tick(), Region: g, Role: RoleID(r), Exposed: c.exposed, Unfed: c.unfed, NoRatio: c.noRatio,
 				BirthsDue: c.birthsDue, DeathsDue: c.deathsDue, DeathsCut: c.deathsCut, DeathsHeld: c.deathsHeld,
 				BirthsCapped: c.birthsCapped, BirthsUnfunded: c.birthsUnfunded, RateClamped: c.clamped,
-				BirthsDone: c.birthsDone, DeathsDone: c.deathsDone,
+				BirthsDone: c.birthsDone, DeathsDone: c.deathsDone, BirthsCeiling: c.birthsCeiling,
 			})
 		}
 	}

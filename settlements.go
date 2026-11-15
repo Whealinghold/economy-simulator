@@ -38,6 +38,20 @@ type settlements struct {
 	hh []int64
 	// tab holds the flags and limits of each class, dense (spec-settlements.md 3.3).
 	tab *settlement.Table
+	// needs and ceil are, per role in canonical order, the index of the flag its
+	// Needs names and of the limit its Ceiling names, or -1 for none; the indices are
+	// into the sorted names of tab (spec-settlements.md 6.1).
+	needs, ceil []int
+	// flags are the sorted flag names of the module: the index of a flag in them is
+	// the index regionHas takes.
+	flags []string
+	// cnt is the households of each role in region cntRegion at the first read of
+	// the entry step of cntTick, kept exact by noteRoleMove between two reads; it is
+	// scratch, never saved (spec-settlements.md 6.4.2, plan 3-set SET11 b).
+	cnt       []int64
+	cntTick   int64
+	cntRegion RegionID
+	cntOK     bool
 }
 
 // newSettlements builds the state of the module from a canonical, validated
@@ -58,6 +72,9 @@ func newSettlements(c *Config) *settlements {
 		m: m, n: len(m.Classes), e: e, l: l, floor: make([]int, n), class: make([]int, n),
 		since: make([]int64, n), hh: make([]int64, n), tab: m.table(),
 	}
+	s.flags = slices.Sorted(maps.Keys(m.flagSet()))
+	s.needs, s.ceil = m.roleReaders(s.flags, c.Roles)
+	s.cnt = make([]int64, len(c.Roles))
 	at := make(map[string]int, n) // lookup only
 	for i := range c.Regions {
 		at[c.Regions[i].ID] = i
@@ -170,4 +187,44 @@ func (w *World) regionLimit(g RegionID, limit int) (int64, bool) {
 		return 0, false
 	}
 	return s.tab.Limit(s.class[g], limit)
+}
+
+// roleReaders resolves, per role in canonical order, the flag its Needs names and the
+// limit its Ceiling names to indices into the sorted flag and limit names, or -1 for
+// none (spec-settlements.md 6.1).
+func (m *Settlements) roleReaders(flags []string, roles []Role) (needs, ceil []int) {
+	limits := slices.Sorted(maps.Keys(m.limitSet()))
+	needs, ceil = make([]int, len(roles)), make([]int, len(roles))
+	for i := range roles {
+		needs[i], ceil[i] = nameIndex(flags, roles[i].Needs), nameIndex(limits, roles[i].Ceiling)
+	}
+	return needs, ceil
+}
+
+// nameIndex is the index of name in the sorted names, or -1 for the empty name.
+func nameIndex(sorted []string, name string) int {
+	if i, ok := slices.BinarySearch(sorted, name); ok && name != "" {
+		return i
+	}
+	return -1
+}
+
+// fillRoleGates is the reader of H1 and H2 (spec-settlements.md 6.4.1, 6.4.2): for
+// each role of the view of region g, Closed is also set when the role's Needs flag is
+// not carried by the region's class, and Headroom and NoLimit say what the class limit
+// of its Ceiling leaves, less the households of the role at the start of the entry
+// step. The households stay: nothing here removes one (R3).
+func (w *World) fillRoleGates(g RegionID) {
+	s := w.set
+	for r := range w.ex.view.Roles {
+		rv := &w.ex.view.Roles[r]
+		if f := s.needs[r]; f >= 0 && !w.regionHas(g, f) {
+			rv.Closed = true
+		}
+		if l := s.ceil[r]; l >= 0 {
+			if limit, ok := w.regionLimit(g, l); ok {
+				rv.Headroom, rv.NoLimit = settlement.Headroom(limit, rv.Households), false
+			}
+		}
+	}
 }
