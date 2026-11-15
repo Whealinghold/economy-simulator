@@ -338,7 +338,9 @@
 //     its trainer's place, while the target role has no headroom for it.
 //   - TraineeshipStarted, TraineeshipCompleted, TraineeshipEnded: the events of a
 //     place filled, a course completed (the agent changes role) and a course that
-//     ends without completing (the reason names why).
+//     ends without completing (the reason names why). TraineeRow is the snapshot
+//     row of a traineeship in progress: the trainee, its trainer, the role it
+//     trains for, the region, the ticks served and the tick it applied.
 //   - Technology: the module of productivity growth: a gain in yield held per region
 //     and technology field (Technology is the module's configuration, TechField its
 //     field row, TechFieldID the typed ID of a field, an index in ascending order of the

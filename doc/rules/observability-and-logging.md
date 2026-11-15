@@ -207,6 +207,7 @@ constants in an internal package and reused. The standard keys are:
 | `entries`, `changed`, `actors`, `levers` | counts: entries a policy actor returned, settings changed, and actors and levers in the construction summary |
 | `cover_policy`, `sum`, `premium`, `payout` | an insurance cover's policy ID, and its sum, premium and payout in minor units (`int64`) |
 | `underwriters`, `insured` | counts of underwriters and of insured agents, in the construction summary |
+| `trainer`, `served` | `trainer`: the agent ID of a trainee's trainer; `served`: the ticks of a traineeship served (`int64`), in the line "traineeship ended" |
 | `outcomes`, `previous` | `outcomes`: a count of order outcomes (`int64`), the denominator of the "price beliefs at bound" line; `previous`: a price in minor units (`int64`), the centre of a belief before an update (`price` is the one after) |
 
 Add a key to this table in the same PR that introduces it. Prices, money and
@@ -980,4 +981,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: f215753306fac0bc7607c4c4
+RULE-TAG: 9ebd6516273680595f477c95

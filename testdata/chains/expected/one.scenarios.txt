@@ -78,6 +78,56 @@ check price within belief bounds (FR-STB-008): 10/10 pass
 
 
 
+## S06 one+imbalance-cook notool seeds 1-10, 1095 ticks
+measure Warns no places open: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure cook share at end (balanced 2267) bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure cook share swing over the last 730 ticks bp: 1=7854 2=6037 3=6217 4=4905 5=5308 6=7697 7=4930 8=5028 9=7703 10=6250 | median=6127 n=10
+measure households at end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure observed premium of the cook bp (check A reports, the band 14100 to 19300): 1=absent 2=absent 3=absent 4=absent 5=absent 6=absent 7=absent 8=absent 9=absent 10=absent
+measure trainees at the end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure traineeships completed: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure traineeships ended without completing: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure traineeships started: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check no traineeship without the overlay: 10/10 pass
+
+## S06 one+imbalance-cook notool+skill seeds 1-10, 1095 ticks
+measure Warns no places open: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure cook share at end (balanced 2267) bp: 1=absent 2=absent 3=0 4=absent 5=0 6=absent 7=absent 8=absent 9=0 10=0 | median=0 n=4
+measure cook share swing over the last 730 ticks bp: 3=0 5=0 9=0 10=0 | median=0 n=4
+measure households at end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure observed premium of the cook bp (check A reports, the band 14100 to 19300): 1=absent 2=absent 3=absent 4=absent 5=absent 6=absent 7=absent 8=absent 9=absent 10=absent
+measure trainees at the end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure traineeships completed: 1=239 2=273 3=240 4=254 5=227 6=194 7=214 8=200 9=223 10=223 | median=225 n=10
+measure traineeships ended without completing: 1=508 2=529 3=410 4=604 5=417 6=194 7=377 8=321 9=421 10=471 | median=419 n=10
+measure traineeships started: 1=747 2=802 3=650 4=858 5=644 6=388 7=591 8=521 9=644 10=694 | median=647 n=10
+check every start is completed, ended or still in training: 10/10 pass
+check places are filled: 10/10 pass
+
+## S06 one+imbalance-cook tool seeds 1-10, 1095 ticks
+measure Warns no places open: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure cook share at end (balanced 2267) bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure cook share swing over the last 730 ticks bp: 1=7235 2=6153 3=7878 4=4365 5=5760 6=3908 7=8846 8=2574 9=7236 10=7155 | median=6654 n=10
+measure households at end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure observed premium of the cook bp (check A reports, the band 14100 to 19300): 1=absent 2=absent 3=absent 4=absent 5=absent 6=absent 7=absent 8=absent 9=absent 10=absent
+measure trainees at the end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure traineeships completed: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure traineeships ended without completing: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure traineeships started: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check no traineeship without the overlay: 10/10 pass
+
+## S06 one+imbalance-cook tool+skill seeds 1-10, 1095 ticks
+measure Warns no places open: 1=0 2=0 3=0 4=0 5=5 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure cook share at end (balanced 2267) bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure cook share swing over the last 730 ticks bp: 1=6819 2=5735 3=4385 4=4821 5=5564 6=8276 7=4375 8=4927 9=4951 10=3757 | median=4939 n=10
+measure households at end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure observed premium of the cook bp (check A reports, the band 14100 to 19300): 1=absent 2=absent 3=absent 4=absent 5=absent 6=absent 7=absent 8=absent 9=absent 10=absent
+measure trainees at the end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure traineeships completed: 1=328 2=411 3=399 4=344 5=327 6=357 7=387 8=423 9=404 10=388 | median=388 n=10
+measure traineeships ended without completing: 1=254 2=155 3=285 4=410 5=199 6=405 7=417 8=493 9=328 10=407 | median=366 n=10
+measure traineeships started: 1=582 2=566 3=684 4=754 5=526 6=762 7=804 8=916 9=732 10=795 | median=743 n=10
+check every start is completed, ended or still in training: 10/10 pass
+check places are filled: 10/10 pass
+
 ## S07 one+glut-prepared seeds 1-10, 400 ticks, cost_floor 10000/9000/7000/5000
 measure floor 10000 households at end: 1=190 2=245 3=249 4=236 5=195 6=197 7=185 8=206 9=215 10=181 | median=202 n=10
 measure floor 10000 longest freeze, prepared: 1=1 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10

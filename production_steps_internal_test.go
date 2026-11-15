@@ -22,7 +22,7 @@ type seedSpec struct {
 // k0 and reason as the start that follows it, changing nothing. Available units
 // are held - reserved (D58).
 //
-// Requirement: FR-PRO-009, FR-PRO-010, FR-PRO-011, FR-PRO-013
+// Requirement: FR-PRO-009, FR-PRO-010, FR-PRO-011, FR-PRO-013, FR-SKL-001
 //
 // Guard: FR-PRO-009, a read that drifts from the start would show the strategy
 // executions the start then refuses, and a refused start that consumes
@@ -189,7 +189,7 @@ func TestStart_LedgerEffects(t *testing.T) {
 // peel of durability 7 by 7), that a tool-only recipe makes no input Transform
 // and that a source recipe creates from nothing.
 //
-// Requirement: FR-PRO-011, FR-PRO-003
+// Requirement: FR-PRO-011, FR-PRO-003, FR-SKL-001, FR-SKL-002
 func TestStart_ToolDestroyedAtDurability(t *testing.T) {
 	t.Parallel()
 	f := newStepFixture(t)

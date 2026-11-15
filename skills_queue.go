@@ -41,8 +41,8 @@ func (w *World) skillsEntry(g RegionID) error {
 		return err
 	}
 	for r := range w.cfg.Roles {
-		if w.cfg.Roles[r].TrainingTicks > 0 && len(s.queue[s.cell(g, RoleID(r))]) > 0 {
-			w.fillPlaces(g, RoleID(r))
+		if w.cfg.Roles[r].TrainingTicks > 0 {
+			w.placeRole(g, RoleID(r))
 		}
 	}
 	for id := range s.trainee {
@@ -113,15 +113,17 @@ func (w *World) canTrain(a *agent) bool {
 }
 
 // trainersOf lists the agents of role r in region g that can take a trainee, in
-// ascending ID, with the trainees each holds.
+// ascending ID, with the trainees each holds. The list is the scratch of the
+// world, valid until the next call.
 func (w *World) trainersOf(g RegionID, r RoleID) []trainerSlot {
-	var trainers []trainerSlot
+	s := w.skills
+	s.slots = s.slots[:0]
 	for i := w.firstHousehold; i < len(w.agents); i++ {
 		if a := &w.agents[i]; a.weight >= 1 && a.role == r && w.regionOf(a) == g && w.canTrain(a) {
-			trainers = append(trainers, trainerSlot{id: a.id, held: w.skills.held(a.id)})
+			s.slots = append(s.slots, trainerSlot{id: a.id, held: s.held(a.id)})
 		}
 	}
-	return trainers
+	return s.slots
 }
 
 // freest returns the index of the trainer with the fewest trainees, the lower ID
@@ -136,18 +138,52 @@ func freest(trainers []trainerSlot, max int64) (int, bool) {
 	return best, best >= 0
 }
 
+// placeStop is why the filling of a role's places ended with an applicant still
+// waiting: nothing (the queue was placed or its applicants are away), no free
+// place, or a negative gain.
+type placeStop int8
+
+const (
+	placeOpen placeStop = iota
+	placeNone
+	placeGain
+)
+
+// The Debug reasons of "traineeship refused" and the reason of the Warn "no
+// places open" (spec-skill-barriers.md 8.3). A rule constant of the log line,
+// not an event field (architecture.md 9.6).
+const (
+	reasonNoTrainer    Reason = "no_trainer"
+	reasonGainNegative Reason = "gain_negative"
+)
+
+// placeRole fills the places of role r in region g from its queue and reports
+// what stopped it: the run of the Warn "no places open" advances every tick, so
+// it resets when the queue is empty or placed.
+func (w *World) placeRole(g RegionID, r RoleID) {
+	s := w.skills
+	stop, head := placeOpen, AgentID(0)
+	if len(s.queue[s.cell(g, r)]) > 0 {
+		stop, head = w.fillPlaces(g, r)
+	} else if s.warnRun[s.cell(g, r)] == 0 {
+		return
+	}
+	w.reportPlaces(g, r, stop, head)
+}
+
 // fillPlaces fills the places of role r in region g from its queue, in queue order
 // (spec-skill-barriers.md 4.2.1 step 2, 4.3.1). An applicant that is away or on a
 // journey waits and the next is tried; the first applicant whose gain is
 // negative, or the lack of a free place, ends the filling. The gain decides a new
-// place only, never a traineeship in progress.
-func (w *World) fillPlaces(g RegionID, r RoleID) {
+// place only, never a traineeship in progress. It returns why it ended and the
+// applicant it ended on.
+func (w *World) fillPlaces(g RegionID, r RoleID) (placeStop, AgentID) {
 	s, cell := w.skills, w.skills.cell(g, r)
 	trainers, gain := w.trainersOf(g, r), w.newGainer(g, r)
 	for i := 0; i < len(s.queue[cell]); {
 		at, free := freest(trainers, w.cfg.Roles[r].MaxTrainees)
 		if !free {
-			return
+			return placeNone, s.queue[cell][i].agent
 		}
 		ap := s.queue[cell][i]
 		a := &w.agents[ap.agent]
@@ -156,7 +192,7 @@ func (w *World) fillPlaces(g RegionID, r RoleID) {
 			continue
 		}
 		if !gain.ok(a) {
-			return
+			return placeGain, ap.agent
 		}
 		trainers[at].held++
 		s.dequeue(ap.agent)
@@ -165,6 +201,7 @@ func (w *World) fillPlaces(g RegionID, r RoleID) {
 			w.obs.deliver(TraineeshipStarted{Tick: w.Tick(), Trainee: ap.agent, Trainer: trainers[at].id, Role: r, Region: g})
 		}
 	}
+	return placeOpen, 0
 }
 
 // gainer decides whether a trainer takes a trainee in role r of region g
@@ -184,7 +221,7 @@ type gainer struct {
 }
 
 // newGainer returns the gain test of role r in region g; it reads nothing yet.
-func (w *World) newGainer(g RegionID, r RoleID) *gainer { return &gainer{w: w, g: g, r: r} }
+func (w *World) newGainer(g RegionID, r RoleID) gainer { return gainer{w: w, g: g, r: r} }
 
 // load reads the prices of the region, the observed wage of the role and the best
 // eligible output.
@@ -318,13 +355,15 @@ func (w *World) fillAgentSkills(row *RegionAgent, a *agent) {
 //
 // It draws nothing.
 func (w *World) dropAgent(a *agent) {
-	s, region := w.skills, w.regionOf(a)
+	s := w.skills
 	if s == nil {
 		return
 	}
+	region := w.regionOf(a)
 	s.dequeue(a.id)
 	if s.isTrainer(a.id) {
-		for _, id := range slices.Clone(s.trainer[a.id].trainees) {
+		s.drop = append(s.drop[:0], s.trainer[a.id].trainees...)
+		for _, id := range s.drop {
 			w.returnTrainee(&w.agents[id], region)
 		}
 	}
@@ -332,10 +371,8 @@ func (w *World) dropAgent(a *agent) {
 		if a.hasJob() {
 			w.abandonJob(a, region, ReasonAgentRemoved)
 		}
-		s.end(a.id)
-		if w.obs.supplied {
-			w.obs.deliver(TraineeshipEnded{Tick: w.Tick(), Agent: a.id, Region: region, Reason: ReasonAgentLeft})
-		}
+		rec, _ := s.end(a.id)
+		w.reportEnded(a.id, region, rec, ReasonAgentLeft)
 	}
 }
 
@@ -347,8 +384,6 @@ func (w *World) returnTrainee(t *agent, region RegionID) {
 		w.abandonJob(t, region, ReasonPrincipalLeft)
 	}
 	rec, _ := w.skills.end(t.id)
-	if w.obs.supplied {
-		w.obs.deliver(TraineeshipEnded{Tick: w.Tick(), Agent: t.id, Region: region, Reason: ReasonTrainerLeft})
-	}
+	w.reportEnded(t.id, region, rec, ReasonTrainerLeft)
 	w.skills.enqueue(w.skills.cell(region, rec.role), applicant{agent: t.id, applied: rec.applied, served: rec.served})
 }
