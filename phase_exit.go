@@ -143,7 +143,8 @@ func (w *World) scanRegion(g RegionID) {
 		s.rings, s.weights, s.targets, s.free = s.rings[:0], s.weights[:0], s.targets[:0], s.free[:0]
 	}
 	for i := w.firstHousehold; i < len(w.agents); i++ {
-		if a := &w.agents[i]; a.weight >= 1 && w.regionOf(a) == g {
+		a := &w.agents[i]
+		if r, ok := w.householdRegion(a); ok && r == g {
 			w.addAgentRow(a)
 		}
 	}

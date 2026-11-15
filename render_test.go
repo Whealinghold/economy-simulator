@@ -59,23 +59,11 @@ func (n namer) idName(v reflect.Value) (string, bool) {
 		return "", false
 	}
 	i := v.Int()
-	var table []string
-	switch t.Name() {
-	case "RegionID":
-		table = n.names.Regions
-	case "CommodityID":
-		table = n.names.Commodities
-	case "RoleID":
-		table = n.names.Roles
-	case "RecipeID":
-		table = n.names.Recipes
-	case "JurisdictionID":
-		table = n.names.Jurisdictions
-	default: // AgentID and any ID with no names table is its integer
-		return strconv.FormatInt(i, 10), true
-	}
+	table, named := n.table(t.Name())
 	switch {
-	case v.Interface() == economysim.NoCommodity:
+	case !named:
+		return strconv.FormatInt(i, 10), true
+	case v.Interface() == economysim.NoCommodity, v.Interface() == economysim.NoSettlementClass:
 		return "-", true
 	case i < 0 || i >= int64(len(table)):
 		return "#" + strconv.FormatInt(i, 10), true
@@ -301,7 +289,7 @@ func renderSnapshot(s economysim.Snapshot) string {
 		for j := 0; j < v.Field(i).Len(); j++ {
 			row := v.Field(i).Index(j)
 			line := row.Type().Name()
-			if parts := n.fields(row, nil); len(parts) > 0 {
+			if parts := n.fields(row, offSettlementIDs(s, row)); len(parts) > 0 {
 				line += " " + strings.Join(parts, " ")
 			}
 			out += line + "\n"

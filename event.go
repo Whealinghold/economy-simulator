@@ -588,6 +588,9 @@ type Names struct {
 	// TechFields holds the string ID of each TechFieldID; nil when the technology
 	// module is off.
 	TechFields []string
+	// SettlementClasses holds the string ID of each SettlementClassID, in ascending
+	// order of Enter; nil when the settlements module is off.
+	SettlementClasses []string
 }
 
 // Amount is a quantity of one commodity.
@@ -1997,3 +2000,56 @@ type TechnologyAdjusted struct {
 }
 
 func (TechnologyAdjusted) isEvent() {}
+
+// The causes of SettlementClassChanged (spec-settlements.md 10.1), constants of
+// Cause.
+const (
+	// CauseFounded is the first class of a region, at construction.
+	CauseFounded Cause = "founded"
+	// CauseGrew is a change to a higher class at P7.2a.
+	CauseGrew Cause = "grew"
+	// CauseShrank is a change to a lower class at P7.2a.
+	CauseShrank Cause = "shrank"
+)
+
+// SettlementClassChanged is emitted when a region's settlement class changes: once
+// per region at construction after the AgentSpawned events (the founding, From
+// NoSettlementClass, Tick 0, in ascending RegionID) and at P7.2a after the last
+// MigrationReviewed, in region order, once per change (spec-settlements.md 5.4,
+// 10.1). It is a transition of one region, so it is per region and not an aggregate.
+// Households is the count the review used. It is never emitted with the module off,
+// and never for a region at P7.2a that SettlementHeld reports in the same tick.
+type SettlementClassChanged struct {
+	Tick int64
+	// Region is the region whose class changed.
+	Region RegionID
+	// From is the class before (NoSettlementClass at the founding) and To the class
+	// after.
+	From, To SettlementClassID
+	// Households is the household count of the region the review used.
+	Households int64
+	// Cause is CauseFounded, CauseGrew or CauseShrank.
+	Cause Cause
+}
+
+func (SettlementClassChanged) isEvent() {}
+
+// SettlementHeld is emitted once per region at P7.2a in a tick in which the dwell
+// holds a change of class, instead of SettlementClassChanged (spec-settlements.md
+// 4.4, 10.1). It is an aggregate: nothing changed, and the event says which class
+// the review would have given. A held change is not remembered, so the next review
+// starts from the count it then has.
+type SettlementHeld struct {
+	Tick int64
+	// Region is the region whose change was held.
+	Region RegionID
+	// Class is the class the region keeps and Target the class the review gave.
+	Class, Target SettlementClassID
+	// Households is the household count the review used.
+	Households int64
+	// TicksLeft is Dwell - (Tick - Since), at least 1: the ticks until the change may
+	// apply.
+	TicksLeft int64
+}
+
+func (SettlementHeld) isEvent() {}

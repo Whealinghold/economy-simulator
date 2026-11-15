@@ -69,6 +69,8 @@ var allEvents = []economysim.Event{
 	economysim.StoreChanged{},
 	economysim.TechnologyAdvanced{},
 	economysim.TechnologyAdjusted{},
+	economysim.SettlementClassChanged{},
+	economysim.SettlementHeld{},
 }
 
 // TestObserve_EveryEventTypeNoPanic sends the zero value of every event type to
