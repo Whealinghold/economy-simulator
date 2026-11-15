@@ -1466,6 +1466,46 @@
 //   - Combining mode: how the rows of a table keyed by jurisdiction combine along a
 //     chain: innermost (the first row), added (the sum) or scaled (the product, rounded
 //     once).
+//   - Tenure: the optional module that says who may draw on an endowment and at what
+//     rent; its presence in Config.Modules (TenureConfig) switches it on
+//     (spec-land.md). "Land" is not a term: it stays only in the name of the spec file.
+//   - Title: a share, in basis points, of the snapshot stock of one endowment, held by
+//     one agent or by the estate pool of the endowment's region; never a rank or an
+//     honorific (Holding is the configuration row that gives it, HoldingsState and
+//     TitleState its checkpoint and snapshot forms, TitleTransfer a move at a call).
+//   - Holder: the agent, or the pool, that holds a title (HolderRef names it in a row).
+//   - Commons share: 10 000 basis points less the titles of an endowment; the units it
+//     covers are free (RES 5.3 when no title exists).
+//   - Entitlement: the whole units of a title at a snapshot, by the largest remainder
+//     (not the entitlement of the other specs).
+//   - Unused entitlement: what a holder's own requests left of its entitlement, which
+//     is let to others.
+//   - Let: a unit of an unused entitlement offered to others and drawn for a rent; the
+//     verb is not "lease".
+//   - Lessor: a holder with an unused entitlement that supplies let units.
+//   - Tenant: a request served from let units.
+//   - Ration tier: one of the three parts of the ration of a titled endowment: own,
+//     commons, let (not the tier of a bid's gap, nor STY's tier of tests).
+//   - Posted rent: the rent per unit let that a term sets, before the scale; state
+//     when a rent step is configured (TenureTerm is its row).
+//   - Rent in force: the posted rent times the rent scale over 10 000, at least 1 when
+//     both are positive; what a tenant pays (RentPaid is the event of its tick).
+//   - Rent scale: the slot between ticks that scales the posted rent, 0 to MaxShockBP
+//     (RentScaled is its event).
+//   - Closed (endowment): an endowment that lets nothing, so its unused entitlements
+//     stay in the stock.
+//   - Enclosure, Release: the two directions of a transfer of titles to and from the
+//     commons (TitleTransferred is the event of each title moved).
+//   - Principal (of a request): the account whose inputs the job uses, the holder
+//     status of a job; the executor except in a hire or a traineeship.
+//   - Apportionment: the sharing of a whole stock in whole units by the largest
+//     remainder, ties by the stateless key and then the ID.
+//   - No agent: the constant -1 of AgentID, the commons as a party of TransferTitles.
+//   - Priced out: the units of a request clipped by what its principal can pay at the
+//     rent in force.
+//   - Forfeited: rent that a payee at MaxMoney could not receive, which is not charged
+//     (RegionMoney is the per-region money row of RentPaid).
+//   - Held: the unused entitlement of a closed endowment.
 //   - Settlement class: the size class of a region, derived from its households and
 //     ordered by its enter threshold; SettlementClassID is its index in that order and
 //     NoSettlementClass means none (Settlements is the module, a pointer of
