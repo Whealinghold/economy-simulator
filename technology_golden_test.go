@@ -74,17 +74,8 @@ func TestGolden_TechnologyAloneEvents(t *testing.T) {
 	if !reflect.DeepEqual(res.Final, step.Final) {
 		t.Errorf("final snapshot of Run(400) differs from the Step loop's (seed %d)", goldenSeed)
 	}
-	var disc, catch, doing, trend int
-	for _, e := range res.Events {
-		if a, ok := e.(economysim.TechnologyAdvanced); ok {
-			disc += int(min(a.Discoveries, 1))
-			catch += int(min(max(a.CatchUpAddedBP, 0), 1))
-			doing += int(min(max(a.DoingAddedBP, 0), 1))
-			trend += int(min(max(a.TrendAddedBP, 0), 1))
-		}
-	}
-	if disc == 0 || catch == 0 || doing == 0 || trend == 0 {
-		t.Errorf("TechnologyAdvanced events with a discovery %d, a catch-up %d, learning %d and a trend %d, want each above 0", disc, catch, doing, trend)
+	if m := mechanismsSeen(res.Events); slices.Contains(m[:], false) {
+		t.Errorf("TechnologyAdvanced events show learning, trend, discovery, catch-up = %v, want each true", m)
 	}
 	checkModuleGolden(t, "technology", "events-three.txt", renderEvents(res))
 }
@@ -160,4 +151,18 @@ func checkOffSums(t *testing.T) {
 			t.Errorf("sha256(testdata/golden/off/%s) = %s, want %s: the off set moved (testing.md 7.1.1)", name, got, want)
 		}
 	}
+}
+
+// mechanismsSeen reports whether some TechnologyAdvanced shows learning, a trend, a
+// discovery and a catch-up add, in that order.
+func mechanismsSeen(events []economysim.Event) (seen [4]bool) {
+	for _, e := range events {
+		if a, ok := e.(economysim.TechnologyAdvanced); ok {
+			seen[0] = seen[0] || a.DoingAddedBP > 0
+			seen[1] = seen[1] || a.TrendAddedBP > 0
+			seen[2] = seen[2] || a.Discoveries > 0
+			seen[3] = seen[3] || a.CatchUpAddedBP > 0
+		}
+	}
+	return seen
 }
