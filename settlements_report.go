@@ -81,6 +81,9 @@ func (w *World) reportClassHeld(g RegionID, class, target SettlementClassID, hou
 // region is at its floor (spec-settlements.md 10.5).
 func (w *World) fillRegionClass(rr *RegionRow, g RegionID) {
 	s := w.set
+	if s == nil {
+		return
+	}
 	target, atFloor := settlement.Target(s.class[g], s.floor[g], rr.Households, s.e[g], s.l[g])
 	rr.Class, rr.ClassSince = SettlementClassID(s.class[g]), s.since[g]
 	rr.ClassTarget, rr.ClassAtFloor = SettlementClassID(target), atFloor

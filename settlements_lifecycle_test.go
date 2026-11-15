@@ -46,6 +46,30 @@ func TestLifecycle_ConsumerGrowsAndShrinksARegion(t *testing.T) {
 	w := newPackWorld(t, settlementsRunConfig(), 1, economysim.WithObserver(rec))
 	step(t, w, 10) // ticks 0 to 9: the dwell has not run, and nothing is due
 	rec.events = nil
+	added := growNorth(t, w, rec)
+	rec.events = nil
+	for _, id := range added {
+		if err := w.RemoveAgent(id); err != nil {
+			t.Fatalf("RemoveAgent(%d) error = %v, want nil", id, err)
+		}
+	}
+	step(t, w, 9) // ticks 11 to 19
+	changed, held := regionClassEvents(rec.events)
+	if len(changed) != 0 || len(held) != 9 {
+		t.Fatalf("events of ticks 11 to 19 = %d changed and %d held, want 0 and 9", len(changed), len(held))
+	}
+	checkNorthHeld(t, held)
+	step(t, w, 1) // tick 20
+	changed, _ = regionClassEvents(rec.events)
+	if !isOneChange(changed, 3, 2, economysim.CauseShrank) {
+		t.Errorf("events of tick 20 = %+v, want one shrank from 3 to 2", changed)
+	}
+}
+
+// growNorth adds 150 households to north between ticks, steps to tick 10 and verifies the
+// change to class 3 there; it returns the added agents.
+func growNorth(t *testing.T, w *economysim.World, rec *recorder) []economysim.AgentID {
+	t.Helper()
 	var added []economysim.AgentID
 	for range 150 {
 		id, err := w.AddAgent(economysim.NewAgent{Region: 0, Role: 0, Money: 100})
@@ -59,7 +83,7 @@ func TestLifecycle_ConsumerGrowsAndShrinksARegion(t *testing.T) {
 	}
 	step(t, w, 1) // tick 10: the dwell has run
 	changed, held := regionClassEvents(rec.events)
-	if len(changed) != 1 || changed[0].Region != 0 || changed[0].From != 2 || changed[0].To != 3 || changed[0].Cause != economysim.CauseGrew || len(held) != 0 {
+	if !isOneChange(changed, 2, 3, economysim.CauseGrew) || len(held) != 0 {
 		t.Fatalf("events of tick 10 = %+v held %+v, want one SettlementClassChanged of north grew from 2 to 3 and none held", changed, held)
 	}
 	snap, _ := w.Snapshot()
@@ -67,26 +91,23 @@ func TestLifecycle_ConsumerGrowsAndShrinksARegion(t *testing.T) {
 		t.Errorf("row of north after tick 10 = class %d since %d households %d, want class 3 since 10 households %d", row.Class, row.ClassSince, row.Households, changed[0].Households)
 	}
 
-	rec.events = nil
-	for _, id := range added {
-		if err := w.RemoveAgent(id); err != nil {
-			t.Fatalf("RemoveAgent(%d) error = %v, want nil", id, err)
-		}
-	}
-	step(t, w, 9) // ticks 11 to 19
-	changed, held = regionClassEvents(rec.events)
-	if len(changed) != 0 || len(held) != 9 {
-		t.Fatalf("events of ticks 11 to 19 = %d changed and %d held, want 0 and 9", len(changed), len(held))
-	}
+	return added
+}
+
+// isOneChange reports whether changed is one event of north, from one class to another,
+// with the given cause.
+func isOneChange(changed []economysim.SettlementClassChanged, from, to economysim.SettlementClassID, cause economysim.Cause) bool {
+	return len(changed) == 1 && changed[0].Region == 0 && changed[0].From == from && changed[0].To == to && changed[0].Cause == cause
+}
+
+// checkNorthHeld verifies that held says north holds class 3 for target 2, with the
+// ticks left counting down from 9.
+func checkNorthHeld(t *testing.T, held []economysim.SettlementHeld) {
+	t.Helper()
 	for i, h := range held {
 		if want := int64(9 - i); h.Region != 0 || h.Class != 3 || h.Target != 2 || h.TicksLeft != want {
 			t.Errorf("held[%d] = %+v, want north holding class 3 for target 2 with %d ticks left", i, h, want)
 		}
-	}
-	step(t, w, 1) // tick 20
-	changed, _ = regionClassEvents(rec.events)
-	if len(changed) != 1 || changed[0].Cause != economysim.CauseShrank || changed[0].From != 3 || changed[0].To != 2 {
-		t.Errorf("events of tick 20 = %+v, want one shrank from 3 to 2", changed)
 	}
 }
 

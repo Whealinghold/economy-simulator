@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -116,6 +117,17 @@ func TestRegionReads_ModuleOffHasNoFlagAndNoLimit(t *testing.T) {
 	}
 }
 
+// checkHeldCountdown verifies that the held events alternate between the two regions,
+// each with the ticks left until the dwell of 5.
+func checkHeldCountdown(t *testing.T, held []SettlementHeld) {
+	t.Helper()
+	for i, h := range held {
+		if wantLeft := int64(5) - h.Tick; h.TicksLeft != wantLeft || h.Region != RegionID(i%2) {
+			t.Errorf("held[%d] = %+v, want region %d with %d ticks left", i, h, i%2, wantLeft)
+		}
+	}
+}
+
 // TestDwell_FirstReleaseAtTickDwell verifies that regions founded together are held
 // together and released together: with Since 0 for every region and a Dwell of 5, two
 // regions whose counts cross a threshold at tick 0 are held at ticks 0 to 4, with the
@@ -141,11 +153,7 @@ func TestDwell_FirstReleaseAtTickDwell(t *testing.T) {
 	if len(held) != 10 {
 		t.Fatalf("held events before the release = %d, want 10 (2 regions, ticks 0 to 4)", len(held))
 	}
-	for i, h := range held {
-		if wantLeft := int64(5) - h.Tick; h.TicksLeft != wantLeft || h.Region != RegionID(i%2) {
-			t.Errorf("held[%d] = %+v, want region %d with %d ticks left", i, h, i%2, wantLeft)
-		}
-	}
+	checkHeldCountdown(t, held)
 	if got := of[SettlementClassChanged](rec); len(got) != 0 {
 		t.Fatalf("changes during the hold = %+v, want none", got)
 	}
@@ -155,8 +163,7 @@ func TestDwell_FirstReleaseAtTickDwell(t *testing.T) {
 		{Tick: 5, Region: setA, From: 0, To: 1, Households: 13, Cause: CauseGrew},
 		{Tick: 5, Region: setB, From: 1, To: 2, Households: 30, Cause: CauseGrew},
 	}
-	got := of[SettlementClassChanged](rec)
-	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+	if got := of[SettlementClassChanged](rec); !slices.Equal(got, want) {
 		t.Errorf("changes at tick 5 = %+v, want %+v", got, want)
 	}
 	if w.set.since[setA] != 5 || w.set.since[setB] != 5 || len(of[SettlementHeld](rec)) != 10 {

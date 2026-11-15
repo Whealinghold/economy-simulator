@@ -620,9 +620,7 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 		w.popSnapshotRegion(s, g, v)
 	}
 	s.Stores = w.storeRows(s.Stores, g, v)
-	if w.set != nil {
-		w.fillRegionClass(rr, g)
-	}
+	w.fillRegionClass(rr, g)
 	w.marketRows(s, g, acc)
 	s.Jobs = appendJobs(s.Jobs, g, acc)
 	return nil
