@@ -44,8 +44,10 @@ func (t *tenure) dropAgent(a *agent) {
 // spec-land.md 6.3, 9.2). Each entry moves ShareBP basis points from From to To, either
 // of which may be NoAgent for the commons (an enclosure or a release), and a positive
 // Price is paid by To to From with the reason title_sale, in the same step. The call
-// validates every entry in the canonical key order (region, resource, From, To) on a
-// working copy and applies none if any fails; the entries are applied in that order. It
+// first checks each entry that needs no state of the titles, in the order of the slice,
+// then checks every entry against the titles in the canonical key order (region,
+// resource, From, To) on a working copy, and applies none if any fails; the entries are
+// applied in canonical order. It
 // returns ErrInStep, ErrWorldFailed, ErrModuleOff, then for the first entry that fails
 // ErrUnknownRegion, ErrOutsideNode, ErrUnknownResource, ErrUnknownAgent,
 // ErrAgentRemoved, ErrNotAHolder, ErrOutOfBounds (a share or a price out of its bound,
