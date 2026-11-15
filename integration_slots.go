@@ -455,7 +455,7 @@ type SlotState struct {
 // world that was never shocked has an empty SlotState. It returns ErrInStep or
 // ErrWorldFailed, changes nothing and draws nothing. It reads the lists the owners
 // save, so a restored world reports what the original did. The one-off
-// AdjustEndowments holds no value and is not listed.
+// AdjustEndowments and AdjustTechnology hold no value and are not listed.
 func (w *World) Slots() (SlotState, error) {
 	if err := w.enter("Slots", "", false); err != nil {
 		return SlotState{}, err
