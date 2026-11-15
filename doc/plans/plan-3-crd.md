@@ -386,4 +386,6 @@ Deviations and choices the plan left open:
 
 Tests: the claim index, the pot and the shield, the allocation (spec-credit.md 20.2) and its ties by `K(t, claim ID)`, the headroom cut, arrears and the write-off, both origins, the events and their order, the welfare terms, the waterfall at both balances of 20.2, the passing, the audit, the checkpoint round trip, the draw guard and the allocation test.
 
+Test pyramid pass (stage 6): `credit_guards_internal_test.go` covers the invariant guards, the room of a role with no Borrow block and the summary counts; `credit_scenario_internal_test.go` holds two end-to-end tests over 30 ticks of the credit world with planted claims (`TestScenario_CreditClaimsInLife`: repaid, arrears, write-off, a removed debtor and a removed creditor, audit and money conserved every tick; `TestFork_CreditClaimsInLife`: a checkpoint at tick 7 finishes with the original's bytes). They stand in for the real-config scenarios S114 to S118 of PR 5, which still need the round.
+
 Left open: `TestSettle_AwayDebtor` uses the transport module's away flag, but a journey (migration module) is not exercised; the scenario S117 and the fork tests of PR 4 and 5 cover the rest of FR-CRD-045 and 087. The counter test of NFR-CRD-003 is `TestSettle_OneBucketServesTwoTicks` (visits, not timings).
