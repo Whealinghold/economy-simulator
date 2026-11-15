@@ -335,12 +335,12 @@ func TestSolveSteadyState_OverlaysSolve(t *testing.T) {
 	// chain-payroll.toml is the data layer of the pack `payroll`: it sets the wants of the demand module
 	// and the payroll share of the employment module, which `one` carries neither of (TestPacks_Payroll
 	// loads, validates and solves it over its own layers).
-	// polity.toml names the five regions of `five` as members (TestScenarioS112_Neutral
+	// polity.toml and polity-governed.toml name the five regions of `five` as members (TestScenarioS112_Neutral
 	// loads, validates and runs it over its own layers).
 	// second-skill.toml names the recipe and the role of the pack `second`, which `one` does not
 	// carry (TestConfigOnly_SkillNeedsOnlyConfiguration loads, validates and runs it over its
 	// own layers).
-	notOnOne := []string{"overhang.toml", "resources-five.toml", "resources-five-binding.toml", "merchants.toml", "merchants-three.toml", "chain-payroll.toml", "polity.toml", "second-skill.toml"}
+	notOnOne := []string{"overhang.toml", "resources-five.toml", "resources-five-binding.toml", "merchants.toml", "merchants-three.toml", "chain-payroll.toml", "polity.toml", "polity-governed.toml", "second-skill.toml"}
 	entries, err := os.ReadDir("testdata/chains/overlay")
 	if err != nil {
 		t.Fatalf("ReadDir(overlay) = %v", err)

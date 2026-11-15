@@ -2310,4 +2310,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 465393acf648022791ac7b35
+NOTES-TAG: 235375ef6f51c788ea44eeb8
