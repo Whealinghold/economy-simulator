@@ -194,9 +194,10 @@ func (v *validator) tenureShares(m *TenureConfig) bool {
 			units = households[[2]string{h.Region, h.Holder.Role}]
 		}
 		key := [2]string{h.Region, h.Resource}
-		sum, ok := checked.Add(total[key], h.ShareBP*units) // at most 10^4 * 10^6 a row
+		row, mulOK := checked.Mul(h.ShareBP, units)
+		sum, addOK := checked.Add(total[key], row)
 		total[key] = sum
-		if !ok || sum > wholeBP {
+		if !mulOK || !addOK || sum > wholeBP {
 			v.rep.add(ErrTitleShares, tenureRow("holding", i, "share_bp"), i64(sum), i64(wholeBP))
 			total[key] = wholeBP // one error per endowment, at the row that crosses
 		}
@@ -232,8 +233,9 @@ func (v *validator) tenureCap(m *TenureConfig) bool {
 		if h.Holder.Kind != HolderKindRole {
 			continue
 		}
-		if held := weight[[2]string{h.Region, h.Holder.Role}] * h.ShareBP; held > limit { // at most 10^6 * 10^4
-			v.rep.add(ErrTitleCap, tenureRow("holding", i, "share_bp"), i64(held), i64(limit))
+		held, ok := checked.Mul(weight[[2]string{h.Region, h.Holder.Role}], h.ShareBP)
+		if !ok || held > limit {
+			v.rep.add(ErrTitleCap, tenureRow("holding", i, "share_bp"), overflowOr(held, ok), i64(limit))
 		}
 	}
 	return len(v.rep.errs) == n
@@ -319,7 +321,8 @@ func newTenureFacts(c *Config, lk lookup) *tenureFacts {
 		}
 	}
 	for _, g := range c.Groups {
-		f.households[[2]string{g.Region, g.Role}] += g.Households
+		// a group the scale rules refuse is clamped, so a sum cannot wrap
+		f.households[[2]string{g.Region, g.Role}] += min(max(g.Households, 0), MaxHouseholds)
 	}
 	for i := range m.Holdings {
 		f.addHolding(i, &m.Holdings[i])
