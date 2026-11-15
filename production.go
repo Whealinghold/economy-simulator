@@ -152,8 +152,9 @@ func (s *yieldShocks) ordered() []shockEntry { return s.entries }
 // (spec-production.md 6.3) and whether a profile row exists for the pair: the
 // site factor, the shock, then the technology, trainee and abundance terms,
 // which are neutral (10 000) here: the warm start, the solver and the viability
-// check cannot see a gain (spec-technology.md 3.3.2, FR-TEC-034). ok is false when a step does not
-// fit int64, which validation of the bounds makes unreachable.
+// check cannot see a gain (spec-technology.md 3.3.2, FR-TEC-034). ok is false
+// when a step does not fit int64, which validation of the bounds makes
+// unreachable.
 func (t *yieldTable) effective(sh *yieldShocks, region RegionID, recipe RecipeID, season int, sited bool) (e int64, has, ok bool) {
 	return t.effectiveAt(sh, region, recipe, season, sited, production.BP, production.BP)
 }
