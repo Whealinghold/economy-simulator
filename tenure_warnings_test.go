@@ -121,3 +121,38 @@ func TestWarnings_TenureSafeOnInvalid(t *testing.T) {
 		economysim.Holding{Region: "north", Resource: "arable", Holder: economysim.HolderRef{Kind: economysim.HolderKindRole, Role: "serf"}, ShareBP: 1 << 40})
 	_ = c.Warnings()
 }
+
+// TestTerms_ReplaceModeAbsenceIsOpenAccessNoWarning verifies that the rows of Terms use
+// the replace mode of spec-regions.md 5 (spec-land.md 3.3.1): an endowment with no row
+// is open access, which is the baseline and raises no warning of a term; a row that
+// restates the defaults validates, raises no warning of a term and is not the same
+// configuration to the hash (the Has flags are hashed), so a file that writes the key is
+// told apart from one that does not.
+//
+// Requirement: FR-LND-004
+func TestTerms_ReplaceModeAbsenceIsOpenAccessNoWarning(t *testing.T) {
+	t.Parallel()
+	absent := tenureConfig()
+	absent.Modules.Tenure.Terms = nil
+	absent.Modules.Tenure.RentStepBP = 0
+	restated := absent
+	restated.Modules.Tenure = &economysim.TenureConfig{
+		Terms:    []economysim.TenureTerm{{Region: "north", Resource: "arable", HasRent: true, HasClosed: true}},
+		Holdings: absent.Modules.Tenure.Holdings,
+	}
+	for name, c := range map[string]economysim.Config{"no row": absent, "a row of the defaults": restated} {
+		if err := c.Validate(); err != nil {
+			t.Errorf("Validate(%s) = %v, want nil", name, err)
+		}
+		// titles_without_rent is about the holdings and is raised either way; no warning is
+		// about a term.
+		for _, w := range tenureWarned(c) {
+			if strings.Contains(w, ".term[") {
+				t.Errorf("Warnings(%s) holds %q, want no warning of a term row", name, w)
+			}
+		}
+	}
+	if hexHash(absent) == hexHash(restated) {
+		t.Errorf("HashConfig of a row of the defaults equals that of no row: %s", hexHash(absent))
+	}
+}
