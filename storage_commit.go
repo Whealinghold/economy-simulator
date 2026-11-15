@@ -489,11 +489,11 @@ func (s *storage) cargoFit(l *ledger.Ledger, account int, c CommodityID, have in
 }
 
 // storesTarget says whether the target is a class of store owners and which store
-// class it names (-1 for every class), for newFlowState. The class is validated, so
+// class it names (-1 for every class, 0 when the target is not stores), for newFlowState. The class is validated, so
 // it is in the configuration (spec-money-supply.md 4.3.4, FR-STO-026).
 func storesTarget(c *Config, t FlowTarget) (stores bool, class int) {
 	if t.Kind != targetStores {
-		return false, -1
+		return false, 0 // zero off the kind: the hashed state of a flow that is not a stores flow does not move
 	}
 	class = -1
 	if t.Store != "" {

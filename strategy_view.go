@@ -64,7 +64,7 @@ func newViewScratch(cfg *Config, rt *roleTable, rc *recipeTable) *viewScratch {
 		}
 		in, out, tl = max(in, ni), max(out, no), max(tl, nt)
 	}
-	return &viewScratch{
+	sc := &viewScratch{
 		trade:       tradeScratch{rows: make([]tradeRow, 0, com)},
 		commodities: make([]CommodityView, 0, com),
 		recipes:     make([]RecipeView, 0, rec),
@@ -72,11 +72,14 @@ func newViewScratch(cfg *Config, rt *roleTable, rc *recipeTable) *viewScratch {
 		inputs:      make([]RecipeLine, 0, in),
 		outputs:     make([]RecipeOutput, 0, out),
 		tools:       make([]RecipeTool, 0, tl),
-		stores:      make([]StoreCount, 0, storeClassCount(cfg)),
 		costQ:       make([]int64, 0, len(cfg.Commodities)),
 		costP:       make([]int64, 0, len(cfg.Commodities)),
 		plan:        TradePlan{Intents: make([]Intent, 0, com)},
 	}
+	if n := storeClassCount(cfg); n > 0 {
+		sc.stores = make([]StoreCount, 0, n)
+	}
+	return sc
 }
 
 // tradePlan returns the empty, reused plan Trade appends to.
