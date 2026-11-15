@@ -1,6 +1,6 @@
 format 1
 config five
-hash bda6e5797565b57eb7d1e7d437f4eb781293bb91b31453c1e4b180371015e8a7
+hash bef4599f5283cca7dc6ace53558a1228d9b9d7363f7e3b490c75c6b2e874bf4b
 seed 1 ticks 400
 warning entry_share_window world/entry_share
 warning graph_not_strongly_connected edges
@@ -2343,8 +2343,8 @@ RoleChanged 4044
 EntryLimited 2000
 BoundaryFlow 32287
 WearApplied 544
-SettlementClassChanged 14
-SettlementHeld 322
+SettlementClassChanged 15
+SettlementHeld 263
 AgentBankrupted cause=insolvent 7317
 AgentBankrupted cause=starved 2481
 RecipeAbandoned reason=agent_removed 945
@@ -2717,4 +2717,4 @@ goods semi_g 540
 goods staple 1162784
 goods tool_a 566
 goods tool_b 16
-checkpoint_digest ce61b2756b16090d570c896507c8ce9d2c288ca99aff789a390122be7ed4b687
+checkpoint_digest 7abf5f92be9b85cab268a8d24e584c15ec88552cb490e784ae7145687002a486

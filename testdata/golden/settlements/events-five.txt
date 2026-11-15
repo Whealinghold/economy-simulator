@@ -1,5 +1,5 @@
 construction
-t=0 WorldCreated Seed=1 ConfigHash=bda6e5797565b57e WarmStart=true
+t=0 WorldCreated Seed=1 ConfigHash=bef4599f5283cca7 WarmStart=true
 t=0 AgentSpawned Agent=5 Region=centre Role=cook Weight=1 StartMoney=14868
 t=0 AgentSpawned Agent=6 Region=centre Role=cook Weight=1 StartMoney=14868
 t=0 AgentSpawned Agent=7 Region=centre Role=cook Weight=1 StartMoney=14868
@@ -194726,8 +194726,8 @@ t=205 events=12693 digest=7e0d1cee450d132d
 t=206 events=11944 digest=7c10ef23c7b56fda
 t=207 events=11981 digest=a02356072e7713b2
 t=208 events=11974 digest=463c82c3cb592a57
-t=209 events=11753 digest=f0e3b8ccfdea0ca1
-t=210 events=11583 digest=593f9e406f1271e1
+t=209 events=11752 digest=9dd30dcdbebf9ead
+t=210 events=11584 digest=44ee704b3f5f899d
 t=211 events=11505 digest=9e3e0fdd4ba383f7
 t=212 events=11171 digest=93790bc21042386e
 t=213 events=11157 digest=3e67633e2442b410
@@ -194771,7 +194771,7 @@ t=250 events=7291 digest=1ee8b872a8fc26b4
 t=251 events=7090 digest=b3753a8654ad786c
 t=252 events=7144 digest=b0fdbc9d95f7b4fd
 t=253 events=7121 digest=384491dff2f9002c
-t=254 events=7155 digest=c3732b7269edfd1a
+t=254 events=7156 digest=c88cd330e57f8715
 t=255 events=7043 digest=dcec2ce2a69eef0a
 t=256 events=7101 digest=fb38bf81e4e69d66
 t=257 events=7132 digest=e3ffb569861e3d44
@@ -194787,46 +194787,46 @@ t=266 events=6412 digest=7ae12e61837d9f3c
 t=267 events=6247 digest=dd7d1311f5bf0d52
 t=268 events=6036 digest=4c9e0363c89e8f6f
 t=269 events=6235 digest=7c525d53c25c9b49
-t=270 events=5945 digest=54c6987278900936
-t=271 events=5771 digest=a7d8710b572f843a
-t=272 events=5799 digest=619ce051b5ef3e37
-t=273 events=5684 digest=656d2d1993294602
-t=274 events=5596 digest=fe0d1ab4f0524cb4
-t=275 events=5554 digest=6dcb6aba22528edd
-t=276 events=5472 digest=c358ee2b38f2f457
-t=277 events=5343 digest=f04edd640741a7ff
-t=278 events=5312 digest=f980d8d0419c8300
-t=279 events=5312 digest=492ef4c4fccaf42f
-t=280 events=5217 digest=8915f5f6b20cee67
-t=281 events=5147 digest=17fe060b381ecc8a
-t=282 events=5132 digest=52fce4fd55a6a393
-t=283 events=4999 digest=88111a8cca0d280c
-t=284 events=4910 digest=ef9e167245342622
-t=285 events=4879 digest=71fc0e57d90fb78e
-t=286 events=4805 digest=84960947daebde9f
-t=287 events=4849 digest=bbd4491addc855be
-t=288 events=4660 digest=66c04da62ea1bb7c
-t=289 events=4692 digest=cac970925c0f559b
-t=290 events=4674 digest=594a6ddc396b11de
-t=291 events=4644 digest=1f11dcdebaee50fb
-t=292 events=4628 digest=bfa11cd3abbcba94
-t=293 events=4677 digest=7a11f7fda0574344
-t=294 events=4570 digest=8e147cb7c5cd1941
-t=295 events=4438 digest=e67c20ecfe0623b5
-t=296 events=4384 digest=8a66587c1fb543b7
-t=297 events=4281 digest=ee1f4189790f18c4
-t=298 events=4301 digest=4d059d99031d29b4
-t=299 events=4245 digest=a038efddc3f4818b
-t=300 events=4191 digest=13246bfaadd1955d
-t=301 events=4193 digest=41b524b5afe25188
-t=302 events=4192 digest=e8b6267c63d70131
-t=303 events=4086 digest=0881825bc7abc98c
-t=304 events=4020 digest=9a297cf6da702187
-t=305 events=4021 digest=002d298ef4de00f4
-t=306 events=4036 digest=c651db2b1ba73819
-t=307 events=4083 digest=3944e72633038ed9
-t=308 events=3979 digest=c985d7199e4b476a
-t=309 events=4010 digest=db7941868597f599
+t=270 events=5944 digest=42e70d49b7340185
+t=271 events=5770 digest=d9c11c97383fc57a
+t=272 events=5798 digest=85924c47a3daed98
+t=273 events=5683 digest=5720ead56c763578
+t=274 events=5595 digest=7458fca70ad9a9e5
+t=275 events=5553 digest=ea47dd2bcc7c59e7
+t=276 events=5471 digest=71fc8c66ec40510a
+t=277 events=5342 digest=0430154d8cda4b1b
+t=278 events=5311 digest=e59fd599fc927887
+t=279 events=5311 digest=c89b81c4b2c81a0a
+t=280 events=5216 digest=925f6d98780b4c88
+t=281 events=5146 digest=83e4b5923ac7f188
+t=282 events=5131 digest=5db4e5eedfe4884c
+t=283 events=4998 digest=5e11f1be99850424
+t=284 events=4909 digest=ddd17b61aebb673d
+t=285 events=4878 digest=04d107baf77ec1f2
+t=286 events=4804 digest=db8883716c647a0f
+t=287 events=4848 digest=db9fdcc53b8573a1
+t=288 events=4659 digest=9c22c228f8b24ec3
+t=289 events=4691 digest=6c6efbe193f6717f
+t=290 events=4673 digest=8158ffcceb85389a
+t=291 events=4643 digest=e3cb7e6dcf7566ac
+t=292 events=4627 digest=f5c141efb532b1c7
+t=293 events=4676 digest=757ade003a424f40
+t=294 events=4569 digest=ea1774853f2710d7
+t=295 events=4437 digest=a0858b7c57e18904
+t=296 events=4383 digest=688daa7334d6a4e5
+t=297 events=4280 digest=9e981260963a46af
+t=298 events=4300 digest=2878da65467475f3
+t=299 events=4244 digest=2d0b9648e1f4b9dd
+t=300 events=4190 digest=7e918fe46b473b21
+t=301 events=4192 digest=d0af78f0d62ee84a
+t=302 events=4191 digest=c315bb3ee1e33036
+t=303 events=4085 digest=49f8d58ef7f15d48
+t=304 events=4018 digest=b6b9339e4bab54ad
+t=305 events=4020 digest=46fdaf716a4e8fc9
+t=306 events=4035 digest=5955cb4c5c4f1ab9
+t=307 events=4082 digest=f96ed97ff187c2cd
+t=308 events=3978 digest=2adb2753a6dcd0c3
+t=309 events=4009 digest=45d34ed0786bc90d
 t=310 events=4022 digest=a5adf9b3d494e089
 t=311 events=3967 digest=388b0bcaf95df1e4
 t=312 events=3885 digest=27f2af57940cb202
@@ -194836,87 +194836,87 @@ t=315 events=3870 digest=6f9c1e636e024280
 t=316 events=3828 digest=a61f56da2c45c0a9
 t=317 events=3750 digest=46b7f99ee5e45625
 t=318 events=3734 digest=2253704914ecf893
-t=319 events=3638 digest=f3f647615524c0a1
-t=320 events=3605 digest=3037d0b2a94d4022
-t=321 events=3563 digest=7aabda53def3d844
-t=322 events=3493 digest=359dafdc7327ec3d
-t=323 events=3519 digest=751ad492ca0d6641
-t=324 events=3434 digest=5c811aa157a16dca
-t=325 events=3396 digest=84c714c777725f1e
-t=326 events=3354 digest=2bbe5fa60f2e7dcb
-t=327 events=3311 digest=0655e40909e0d4a5
-t=328 events=3307 digest=d2aab9549f740c5f
-t=329 events=3259 digest=6f9c78006da64e2d
-t=330 events=3282 digest=b5b801f30ca591f6
-t=331 events=3277 digest=384a52e8f2a1e480
-t=332 events=3252 digest=5679f19e5d494a46
-t=333 events=3294 digest=15a42671a5a81e1b
-t=334 events=3310 digest=de0bedf66e231e2e
-t=335 events=3316 digest=e85e9a308709ca1c
-t=336 events=3332 digest=76bf1922d6dedd06
-t=337 events=3359 digest=6479a185b0f71ef3
-t=338 events=3389 digest=56919078a370c7bc
-t=339 events=3367 digest=8268c9f78764d859
-t=340 events=3385 digest=ce40cb76f7755f2b
-t=341 events=3390 digest=28e1d0a70d6890d6
-t=342 events=3383 digest=f19101f88105d60f
-t=343 events=3429 digest=ebac9a79b903fdb7
-t=344 events=3406 digest=8a92c108f7ba6126
-t=345 events=3428 digest=ea29a97d8fa28d50
-t=346 events=3428 digest=a51372ba45d75cb3
-t=347 events=3439 digest=7e04afb91811328a
-t=348 events=3365 digest=e7711bcaa19816a7
-t=349 events=3416 digest=36f1f36aaa0008e1
-t=350 events=3372 digest=c07c187635cb9aa7
-t=351 events=3303 digest=a53848d6b6a61b74
-t=352 events=3280 digest=f1e7f496265db7a8
-t=353 events=3276 digest=f773ceccb26515f1
-t=354 events=3224 digest=ca0da570788434ae
-t=355 events=3301 digest=0a955692a96d343e
-t=356 events=3204 digest=1799358281ce4378
-t=357 events=3187 digest=27a1c21ec84fc4d8
-t=358 events=3173 digest=51e552f942ab2e38
-t=359 events=3164 digest=69d4847596e5ce20
-t=360 events=3175 digest=370c36a3dbec8078
-t=361 events=3177 digest=491f8ae936537daa
-t=362 events=3178 digest=bf79b672de56b825
-t=363 events=3164 digest=00fef867f4b385d4
-t=364 events=3151 digest=e70e07266e03fe04
-t=365 events=3138 digest=a6c811ce06656453
-t=366 events=3149 digest=1a590b3af9547ebc
-t=367 events=3131 digest=69ffc38c18514e5d
-t=368 events=3130 digest=ce1000bdec4a6831
-t=369 events=3114 digest=77ee7e36a0af7682
-t=370 events=3096 digest=c0a47b8491838592
-t=371 events=3097 digest=41677e95f85b4f0f
-t=372 events=3101 digest=aa6336949a3b2e3a
-t=373 events=3084 digest=464ff046fe3e8c9f
-t=374 events=3086 digest=3461417e9cd42cb7
-t=375 events=3080 digest=cf830af4ea1f3775
-t=376 events=3054 digest=1597e2a3b3f834cd
-t=377 events=3040 digest=e036d434cdfff669
-t=378 events=3042 digest=c9502a5bcc49d783
-t=379 events=3009 digest=9fc863596a24f4ca
-t=380 events=3006 digest=2ff478093b2c390a
-t=381 events=3003 digest=079612f017f7217e
-t=382 events=2990 digest=091ab7c1eef1ca5a
-t=383 events=2965 digest=3d9e892daf8215a7
-t=384 events=2940 digest=6cb0da24830d4583
-t=385 events=2914 digest=7945fa47f6822037
-t=386 events=2881 digest=d6f17302a5109851
-t=387 events=2860 digest=04c852e3e4bc2db9
-t=388 events=2843 digest=147ea1dc16652240
-t=389 events=2818 digest=8d1f87f8780f45f0
-t=390 events=2769 digest=25c89f677ef31eeb
-t=391 events=2744 digest=ed94fb05bc52c338
-t=392 events=2719 digest=b868270445afc1b6
-t=393 events=2692 digest=a2e0811515d0dfa3
-t=394 events=2648 digest=a797d3925c47494d
-t=395 events=2624 digest=e37d581a5fb3adc3
-t=396 events=2595 digest=abc90481c4d1a5ee
-t=397 events=2570 digest=b04fd62ecb1adc72
-t=398 events=2558 digest=5715fb9a43071e2c
-t=399 events=2528 digest=c49eab9d0a3cae7e
+t=319 events=3639 digest=1dd07ee5384888a6
+t=320 events=3606 digest=7c96059bbfeed5e4
+t=321 events=3564 digest=f126ccc693b541a2
+t=322 events=3494 digest=4dd257cd3e61b35c
+t=323 events=3520 digest=5cca0080bb862962
+t=324 events=3435 digest=7acc7a9610c17048
+t=325 events=3398 digest=436be9e9ed583db8
+t=326 events=3355 digest=c86738dd77c482ad
+t=327 events=3312 digest=b50bf1a53074ebd2
+t=328 events=3308 digest=4697d8c795b1866b
+t=329 events=3260 digest=37f895a0d1c6f00c
+t=330 events=3283 digest=8bb891767d4e972b
+t=331 events=3278 digest=bd8eba3532db50fc
+t=332 events=3252 digest=214d40eba292c4ca
+t=333 events=3294 digest=51ad5a83ebee6e79
+t=334 events=3310 digest=ea96478f5227eb76
+t=335 events=3316 digest=1ff125b5e66198f8
+t=336 events=3332 digest=93bb2d927712d579
+t=337 events=3359 digest=23ed2ac7f86b6fef
+t=338 events=3389 digest=653d893d847083fb
+t=339 events=3367 digest=88b06b4e4109611e
+t=340 events=3385 digest=3b31be09bcdd14ec
+t=341 events=3390 digest=e83307fc5a07adb2
+t=342 events=3383 digest=dda0daca8477a19f
+t=343 events=3429 digest=265ebe47d95b5281
+t=344 events=3406 digest=2d707c44a4b040d3
+t=345 events=3428 digest=a939884410d38ffd
+t=346 events=3428 digest=74610399ec578888
+t=347 events=3439 digest=0b7190df7eee8c5e
+t=348 events=3365 digest=582ba487f9e8bb28
+t=349 events=3416 digest=cb937ca9cdcd02f9
+t=350 events=3372 digest=d2b91ca6a44ec879
+t=351 events=3303 digest=a4a6c6b24df9298e
+t=352 events=3280 digest=efd876460bc25275
+t=353 events=3276 digest=b7aa1d3508499580
+t=354 events=3224 digest=55552c1d5c117c69
+t=355 events=3300 digest=ddc610d6e578ac31
+t=356 events=3203 digest=935ebfe49f50f161
+t=357 events=3186 digest=92f7cb22c63dc523
+t=358 events=3172 digest=bf218da0b4be5a26
+t=359 events=3163 digest=4cb3518a47f565ff
+t=360 events=3174 digest=076de7d7de430620
+t=361 events=3176 digest=86a66810686b85eb
+t=362 events=3177 digest=f8141513e3c1cb8e
+t=363 events=3163 digest=4e7769da60502b61
+t=364 events=3150 digest=e6ceab2ac5ccb6ba
+t=365 events=3137 digest=80b17ff02b21dae2
+t=366 events=3148 digest=0cc6bdc385f5969c
+t=367 events=3130 digest=5f21743ba2b4021d
+t=368 events=3129 digest=50ac9b846fedffbc
+t=369 events=3113 digest=58df66b8eb9c7e78
+t=370 events=3095 digest=f9145d3287a8af80
+t=371 events=3096 digest=ff38774255661c5a
+t=372 events=3100 digest=03c7765ccf7ae8fa
+t=373 events=3083 digest=47d97571a1a7ffad
+t=374 events=3085 digest=9467b6b2f18c67e3
+t=375 events=3079 digest=9c7cf5c1f242328d
+t=376 events=3053 digest=2bb9cba1c67006c9
+t=377 events=3039 digest=7c34d4005c6a807a
+t=378 events=3041 digest=f7691a2f31aa6c08
+t=379 events=3008 digest=916a68bcdbd18014
+t=380 events=3005 digest=ac4dadebe49847d0
+t=381 events=3002 digest=9f3f02056f5ac464
+t=382 events=2989 digest=ab966e874a0afa4b
+t=383 events=2964 digest=9fd5d900ee544c1d
+t=384 events=2939 digest=2cb9988d85407308
+t=385 events=2913 digest=9f038bf6cc0111e7
+t=386 events=2880 digest=b66c8d6c2769cea0
+t=387 events=2860 digest=141c0051d5ea9e19
+t=388 events=2843 digest=ab0fd53db8c598bf
+t=389 events=2818 digest=8a7b116b07a98569
+t=390 events=2769 digest=01e2e3bb150e09df
+t=391 events=2744 digest=c8d12d3499c6bbc5
+t=392 events=2719 digest=aba3b3d04ad29929
+t=393 events=2692 digest=8c98445cb5c0090c
+t=394 events=2648 digest=c6fc16e2b8dfecc2
+t=395 events=2624 digest=fa1c784eac7e3c98
+t=396 events=2595 digest=412db979cc6450fb
+t=397 events=2570 digest=7647a261613c997f
+t=398 events=2558 digest=f1fae5036c2aa516
+t=399 events=2528 digest=3acc75024acb142a
 t=400 events=1 digest=973accb64b729524
 counts
 WorldCreated 1
@@ -194940,16 +194940,16 @@ RoleChanged 4044
 EntryLimited 2000
 BoundaryFlow 32287
 WearApplied 544
-SettlementClassChanged 14
-SettlementHeld 322
+SettlementClassChanged 15
+SettlementHeld 263
 snapshot
-Snapshot Tick=400 Seed=1 ConfigHash=bda6e5797565b57e Moment={Tick=400 Year=1 DayOfYear=35 Month=1 DayOfMonth=4 DayOfWeek=1 Season=3 DayOfSeason=66} Modules=[settlements] Agents=442 Households=442 Money=202528101 Components=5
+Snapshot Tick=400 Seed=1 ConfigHash=bef4599f5283cca7 Moment={Tick=400 Year=1 DayOfYear=35 Month=1 DayOfMonth=4 DayOfWeek=1 Season=3 DayOfSeason=66} Modules=[settlements] Agents=442 Households=442 Money=202528101 Components=5
 Regions
 RegionRow Region=centre Agents=68 Households=68 MoneyHouseholds=985 MoneyPool=39138033 EntryBudget=19569017 Class=village ClassSince=315 ClassTarget=hamlet
-RegionRow Region=east Agents=110 Households=110 MoneyHouseholds=485182 MoneyPool=32850971 EntryBudget=16425486 Class=village ClassSince=308 ClassTarget=village ClassAtFloor=true
-RegionRow Region=north Agents=50 Households=50 MoneyHouseholds=1211 MoneyPool=55670742 EntryBudget=27835371 Class=village ClassSince=309 ClassTarget=hamlet
+RegionRow Region=east Agents=110 Households=110 MoneyHouseholds=485182 MoneyPool=32850971 EntryBudget=16425486 Class=village ClassSince=308 ClassTarget=hamlet
+RegionRow Region=north Agents=50 Households=50 MoneyHouseholds=1211 MoneyPool=55670742 EntryBudget=27835371 Class=village ClassSince=354 ClassTarget=village ClassAtFloor=true
 RegionRow Region=south Agents=48 Households=48 MoneyHouseholds=1461 MoneyPool=42041476 EntryBudget=21020738 Class=village ClassSince=313 ClassTarget=hamlet
-RegionRow Region=west Agents=166 Households=166 MoneyHouseholds=788560 MoneyPool=31549480 EntryBudget=15774740 Class=town ClassSince=304 ClassTarget=town
+RegionRow Region=west Agents=166 Households=166 MoneyHouseholds=788560 MoneyPool=31549480 EntryBudget=15774740 Class=village ClassSince=325 ClassTarget=village
 Boundary
 BoundaryRow Reason=initial Kind=faucet Commodity=- Balance=-202528101
 BoundaryRow Reason=initial Kind=faucet Commodity=fuel Balance=-25708

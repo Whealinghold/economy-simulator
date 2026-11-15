@@ -39,12 +39,10 @@ label = "a city"
 [modules.settlements.class.city.limits]
 workers = 480
 
-# The west is a small realm: its thresholds are scaled to 60 %, and the east never falls below a hamlet's
-# neighbour: its floor is village.
-[modules.settlements.region.west]
+# The north is a small realm: its thresholds are scaled to 60 %, and it never falls below a village: its floor.
+# Only the north is named, so the overlay layers on pack one as well as on pack five.
+[modules.settlements.region.north]
 threshold_bp = 6000
-
-[modules.settlements.region.east]
 floor = "village"
 
 [role.maker]
