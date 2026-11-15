@@ -255,6 +255,13 @@ type productionScratch struct {
 	// res is the resources module's state, nil when it is off: the abundance of a
 	// recipe that draws is read through it (abundance).
 	res *resourcesState
+	// sto is the storage module's state, nil when it is off: the room of the
+	// principal bounds the executions (maxExecutions) and caps the credit of the
+	// output (cutOutputs, complete).
+	sto *storage
+	// roomCut is the executions the room took off the last maxExecutions (k0 less
+	// the executions the room allows), 0 when it cut none.
+	roomCut int64
 
 	terms   []production.Term
 	wears   []production.Wear
@@ -365,6 +372,9 @@ type startReq struct {
 	// admission or a view makes ignores the grant and leaves it false.
 	capped  bool
 	drawCap int64
+	// exec is the executor, whose weight, role and residues the room bound reads
+	// (storage module); nil reads no room.
+	exec *agent
 }
 
 // startResult is what a start tells the world. reason is set only when k is 0
@@ -373,6 +383,8 @@ type startResult struct {
 	k         int64
 	effective int64
 	reason    Reason
+	// cut is the executions the room of the principal took off (storage module).
+	cut int64
 }
 
 // wearFact is the wear one start put on a tool: items distinct items worn by
@@ -443,7 +455,12 @@ func (s *productionScratch) maxExecutions(l *ledger.Ledger, q *startReq) (k0 int
 		return 0, "", err
 	}
 	k, code := production.Count(q.weight, q.maximum, s.limits)
-	return k, limitReason(code), nil
+	reason = limitReason(code)
+	s.roomCut = 0
+	if s.sto != nil {
+		k, reason = s.sto.boundExecutions(l, q, k, reason, &s.roomCut)
+	}
+	return k, reason, nil
 }
 
 // start begins a job (spec-production.md 4.3, 4.4, 5.1). j must hold no job
@@ -464,6 +481,7 @@ func (s *productionScratch) start(l *ledger.Ledger, j *job, residues []int64, q 
 	if err != nil || k == 0 {
 		return startResult{reason: reason}, err
 	}
+	cut := s.roomCut
 
 	// The pending output and the new residues are formed before the ledger
 	// is touched, so a value that does not fit refuses the start whole.
@@ -485,7 +503,7 @@ func (s *productionScratch) start(l *ledger.Ledger, j *job, residues []int64, q 
 	copy(residues, s.newRes)
 	j.recipe, j.executions, j.principal, j.yield = q.recipe, k, q.principal, q.effective
 	j.remaining = s.cfg.Recipes[q.recipe].Duration
-	return startResult{k: k, effective: q.effective}, nil
+	return startResult{k: k, effective: q.effective, cut: cut}, nil
 }
 
 // formPending fills j.pending and s.newRes for k executions of the recipe. On a
@@ -595,6 +613,9 @@ func (s *productionScratch) cutOutputs(l *ledger.Ledger, j *job, row *recipeRow,
 				}
 			}
 			fit := min(q, max(0, maxQty-held))
+			if s.sto != nil {
+				fit = s.sto.fitRoom(l, account, o.commodity, fit, s.outputs)
+			}
 			s.disposed[i], s.overflow[i] = q-fit, q-fit
 			if fit > 0 {
 				s.outputs = append(s.outputs, ledger.Line{Commodity: int(o.commodity), Quantity: fit})
@@ -614,7 +635,11 @@ func (s *productionScratch) complete(l *ledger.Ledger, j *job, account int, maxQ
 	row := s.recipes.row(j.recipe)
 	s.cutOutputs(l, j, row, account, maxQty)
 	if len(s.outputs) > 0 {
-		if err := l.Transform(account, nil, s.outputs); err != nil {
+		form := ledger.CreditFree
+		if s.sto != nil {
+			form = s.sto.pledgeForm(l, account)
+		}
+		if err := l.TransformCredited(account, nil, s.outputs, form); err != nil {
 			// Excluded from coverage (testing.md 9.5): each line is cut to the
 			// room read in this step; only an int64 overflow of a flow total
 			// could refuse it.

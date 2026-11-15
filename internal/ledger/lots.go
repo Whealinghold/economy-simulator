@@ -217,6 +217,15 @@ func (l *Ledger) MoveCredited(from, to, commodity int, qty int64, r Reason, mark
 	return l.move(goodsMove{from: from, to: to, commodity: commodity, qty: qty, r: r, marked: marked, credit: form})
 }
 
+// MoveLotCredited is MoveLot, or MoveLotReserved if marked, with the credit to the
+// destination in the given form (room.go, spec-storage.md 4.1.3): the delivery of
+// a named lot of an estate to the limited buyer of a bid is MoveLotCredited(...,
+// true, CreditReserved). The form changes nothing for a destination that is not
+// limited, except that the forms that draw on a room are ErrNotLimited there.
+func (l *Ledger) MoveLotCredited(from, to int, key Key, qty int64, r Reason, marked bool, form Credit) error {
+	return l.move(goodsMove{from: from, to: to, commodity: key.Commodity, qty: qty, r: r, marked: marked, named: true, key: key, credit: form})
+}
+
 // validStated reports whether a stated key is inside the ranges of 5.2.4.
 func (l *Ledger) validStated(k Key) bool {
 	c := l.comms[k.Commodity]

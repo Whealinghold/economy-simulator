@@ -139,6 +139,9 @@ func (w *World) finishJob(a *agent, region RegionID) {
 		account = w.jobAccount(a) // a trainee's output goes to its trainer
 	}
 	c := w.prod.complete(w.ledger, &a.job, account, MaxQuantity)
+	if w.sto != nil {
+		w.syncJob(a)
+	}
 	if w.obs.supplied {
 		w.obs.deliver(w.prod.recipeExecuted(nil, nil, nil, w.Tick(), a.id, region, &c, w.cfg.Recipes[c.recipe].Duration))
 	}
@@ -312,7 +315,7 @@ func (w *World) startReq(a *agent, region RegionID, recipe RecipeID, maximum int
 		invariant("the effective yield does not fit after validation")
 	}
 	q := startReq{recipe: recipe, account: a.account, principal: a.id, weight: a.weight,
-		maximum: maximum, effective: e, hasProfile: has}
+		maximum: maximum, effective: e, hasProfile: has, exec: a}
 	if w.skills != nil {
 		w.traineeRequest(&q, a, region)
 	}
@@ -323,6 +326,9 @@ func (w *World) startReq(a *agent, region RegionID, recipe RecipeID, maximum int
 // started" behind Enabled and, under the flag, one count in the refusal tally. A
 // recipe outside the configuration has no row in the tally and is only logged.
 func (w *World) refuse(a *agent, region RegionID, recipe RecipeID, reason Reason) {
+	if w.sto != nil {
+		w.sto.refusedStart(w.cellOf(region, a), reason)
+	}
 	ctx := context.Background()
 	if w.log.Enabled(ctx, slog.LevelDebug) {
 		w.log.LogAttrs(ctx, slog.LevelDebug, "recipe not started",
@@ -410,6 +416,17 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 		}
 		return nil
 	}
+	w.noteStarted(a, region, ask, res)
+	if done, _ := a.job.advance(); done {
+		w.finishJob(a, region)
+	}
+	return nil
+}
+
+// noteStarted is what the world records of a start that began: the draws on the
+// endowments, the own-use count, the wear of the tools, the working ticks and the
+// pledge of the storage module.
+func (w *World) noteStarted(a *agent, region RegionID, ask *jobAsk, res startResult) {
 	if w.res != nil {
 		w.takeDraws(ask.first, ask.draws, res.k)
 	}
@@ -420,10 +437,9 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 		w.welfare.addWear(int(a.id), f.commodity, f.items, f.units)
 	}
 	w.welfare.markWorking(int(a.id), res.k, w.sub.ownJob(w, a))
-	if done, _ := a.job.advance(); done {
-		w.finishJob(a, region)
+	if w.sto != nil {
+		w.startedStorage(a, region, res)
 	}
-	return nil
 }
 
 // p28aHalted is P2.8a: the aggregates of the work decision, only when an

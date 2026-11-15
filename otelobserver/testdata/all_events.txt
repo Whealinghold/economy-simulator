@@ -41,6 +41,7 @@ SettlementHeld
 ShipmentArrived
 ShipmentDispatched
 ShipmentRejected
+StoreChanged
 TickEnded
 TickStarted
 TradeExecuted

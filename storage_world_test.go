@@ -78,16 +78,27 @@ func TestStorage_PackFileToWorld(t *testing.T) {
 	}
 }
 
-// sameButHash returns res with the ConfigHash of WorldCreated and of the final
-// snapshot set to hash: the one field of a run that a module's presence must change
-// (FR-CFG-026).
+// sameButHash returns res with the fields a module's presence must change set to
+// what a run with the module off has: the ConfigHash of WorldCreated and of the final
+// snapshot (FR-CFG-026), the names table's store classes, the final snapshot's list
+// of modules, the store rows and the room figures of the role rows, which describe the
+// accounts of the module and are 0 with it off. Nothing a world did is changed.
 func sameButHash(res result, hash [32]byte) result {
 	out := res
 	out.Final.ConfigHash = hash
+	out.Final.Names.StoreClasses = nil
+	out.Final.Stores = nil
+	out.Final.Modules = slices.DeleteFunc(slices.Clone(res.Final.Modules), func(m string) bool { return m == "storage" })
+	out.Final.Roles = slices.Clone(res.Final.Roles)
+	for i := range out.Final.Roles {
+		r := &out.Final.Roles[i]
+		r.LimitedHouseholds, r.RoomMass, r.RoomBulk, r.LoadMass, r.LoadBulk = 0, 0, 0, 0, 0
+	}
 	out.Events = slices.Clone(res.Events)
 	for i, e := range out.Events {
 		if wc, ok := e.(economysim.WorldCreated); ok {
 			wc.ConfigHash = hash
+			wc.Names.StoreClasses = nil
 			out.Events[i] = wc
 		}
 	}
@@ -114,17 +125,19 @@ func TestStorage_NewWorldRejectsASmallRoom(t *testing.T) {
 
 // TestStorage_InertOverARun verifies, over a run of the pack one with the audit on
 // and a recording observer, that a world built with the storage module on behaves
-// exactly as one built with it off: the same events in the same order (but for the
-// configuration hash of WorldCreated, which the module moves) and the same final
-// snapshot, for two seeds. The module has no state, no position and no event
-// yet, so its presence, with or without a limited role, moves nothing.
+// exactly as one built with it off while no room binds: the same events in the same
+// order (but for the configuration hash of WorldCreated, which the module moves) and
+// the same final snapshot, for two seeds, for the empty module and for a base room
+// far above anything a household of the pack holds. The second case has limited
+// accounts, so it exercises the room of the ledger, the commitments at bids, starts
+// and dispatches and the audit of the pledge, and none of them may change a result
+// while the room is never short.
 //
 // Requirement: FR-STO-001
 //
-// Guard: the module is inert until its commitments are built (plan 3-sto Phase 5).
-// The empty module and the module with no limited role must stay identical to off
-// for good; the case with a base room is the one that Phase 4 and 5 will change and
-// that their PR replaces with the invariant of spec-storage.md 4.4.
+// Guard: with the module off or on and no room binding, a run must equal one built
+// without the module, in events and in the snapshot; a hook that changed a result,
+// or an event that appeared with no room limit acting, would break it.
 func TestStorage_InertOverARun(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {

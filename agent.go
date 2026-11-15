@@ -740,6 +740,11 @@ type AgentState struct {
 	HasJourney     bool
 	JourneyTo      RegionID
 	JourneyArrives int64
+
+	// Room is the room group of the storage module: the room, load, pledge and free
+	// room of the account and its stores; the zero value while the module is off
+	// and for an agent whose role has no base room.
+	Room RoomState
 }
 
 // HoldingState is a commodity an agent holds: its units and the units of them that
@@ -794,6 +799,9 @@ func (w *World) Agent(id AgentID) (AgentState, error) {
 		return AgentState{}, fmt.Errorf("Agent: agent %d: %w", id, err)
 	}
 	w.fillJob(&st, a)
+	if w.sto != nil {
+		w.fillRoomState(&st, a)
+	}
 	w.fillBeliefs(&st, a)
 	if d := a.directive.mailbox(); d != nil {
 		st.HasDirective, st.Directive = true, *d

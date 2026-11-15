@@ -90,6 +90,9 @@ type Snapshot struct {
 	// Trainees are the traineeships in progress, by trainee agent ID; empty while
 	// no role trains or nobody is a trainee (spec-skill-barriers.md 8.2).
 	Trainees []TraineeRow
+	// Stores has one row per (region, store class) with at least one store, by region
+	// then class; empty with the storage module off (spec-storage.md 14.5).
+	Stores []StoreRow
 	// Jurisdictions has one row for each governed jurisdiction, in ascending
 	// JurisdictionID: its seat, its treasury pseudo-agent and the treasury's money
 	// (spec-polity.md 10.5). Empty with the polity module off or with no jurisdiction
@@ -257,6 +260,11 @@ type RoleRow struct {
 	// trainees at TrainingTicks held for want of headroom. All 0 for a role with no
 	// training (spec-skill-barriers.md 8.2).
 	Places, PlacesTaken, Queue, Trainers, Held int64
+	// LimitedHouseholds is the households of the role's agents whose account has a
+	// room, RoomMass and RoomBulk their room (the weight folded in) and LoadMass and
+	// LoadBulk their load, summed over the role's limited agents in the region. All 0
+	// while the storage module is off (spec-storage.md 14.5).
+	LimitedHouseholds, RoomMass, RoomBulk, LoadMass, LoadBulk int64
 }
 
 // MarketState is the report of one market and its price window: the type the
@@ -589,6 +597,9 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 		rr.Households = satAdd(rr.Households, ra.Weight)
 		rr.MoneyHouseholds = Money(satAdd(int64(rr.MoneyHouseholds), int64(ra.Money)))
 		addRoleAgent(&s.Roles[int(g)*nr+int(ra.Role)], ra)
+		if w.sto != nil {
+			w.addRoomRow(&s.Roles[int(g)*nr+int(ra.Role)], &w.agents[ra.Agent])
+		}
 		// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 		// refusal of the world's own accounts, which a valid configuration cannot cause
 		// and no test can inject from the root (D190); the branch only wraps and returns
@@ -608,6 +619,7 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 	if w.pop != nil {
 		w.popSnapshotRegion(s, g, v)
 	}
+	s.Stores = w.storeRows(s.Stores, g, v)
 	if w.set != nil {
 		w.fillRegionClass(rr, g)
 	}

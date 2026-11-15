@@ -115,6 +115,15 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 		w.obs.deliver(AgentBankrupted{Tick: tick, Agent: a.id, Region: region, Role: a.role, Weight: a.weight, Cause: cause, Money: money, GoodsListed: lots})
 		w.obs.deliver(EstateOpened{Tick: tick, Agent: a.id, Region: region, Balance: w.estates.pool(w.ledger, region), GoodsListed: lots})
 	}
+	w.dropModules(a)
+	w.logRemoval(a, cause)
+	w.forget(a, region)
+	return nil
+}
+
+// dropModules is the step of a removal that each module takes for the agent it
+// held state for, in module order, after the events (spec-agents.md 3.6).
+func (w *World) dropModules(a *agent) {
 	if w.demand != nil {
 		w.demand.dropAgent(a)
 	}
@@ -125,9 +134,9 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 		w.sub.drop(a.id)
 	}
 	w.dropExternal(a)
-	w.logRemoval(a, cause)
-	w.forget(a, region)
-	return nil
+	if w.sto != nil {
+		w.dropStorage(a)
+	}
 }
 
 // agentJoined is the first agent-lifecycle fan-in (architecture.md 2.10.4, ADR
@@ -137,6 +146,9 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 func (w *World) agentJoined(a *agent, region RegionID) {
 	if w.demand != nil {
 		w.joinedDemand(a, region)
+	}
+	if w.sto != nil {
+		w.joinedStorage(a)
 	}
 }
 
@@ -155,6 +167,9 @@ func (w *World) agentRoleChanged(a *agent, from RoleID, region RegionID) {
 	}
 	if a.external {
 		w.externalRoleChanged(a)
+	}
+	if w.sto != nil {
+		w.roleChangedStorage(a, region)
 	}
 }
 

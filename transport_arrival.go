@@ -84,6 +84,9 @@ func (w *World) arrive(s shipment) bool {
 	}
 	first := len(t.arrivedLines)
 	receiver, diverted := w.deliver(&s)
+	if w.sto != nil {
+		w.arrivedStorage(&s)
+	}
 	if s.account >= 0 {
 		t.free[s.from].Put(s.account)
 	}
@@ -154,27 +157,59 @@ func (w *World) deliver(s *shipment) (receiver AgentID, diverted bool) {
 	cons := w.consigneeAccount(s)
 	receiver = s.consignee
 	for _, ln := range s.lines {
-		have, _, err := w.ledger.Holding(s.account, int(ln.Commodity))
-		if err != nil {
-			invariant("the ledger refused the holding of a Transit account: " + err.Error())
-		}
-		rec := ArrivedLine{Commodity: ln.Commodity, Shipped: ln.Quantity, Spoiled: ln.Quantity - Quantity(have)}
-		to, ok := cons, cons >= 0 && w.consigneeHolds(cons, ln.Commodity, have)
-		if !ok {
-			to, diverted, receiver = w.estates.accounts[s.to], true, AgentID(s.to)
-			rec.Diverted = Quantity(have)
-			w.logDiverted(s)
-		} else {
-			rec.Delivered = Quantity(have)
-		}
-		if have > 0 {
-			if err := w.ledger.Move(s.account, to, int(ln.Commodity), have, ledger.TransitIn); err != nil {
-				invariant("the ledger refused the delivery of a cargo: " + err.Error())
-			}
+		rec, div := w.deliverLine(s, cons, ln)
+		if div {
+			diverted, receiver = true, AgentID(s.to)
 		}
 		t.arrivedLines = append(t.arrivedLines, rec)
 	}
 	return receiver, diverted
+}
+
+// deliverLine moves one line of the cargo to the consignee, or what the consignee
+// cannot hold to the estate of the destination, and returns what became of it and
+// whether any went to the estate. A consignee that cannot take the whole line within
+// MaxQuantity is passed it whole; one whose room is short is given what fits, whole
+// units, and the rest is diverted (spec-storage.md 5.4.4, FR-STO-015).
+func (w *World) deliverLine(s *shipment, cons int, ln Line) (rec ArrivedLine, diverted bool) {
+	have, _, err := w.ledger.Holding(s.account, int(ln.Commodity))
+	if err != nil {
+		invariant("the ledger refused the holding of a Transit account: " + err.Error())
+	}
+	rec = ArrivedLine{Commodity: ln.Commodity, Shipped: ln.Quantity, Spoiled: ln.Quantity - Quantity(have)}
+	ok := cons >= 0 && w.consigneeHolds(cons, ln.Commodity, have)
+	give := int64(0)
+	if ok {
+		give = have
+		if w.sto != nil {
+			give = w.sto.cargoFit(w.ledger, cons, ln.Commodity, have)
+		}
+	}
+	rec.Delivered, rec.Diverted = Quantity(give), Quantity(have-give)
+	if diverted = !ok || give < have; diverted {
+		w.logDiverted(s)
+	}
+	w.moveCargo(s, cons, ln, give, have-give)
+	return rec, diverted
+}
+
+// moveCargo moves give units of the line to the consignee's account, drawing on its
+// pledge when it is limited, and rest units to the estate of the destination.
+func (w *World) moveCargo(s *shipment, cons int, ln Line, give, rest int64) {
+	if give > 0 {
+		form := ledger.CreditFree
+		if w.sto != nil {
+			form = w.sto.pledgeForm(w.ledger, cons)
+		}
+		if err := w.ledger.MoveCredited(s.account, cons, int(ln.Commodity), give, ledger.TransitIn, false, form); err != nil {
+			invariant("the ledger refused the delivery of a cargo: " + err.Error())
+		}
+	}
+	if rest > 0 {
+		if err := w.ledger.Move(s.account, w.estates.accounts[s.to], int(ln.Commodity), rest, ledger.TransitIn); err != nil {
+			invariant("the ledger refused the diversion of a cargo: " + err.Error())
+		}
+	}
 }
 
 // consigneeAccount returns the account of the consignee when the agent still
@@ -190,7 +225,8 @@ func (w *World) consigneeAccount(s *shipment) int {
 }
 
 // consigneeHolds reports whether the account can take qty more units of the
-// commodity within MaxQuantity (the room of the storage module is its own seam, 11a).
+// commodity within MaxQuantity (the room of the storage module is checked apart, by
+// cargoFit in deliverLine).
 func (w *World) consigneeHolds(account int, c CommodityID, qty int64) bool {
 	held, _, err := w.ledger.Holding(account, int(c))
 	if err != nil {
