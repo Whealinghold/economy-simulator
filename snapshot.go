@@ -87,6 +87,9 @@ type Snapshot struct {
 	// Outside is the state of the external module (spec-observability.md 5.3.9); the
 	// zero value with the module off.
 	Outside OutsideState
+	// Trainees are the traineeships in progress, by trainee agent ID; empty while
+	// no role trains or nobody is a trainee (spec-skill-barriers.md 8.2).
+	Trainees []TraineeRow
 	// Stores has one row per (region, store class) with at least one store, by region
 	// then class; empty with the storage module off (spec-storage.md 14.5).
 	Stores []StoreRow
@@ -389,6 +392,7 @@ func (w *World) Snapshot() (Snapshot, error) {
 	}
 	w.snapshotOutside(&s)
 	w.dropOutsideRows(&s)
+	w.snapshotSkills(&s)
 	return s, nil
 }
 
@@ -572,6 +576,9 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 	*rr = RegionRow{Region: g, MoneyPool: v.PoolMoney, EntryBudget: v.Budget, Agents: int64(len(v.Agents))}
 	for r := range nr {
 		w.roleRow(&s.Roles[int(g)*nr+r], g, v, r)
+	}
+	if w.skills != nil {
+		w.skillsRoleRows(s.Roles[int(g)*nr:int(g+1)*nr], g)
 	}
 	for i := range v.Agents {
 		ra := &v.Agents[i]

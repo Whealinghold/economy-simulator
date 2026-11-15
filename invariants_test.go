@@ -283,6 +283,9 @@ var invariantTable = []invariantCase{
 	// Plan 3-skl Phase 5: the traineeship overlay (120 ticks of training on cook and crafter_a),
 	// so a trainee's board, its job for the trainer and the completions are under the invariants.
 	{"one+skill", append(slices.Clone(packLayers["one"]), "overlay/skill.toml"), 4, 0, "", nil},
+	// Plan 3-skl Phase 8: the warm layer, the pack of the module-alone golden, where courses complete
+	// (the cold layer starves before a course ends, plan risk R1).
+	{"one+skill warm", packOneSkills, 4, 0, "", nil},
 	{"one-demand+employment", packOneDemandEmployment, 4, 0, "", nil},
 	{"one+population", packOnePopulation, 4, 0, "", nil},
 	{"one+storage", packOneStorage, 4, 0, "", nil},

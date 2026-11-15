@@ -1,17 +1,123 @@
 package economysim
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/codec"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 	"github.com/Whealinghold/economy-sim/internal/skill"
 )
 
-// This file is the reports of the skill barriers: the checkpoint's encoder and
-// decoder of tag 10 and its cross-check (spec-checkpoint.md 4.2 row 10, F7;
-// spec-skill-barriers.md 9). The events, the logs and the snapshot rows join it
-// with the behaviour.
+// This file is the reports of the skill barriers: the logs and the snapshot rows
+// of spec-skill-barriers.md 8, and the checkpoint's encoder and decoder of tag 10
+// with its cross-check (spec-checkpoint.md 4.2 row 10, F7; spec-skill-barriers.md
+// 9). The three events are built where the transitions are (skills_queue.go),
+// under w.obs.supplied. Nothing here draws a random number, and nothing above
+// Debug is logged except the one bounded Warn.
+
+// reportPlaces advances the run of the Warn "no places open" of (region g, role r)
+// and logs what stopped the filling of its places (spec-skill-barriers.md 8.3,
+// FR-SKL-022). The run counts the consecutive ticks in which an applicant was
+// kept waiting by a negative gain, and warns at the tenth and every tenth after,
+// once per region and role, never per applicant; a stop for want of a free place
+// is a Debug line only, with its counterpart in the snapshot (Places, Queue,
+// Trainers). The Debug line "traineeship refused" is once per region and role and
+// tick, naming the applicant it ended on.
+func (w *World) reportPlaces(g RegionID, r RoleID, stop placeStop, head AgentID) {
+	cell := w.skills.cell(g, r)
+	run, warn := skill.NextRun(w.skills.warnRun[cell], stop == placeGain)
+	w.skills.warnRun[cell] = run
+	if stop == placeOpen {
+		return
+	}
+	reason := reasonNoTrainer
+	if stop == placeGain {
+		reason = reasonGainNegative
+	}
+	ctx := context.Background()
+	if w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "traineeship refused", slog.Int64(logkeys.Agent, int64(head)),
+			slog.Int64(logkeys.Region, int64(g)), slog.Int64(logkeys.Role, int64(r)), slog.String(logkeys.Reason, string(reason)))
+	}
+	if warn && w.log.Enabled(ctx, slog.LevelWarn) {
+		w.log.LogAttrs(ctx, slog.LevelWarn, "no places open", slog.Int64(logkeys.Region, int64(g)),
+			slog.Int64(logkeys.Role, int64(r)), slog.String(logkeys.Reason, string(reason)))
+	}
+}
+
+// reportEnded reports the end of the traineeship rec of trainee id without a
+// completion: the event TraineeshipEnded, which carries the reason and the
+// region, and the Debug line "traineeship ended", which carries what the event
+// does not (the trainer, the role trained for and the ticks served), so that a
+// run that never completes can be told from one whose trainers leave late
+// (spec-skill-barriers.md 8.3).
+func (w *World) reportEnded(id AgentID, region RegionID, rec traineeRec, reason Reason) {
+	if w.obs.supplied {
+		w.obs.deliver(TraineeshipEnded{Tick: w.Tick(), Agent: id, Region: region, Reason: reason})
+	}
+	ctx := context.Background()
+	if w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "traineeship ended", slog.Int64(logkeys.Agent, int64(id)),
+			slog.Int64(logkeys.Trainer, int64(rec.trainer)), slog.Int64(logkeys.Region, int64(region)),
+			slog.Int64(logkeys.Role, int64(rec.role)), slog.Int64(logkeys.Served, rec.served),
+			slog.String(logkeys.Reason, string(reason)))
+	}
+}
+
+// TraineeRow is a traineeship in progress, one per trainee in ascending agent ID
+// (spec-skill-barriers.md 8.2): the trainee, its trainer, the role it trains for,
+// the region, the ticks served and the tick it applied. Empty while no role
+// trains or nobody is a trainee.
+type TraineeRow struct {
+	Agent, Trainer  AgentID
+	Role            RoleID
+	Region          RegionID
+	Served, Applied int64
+}
+
+// snapshotSkills fills the trainee rows of a snapshot. It is a no-op while
+// w.skills is nil.
+func (w *World) snapshotSkills(s *Snapshot) {
+	sk := w.skills
+	if sk == nil {
+		return
+	}
+	for id, rec := range sk.trainee {
+		if rec.live {
+			s.Trainees = append(s.Trainees, TraineeRow{Agent: AgentID(id), Trainer: rec.trainer, Role: rec.role,
+				Region: w.regionOf(&w.agents[id]), Served: rec.served, Applied: rec.applied})
+		}
+	}
+}
+
+// skillsRoleRows fills the traineeship columns of the role rows of region g, by
+// RoleID: the places the trainers have open, the trainees in training for the
+// role, the queue and the trainers that can take a trainee (spec-skill-barriers.md
+// 8.2). A role with no training keeps 0, and so does Held until the headroom of
+// a role is limited by a module (completionHeadroom).
+func (w *World) skillsRoleRows(rows []RoleRow, g RegionID) {
+	s := w.skills
+	for r := range rows {
+		if w.cfg.Roles[r].TrainingTicks <= 0 {
+			continue
+		}
+		slots, max := w.trainersOf(g, RoleID(r)), w.cfg.Roles[r].MaxTrainees
+		s.open = s.open[:0]
+		for _, t := range slots {
+			s.open = append(s.open, skill.Trainer{Held: t.held, Max: max})
+		}
+		rows[r].Places, rows[r].Trainers = skill.Open(s.open), int64(len(slots))
+		rows[r].Queue = int64(len(s.queue[s.cell(g, RoleID(r))]))
+	}
+	for id, rec := range s.trainee {
+		if rec.live && w.regionOf(&w.agents[id]) == g {
+			rows[rec.role].PlacesTaken++
+		}
+	}
+}
 
 // saveSkills is tag 10 (spec-checkpoint.md 4.2): four counts, each followed by its
 // rows. The trainees in ascending agent ID (agent, trainer, target role, ticks

@@ -187,6 +187,13 @@ const (
 	StoreClasses = "store_classes"
 )
 
+// Trainer is the agent ID of a trainee's trainer, and Served the ticks of a
+// traineeship served, in the line "traineeship ended" of the skill barriers.
+const (
+	Trainer = "trainer"
+	Served  = "served"
+)
+
 // Field is a technology field ID, Fields a count of technology fields in the
 // construction summary, and Gain a technology gain in basis points, in the lines
 // of the technology module.
