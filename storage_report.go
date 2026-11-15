@@ -89,9 +89,12 @@ func (w *World) addRoomRow(row *RoleRow, a *agent) {
 }
 
 // storeRows appends the StoreRows of region g, by class, from the agents of the
-// region's view.
+// region's view; with the storage module off it returns rows unchanged.
 func (w *World) storeRows(rows []StoreRow, g RegionID, v *RegionView) []StoreRow {
 	s := w.sto
+	if s == nil {
+		return rows
+	}
 	n := make([]int64, len(s.classes))
 	for i := range v.Agents {
 		for c := range n {
