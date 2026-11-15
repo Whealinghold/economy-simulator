@@ -475,11 +475,20 @@ func (s *subsistence) noteStart(w *World, a *agent, cell int, recipe RecipeID, k
 	s.ownUseJobs[a.id] = 0
 }
 
+// blocksOwnUse reports whether a start refused for the reason blocks an own-use
+// household (FR-SUB-023, case b). The reasons that later modules add are appended
+// here and to blockReasons (D418). no_room is not in blockReasons yet: a longer
+// blockedBy changes the hashed shape of the state and so golden/all, which no module
+// PR moves (plan 3-sto Q3), so a household refused for room counts in the slot of any
+// other reason until the PR that moves golden/all appends it.
+func blocksOwnUse(reason Reason) bool {
+	return reason == ReasonNoEndowment || reason == ReasonNoRoom
+}
+
 // blockedStart counts an own-use request that the start refused for want of an
-// endowment (FR-SUB-023, case b). The reasons that later modules add are
-// appended to the test here (D418).
+// endowment or of room (FR-SUB-023, case b).
 func (s *subsistence) blockedStart(w *World, a *agent, cell int, recipe RecipeID, reason Reason) {
-	if reason == ReasonNoEndowment && s.on(a) && isOwn(w.roles.row(a.role), recipe) {
+	if blocksOwnUse(reason) && s.on(a) && isOwn(w.roles.row(a.role), recipe) {
 		s.blocked[cell] += a.weight
 		s.blockedBy[cell][blockReasonAt(reason)] += a.weight
 		s.debug(w, "own use blocked", a, string(reason))

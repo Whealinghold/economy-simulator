@@ -26,6 +26,7 @@ const (
 	refusedNoTool
 	refusedNoInput
 	refusedNoEndowment
+	refusedNoRoom
 	refusedColumns
 )
 
@@ -61,6 +62,8 @@ func refusalColumn(reason Reason) int {
 		return refusedNoInput
 	case ReasonNoEndowment:
 		return refusedNoEndowment
+	case ReasonNoRoom:
+		return refusedNoRoom
 	default:
 		panic("economysim: invariant violated: refusal of a start under the reason " + string(reason) + ", which the first slice does not count")
 	}
@@ -98,7 +101,7 @@ func (t *refusalTally) flush(tick int64, emit func(RecipeRefused)) {
 		emit(RecipeRefused{
 			Tick: tick, Region: RegionID(p / t.recipes), Recipe: RecipeID(p % t.recipes),
 			NotOnRole: c[refusedNotOnRole], ZeroYield: c[refusedZeroYield], NoSite: c[refusedNoSite],
-			NoTool: c[refusedNoTool], NoInput: c[refusedNoInput], NoEndowment: c[refusedNoEndowment],
+			NoTool: c[refusedNoTool], NoInput: c[refusedNoInput], NoEndowment: c[refusedNoEndowment], NoRoom: c[refusedNoRoom],
 		})
 		clear(c)
 	}

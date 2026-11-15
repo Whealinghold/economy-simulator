@@ -920,3 +920,69 @@ func TestRoom_OverflowingCreditIsRefusedInARoomOfMaxInt64(t *testing.T) {
 		t.Errorf("load after the refusals = (%d, %d), want (0, 0)", r.LoadMass, r.LoadBulk)
 	}
 }
+
+// TestRoom_NamedLotFromReservedDrawsReserved verifies the settlement of a named lot
+// (an estate's ask) to a limited buyer: MoveLotCredited with the form from reserved
+// draws the reserved room as the commodity form does, and without it the same move is
+// refused because the free room does not include the reserved room.
+//
+// Arithmetic: 4 goods of (2, 1) are a load of (8, 4); the room (20, 20) has (8, 4)
+// reserved, so the free room is (12, 16) and the credit fits it either way; the buyer
+// with only (6, 3) free would refuse the unmarked form: the case below reserves all.
+//
+// Requirement: FR-STO-007, FR-STO-009
+func TestRoom_NamedLotFromReservedDrawsReserved(t *testing.T) {
+	t.Parallel()
+	f := settleFix(t)
+	if err := f.l.ReserveRoom(f.a0, 12, 16); err != nil { // the whole free room
+		t.Fatal(err)
+	}
+	lots, err := f.l.AppendLots(nil, f.a1)
+	if err != nil || len(lots) == 0 {
+		t.Fatalf("AppendLots() = %v, %v, want a lot", lots, err)
+	}
+	key := ledger.Key{Commodity: lots[0].Commodity, Born: lots[0].Born, Durability: lots[0].Durability}
+	if err := f.l.ReserveLot(f.a1, key, 4); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.l.MoveLotCredited(f.a1, f.a0, key, 4, ledger.Trade, true, ledger.CreditFree); !errors.Is(err, ledger.ErrNoRoom) {
+		t.Errorf("MoveLotCredited(free form) with the free room reserved = %v, want ErrNoRoom", err)
+	}
+	if err := f.l.MoveLotCredited(f.a1, f.a0, key, 4, ledger.Trade, true, ledger.CreditReserved); err != nil {
+		t.Fatalf("MoveLotCredited(from reserved) = %v, want nil", err)
+	}
+	if r := f.room(t, f.a0); r.LoadMass != 8 || r.LoadBulk != 4 || r.ReservedMass != 12 || r.ReservedBulk != 16 {
+		t.Errorf("room after the lot settlement = %+v, want load (8, 4) and reserved (12, 16): the (8, 4) was drawn from the (20, 20)", r)
+	}
+	f.checkLoad(t)
+}
+
+// TestSetRoom_RoomsOfManyAccountsAreIndependent verifies that the rooms of more
+// accounts than one allocation block holds (a block serves 64) keep their own size:
+// setting each account a different mass and bulk and reading them back gives each its
+// own pair, so rooms cut from one block never alias.
+//
+// Requirement: NFR-STO-002
+//
+// Guard: rooms are cut from shared blocks to spare an allocation per household that
+// enters; a block slice that moved or was reused would give two accounts one room.
+func TestSetRoom_RoomsOfManyAccountsAreIndependent(t *testing.T) {
+	t.Parallel()
+	f := newRoomFix(t, 1000, rSizes, true)
+	const n = 150 // two full blocks of 64 and a part
+	ids := make([]int, n)
+	for i := range ids {
+		id, err := f.l.Open(ledger.KindAgent, 0, 0)
+		if err != nil {
+			t.Fatalf("Open(agent) %d error = %v, want nil", i, err)
+		}
+		ids[i] = id
+		f.limit(t, id, int64(10+i), int64(100+i))
+	}
+	for i, id := range ids {
+		r := f.room(t, id)
+		if r.Mass != int64(10+i) || r.Bulk != int64(100+i) || !r.Limited {
+			t.Errorf("RoomOf(account %d) = %+v, want mass %d, bulk %d, limited", id, r, 10+i, 100+i)
+		}
+	}
+}
