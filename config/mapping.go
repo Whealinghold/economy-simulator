@@ -326,6 +326,12 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Settlements = l.settlements(ss)
 		ss.finish()
 	}
+	l.lastModules(m, cfg)
+}
+
+// lastModules reads the tables of technology, credit and tenure, in that order (a
+// continuation of laterModules for the Lizard limit).
+func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 	if ts := m.sub("technology"); ts != nil {
 		cfg.Modules.Technology = l.technology(ts)
 		ts.finish()
@@ -334,6 +340,47 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Credit = creditModule(cs)
 		cs.finish()
 	}
+	if ts := m.sub("tenure"); ts != nil {
+		cfg.Modules.Tenure = l.tenure(ts)
+		ts.finish()
+	}
+}
+
+// tenure reads [modules.tenure] (spec-config.md 6.2, spec-land.md 3.3.2): the four
+// tunables and the exemption, a term as [term.<region>.<resource>] with rent and
+// closed (each key present sets its Has flag), and a holding as
+// [holding.<region>.<resource>.<holder>] with share_bp, where <holder> is a role ID or
+// the word pool. A key-less table switches the module on with nothing in it. Every
+// level is read in the order of the keys, so a role holder comes before the pool when
+// its ID sorts before the word; Validate and the hash apply the canonical order.
+func (l *loader) tenure(t *tbl) *economysim.TenureConfig {
+	var m economysim.TenureConfig
+	readInts(t, []intField{
+		{"rent_step_bp", &m.RentStepBP}, {"rent_floor_bp", &m.RentFloorBP},
+		{"rent_ceiling_bp", &m.RentCeilingBP}, {"max_holder_share_bp", &m.MaxHolderShareBP},
+	})
+	t.flag("own_use_exempt", &m.OwnUseExempt)
+	t.entities("term", func(region string, r *tbl) {
+		r.eachSub(func(resource string, e *tbl) {
+			row := economysim.TenureTerm{Region: region, Resource: resource}
+			row.HasRent = integer(e, "rent", &row.Rent)
+			row.HasClosed = e.flag("closed", &row.Closed)
+			m.Terms = append(m.Terms, row)
+		})
+	})
+	t.entities("holding", func(region string, r *tbl) {
+		r.eachSub(func(resource string, e *tbl) {
+			e.eachSub(func(holder string, h *tbl) {
+				row := economysim.Holding{Region: region, Resource: resource, Holder: economysim.HolderRef{Kind: economysim.HolderKindPool}}
+				if holder != economysim.HolderKindPool {
+					row.Holder = economysim.HolderRef{Kind: economysim.HolderKindRole, Role: holder}
+				}
+				h.need("share_bp", integer(h, "share_bp", &row.ShareBP))
+				m.Holdings = append(m.Holdings, row)
+			})
+		})
+	})
+	return &m
 }
 
 // settlements reads [modules.settlements] over DefaultSettlements (spec-config.md 6.2,

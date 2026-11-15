@@ -267,6 +267,12 @@ func TestPacks_OnlyD1ToD5AreNotViable(t *testing.T) {
 		if strings.HasPrefix(f, "overlay/polity") {
 			continue
 		}
+		// The tenure overlay titles the endowments of the resources overlay, which pack
+		// one alone lacks; TestPacks_TenureOverlayLoadsAndSolves validates it over the
+		// layers it needs.
+		if f == "overlay/tenure.toml" {
+			continue
+		}
 		cfg, err := config.LoadFS(fsys, "base.toml", "one.toml", "warm-one.toml", f)
 		if err != nil {
 			continue // names a module that is not built yet
