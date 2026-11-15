@@ -182,7 +182,7 @@ func TestLoad_TechnologyOverlays(t *testing.T) {
 		t.Errorf("overlay/technology.toml loaded %+v, want the one field %+v", m, want)
 	}
 	four := loadTechnologyPack(t, append(append([]string{}, pack...), "overlay/trade-three.toml", "overlay/technology-four.toml")...)
-	want.TrendBP, want.DiscoveryBP, want.StepBP, want.CatchUpBP, want.Reach = 100, 5000, 100, 2000, 250
+	want.TrendBP, want.DiscoveryBP, want.StepBP, want.CatchUpBP, want.Reach = 100, 100_000, 100, 2000, 250
 	if m := four.Modules.Technology; m == nil || !reflect.DeepEqual(m.Fields, []economysim.TechField{want}) {
 		t.Errorf("overlay/technology-four.toml loaded %+v, want the one field %+v", m, want)
 	}
