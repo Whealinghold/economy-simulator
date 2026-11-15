@@ -74,6 +74,11 @@ func TestCount_Rules(t *testing.T) {
 	if want := []int64{0, 7, 0, 5}; !slices.Equal(tt.counter, want) {
 		t.Errorf("counter = %v, want %v (inert field not counted, counts added)", tt.counter, want)
 	}
+	tt.count(0, 1, 0)
+	tt.count(0, 1, -4)
+	if tt.counter[1] != 7 {
+		t.Errorf("counter = %d, want 7 (a count of 0 or less adds nothing)", tt.counter[1])
+	}
 	tt.count(0, 1, MaxExperience)
 	tt.count(0, 1, 1<<62)
 	if tt.counter[1] != MaxExperience {

@@ -150,11 +150,12 @@ func (s *productionScratch) techFactor(region RegionID, recipe RecipeID) int64 {
 
 // count adds the executions of a completed job of a recipe to the counter of its
 // cell (spec-technology.md 3.4). A recipe in no field, or in a field with every
-// mechanism off, adds nothing. The counter saturates at MaxExperience, which no
+// mechanism off, adds nothing, and neither does a count of 0 or less (a negative
+// counter would fail the step). The counter saturates at MaxExperience, which no
 // run reaches.
 func (t *technology) count(region RegionID, recipe RecipeID, executions int64) {
 	f := t.fieldOf[recipe]
-	if f < 0 || !t.counted[f] {
+	if executions <= 0 || f < 0 || !t.counted[f] {
 		return
 	}
 	i, ok := t.cellOf(region, int(f))
