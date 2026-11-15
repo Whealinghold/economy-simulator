@@ -326,6 +326,10 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Settlements = l.settlements(ss)
 		ss.finish()
 	}
+	if ts := m.sub("technology"); ts != nil {
+		cfg.Modules.Technology = l.technology(ts)
+		ts.finish()
+	}
 	if cs := m.sub("credit"); cs != nil {
 		cfg.Modules.Credit = creditModule(cs)
 		cs.finish()
@@ -364,7 +368,27 @@ func (l *loader) settlements(t *tbl) *economysim.Settlements {
 		m.Regions = append(m.Regions, r)
 	})
 	return &m
+}
 
+// technology reads [modules.technology] (spec-config.md 6.2, spec-technology.md 9.1):
+// a field as [field.<id>] with the keys recipes (a list of recipe IDs), cap_bp,
+// base, doubling_bp, trend_bp, discovery_bp, step_bp, catch_up_bp, reach and label.
+// A key-less table switches the module on with no field. The fields come out in ID
+// order because the entities are read in the order of the keys.
+func (l *loader) technology(t *tbl) *economysim.Technology {
+	var m economysim.Technology
+	t.entities("field", func(id string, e *tbl) {
+		f := economysim.TechField{ID: id}
+		e.strings("recipes", &f.Recipes)
+		readInts(e, []intField{
+			{"cap_bp", &f.CapBP}, {"base", &f.Base}, {"doubling_bp", &f.DoublingBP},
+			{"trend_bp", &f.TrendBP}, {"discovery_bp", &f.DiscoveryBP}, {"step_bp", &f.StepBP},
+			{"catch_up_bp", &f.CatchUpBP}, {"reach", &f.Reach},
+		})
+		e.text("label", &f.Label)
+		m.Fields = append(m.Fields, f)
+	})
+	return &m
 }
 
 // creditModule reads [modules.credit] (spec-config.md 6.2, spec-credit.md 4.1): the

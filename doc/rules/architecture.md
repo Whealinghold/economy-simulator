@@ -137,6 +137,7 @@ economy-sim/
   storage_validate.go  storage_commit.go  storage_report.go          (STO)
   skills_queue.go  skills_report.go                                    (SKL)
   settlements_validate.go  settlements_report.go                       (SET)
+  technology_validate.go  technology_report.go                         (TEC)
   credit_round.go  credit_settle.go  credit_strategy.go  credit_report.go
   credit_state.go                                                     (CRD)
 
@@ -1086,4 +1087,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 63e17e2c1b69d3d614b4db9b
+RULE-TAG: ec630ce337f98a4fd9a81d86

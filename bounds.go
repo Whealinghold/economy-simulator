@@ -557,6 +557,40 @@ const (
 	MaxThresholdBP = 100_000
 )
 
+// The bounds of the technology module (spec-technology.md 9.2). All are
+// placeholders (N-015, N-027), chosen so that every product of spec-technology.md
+// 9.5 fits int64 or the checked 128-bit helper.
+const (
+	// MaxTechFields is the most technology fields: fields are authored by hand.
+	MaxTechFields = 64
+	// MaxFieldRecipes is the most recipes of one field.
+	MaxFieldRecipes = 64
+	// MaxTechBase is the largest Base of a field, in executions: 10^12, so that
+	// X + Base fits int64 with MaxExperience.
+	MaxTechBase = 1_000_000_000_000
+	// MaxDoublingBP is the largest gain per doubling of the cumulative work: a
+	// doubling doubles the table's yield at most.
+	MaxDoublingBP = 10_000
+	// MaxTechTrendBP is the largest trend a year: a year adds at most the table's
+	// yield again.
+	MaxTechTrendBP = 10_000
+	// MaxDiscoveryBP is the largest discovery rate: ten discoveries a year.
+	MaxDiscoveryBP = 100_000
+	// MaxGainBP is the largest cap of a field: a technique raises the table's
+	// yield at most elevenfold.
+	MaxGainBP = 100_000
+	// MaxStepBP is the largest gain of one discovery: the largest cap.
+	MaxStepBP = MaxGainBP
+	// MaxCatchUpBP is the largest share of the gap closed a year: the whole gap.
+	MaxCatchUpBP = 10_000
+	// MaxTechBP is the largest technology factor, in basis points: 10 000 plus the
+	// largest cap.
+	MaxTechBP = 10_000 + MaxGainBP
+	// MaxExperience is the most executions a cell counts, 2^50: unreachable in any
+	// run, it only keeps X + Base inside int64 (spec-technology.md 4.2.4).
+	MaxExperience = 1 << 50
+)
+
 // The bounds of the credit module (spec-credit.md 14). All three are placeholders
 // (N-015, N-027).
 const (

@@ -593,6 +593,22 @@ var (
 	ErrUnknownLimit = errors.New("unknown settlement limit")
 )
 
+// The sentinels of the technology module (spec-technology.md 10.1). They are root
+// sentinels matched with errors.Is; the module reuses ErrUnknownRecipe,
+// ErrDuplicateID, ErrOutOfBounds, ErrTooMany, ErrModuleOff, ErrUnknownRegion and
+// ErrOutsideNode.
+var (
+	// ErrTechShape is a technology field of the wrong shape: no recipe, a cap of 0,
+	// a value that an off mechanism does not use that is not 0, or one an on
+	// mechanism needs that is 0 (spec-technology.md 3.1.2).
+	ErrTechShape = errors.New("technology field has the wrong shape")
+	// ErrTechRecipeOverlap is a recipe in two technology fields.
+	ErrTechRecipeOverlap = errors.New("recipe is in two technology fields")
+	// ErrUnknownTechField is a technology field that is not configured, named by a
+	// call.
+	ErrUnknownTechField = errors.New("unknown technology field")
+)
+
 // The sentinels of the credit module (spec-credit.md 15.1, FR-CRD-010). The module
 // reuses ErrOutOfBounds, ErrModuleDependency, ErrReasonCollision, ErrMissingField,
 // ErrUnknownRole, ErrDuplicateID and ErrModuleOff. The ledger's ErrOpenClaim and

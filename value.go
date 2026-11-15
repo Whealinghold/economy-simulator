@@ -48,6 +48,11 @@ type ResourceID int
 // exchange.
 type ModeID int
 
+// TechFieldID is the index of a technology field in ascending order of its ID
+// string in the effective configuration (spec-technology.md 3.1.4). A consumer
+// persists the string ID and resolves it once from Config().
+type TechFieldID int
+
 // StoreClassID is the index of a store class in ascending order of its ID
 // string, which is its position in Config().Modules.Storage.Classes (spec-storage.md
 // 3.6.2). It is not stable across configurations; use the string ID to persist or

@@ -99,7 +99,7 @@ Out of scope, with the owner:
 | 5 | **Four mechanisms, each off at 0:** learning by doing (a gain per doubling of cumulative executions), a trend (a gain a year, a carried remainder), discovery (a step with a chance) and diffusion (a catch-up toward a frontier). The exogenous part is the trend, the call and discovery; the endogenous part is doing and contact | 4 |
 | 6 | **Experience is physical.** It counts executions that completed, in the region where they ran, for a recipe of the field. It reads no price, wage, stock, count of households or measure: the module holds a stock that yield reacts to, like an endowment, and not an aggregate that anyone's rate is set from (WLD 9.4) | 4.1 |
 | 7 | **Learning is logarithmic.** The gain is `DoublingBP` for each doubling of `(X + Base) / Base`, in integer arithmetic (a piecewise-linear log2 in 12-bit fixed point): exact at a doubling, within 0.086 of one between. Executions are bounded by households, so the learned gain grows ever slower: the loop through doing is self-limiting even before the cap | 4.2, 13 |
-| 8 | **Discovery takes one word, once.** A discovery is a hit of a stateless keyed hash of (key, tick, cell); the key is one word drawn at construction. No word is drawn in a tick, so the stream of every later draw is unchanged by the module's activity (WLD 7.6.1), and a paired comparison across a parameter of this module stays aligned | 4.4, 6.3 |
+| 8 | **Discovery takes no word.** A discovery is a hit of a stateless keyed hash of (key, tick, cell); the key is derived from the effective seed (ADR 0008) and no word is drawn at construction or in a tick, so the stream of every later draw is unchanged by the module's activity (WLD 7.6.1), and a paired comparison across a parameter of this module stays aligned | 4.4, 6.3 |
 | 9 | **Contact is a distance over the region graph.** A cell catches up toward the best gain of a region in contact, discounted by a weight that falls linearly with the shortest distance (REG 4.3) and is zero at `Reach`. The step reads a snapshot, so no order in which the cells are visited matters; a closed edge cuts contact; the receiver never passes the discounted frontier of the tick | 4.5 |
 | 10 | **There is no forgetting except the call.** The gain never falls by itself. A consumer's call may lower `A` (a lost art, a forced loss): the module says so and does not model it (open question 4) | 7.1 |
 | 11 | **No tick of feedback.** Experience accrues in scratch at P2.1 and P2.7 and is folded at one new position, **P8.3c**, at the end of the tick. Every position of a tick therefore sees one set of gains, and the cost anchor, the view and the start of a job agree | 6.1 |
@@ -177,9 +177,9 @@ every field. Its state is three integers:
 | `Advance` (`A`) | gain added by the trend, discoveries, contact and the call of 7.1, basis points | 0 to the field's `CapBP` |
 | `CatchUp` | the carried remainder of the diffusion step (4.5.4) | 0 to `10 000 * TicksPerYear - 1` |
 
-A field has one more integer, `TrendCarry` (4.3), and the module has one, `Key`
-(4.4.1), present when some field has `DiscoveryBP` above 0. The gain of a cell is
-derived (3.3) and is not saved.
+A field has one more integer, `TrendCarry` (4.3). The module has a key (4.4.1), which
+is derived from the effective seed and is not saved. The gain of a cell is derived
+(3.3) and is not saved.
 
 3.2.2. **Cells are created at construction**, in ascending (`RegionID`, `TechFieldID`)
 order, all zero. A region added later does not exist (the region set is fixed for a
@@ -290,8 +290,8 @@ order are in 4.6 and 6. All of it is integer: no floating point appears in a rul
 Between ticks nothing changes. Within a tick the only thing that accrues is the
 **execution counter** of each cell, a scratch value of the tick (3.4): the sum of the
 `Executions` of the jobs of the field's recipes that completed in the region at P2.1
-and at P2.7. It is cleared at P8.6 with the module's other per-tick counters; it is
-not state (12.1). Everything below happens at P8.3c from that counter and from the
+and at P2.7. The fold at P8.3c clears the counters it reads (4.6.1), so no
+bracket step clears them; it is not state (12.1). Everything below happens at P8.3c from that counter and from the
 saved state.
 
 ### 4.2 Learning by doing
@@ -375,14 +375,14 @@ of a larger yield as the gain grows. The growth rate of the factor falls as `1 /
 
 ### 4.4 Discovery
 
-4.4.1. **The key.** If some field has `DiscoveryBP` above 0, the world takes **one
-word** from its source at step 8c of construction (`spec-world.md` 5.1.2),
-after the creation draws of the initial agents (draw D1) and before the audit of
-step 9, and keeps it as the module's `Key` (an unsigned 64-bit value, saved, 12.1).
-It is the draw D16 of 6.3. Without a discovery field the module takes no word. This
-word is a **module-level** word and not a creation draw of an agent, so it is not
-what `spec-world.md` 5.7.2 forbids to make conditional; 6.3.4 says what that
-section and 5.7.3 then need.
+4.4.1. **The key.** The module's `Key` is an unsigned 64-bit value **derived from the
+effective seed**, never drawn and never saved: it is the high word of the stream key of
+the site `siteTechnology` with tick 0 and entity 0 (`ordering.StreamKey`, ADR 0008;
+`spec-world.md` 7.1). The world computes it at construction and at a restore from the
+effective seed, which is the seed after a reseed. It exists whenever the module is on
+(it is read only by a field with `DiscoveryBP` above 0). The world takes **no word** for
+it, so the creation draws of the initial agents (draw D1) and every later draw are the
+same with the module on or off. The draw D16 is retired (6.3).
 
 4.4.2. **The hash.** Let `C` be the number of cells and `c` the index of a cell in
 ascending (`RegionID`, `TechFieldID`) order. For tick `t`:
@@ -427,20 +427,18 @@ already gives a larger region a faster climb.
 in a run changes every later word (`spec-world.md` 7.6.1), and the number of
 practising cells in a tick depends on the economy, so a draw per cell would shift the
 stream of the clearing keys and of every belief draw by an amount that is a function of
-what the economy did. A keyed hash of (key, tick, cell) costs one word in the world's
-life and nothing after: it is a function of the tick and the cell, as the ration's
+what the economy did. A keyed hash of (key, tick, cell) costs no word at all: it is a function of the tick and the cell, as the ration's
 tie-break of `spec-resources.md` 5.3.3 is, and it is seeded through `Key`, so two
 seeds discover on different ticks. The cost is that a cell's chance in a tick is a
 fixed function of (`Key`, tick, cell) and cannot be changed by an event in the run: a
 discovery is not an outcome of the economy's own randomness. That is the sense of
 "exogenous".
 
-4.4.6. **A reseed.** A restore with `WithReseed(salt)` (`spec-checkpoint.md` 6.8)
-gives the branch its own stream. A module that keeps a key must re-derive it in the
-same way, or every branch discovers on the same ticks and the reseed would not
-branch the module. The rule is `Key' = finalise(Key xor finalise(salt))`, taken at the
-restore and saved with the branch; it is a rule constant and part of the golden
-output. The edit is owed to CHK 6.8 (17.2).
+4.4.6. **A reseed.** A restore with `WithReseed(salt)` (`spec-checkpoint.md` 6.8) sets
+`seed' = finalise(seed xor finalise(salt))` and every keyed stream and module key derives
+from the effective seed, so the module re-derives nothing of its own: the key follows
+from the new seed (4.4.1), and the branch discovers on other ticks. The key is not saved,
+so a checkpoint cannot hold a key that disagrees with the seed of its header.
 
 ### 4.5 Diffusion
 
@@ -663,13 +661,13 @@ region (the world exposes no remote state to a strategy, N-106).
 6.1.1. **One new position, P8.3c**, for `spec-world.md` 6.10, after CAP's P8.3b (the
 facility step) and before P8.4 (the optional audit):
 
-| ID | What runs | Owner | Reads / writes | Draws | Events |
-|----|-----------|-------|----------------|-------|--------|
-| P8.3c | The technology step, with the module on: fold the execution counters of the tick, the trend, discovery, the snapshot of the gains, diffusion, the clamp (4.6) | TEC 4.6 | the counters, the saved cells, the graph tables, the key; writes `X`, `A`, `CatchUp`, `TrendCarry` and the derived gains | none (the keyed hash of D16 takes no word) | `TechnologyAdvanced`, per cell in ascending (`RegionID`, `TechFieldID`) order, after the events of P8.3b and before `TickEnded` |
+| ID    | What runs                                                                                                                                                     | Owner   | Reads / writes                                                                                                           | Draws                               | Events                                                                                                                          |
+|-------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------|-------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| P8.3c | The technology step, with the module on: fold the execution counters of the tick, the trend, discovery, the snapshot of the gains, diffusion, the clamp (4.6) | TEC 4.6 | the counters, the saved cells, the graph tables, the key; writes `X`, `A`, `CatchUp`, `TrendCarry` and the derived gains | none (the keyed hash takes no word) | `TechnologyAdvanced`, per cell in ascending (`RegionID`, `TechFieldID`) order, after the events of P8.3b and before `TickEnded` |
 
 6.1.2. **Two rows of the table gain a clause** (an edit, 17.2): P2.1 "the executions
 of a completed job of a recipe in a field are added to the counter of its cell",
-and P2.7 the same for a job of duration 1. The counter is scratch, cleared at P8.6.
+and P2.7 the same for a job of duration 1. The counter is scratch, cleared by the fold at P8.3c.
 
 6.1.3. **Why the end of the tick.** If the gain were folded at the completion, the
 cost anchor of P1.2 of the same tick, the view of P2.5 and the start of P2.7 would
@@ -687,53 +685,34 @@ is the last of the tick that changes module state and its events are the last be
 
 ### 6.2 What a restore and a reseed do
 
-A restored world continues exactly: the cells, the carries and the key are saved
-(12.1), and the counters are empty at a boundary (a tick's scratch is cleared at
-P8.6). `WithReseed(salt)` re-derives the key (4.4.6). `WithSeed` on a restore is an
+A restored world continues exactly: the cells and the carries are saved
+(12.1), the key is derived from the header's seed (4.4.1), and the counters are empty at a
+boundary (the fold of P8.3c clears them). `WithReseed(salt)` changes the key by changing
+the seed (4.4.6). `WithSeed` on a restore is an
 error as always (`ErrOptionContext`).
 
 ### 6.3 The draws
 
-6.3.1. The module adds **one row** to the table of `spec-world.md` 7.3 (the number
-follows the draw IDs D13 to D15 that RSK took; "draw D16" is a row of that table and
-is not the damper D16 of the register, `spec-stability.md` 5):
+6.3.1. **The module has no draw.** The draw D16 that this spec once proposed is retired
+(ADR 0008, N-214): the key is derived from the effective seed (4.4.1) and no row is added to
+the table of `spec-world.md` 7.3. The site constant `siteTechnology` is a key, not a draw
+(`spec-world.md` 7.1.4).
 
-| ID | When and where | Taken by | How many | In what order | Owner |
-|----|----------------|----------|----------|---------------|-------|
-| D16 | construction, step 8c (after the creation draws, draw D1, and before the audit of step 9), only when some field has `DiscoveryBP` above 0 | the world: the module's key | 1 | once | TEC 4.4.1 |
+6.3.2. **The module takes no word in a tick or at construction**, in any configuration:
+the trend, the learned gain, the diffusion and the discovery are functions of the saved
+state, the graph and the key (4.6.4). The words of one tick (`spec-world.md` 7.3.1) are
+unchanged, so a pair of runs that differ in any parameter of this module, a pair that
+differs in whether a discovery field exists included, is aligned in the sense of
+`spec-experiments.md` 7.3 as far as this module goes.
 
-6.3.2. **The module takes no word in a tick**, in any configuration: the trend, the
-learned gain, the diffusion and the discovery are functions of the saved state, the
-graph and the key (4.6.4). The words of one tick (`spec-world.md` 7.3.1) are
-unchanged, so a pair of runs that differ in any parameter of this module is aligned
-in the sense of `spec-experiments.md` 7.3 as far as this module goes, from the first
-tick after construction. The one exception is a pair that differs in whether a
-discovery field exists at all: the second run has one more word at construction,
-which shifts every later word by one (WLD-A5). An experiment sweeps `DiscoveryBP`
-between positive values, or keeps a field with the smallest rate, to stay aligned
-(N-124).
+6.3.3. **A module that is on and does nothing takes no word**, and a module that is on
+and has work takes none either (`spec-world.md` 7.4.2). The creation draws of the initial
+agents (draw D1) are the same with the module on or off.
 
-6.3.3. **A module that is on and does nothing takes no word**: with no field, or no
-field with `DiscoveryBP` above 0, there is no key and no draw
-(`spec-world.md` 7.4.2). The creation draws of the initial agents (draw D1) are the
-same with the module on or off, because draw D16 comes after them.
-
-6.3.4. **What `spec-world.md` 5.1, 5.7.2 and 5.7.3 then say** (an edit owed, 17.2).
-They state that nothing in construction takes a random number before step 8, that a
-spec that adds a creation draw never makes it conditional on a module, and that
-construction takes `2 * H_agents` draws and nothing else, so that the first draw of
-the first tick is the `2 * H_agents + 1`th. The key is neither an agent's creation
-draw nor a per-tick term, and 7.4.2 of that spec states the converse (a module that is on and does nothing takes
-none); the edits, which add D16 as the word of a module that has work, are: 5.1.2 has the sub-step 8c, "the technology key, one word, when some field has a
-discovery rate (D16)"; 5.7.2 carves out of its rule a **module-level word** that is
-taken once at construction, after the creation draws, and only by a module that is on
-and has work to do (7.4.2), and says that a creation draw of an agent is still never
-conditional; 5.7.3 reads "`2 * H_agents` draws, and one more when the technology
-module has a discovery field (D16); the first draw of the first tick is the
-`2 * H_agents + 1`th, or the `2 * H_agents + 2`th with it". A pair of runs that
-differs in whether a discovery field exists is not aligned from the first tick (6.3.2,
-WLD-A5), which is the price of a word that no step could take without shifting the
-stream.
+6.3.4. **What `spec-world.md` 5.1, 5.7.2 and 5.7.3 say.** They already say that the
+technology key is derived from the effective seed and takes no word, so nothing is owed
+to them: construction takes `2 * H_agents` draws and nothing else, with or without the
+module.
 
 ### 6.4 Between ticks
 
@@ -1005,7 +984,7 @@ truncations; the linear contact weight (4.5.1); the frontier as a maximum over a
 snapshot and the closing by a carried remainder (4.5); the hash, its multiplier
 `0x9E3779B97F4A7C15`, the reduction and the reseed rule (4.4, 4.4.6); the order of the
 steps of P8.3c (4.6.1); the stored clamp of `A` (3.3.4); the rule that a recipe is in
-at most one field (3.1.3); the position P8.3c (6.1) and the draw D16 (6.3). The
+at most one field (3.1.3); the position P8.3c (6.1) and the derivation of the key (4.4.1). The
 experience that a job adds is its executions (3.4.1): a rule, not a weight.
 
 ### 9.4 Rows for the parameter-owner table
@@ -1255,11 +1234,10 @@ order of `spec-checkpoint.md` 4.2 after the last later-stage module present (the
 |------|---------|-------|
 | cells | per cell: `Experience`, `Advance`, `CatchUp` (three varints) | ascending (`RegionID`, `TechFieldID`); the count is `R * F` from the configuration and is not written |
 | fields | per field: `TrendCarry` | ascending `TechFieldID` |
-| key | `Key` (an unsigned 64-bit value), **present only when some field has `DiscoveryBP` above 0** | |
 
 The size for the first consumer's world is a few hundred bytes. **Not saved**
-because derived: the gain of a cell (a function of `X`, `A` and the configuration),
-the contact weights (not stored: computed from the graph tables, 4.5.1), and the per-tick counters (cleared at P8.6, so empty at every
+because derived: the key (4.4.1), the gain of a cell (a function of `X`, `A` and the configuration),
+the contact weights (not stored: computed from the graph tables, 4.5.1), and the per-tick counters (cleared by the fold of P8.3c, so empty at every
 boundary). **No per-agent field**, so nothing is added to the agent record (N-128).
 
 ### 12.2 Restore
@@ -1268,9 +1246,9 @@ Validation, in the fixed order of `spec-checkpoint.md` 6.2, each failure
 `ErrCheckpointCorrupt`: the cell count matches the configuration (the hash is
 checked first); `Experience` in `[0, MaxExperience]`; `Advance` in `[0, CapBP]` of its
 field; `CatchUp` in `[0, 10 000 * TicksPerYear)`; `TrendCarry` in `[0, TicksPerYear)`;
-the key present exactly when a discovery field exists. A restored world continues
+no bytes after the last field. A restored world continues
 exactly as an uninterrupted one: the same gains, the same discoveries on the same
-ticks (the key is saved), the same carries (FR-TEC-028). The format version changes
+ticks (the key follows from the header's seed), the same carries (FR-TEC-028). The format version changes
 with the first release that has the module, and a fixture joins `testdata/checkpoints/`.
 
 ### 12.3 The hash
@@ -1278,7 +1256,7 @@ with the first release that has the module, and a fixture joins `testdata/checkp
 The module and its fields are in the configuration hash (`spec-config.md` 8.1), in
 ID order; `Label` is presentation only (it joins the allow-list of presentation-only
 fields of `spec-config.md` 8.3, as `Region.Label` is). The key is **not**
-configuration: it is state drawn from the stream, like the PCG. The hash therefore
+configuration: it is derived from the effective seed, like every keyed stream. The hash therefore
 differs between a world with the module present and one without, and so do the
 `ConfigHash` and `Names` fields of the snapshot header and of `WorldCreated`, and
 `Modules`: FR-TEC-001 excepts exactly these.
@@ -1625,7 +1603,7 @@ and each other mechanism in turn).
 | TEC-S3 | diffusion on `three`: the lagging region reaches `w` times the leader; an edge closed by `SetEdgeStatuses` stops it; the comparative-advantage facts P06 and T02 hold | `three` with the trade overlay | `TechRow`, `PriceGap` |
 | TEC-S4 | a logistic stock on `one`: a cap below and above the threshold of 10.3, a step and a ramp; the stock share in the snapshot | `one` with the resources and population overlays | `EndowmentRow`, `RegionRow` |
 | TEC-S5 | a staple with inelastic demand: income per household against the gain with `MinWorkShare` at its default and at 0, and the production halt on and off | `one` | `RoleRow` (`HeldByFloor`, the ratio) |
-| TEC-S6 | a **harness test**: a checkpoint mid-run with a discovery key and non-zero carries restores bit for bit; a branch with `WithReseed` discovers on other ticks | `one` | the checkpoint |
+| TEC-S6 | a **harness test**: a checkpoint mid-run with a discovery field and non-zero carries restores bit for bit; a branch with `WithReseed` discovers on other ticks | `one` | the checkpoint |
 | TEC-S7 | the call: a negative advance (a lost art) lowers the gain at once and the population follows it down at `1 / k`; `LostBP` when the bound cuts | `one` | `TechnologyAdjusted`, `TechRow` |
 
 ## 15. What was run
@@ -1726,7 +1704,7 @@ no warning; 201 gives 16 050, and `trend_outpaces_schedule` fires.
 
 ### 17.1 Notes
 
-Every open note tagged `TEC` (there is none in the index) and every note tagged `ALL`,
+Every open note tagged `TEC` (N-214 only, its TEC leg applied in 4.4.1 and 4.4.6) and every note tagged `ALL`,
 read before writing (`AGENTS.md`); the others that this spec touches are listed with
 what it did.
 
@@ -1740,7 +1718,7 @@ what it did.
 | N-128 A hosted per-agent field is saved once (ALL, CHK) | **Applied:** no per-agent field (3.5, 12.1) |
 | N-015 Placeholders (VIA, STY, CLB, EXP) | **Update line:** the defaults and bounds of 9.2 and every number of 16 |
 | N-098 / N-109 The fixed factor and `r_full` (POP, VIA) | **Read:** a gain scales `r_full` and moves the fixed point (13.1) |
-| N-124 A paired comparison is exact only while aligned (EXP, STB, CLB, WLD) | **Stated:** the module takes no word in a tick; one at construction (6.3.2) |
+| N-124 A paired comparison is exact only while aligned (EXP, STB, CLB, WLD) | **Stated:** the module takes no word, in a tick or at construction (6.3.2) |
 | N-134 A sweep that moves the steady state (VIA, EXP, CLB) | **Applied:** no parameter moves the tick-0 table (3.3.2, 8.7) |
 | N-104 Region-keyed tables (LND) | **Applied:** the module adds none (3.3.2) |
 | N-090 What a relocation must do | **Applied:** the module holds no obligation tied to a region and registers no `region_bound` refusal |
@@ -1760,8 +1738,8 @@ what it did.
    clause on a facility class; not asked (open question 3).
 2. **R9's volume clause is on units** (areas STY, IND): growth deflation must stay
    silent (8.8).
-3. **A module that keeps a key re-derives it at a reseed** (areas CHK): the rule of 4.4.6
-   is the first; a later module with a keyed hash does the same.
+3. **A module that keeps a key derives it from the effective seed** (areas CHK): 4.4.1 is
+   the first; a later module with a keyed hash does the same and saves nothing.
 4. **The stability check is made with the module off** (areas STY, EXP): 8.7.
 
 ### 17.2 What this spec needs from the other specs
@@ -1772,10 +1750,10 @@ Every edit is owed and is **not made here**. The full table with exact text is i
 | File | Where | The change |
 |------|-------|-----------|
 | `spec-production.md` | 6.3, FR-PRO-022, 6.7, 10.3 | add the term `E = E * tech / 10 000` between the shock and the trainee factor; the row "A recipe that changes over time" answered by this spec; the overflow check reads `MaxTechBP` |
-| `spec-world.md` | 5.1, 5.7.2, 5.7.3, 6.4 (P2.1, P2.7), 6.10, 6.11, 7.3, 7.4.2, 8.2 | the sub-step 8c of construction (5.1.2: the key, draw D16); the carve-out of a module-level word in 5.7.2 and the count of 5.7.3 (6.3.4); the counter clauses; P8.3c; the order of the events; the row D16; the call as a row of 8.2 |
+| `spec-world.md` | 5.1, 5.7.2, 5.7.3, 6.4 (P2.1, P2.7), 6.10, 6.11, 7.3, 7.4.2, 8.2 | the sub-step 8c of construction (5.1.2: the key derived from the effective seed, no word); the counter clauses; P8.3c; the order of the events; the call as a row of 8.2 |
 | `spec-integration.md` | 5.1, 5.3, 7.1, 11.2 | the call `AdjustTechnology`; not listed by `Slots()`; `ErrUnknownTechField`; the module name |
 | `spec-observability.md` | 3.2, 3.3.9, 4.1, 5.3, 6.2, 6.4.2, 6.5, 7.2, 7.5, 7.6 | the events, the names table, `TechRow`, the metrics and the attribute, the seeding row of the gain gauge, the keys, the `Info` summary's `fields`; 5.3.1 and 4.1.1: a note that the header fields `ConfigHash`, `Modules`, `Names` and the event fields `ConfigHash`, `Names` are what a module present and inert changes (FR-TEC-001, FR-CAP-001) |
-| `spec-checkpoint.md` | 4.1, 4.2, 4.3, 6.2, 6.8, 9.3 | the module section; the restore checks; the reseed rule for the key; the format version |
+| `spec-checkpoint.md` | 4.1, 4.2, 4.3, 6.2, 6.8, 9.3 | the module section (no key saved); the restore checks; the format version |
 | `spec-config.md` | 3.2, 3.7, 4.1, 6.2, 7.3, 7.4, 8.1, 8.3 | the module, the fields, the bounds (and `Label` at `MaxLabelBytes`), the errors and warnings, the hash, the allow-list of presentation-only fields (`TechField.Label`) |
 | `spec-resources.md`, `spec-population.md` | 8.3.1, 10; 5.4, 9.2 | informational pointers to 10.3 and 13 |
 | `spec-agents.md`, `spec-employment.md` | 6.3; 6.1, FR-EMP-028 | the wording of the effective yield; `tech` in the hired job's factor |
@@ -1819,8 +1797,8 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs in a
 | FR-TEC-008 | The trend MUST add to every cell of the field, by the carried remainder `TrendCarry` over `TicksPerYear`, exactly `TrendBP` basis points of advance over any whole number of years (4.3). |
 | FR-TEC-009 | A practising cell of a field with `DiscoveryBP` above 0 MUST discover when the high word of `K(t, c) * (10 000 * TicksPerYear)` is below `DiscoveryBP`, with `K` as in 4.4.2, and a discovery MUST add `StepBP` to `Advance` (4.4). |
 | FR-TEC-010 | Every position of a tick MUST read the same gain for a recipe in a region: the gain MUST change only at P8.3c and at a call of 7.1 (5.3, 6.1). |
-| FR-TEC-011 | The module MUST take no random word in a tick; it MUST take exactly one word at construction, at step 8c of construction (`spec-world.md` 5.1), after the creation draws of the initial agents (draw D1) and before the audit of step 9, if and only if some field has `DiscoveryBP` above 0; and the creation draws of the agents MUST be the same with the module on or off (6.3). |
-| FR-TEC-012 | The key MUST be saved with the module's state, and a restore with `WithReseed(salt)` MUST replace it with `finalise(Key xor finalise(salt))` (4.4.6). |
+| FR-TEC-011 | The module MUST take no random word, in a tick or at construction, in any configuration; and the creation draws of the agents MUST be the same with the module on or off (6.3). |
+| FR-TEC-012 | The key MUST be derived from the effective seed and MUST NOT be saved, so a restore with `WithReseed(salt)` has a key that follows from the new seed (4.4.1, 4.4.6). |
 | FR-TEC-013 | Diffusion MUST compute every frontier from the snapshot of 4.6.1 (after the fold, the trend and the discoveries) before any catch-up is applied, and MUST NOT depend on the order in which the cells are visited (4.5.3). |
 | FR-TEC-014 | The contact weight from a region `s` to a region `r` MUST be `(Reach - d) * 10 000 / Reach` for `1 <= d < Reach`, truncating, and 0 for `d >= Reach` or when there is no path, with `d` the shortest distance from `s` to `r` over the effective graph (4.5.1). |
 | FR-TEC-015 | A catch-up MUST add `floor((CatchUp + gap * CatchUpBP) / (10 000 * TicksPerYear))` to `Advance` and keep the remainder in `CatchUp`, and a cell with no positive gap MUST add nothing and keep its carry (4.5.4). |

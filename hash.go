@@ -477,7 +477,7 @@ func pairsModules(e *encoder, m Modules) {
 	pairsLaterModules(e, m)
 }
 
-// pairsLaterModules writes the pairs of the modules of ids 9, 10, 11, 12, 13, 15, 19 and 25 of
+// pairsLaterModules writes the pairs of the modules of ids 9, 10, 11, 12, 13, 15, 19, 24 and 25 of
 // Modules, after those pairsModules writes (a continuation for the Lizard limit).
 func pairsLaterModules(e *encoder, m Modules) {
 	if m.Migration != nil {
@@ -514,10 +514,34 @@ func pairsLaterModules(e *encoder, m Modules) {
 		pairsPolity(e, *m.Polity)
 		e.end()
 	}
+	if m.Technology != nil {
+		e.id(24)
+		pairsTechnology(e, *m.Technology)
+		e.end()
+	}
 	if m.Estates != nil {
 		e.id(25)
 		e.end()
 	}
+}
+
+// pairsTechnology writes the pairs of a Technology: Fields 1, in ID order. A
+// TechField has ID 1, Recipes 2 (the recipe IDs, sorted), CapBP 3, Base 4,
+// DoublingBP 5, TrendBP 6, DiscoveryBP 7, StepBP 8, CatchUpBP 9 and Reach 10
+// (Label is presentation only and has no id, spec-technology.md 12.3).
+func pairsTechnology(e *encoder, t Technology) {
+	encodeList(e, 1, t.Fields, func(e *encoder, f TechField) {
+		e.text(1, f.ID)
+		e.texts(2, f.Recipes)
+		e.num(3, f.CapBP)
+		e.num(4, f.Base)
+		e.num(5, f.DoublingBP)
+		e.num(6, f.TrendBP)
+		e.num(7, f.DiscoveryBP)
+		e.num(8, f.StepBP)
+		e.num(9, f.CatchUpBP)
+		e.num(10, f.Reach)
+	})
 }
 
 // pairsStorage writes the pairs of a Storage: Base 1, Roles 2, Classes 3. A

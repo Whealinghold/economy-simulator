@@ -186,3 +186,12 @@ const (
 	StoreClass   = "store_class"
 	StoreClasses = "store_classes"
 )
+
+// Field is a technology field ID, Fields a count of technology fields in the
+// construction summary, and Gain a technology gain in basis points, in the lines
+// of the technology module.
+const (
+	Field  = "field"
+	Fields = "fields"
+	Gain   = "gain"
+)

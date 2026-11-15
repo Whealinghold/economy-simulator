@@ -49,9 +49,9 @@ PR description.
 | AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
-| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205 |
+| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358 |
 | CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349 |
-| CHK | N-125, N-128, N-129, N-202, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319 |
+| CHK | N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-317, N-318, N-319, N-360 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339 |
 | CLR | N-113, N-137, N-241 |
 | CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354 |
@@ -60,11 +60,11 @@ PR description.
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
-| EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350 |
+| EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361 |
 | EXT | N-108, N-112, N-113, N-214 |
 | FIS | N-107, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-183, N-184, N-185, N-186, N-187, N-188, N-189, N-190, N-204 |
 | GDS | N-039 |
-| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350 |
+| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359 |
 | INF | N-110, N-112, N-156, N-170, N-214 |
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
@@ -77,7 +77,7 @@ PR description.
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
-| PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243 |
+| PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226, N-327 |
@@ -88,13 +88,13 @@ PR description.
 | SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-264, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357 |
-| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356 |
+| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361 |
 | SUB | N-121, N-228, N-268, N-244 |
-| TEC | N-214 |
+| TEC | N-358, N-359, N-360, N-361 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346 |
-| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337 |
+| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360 |
 
 ## Open notes
 
@@ -1419,16 +1419,6 @@ PR description.
 - **Note:** Growth lowers the price index and raises the units traded, so R9 (deflation with distress) stays silent only while its second conjunct is a clause on units (`Turnover.Volume`, `SumV`), not on value. STY should keep the clause and run TEC-S2 (S149) with R9 and F4.
 - **Update (2026-10-16, plan 1-5 Phase 1):** read for the production row; left open. `Outputs` and `Disposed` of `RecipeExecuted` are units of quantity; the sentence added to `spec-indicators.md` 7.2.4 changes no clause on value or volume.
 
-### N-202 A module that keeps a key re-derives it at a reseed
-
-- **Areas:** CHK
-- **Raised:** 2026-10-13, `spec-technology.md` 4.4.6.
-- **Note:** TEC's rule is `Key' = finalise(Key xor finalise(salt))`; a later module with a keyed hash does the same.
-- **Answer (2026-10-12, ADR 0008):** generalised to the seed itself: a reseed sets `seed' = finalise(seed xor finalise(salt))` and every keyed stream and module key derives from the effective seed, so no module re-derives anything of its own. TEC 4.4.1 and 4.4.6 and CHK 6.8 are rewritten under N-214; close then.
-- **Update (2026-10-12, Phase 1):** CHK 6.8.2 now states `seed' = finalise(seed xor finalise(salt))` and that no module re-derives a key at a reseed (the technology key derives from the effective seed). Close when TEC 4.4.1 and 4.4.6 are rewritten.
-- **Update (2026-10-17, plan 1-6 Phase 1):** read: the welfare record keeps no key and draws nothing at a reseed (the target is a creation word); the stale-marked passages of CHK are not edited here. Left open.
-- **Update (2026-10-23, plan 2-2 Phase 1):** read: no module keeps a key in the slice, so the checkpoint row has nothing to re-derive at a reseed. Close when TEC 4.4.1 and 4.4.6 are rewritten. Left open.
-
 ### N-203 A stability claim is made with the module off
 
 - **Areas:** STY, EXP
@@ -1505,14 +1495,13 @@ PR description.
 
 ### N-214 Keyed random streams (ADR 0008): the edits owed
 
-- **Areas:** WLD, CHK, CLB, STB, TEC, PLC, AGT, EXT, INF, MER, MIG, RSK, WEL, CODE
+- **Areas:** WLD, CHK, CLB, STB, PLC, AGT, EXT, INF, MER, MIG, RSK, WEL, CODE
 - **Raised:** 2026-10-12, `adr/0008-random-draws-are-keyed-streams.md`; `rules/architecture.md` 7.3 is already changed.
 - **Note:** Randomness is a function of (seed, site, tick, entity): the one PCG is reseeded by a SplitMix64 key at every draw site, no draw depends on how many others were taken, a checkpoint holds the seed and no stream state, and `WithReseed(salt)` gives `finalise(seed xor finalise(salt))`. The specs still describe one positional stream; apply the ADR in the next change that touches each:
   - WLD 7 (one seed; the keying rule with the exact constants and the test vectors, `models/wld/seed.py` regenerated; the draw table 7.3 gains a `site` constant and an `id` per row; 7.4.2 and 7.4.3 narrow to one stream; 7.4.4 reads the seed, not the PCG state; 7.6 is no longer a hazard between runs), 12 (no PCG state), 13 (the CHK row), 16.5, 17 (WLD-A5), 22 (questions 4 and 7: answered; P4.1 may clear markets concurrently once architecture.md 12.2 has an owner), 23 (`random.go` holds the seed, the PCG, the `Rand` and the site table).
   - CHK 4.2 tag 1 (the seed is in the header; nothing else), 6.2 step 8 (no install), 6.8 (the reseed rule above), 8.4 (no positional state), FR-CHK-051 (a restore takes no word: still true, trivially), the worked example of 17 and the size table.
   - EXP 7.3 and FR-EXP-062 (the stream fingerprint has nothing to read: runs of one seed are aligned by construction and diverge through state only; `Pair` keeps measuring the gain); CLB 4.2.1, 7.2.3 and FR-CLB-024 (the flag `d` goes).
   - STB L120 (WLD-A5 becomes "a count change moves the later draws of its own stream only"), L124, D88 (draw anyway is an owner's choice inside a stream, not an alignment damper); the case PLC-A7.
-  - TEC 4.4.1 and 4.4.6 (the technology key is derived from the effective seed; D16 takes no construction word; N-202 is answered by the general rule).
   - The owner of each draw row adds its `id`: AGT (D3, D5, D10, D12: the agent), BEL (D8: the agent and the order), CLR (D7: the market; whether the per-order key becomes a stateless `K` is ADR 0008 open point 2), EXT (D2: the line), INF (D4: the agent), MER (D6: the offer or take), MIG (D11: the agent), RSK (D13, D14, D15: the row, the shipment, the agent and store), WEL (D1: the agent), PLC (D17: the actor).
   - CODE: `random.go` and `internal/ordering` (the keying helper beside the finaliser); the allocation test of NFR-WLD-001 covers the reseed.
 - **Update (2026-10-12, Phase 1 of the Stage 0 plan):** applied now: WLD 7 (7.1.2 to 7.1.7, 7.2 to 7.6), 4.1, 4.4, 5.1, 5.7, 6.9.1, 6.12 C22, 8.1.1, 10.1.1, 12, 14, 18, 19, 22 (questions 4 and 7), 23, FR-WLD-049, 060, 062, 065, 066, 067, 068, 069, 071, 076, 091 and 100; CHK 6.8, 17.5, FR-CHK-070 and 071; the models `wld/seed.py`, `stream.py`, `worked.py` and `chk/worked.py` regenerated; ADR 0008 open points 1 and 2 answered (WLD 7.1 and 7.3); architecture.md 7.3 gains the optional second ID of a pair (D7 and D8). Marked stale in place ("stale under ADR 0008, see N-214"): WLD 13, 16.5, 17 (WLD-A5) and the S63 row of 22; CHK's header paragraph, 3.1 `Stream`, 4.2 tag 1, 5.4, R4, 6.2 step 8, 6.4 `WithSeed`, 6.6.3, 6.7.1, 8.1 item 4, 8.4, 9.3, 11 (EXP row), 15 (CHK-A2), 16, 17.2, FR-CHK-006, 025, 051 and the edits-owed rows of 20; CHK 4.2 tag 1, 5.4, 6.2 step 8, 8.4 and 17.2 must be rewritten before `checkpoint.go` (Stage 2), and the code of Stages 0 and 1 must not implement `Checkpoint.Stream` or a PCG-state section. **Still owed:** EXP 7.3, FR-EXP-062 and the use of `0x243F6A8885A308D3` in `DesignSalt`; CLB 4.2.1, 7.2.3, FR-CLB-024; STB L120, L124, D88 and the D90 row (it states the old reseed constant); TEC 4.4.1 and 4.4.6 (D16 takes no word); the site constants and IDs of D2, D4, D6, D11, D12, D13, D14, D15 and D17, each appended by its module with its change (ADR 0008 open point 3, the key of a site with no natural entity, stays open for D2's line and D13's route row); CODE `random.go` and `internal/ordering` (N-019); the rows of `doc/specs/models/README.md` for `wld/` and `chk/`, which still describe the old seeding rule.
@@ -1535,6 +1524,7 @@ PR description.
 - **Update (2026-11-09, plan 2-14 Phase 1):** MIG: `siteMigration` `0x53C434C7EFE6D523` (the first eight bytes of SHA-256 of `economy-sim/site/siteMigration`, checked) is in `spec-world.md` 7.1.4 and the D11 row of 7.3, `id` the agent, keyed once per evaluated pushed agent whose role has a recipe, only when `RumourErrorBP` is above 0 (as `siteInform` is). The constant is appended to `random.go` in Phase 5. Left open for the other owners.
 - **Update (2026-11-09, plan 2-15 Phase 1):** MER: `siteContract` `0xF0FF7DEE8E50504B` (the first eight bytes of SHA-256 of `economy-sim/site/siteContract`, checked) is in `spec-world.md` 7.1.4 and the D6 row of 7.3, `id` the agent and `sub` `2*i` for the `i`-th submitted offer and `2*i+1` for the `i`-th submitted take (the plan index, ADR 0008 open point 3 answered for D6); `spec-merchants.md` 9.4.2 and FR-MER-033 say the key is the first word of that stream. The constant is appended to `random.go` in Phase 6. MER leaves the areas of this note; left open for the other owners.
 - **Update (2026-11-11, plan 2-13):** `siteInform = 0x7B15D7AD592D7D8F` is appended (WLD 7.1.4, row D4); D11 (MIG) keeps no constant until plan 2-14 (see its update above).
+- **Update (2026-11-14, plan 3-tec Phase 1):** applied for TEC, which leaves the areas: `spec-technology.md` 4.4.1, 4.4.6, 6.3, 12.1, 12.2, FR-TEC-011 and FR-TEC-012 say the technology key is derived from the effective seed (the high word of the stream key of `siteTechnology`, tick 0, entity 0), takes no word and is not saved; D16 is retired; `spec-checkpoint.md` 4.2 tag 33 has no `Key`; N-202 is settled by the same rule and removed.
 
 ### N-215 The reseed rule is the identity for seed 0 and salt 0
 
@@ -2272,6 +2262,30 @@ PR description.
 
 ## Read receipt
 
+### N-358 A gain is not a recipe
+
+- **Areas:** PRO, CAP, TEC
+- **Raised:** 2026-11-14, `spec-technology.md` 17.1, plan 3-tec.
+- **Note:** an unlock (a recipe or a facility class that appears at a level) needs a refusal reason in PRO's order and a `Needs`-like clause on a facility class. TEC does not ask for it (its open question 3); a later spec that wants one adds both.
+
+### N-359 R9's volume clause is on units
+
+- **Areas:** STY, IND, TEC
+- **Raised:** 2026-11-14, `spec-technology.md` 8.8, 17.1.
+- **Note:** growth lowers the price index and raises the units traded, so deflation with distress (R9) stays silent only while its second conjunct is a clause on units and not on value. STY keeps the clause and runs TEC-S2 (S149).
+
+### N-360 A module that keeps a key derives it from the effective seed
+
+- **Areas:** CHK, WLD, TEC
+- **Raised:** 2026-11-14, `spec-technology.md` 4.4.1, plan 3-tec.
+- **Note:** a keyed hash that a module needs is `ordering.StreamKey(effectiveSeed, site, 0, 0)` taken at construction and at a restore; nothing is drawn and nothing is saved, so a reseed changes it by changing the seed. A later module with a keyed hash does the same and appends its site constant to `random.go`.
+
+### N-361 The stability check is made with the module off
+
+- **Areas:** STY, EXP, TEC
+- **Raised:** 2026-11-14, `spec-technology.md` 8.7, 17.1.
+- **Note:** the viability check, the warm start and the steady state of tick 0 never read a technology gain (the gain is 0 at tick 0 and the checks pass `production.BP`); a sweep of a TEC parameter starts every point from the same table, and the growth scenarios (S149 to S152) are held to their own claims.
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2282,4 +2296,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 655590a0ef735afbfb8d6e6f
+NOTES-TAG: e57561a215ff57eb26345823
