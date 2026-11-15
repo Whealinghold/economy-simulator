@@ -119,7 +119,10 @@ func TestScenarioS153_CheckpointAndReseed(t *testing.T) {
 			if err != nil {
 				t.Fatalf("seed %d: RestoreWorld(WithReseed) error = %v, want nil", seed, err)
 			}
-			if same, other := discoveryTicks(t, c, &ra, 300), discoveryTicks(t, d, &rb, 300); len(same)+len(other) > 0 && reflect.DeepEqual(same, other) {
+			same, other := discoveryTicks(t, c, &ra, 300), discoveryTicks(t, d, &rb, 300)
+			if len(same)+len(other) == 0 {
+				t.Errorf("seed %d: neither world discovered in 300 ticks, the reseed is not exercised", seed)
+			} else if reflect.DeepEqual(same, other) {
 				t.Errorf("seed %d: the reseeded restore discovers on the same ticks %v as the original", seed, same)
 			}
 		})
