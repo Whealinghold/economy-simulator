@@ -63,7 +63,11 @@ func newSettlements(c *Config) *settlements {
 		at[c.Regions[i].ID] = i
 	}
 	for _, row := range m.Regions {
-		s.floor[at[row.Region]] = m.classIndex(row.Floor)
+		g, ok := at[row.Region]
+		if !ok {
+			invariant("a settlement region row names a region that does not exist after validation")
+		}
+		s.floor[g] = m.classIndex(row.Floor)
 	}
 	return s
 }
