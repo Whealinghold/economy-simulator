@@ -43,7 +43,9 @@ type restoreCtx struct {
 // already hold the checkpoint's state. The error is ErrCheckpointVersion, ErrCheckpointCorrupt,
 // ErrCheckpointConfig, ErrCheckpointExtension, ErrOptionContext (WithSeed is refused:
 // the checkpoint holds the seed, and WithReseed is the way to another continuation)
-// or what NewWorld returns for the configuration.
+// or what NewWorld returns for the configuration. A checkpoint of a world with the
+// storage module on is refused with ErrCheckpointCorrupt until its stores are saved
+// (plan 3-sto Phase 8): the bytes are not damaged, but a restore would lose the stores.
 //
 // The world is at the tick of the checkpoint with the effective seed of its
 // header, or of the reseed. It emits no WorldCreated and no AgentSpawned; an
@@ -97,6 +99,11 @@ func restoreShell(cfg Config, f frame, opts []Option) (*World, options, error) {
 // load their state. A failure at any step before the last touches nothing the
 // consumer owns.
 func (w *World) restoreState(rs *restoreCtx, sections []byte) error {
+	if w.cfg.Modules.Storage != nil {
+		// The stores are not saved until plan 3-sto Phase 8 (PR 5): a restore would
+		// drop the stores of the role rows and change the room of every account.
+		return fmt.Errorf("%w: the storage module is on and its stores are not in the checkpoint yet (plan 3-sto Phase 8)", ErrCheckpointCorrupt)
+	}
 	bodies, err := splitSections(&w.cfg, sections)
 	if err != nil {
 		return err

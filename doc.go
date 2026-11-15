@@ -1432,6 +1432,11 @@
 //     capacity of its stores, a read with no attribution to commodities.
 //   - Buffer store: a store of large capacity held against a shortage; its owner is a
 //     strategy of its own (spec-storage.md 10.1).
+//   - StoreCount: the stores of one class that an agent owns, as the agent query reports
+//     them.
+//   - RoomState: the room group of the agent query: room, load, pledge, free room and
+//     stores of an account.
+//   - StoreRow: the stores of one class in one region, a row of the snapshot.
 //   - Owns a store: an agent owns a store if its stores of any class are at least one;
 //     it then cannot make a self-carried trip or a relocation.
 //   - StoreChanged: the event of one store added to an agent or removed from it.

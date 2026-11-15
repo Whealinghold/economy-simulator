@@ -96,13 +96,13 @@ func TestRecipe_ExecutionsRefusedAbandonedOverflow(t *testing.T) {
 	tick(h, 0,
 		economysim.RecipeExecuted{Recipe: 0, Executions: 3, Overflow: []economysim.Amount{{Commodity: 2, Quantity: 4}}},
 		economysim.RecipeExecuted{Recipe: 0, Executions: 2},
-		economysim.RecipeRefused{Recipe: 0, NotOnRole: 1, ZeroYield: 2, NoSite: 3, NoTool: 4, NoInput: 5, NoEndowment: 6},
+		economysim.RecipeRefused{Recipe: 0, NotOnRole: 1, ZeroYield: 2, NoSite: 3, NoTool: 4, NoInput: 5, NoEndowment: 6, NoRoom: 7},
 		economysim.RecipeAbandoned{Recipe: 0, Executions: 2, Reason: economysim.ReasonAgentRemoved},
 		economysim.RecipeAbandoned{Recipe: 0, Executions: 1, Reason: economysim.ReasonRegionChanged})
 	got := h.collect()
 	check(t, got, "recipe.executions", 5, "recipe", "p0")
 	check(t, got, "recipe.overflow", 4, "commodity", "c2")
-	for i, r := range []string{"not_on_role", "zero_yield", "no_site", "no_tool", "no_input", "no_endowment"} {
+	for i, r := range []string{"not_on_role", "zero_yield", "no_site", "no_tool", "no_input", "no_endowment", "no_room"} {
 		check(t, got, "recipe.refused", int64(i+1), "recipe", "p0", "reason", r)
 	}
 	check(t, got, "recipe.abandoned", 2, "recipe", "p0", "reason", "agent_removed")

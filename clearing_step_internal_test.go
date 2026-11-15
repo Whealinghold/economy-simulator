@@ -664,7 +664,7 @@ func TestClearMarket_NonInterference(t *testing.T) {
 // as an empty reason, and a constant with no code could never be produced.
 func TestReasonCodes_Guard(t *testing.T) {
 	t.Parallel()
-	for c := clearing.UnknownAgent; c <= clearing.InsufficientStock; c++ {
+	for c := clearing.UnknownAgent; c <= clearing.NoRoom; c++ {
 		t.Run(fmt.Sprintf("code %d", c), func(t *testing.T) {
 			r, ok := reasonOfCode(c)
 			if !ok {
@@ -678,8 +678,8 @@ func TestReasonCodes_Guard(t *testing.T) {
 	if r, ok := reasonOfCode(clearing.Admitted); ok {
 		t.Errorf("reasonOfCode(Admitted) = %q, want none", r)
 	}
-	if r, ok := reasonOfCode(clearing.InsufficientStock + 1); ok {
-		t.Errorf("reasonOfCode(%d) = %q, want none", clearing.InsufficientStock+1, r)
+	if r, ok := reasonOfCode(clearing.NoRoom + 1); ok {
+		t.Errorf("reasonOfCode(%d) = %q, want none", clearing.NoRoom+1, r)
 	}
 	if c, ok := codeOfReason(ReasonTrade); ok {
 		t.Errorf("codeOfReason(trade) = %d, want none", c)
@@ -694,7 +694,7 @@ func TestReasonCodes_Guard(t *testing.T) {
 	if from < 0 || to < from {
 		t.Fatalf("table of 3.2 not found in spec-clearing.md")
 	}
-	deferred := []string{"not_permitted", "no_room"}
+	deferred := []string{"not_permitted"}
 	for _, line := range strings.Split(spec[from:to], "\n") {
 		var name string
 		if _, rest, ok := strings.Cut(line, "| `"); ok {

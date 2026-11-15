@@ -117,6 +117,11 @@ func (w *World) AddAgent(n NewAgent) (AgentID, error) {
 	if !w.ledger.FundFits(int(n.Region), int64(n.Money), funds) {
 		return NoAgent, fmt.Errorf("AddAgent: creating the agent's money and goods: %w", ErrOverflow)
 	}
+	if w.sto != nil {
+		if err := w.sto.admitsStock(n, stock); err != nil {
+			return NoAgent, fmt.Errorf("AddAgent: creating the agent's goods: %w", err)
+		}
+	}
 	slices.SortFunc(stock, func(a, b itemRow) int { return cmp.Compare(a.commodity, b.commodity) }) // the order of the input changes no ledger order
 	// The belief seeds read the cost anchors, which are scratch and not saved: derive
 	// them from the saved state as Snapshot does, so a restored world agrees.

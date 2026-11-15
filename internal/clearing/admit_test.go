@@ -23,6 +23,12 @@ func okBid() clearing.Facts {
 	}
 }
 
+// limit makes the bid of f one of a limited account with the free room and the unit
+// size given (mass then bulk).
+func limit(f *clearing.Facts, freeMass, freeBulk, sizeMass, sizeBulk int64) {
+	f.Limited, f.FreeMass, f.FreeBulk, f.SizeMass, f.SizeBulk = true, freeMass, freeBulk, sizeMass, sizeBulk
+}
+
 func okAsk() clearing.Facts {
 	f := okBid()
 	f.Bid, f.Available, f.Balance = false, 5, 0
@@ -32,7 +38,7 @@ func okAsk() clearing.Facts {
 // TestAdmit_Rows breaks exactly one row of CLR 3.2 per case and asserts the
 // code, then two rows at once and asserts the first of the table.
 //
-// Requirement: FR-CLR-002, FR-CLR-003, FR-CLR-004, FR-CLR-005, FR-CLR-006, FR-CLR-028, FR-CLR-030, FR-CLR-031
+// Requirement: FR-CLR-002, FR-CLR-003, FR-CLR-004, FR-CLR-005, FR-CLR-006, FR-CLR-028, FR-CLR-030, FR-CLR-031, FR-STO-008
 func TestAdmit_Rows(t *testing.T) {
 	t.Parallel()
 	mut := func(base clearing.Facts, f func(*clearing.Facts)) clearing.Facts { f(&base); return base }
@@ -99,6 +105,20 @@ func TestAdmit_Rows(t *testing.T) {
 		{"negative holding", mut(okBid(), func(f *clearing.Facts) { f.Held = -1 }), clearing.Overflow},
 		{"negative balance", mut(okAsk(), func(f *clearing.Facts) { f.Balance = -1 }), clearing.Overflow},
 		{"negative tally", mut(okAsk(), func(f *clearing.Facts) { f.Tally = -1 }), clearing.Overflow},
+		// no_room (spec-storage.md 5.2.1, FR-STO-008): 5 units of (2, 3) are a load of (10, 15).
+		{"room exactly", mut(okBid(), func(f *clearing.Facts) { limit(f, 10, 15, 2, 3) }), clearing.Admitted},
+		{"mass one over", mut(okBid(), func(f *clearing.Facts) { limit(f, 9, 15, 2, 3) }), clearing.NoRoom},
+		{"bulk one over", mut(okBid(), func(f *clearing.Facts) { limit(f, 10, 14, 2, 3) }), clearing.NoRoom},
+		{"no free room", mut(okBid(), func(f *clearing.Facts) { limit(f, 0, 0, 2, 3) }), clearing.NoRoom},
+		{"a size of 0 takes none", mut(okBid(), func(f *clearing.Facts) { limit(f, 0, 0, 0, 0) }), clearing.Admitted},
+		{"a size of 0 in one dimension", mut(okBid(), func(f *clearing.Facts) { limit(f, 0, 15, 0, 3) }), clearing.Admitted},
+		{"load overflows int64", mut(okBid(), func(f *clearing.Facts) { limit(f, math.MaxInt64, math.MaxInt64, math.MaxInt64, 1) }), clearing.NoRoom},
+		{"an ask is not tested", mut(okAsk(), func(f *clearing.Facts) { limit(f, 0, 0, 2, 3) }), clearing.Admitted},
+		{"an account that is not limited is not tested", mut(okBid(), func(f *clearing.Facts) { f.FreeMass, f.SizeMass = 0, 2 }), clearing.Admitted},
+		// no_room is the last row: funds, then stock, are decided first.
+		{"funds beat room", mut(okBid(), func(f *clearing.Facts) { limit(f, 0, 0, 2, 3); f.Available = 49 }), clearing.InsufficientFunds},
+		{"holding limit beats room", mut(okBid(), func(f *clearing.Facts) { limit(f, 0, 0, 2, 3); f.Held = maxQty }), clearing.HoldingLimit},
+		{"duplicate beats room", mut(okBid(), func(f *clearing.Facts) { limit(f, 0, 0, 2, 3); f.Duplicate = true }), clearing.DuplicateOrder},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -135,6 +155,9 @@ func refAdmit(f clearing.Facts) clearing.Code {
 		return clearing.InsufficientFunds
 	case !f.Bid && f.Qty > f.Available:
 		return clearing.InsufficientStock
+	case f.Bid && f.Limited && (new(big.Int).Mul(bi(f.Qty), bi(f.SizeMass)).Cmp(bi(f.FreeMass)) > 0 ||
+		new(big.Int).Mul(bi(f.Qty), bi(f.SizeBulk)).Cmp(bi(f.FreeBulk)) > 0):
+		return clearing.NoRoom
 	}
 	return clearing.Admitted
 }
@@ -177,25 +200,26 @@ func refHeadroom(f clearing.Facts) clearing.Code {
 
 // decodeFacts reads Facts from bytes, padding with zeros.
 func decodeFacts(b []byte) clearing.Facts {
-	buf := make([]byte, 2+9*8)
+	buf := make([]byte, 2+13*8)
 	copy(buf, b)
 	n := func(i int) int64 { return int64(binary.LittleEndian.Uint64(buf[2+i*8:])) }
 	return clearing.Facts{
 		AgentKnown: buf[0]&1 != 0, SideAllowed: buf[0]&2 != 0, CommodityKnown: buf[0]&4 != 0,
-		Tradable: buf[0]&8 != 0, Duplicate: buf[0]&16 != 0, Bid: buf[0]&32 != 0,
+		Tradable: buf[0]&8 != 0, Duplicate: buf[0]&16 != 0, Bid: buf[0]&32 != 0, Limited: buf[0]&64 != 0,
 		Price: n(0), Qty: n(1), MaxPrice: n(2), MaxQuantity: n(3), MaxMoney: n(4),
 		Available: n(5), Held: n(6), Balance: n(7), Tally: n(8),
+		FreeMass: n(9), FreeBulk: n(10), SizeMass: n(11), SizeBulk: n(12),
 	}
 }
 
 func encodeFacts(f clearing.Facts) []byte {
-	b := make([]byte, 2+9*8)
-	for i, v := range []bool{f.AgentKnown, f.SideAllowed, f.CommodityKnown, f.Tradable, f.Duplicate, f.Bid} {
+	b := make([]byte, 2+13*8)
+	for i, v := range []bool{f.AgentKnown, f.SideAllowed, f.CommodityKnown, f.Tradable, f.Duplicate, f.Bid, f.Limited} {
 		if v {
 			b[0] |= 1 << i
 		}
 	}
-	for i, v := range []int64{f.Price, f.Qty, f.MaxPrice, f.MaxQuantity, f.MaxMoney, f.Available, f.Held, f.Balance, f.Tally} {
+	for i, v := range []int64{f.Price, f.Qty, f.MaxPrice, f.MaxQuantity, f.MaxMoney, f.Available, f.Held, f.Balance, f.Tally, f.FreeMass, f.FreeBulk, f.SizeMass, f.SizeBulk} {
 		binary.LittleEndian.PutUint64(b[2+i*8:], uint64(v))
 	}
 	return b
@@ -205,7 +229,7 @@ func encodeFacts(f clearing.Facts) []byte {
 // agrees with an independent math/big restatement of CLR 3.2: admitted only
 // when every row holds, otherwise the first failing row of the table.
 //
-// Requirement: FR-CLR-002, FR-CLR-003, FR-CLR-004, FR-CLR-005, FR-CLR-006, FR-CLR-007, FR-CLR-028, FR-CLR-030, FR-CLR-031
+// Requirement: FR-CLR-002, FR-CLR-003, FR-CLR-004, FR-CLR-005, FR-CLR-006, FR-CLR-007, FR-CLR-028, FR-CLR-030, FR-CLR-031, FR-STO-008
 //
 // Fix: the corpus files testdata/fuzz/FuzzAdmit/seed-* pin three hand-written
 // edges, not crashes (the same inputs are given with f.Add): seed-bid-edge, a
@@ -223,6 +247,9 @@ func FuzzAdmit(f *testing.F) {
 	f.Add(encodeFacts(edge))
 	edge = okBid()
 	edge.MaxPrice, edge.MaxQuantity, edge.Price, edge.Qty = math.MaxInt64, math.MaxInt64, math.MaxInt64, 2
+	f.Add(encodeFacts(edge))
+	edge = okBid()
+	limit(&edge, 10, 14, 2, 3)
 	f.Add(encodeFacts(edge))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		in := decodeFacts(data)

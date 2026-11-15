@@ -122,6 +122,7 @@ economy-sim/
   construct.go  construct_warm.go  fanin.go  phase_start.go
   phase_production.go  phase_trade.go  phase_outcomes.go
   phase_exit.go                                                    (WLD)
+  clearing_release.go                                                  (CLR)
   checkpoint_save.go  checkpoint_restore.go  checkpoint_sections.go    (CHK)
   regions_relocate.go  regions_status.go                               (REG)
   demand_plan.go  demand_state.go                                      (DEM)
@@ -129,7 +130,7 @@ economy-sim/
   resources_check.go  resources_warn.go  resources_tick.go                  (RES)
   subsistence_validate.go                                           (SUB)
   transport_request.go  transport_arrival.go  transport_view.go
-  transport_state.go  transport_lanes.go                            (TRN)
+  transport_state.go  transport_lanes.go  transport_checks.go             (TRN)
   migration_pass.go  migration_report.go                            (MIG)
   contract_settle.go                                                   (MER)
   external_state.go                                                    (EXT)
@@ -1089,4 +1090,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: b6524107bea39ff4a416ead3
+RULE-TAG: 607ad1934df33a08dc5a9569
