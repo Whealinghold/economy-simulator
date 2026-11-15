@@ -119,6 +119,9 @@ type World struct {
 	polity *polity
 	// sto is the state of the storage module, nil when it is off (storage.go).
 	sto *storage
+	// tec is the state of the technology module, nil when it is off
+	// (technology.go).
+	tec *technology
 	// set is the state of the settlements module, nil when it is off (settlements.go).
 	set *settlements
 	// integ is what INT keeps (integration.go).

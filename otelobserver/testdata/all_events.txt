@@ -42,6 +42,8 @@ ShipmentArrived
 ShipmentDispatched
 ShipmentRejected
 StoreChanged
+TechnologyAdjusted
+TechnologyAdvanced
 TickEnded
 TickStarted
 TradeExecuted

@@ -67,6 +67,8 @@ var allEvents = []economysim.Event{
 	economysim.TraineeshipCompleted{},
 	economysim.TraineeshipEnded{},
 	economysim.StoreChanged{},
+	economysim.TechnologyAdvanced{},
+	economysim.TechnologyAdjusted{},
 	economysim.SettlementClassChanged{},
 	economysim.SettlementHeld{},
 }

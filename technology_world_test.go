@@ -170,6 +170,7 @@ func TestTechnology_InertModuleRunsAsOff(t *testing.T) {
 			}
 			fa, fb := a.Final, b.Final
 			fa.ConfigHash, fb.ConfigHash, fa.Modules, fb.Modules = [32]byte{}, [32]byte{}, nil, nil
+			fa.Names, fb.Names = economysim.Names{}, economysim.Names{} // Names carries TechFields (FR-TEC-001)
 			if !reflect.DeepEqual(fa, fb) {
 				t.Errorf("%s, seed %d: the final snapshots differ from the module off beyond the hash and the module list", tt.name, seed)
 			}
