@@ -276,7 +276,7 @@ var (
 		"ContractRound", "PayrollPaid"}
 	ignoredEvents = []string{"EstateOpened", "EdgeStatusChanged", "ReliefPaid", "MoneyFlowEnded", "MoneyFlowScaled",
 		"PopulationScaled", "TransitFactorChanged", "OutsideEnded", "OutsideShocked", "YieldShocked",
-		"TraineeshipStarted", "TraineeshipCompleted", "TraineeshipEnded", "StoreChanged", "TechnologyAdvanced", "TechnologyAdjusted", "LoanEnded", "LoanPassed", "CreditSettled",
+		"TraineeshipStarted", "TraineeshipCompleted", "TraineeshipEnded", "StoreChanged", "TechnologyAdvanced", "TechnologyAdjusted", "LoanEnded", "LoanPassed", "CreditSettled", "LoanFormed", "CreditRound",
 		"SettlementClassChanged", "SettlementHeld"}
 )
 

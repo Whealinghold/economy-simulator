@@ -32,11 +32,16 @@ type credit struct {
 	capRun     int64
 	// pass is the scratch of the settlement and of a waterfall.
 	pass settleScratch
-	// vs is the storage of the credit group of the view and valuedAt the tick plus one
-	// at which the prices were last valued for the upkeep cost (0: never). Both are
-	// scratch, not saved.
+	// vs is the storage of the credit group of the view, valuedAt the tick plus one at
+	// which the prices were last valued for the upkeep cost (0: never), and round the
+	// requests, offers and counts of the round at P3.3b. All are scratch, not saved.
 	vs       creditScratch
 	valuedAt int64
+	round    roundScratch
+	// rateCap is the rate limit in force in a region, or nil when no module supplies
+	// one (spec-credit.md 5.2.3, FR-CRD-028): the ORG seam. It reports the cap and
+	// whether the region has one.
+	rateCap func(RegionID) (int64, bool)
 }
 
 // newCredit builds the state of the module for a canonical configuration, or nil
@@ -56,6 +61,7 @@ func newCredit(c *Config) *credit {
 		cr.scale[i] = wholeBP
 	}
 	cr.pass.rows = make([]settleRow, n)
+	cr.round.lanes, cr.round.counts = make([]crdLane, n), make([]creditCount, n)
 	return cr
 }
 

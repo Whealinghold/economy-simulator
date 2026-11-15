@@ -110,15 +110,14 @@ func TestCredit_NewWorldRejectsABadBlock(t *testing.T) {
 // and a recording observer, that a world built with the credit module on behaves
 // exactly as one built with it off: the same events in the same order (but for the
 // configuration hash of WorldCreated, which the module moves) and the same final
-// snapshot, for two seeds. The module has no state, no position and no event yet,
-// so its presence, with or without a lender and a borrower, moves nothing.
+// snapshot, for two seeds. With no role carrying a block the module has no request,
+// no offer and no claim, so its presence moves nothing; with blocks it forms loans and
+// TestCredit_PackRoundRuns holds the invariants.
 //
 // Requirement: FR-CRD-001
 //
-// Guard: the module is inert until its positions are built (plan 3-crd Phases 4 to
-// 7). The empty module and the module with blocks must stay identical to off until
-// then; the PR that builds P1.7a and P3.3b replaces the block case with the
-// invariants of spec-credit.md 12.
+// Guard: the module with no block is inert; a change that made it leave a trace
+// would move every pack that switches it on.
 func TestCredit_InertOverARun(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -134,7 +133,6 @@ func TestCredit_InertOverARun(t *testing.T) {
 			c.Modules.Credit = &economysim.Credit{MinPrincipal: 1, MaxClaims: 1}
 			return c
 		}()},
-		{"a lender and a borrower", loadPackBytes(t, []byte(creditPackDoc), packOne...)},
 	}
 	for seed := uint64(1); seed <= uint64(seedsFor(raceEnabled, 2)); seed++ {
 		base := runPack(t, off, runSpec{Seed: seed, Ticks: 30, Observe: true, Audit: true})
@@ -160,5 +158,35 @@ func TestCredit_InertOverARun(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// TestCredit_PackRoundRuns verifies, over a run of the pack one with a lender role and
+// a borrower role, the audit on and a recording observer, that the round runs: the
+// module is not inert, the loans it forms are claims the audit accepts every tick, and
+// every LoanFormed names a claim the ledger totals count.
+//
+// Requirement: FR-CRD-001, FR-CRD-082
+func TestCredit_PackRoundRuns(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	cfg := loadPackBytes(t, []byte(creditPackDoc), packOne...)
+	for seed := uint64(1); seed <= uint64(seedsFor(raceEnabled, 2)); seed++ {
+		res := runPack(t, cfg, runSpec{Seed: seed, Ticks: 30, Observe: true, Audit: true})
+		rounds, formed := 0, 0
+		for _, e := range res.Events {
+			switch e.(type) {
+			case economysim.CreditRound:
+				rounds++
+			case economysim.LoanFormed:
+				formed++
+			}
+		}
+		if rounds == 0 {
+			t.Errorf("seed %d: no CreditRound in 30 ticks of a pack with a lender and a borrower, want the round to run", seed)
+		}
+		t.Logf("seed %d: %d rounds, %d loans formed", seed, rounds, formed)
 	}
 }

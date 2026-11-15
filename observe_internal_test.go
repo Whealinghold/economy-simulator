@@ -316,6 +316,11 @@ var stepSites = []site{
 			w.p33aPlanned()
 		}
 	})},
+	{"P3.3b", noError(func(w *World) {
+		if w.credit != nil {
+			w.p33bRound()
+		}
+	})},
 	{"P3.4", (*World).p34Estates},
 	{"P3.5", func(w *World) error {
 		if w.external != nil {

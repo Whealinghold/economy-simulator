@@ -79,6 +79,7 @@ func (w *World) checkTradePlan(a *agent, p *TradePlan) {
 	if w.mer != nil {
 		w.checkMerchantPlan(a, p)
 	}
+	w.checkCreditPlan(a, p) // nil-safe: with the module off a request or an offer is only a Debug line
 }
 
 // removeAgent is the one removal path of an agent (spec-agents.md 3.6,
