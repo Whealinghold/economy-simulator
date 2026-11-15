@@ -339,6 +339,43 @@
 //   - TraineeshipStarted, TraineeshipCompleted, TraineeshipEnded: the events of a
 //     place filled, a course completed (the agent changes role) and a course that
 //     ends without completing (the reason names why).
+//   - Technology: the module of productivity growth: a gain in yield held per region
+//     and technology field (Technology is the module's configuration, TechField its
+//     field row, TechFieldID the typed ID of a field, an index in ascending order of the
+//     ID string). It is not the technology matrix of the viability check.
+//   - Cell: a region and a technology field; it holds the experience, the advance and
+//     the catch-up carry, and has no account, no price and no owner.
+//   - Experience: the executions of a field's recipes that completed in a cell,
+//     cumulative, saturating at MaxExperience.
+//   - Learned gain: the gain from experience, DoublingBP for each doubling of the
+//     experience plus the base over the base; exact at a doubling.
+//   - Advance: the gain a cell has from the trend, discoveries, contact and the call
+//     of AdjustTechnology, in basis points, stored between 0 and the cap.
+//   - Technology gain: the learned gain plus the advance, at most the cap of the field; the
+//     technology factor of a recipe in the field is 10 000 plus the gain.
+//   - Doubling: a doubling of the experience plus the base over the base; the gain
+//     of one is DoublingBP.
+//   - Base: the executions already behind a field, which sets how slowly it learns.
+//   - Trend: a gain added a year to every cell of a field, by a carried remainder.
+//   - Discovery: a step of gain with a chance each tick, for a cell that practises;
+//     the chance is a keyed hash of the key, the tick and the cell, with no draw.
+//   - Key (of the technology module): a 64-bit value derived from the effective seed,
+//     never drawn and never saved.
+//   - Practises: a cell practises in a tick when an execution of its field completed
+//     in it that tick.
+//   - Contact: the link between two regions at a distance below the reach of a field;
+//     the contact weight falls linearly with the distance and is 0 at the reach.
+//   - Reach: the distance at which contact is lost, in the distance unit of the pack.
+//   - Frontier: the best contact-weighted gain of the other regions for a cell, read
+//     from a snapshot taken once in the step.
+//   - Gap: the frontier less the gain of a cell.
+//   - Catch-up: the share of the gap a cell closes a year, by a carried remainder.
+//   - Cap (of a field): CapBP, the largest gain of a cell of the field.
+//   - Premium: the ratio above the replacement ratio at which a population settles
+//     while a gain grows.
+//   - TechnologyAdjustment, TechRow, TechnologyAdvanced, TechnologyAdjusted: the entry
+//     of a call that moves the advance of a cell, the snapshot row of a cell, the event
+//     of a step and the event of a call.
 //   - Upkeep: the goods one household must consume each tick to stay alive.
 //   - Warning: a configuration that is legal but probably a mistake; Warnings
 //     returns it as a value with a path and a rule and it never fails

@@ -42,7 +42,7 @@ var notBuilt = []string{
 	"Modules.Infrastructure", "Modules.Institutions", "Modules.Insurance",
 	"Modules.Policy",
 	"Modules.Risk", "Modules.Saving",
-	"Modules.Settlements", "Modules.Technology",
+	"Modules.Settlements",
 	"Modules.Tenure",
 	// Fields of FlowTarget that the targets of the stores and treasury kinds add.
 	"FlowTarget.Jurisdiction",
@@ -64,8 +64,8 @@ var notBuilt = []string{
 	"RateLimit", "Reaction", "RegionSettlement",
 	"Release", "Right", "Risk", "RouteRisk",
 	"Saver", "Saving", "ScheduleStep", "SettlementClass",
-	"Settlements", "StoreRisk", "Tax", "TechField",
-	"Technology", "Tenure", "TenureTerm", "Toll", "Underwrite",
+	"Settlements", "StoreRisk", "Tax",
+	"Tenure", "TenureTerm", "Toll", "Underwrite",
 	"Window",
 }
 
@@ -80,7 +80,7 @@ var exemptFields = map[string]bool{
 	"Config.Groups": true, "Config.Modules": true,
 	// The demand module: its pointer is the switch (spec-config.md 6.2.1), and the
 	// two taste lists are containers whose fields are the rows (spec-demand.md 9).
-	"Modules.Demand": true, "Modules.External": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Modules.Migration": true, "Modules.Merchants": true, "Modules.Employment": true, "Modules.Polity": true, "Modules.Storage": true, "Modules.Credit": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
+	"Modules.Demand": true, "Modules.External": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Modules.Migration": true, "Modules.Merchants": true, "Modules.Employment": true, "Modules.Polity": true, "Modules.Storage": true, "Modules.Credit": true, "Modules.Technology": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
 	"YieldProfile.HasAll": true,
 	// The Has flags of an Endowment row only spell in Go what the file says by writing the key.
 	"Endowment.HasCapacity": true, "Endowment.HasInitial": true, "Endowment.HasRegenScale": true,

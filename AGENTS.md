@@ -142,6 +142,7 @@ economy-sim/
 │   storage_validate.go storage_commit.go storage_report.go (STO)
 │   skills_queue.go skills_report.go (SKL)
 │   tenure_validate.go tenure_ration.go tenure_transfer.go tenure_report.go (LND)
+│   technology_validate.go technology_report.go (TEC)
 │   credit_round.go credit_settle.go credit_strategy.go credit_report.go
 │   credit_state.go (CRD)
 │                           # CONTINUATION files: a concept past the Lizard limits
