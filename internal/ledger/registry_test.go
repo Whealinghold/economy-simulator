@@ -109,6 +109,19 @@ func pairing(between string) (from, to []ledger.Kind, back bool) {
 	return kinds(l), kinds(r), back
 }
 
+// withTreasury adds the Treasury kind to a side of the pairing of initial money, the
+// only row that names it so far: the spec text of the trade and fiscal rows names it
+// too, but the fiscal module builds those (plan 3-pol D5, FR-POL-017).
+func withTreasury(name, between string, from, to []ledger.Kind) ([]ledger.Kind, []ledger.Kind) {
+	if name == "initial" {
+		_, r, _ := strings.Cut(between, " to ")
+		if strings.Contains(r, "treasury") {
+			to = append(to, ledger.KindTreasury)
+		}
+	}
+	return from, to
+}
+
 // TestRegistry_AgreesWithSpec verifies, by a plain text parse of the table of
 // spec-ledger.md 7.2, that every built reason has the class and the pairing
 // of its row for money and for goods, for every ordered pair of account kinds,
@@ -147,6 +160,7 @@ func TestRegistry_AgreesWithSpec(t *testing.T) {
 				continue // checked against FR-LED-055 below: the cell has two clauses
 			}
 			from, to, back := pairing(row.between)
+			from, to = withTreasury(name, row.between, from, to)
 			for _, goods := range []bool{false, true} {
 				thing := "money"
 				if goods {

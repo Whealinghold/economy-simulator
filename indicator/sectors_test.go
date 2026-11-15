@@ -73,6 +73,23 @@ func TestSectors_MoneyByHolderAndNetWorth(t *testing.T) {
 	}
 }
 
+// TestSectors_TreasuryMoneyInRow verifies that the treasury money of a region's
+// snapshot row reaches the sector row and its total.
+//
+// Requirement: FR-IND-018
+func TestSectors_TreasuryMoneyInRow(t *testing.T) {
+	w, open, closing := workedWindow(t)
+	withMoney(&open, &closing, [4]economysim.Money{4900, 800, 2000, 0}, [4]economysim.Money{5000, 800, 1980, 0}, 100)
+	closing.Regions[0].MoneyTreasury = 300
+	got, err := indicator.Sectors(w, open, closing, valleyTable(t, w, alphaP, alphaP))
+	if err != nil {
+		t.Fatalf("Sectors() error = %v, want nil", err)
+	}
+	if a := got.Regions[0]; a.MoneyTreasury != 300 || a.Money != 6100 {
+		t.Errorf("Sectors().alpha treasury = %d (total %d), want 300 (6100)", a.MoneyTreasury, a.Money)
+	}
+}
+
 // TestSectors_Misuse verifies that snapshots with a different number of regions
 // than the window are refused.
 //
@@ -117,6 +134,24 @@ func TestRegionalMoneyIdentity_Terms(t *testing.T) {
 		if row.Account != want[i] {
 			t.Errorf("Sectors().account[%d] = %+v, want %+v", i, row.Account, want[i])
 		}
+	}
+}
+
+// TestRegionalMoneyIdentity_Treasury verifies that the change of a region's
+// money counts its treasury: a treasury funded by a faucet closes the account.
+//
+// Requirement: FR-IND-019
+func TestRegionalMoneyIdentity_Treasury(t *testing.T) {
+	w, open, closing := workedWindow(t)
+	withMoney(&open, &closing, [4]economysim.Money{4900, 800, 2000, 0}, [4]economysim.Money{4900, 800, 2000, 0}, 100)
+	closing.Regions[0].MoneyTreasury = 300
+	addFlow(&w, moneyFlow(10, alpha, economysim.ReasonStartMoney, economysim.KindFaucet, 300))
+	got, err := indicator.Sectors(w, open, closing, valleyTable(t, w, alphaP, alphaP))
+	if err != nil {
+		t.Fatalf("Sectors() error = %v, want nil", err)
+	}
+	if a := got.Regions[0].Account; a.Change != 300 || a.Faucets != 300 || a.Residual != 0 {
+		t.Errorf("Sectors().alpha account = %+v, want change 300, faucets 300, residual 0", a)
 	}
 }
 

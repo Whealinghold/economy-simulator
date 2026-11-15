@@ -148,6 +148,9 @@ const (
 	setTransit  = kindSet(1 << KindTransit)
 	setEscrow   = kindSet(1 << KindEscrow)
 	setOutside  = kindSet(1 << KindOutside)
+	// setTreasury is the Treasury kind of the polity module; the row initial names it
+	// for money (spec-ledger.md 7.2, FR-LED-065), and the fiscal rows will name it.
+	setTreasury = kindSet(1 << KindTreasury)
 	// setHolder is every non-boundary kind: "any holder" of 7.2.
 	setHolder = kindSet(1<<KindBoundary - 1)
 )
@@ -182,7 +185,7 @@ var table = [NumReasons][2]row{
 	// trade also runs to and from an Outside account (spec-ledger.md 7.2, FR-LED-057);
 	// no Outside account exists while the external module is off.
 	Trade:        {thingMoney: {true, Internal, setAE | setOutside, setAE | setOutside, false, false, 0}, thingGoods: {true, Internal, setAE | setOutside, setAE | setOutside, false, false, 0}},
-	Initial:      {thingMoney: {true, Faucet, setBoundary, setAE, false, false, 0}, thingGoods: {true, Faucet, setBoundary, setAE, false, false, 0}},
+	Initial:      {thingMoney: {true, Faucet, setBoundary, setAE | setTreasury, false, false, 0}, thingGoods: {true, Faucet, setBoundary, setAE, false, false, 0}},
 	RecipeInput:  {thingGoods: {true, Sink, setAgent, setBoundary, false, false, 0}},
 	RecipeOutput: {thingGoods: {true, Faucet, setBoundary, setAgent, false, false, 0}},
 	Disposal:     {thingGoods: {true, Sink, setAgent, setBoundary, false, false, 0}},

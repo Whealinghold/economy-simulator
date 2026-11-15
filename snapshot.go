@@ -33,8 +33,8 @@ type Snapshot struct {
 	Modules []string
 	// Agents is the live agents and Households the sum of their weights.
 	Agents, Households int64
-	// Money is the money of the non-boundary accounts: the households and the
-	// estates (escrow and treasuries are 0 in the slice).
+	// Money is the money of the non-boundary accounts: the households, the
+	// estates and the treasuries (escrow is 0 in the slice).
 	Money Money
 	// Regions has one row per region, by RegionID.
 	Regions []RegionRow
@@ -87,6 +87,11 @@ type Snapshot struct {
 	// Outside is the state of the external module (spec-observability.md 5.3.9); the
 	// zero value with the module off.
 	Outside OutsideState
+	// Jurisdictions has one row for each governed jurisdiction, in ascending
+	// JurisdictionID: its seat, its treasury pseudo-agent and the treasury's money
+	// (spec-polity.md 10.5). Empty with the polity module off or with no jurisdiction
+	// governed.
+	Jurisdictions []JurisdictionRow
 }
 
 // EndowmentRow is the state of one endowment (spec-observability.md 5.3.6).
@@ -149,6 +154,9 @@ type RegionRow struct {
 	// MoneyContract is the money in the Escrow accounts of the region, the contracts'
 	// escrow; 0 with the merchants module off (spec-observability.md 5.3.2).
 	MoneyContract Money
+	// MoneyTreasury is the money of the treasuries seated in the region; 0 with none
+	// (spec-polity.md 10.5).
+	MoneyTreasury Money
 }
 
 // PopulationState is the figures of the population module in the snapshot: the
@@ -368,6 +376,9 @@ func (w *World) Snapshot() (Snapshot, error) {
 	}
 	w.snapshotMigration(&s)
 	w.snapshotContracts(&s)
+	if err := w.snapshotTreasuries(&s); err != nil {
+		return Snapshot{}, fmt.Errorf("snapshot at tick %d: %w", w.Tick(), err)
+	}
 	w.snapshotOutside(&s)
 	w.dropOutsideRows(&s)
 	return s, nil
@@ -434,6 +445,9 @@ func (w *World) Region(g RegionID) (RegionState, error) {
 	}
 	w.snapshotMigration(&s)
 	w.snapshotContracts(&s)
+	if err := w.snapshotTreasuries(&s); err != nil {
+		return RegionState{}, fmt.Errorf("Region: region %d: %w", g, err)
+	}
 	out := RegionState{Region: s.Regions[g], Jobs: s.Jobs}
 	if !w.isOutsideNode(g) {
 		out.Roles = slices.Clone(s.Roles[int(g)*nr : (int(g)+1)*nr])
