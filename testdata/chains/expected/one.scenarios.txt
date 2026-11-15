@@ -234,6 +234,81 @@ measure households at end scale 10: 1=160 | median=160 n=1
 measure households at end scale 4: 1=413 | median=413 n=1
 measure largest absolute gap bp: 1=15955 | median=15955 n=1
 
+## S149 one+population+resources+technology learning, 365 ticks seeds 1-10
+measure TechnologyAdvanced events: 1=26 2=27 3=24 4=28 5=26 6=21 7=26 8=30 9=25 10=23 | median=26 n=10
+measure experience of the first cell at end: 1=126 2=123 3=129 4=135 5=120 6=107 7=120 8=117 9=132 10=116 | median=122 n=10
+measure gain added by catch-up bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain added by discoveries bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain added by learning bp: 1=43 2=43 3=44 4=46 5=42 6=38 7=42 8=41 9=45 10=41 | median=42 n=10
+measure gain added by the trend bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain of the first cell at end bp: 1=43 2=43 3=44 4=46 5=42 6=38 7=42 8=41 9=45 10=41 | median=42 n=10
+measure households at end: 1=122 2=102 3=95 4=98 5=101 6=112 7=97 8=83 9=80 10=108 | median=100 n=10
+check only learning accrues: 10/10 pass
+check the gains of each cell chain, never fall and stay within the cap: 10/10 pass
+
+## S151 one+population+resources cap 1000, 365 ticks seeds 1-10
+measure TechnologyAdvanced events: 1=26 2=27 3=24 4=28 5=26 6=21 7=26 8=30 9=25 10=23 | median=26 n=10
+measure experience of the first cell at end: 1=126 2=123 3=129 4=135 5=120 6=107 7=120 8=117 9=132 10=116 | median=122 n=10
+measure gain added by catch-up bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain added by discoveries bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain added by learning bp: 1=43 2=43 3=44 4=46 5=42 6=38 7=42 8=41 9=45 10=41 | median=42 n=10
+measure gain added by the trend bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain of the first cell at end bp: 1=43 2=43 3=44 4=46 5=42 6=38 7=42 8=41 9=45 10=41 | median=42 n=10
+measure households at end: 1=122 2=102 3=95 4=98 5=101 6=112 7=97 8=83 9=80 10=108 | median=100 n=10
+measure stock of the first endowment at end: 1=369 2=373 3=381 4=368 5=373 6=373 7=377 8=374 9=368 10=376 | median=373 n=10
+check the gain stays within the cap of the variant: 10/10 pass
+check the gains of each cell chain, never fall and stay within the cap: 10/10 pass
+
+## S151 one+population+resources cap 9000, 365 ticks seeds 1-10
+measure TechnologyAdvanced events: 1=26 2=27 3=24 4=28 5=26 6=21 7=26 8=30 9=25 10=23 | median=26 n=10
+measure experience of the first cell at end: 1=126 2=123 3=129 4=135 5=120 6=107 7=120 8=117 9=132 10=116 | median=122 n=10
+measure gain added by catch-up bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain added by discoveries bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain added by learning bp: 1=43 2=43 3=44 4=46 5=42 6=38 7=42 8=41 9=45 10=41 | median=42 n=10
+measure gain added by the trend bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain of the first cell at end bp: 1=43 2=43 3=44 4=46 5=42 6=38 7=42 8=41 9=45 10=41 | median=42 n=10
+measure households at end: 1=122 2=102 3=95 4=98 5=101 6=112 7=97 8=83 9=80 10=108 | median=100 n=10
+measure stock of the first endowment at end: 1=369 2=373 3=381 4=368 5=373 6=373 7=377 8=374 9=368 10=376 | median=373 n=10
+check the gain stays within the cap of the variant: 10/10 pass
+check the gains of each cell chain, never fall and stay within the cap: 10/10 pass
+
+## S152 one+technology work floor default, 365 ticks seeds 1-10
+measure TechnologyAdvanced events: 1=26 2=27 3=24 4=28 5=26 6=21 7=26 8=30 9=25 10=23 | median=26 n=10
+measure experience of the first cell at end: 1=126 2=123 3=129 4=135 5=120 6=107 7=120 8=117 9=132 10=116 | median=122 n=10
+measure gain added by catch-up bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain added by discoveries bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain added by learning bp: 1=43 2=43 3=44 4=46 5=42 6=38 7=42 8=41 9=45 10=41 | median=42 n=10
+measure gain added by the trend bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain of the first cell at end bp: 1=43 2=43 3=44 4=46 5=42 6=38 7=42 8=41 9=45 10=41 | median=42 n=10
+measure households at end: 1=122 2=102 3=95 4=98 5=101 6=112 7=97 8=83 9=80 10=108 | median=100 n=10
+check the gains of each cell chain, never fall and stay within the cap: 10/10 pass
+
+## S152 one+technology work floor zero, 365 ticks seeds 1-10
+measure TechnologyAdvanced events: 1=26 2=23 3=22 4=25 5=23 6=28 7=28 8=29 9=27 10=24 | median=26 n=10
+measure experience of the first cell at end: 1=120 2=116 3=121 4=123 5=122 6=120 7=119 8=119 9=117 10=116 | median=120 n=10
+measure gain added by catch-up bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain added by discoveries bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain added by learning bp: 1=42 2=41 3=42 4=43 5=42 6=42 7=41 8=41 9=41 10=41 | median=42 n=10
+measure gain added by the trend bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain of the first cell at end bp: 1=42 2=41 3=42 4=43 5=42 6=42 7=41 8=41 9=41 10=41 | median=42 n=10
+measure households at end: 1=94 2=92 3=80 4=77 5=81 6=100 7=87 8=87 9=112 10=85 | median=87 n=10
+check the gains of each cell chain, never fall and stay within the cap: 10/10 pass
+
+## S154 one+technology the call, 230 ticks seeds 1-10
+measure TechnologyAdvanced events: 1=26 2=27 3=24 4=28 5=26 6=21 7=26 8=30 9=25 10=23 | median=26 n=10
+measure bp lost to the bounds over the three calls: 1=700 2=700 3=700 4=700 5=700 6=700 7=700 8=700 9=700 10=700 | median=700 n=10
+measure experience of the first cell at end: 1=126 2=123 3=129 4=135 5=120 6=107 7=120 8=117 9=132 10=116 | median=122 n=10
+measure gain added by catch-up bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain added by discoveries bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain added by learning bp: 1=43 2=43 3=44 4=46 5=42 6=38 7=42 8=41 9=45 10=41 | median=42 n=10
+measure gain added by the trend bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain of the first cell at end bp: 1=43 2=43 3=44 4=46 5=42 6=38 7=42 8=41 9=45 10=41 | median=42 n=10
+measure households at end: 1=143 2=138 3=130 4=138 5=135 6=136 7=142 8=139 9=145 10=136 | median=138 n=10
+check advances after the three calls are 800, 300 and 0: 10/10 pass
+check the cut of the last call is lost: 10/10 pass
+check the gain follows the advance at once: 10/10 pass
+check the gains of each cell chain, never fall and stay within the cap: 10/10 pass
+
 ## S16 one+overhang seeds 1-10, 1095 ticks
 measure households at end: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
 measure staple belief outcomes mostly at a bound, share bp of last year: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
