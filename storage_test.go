@@ -447,7 +447,11 @@ func TestStorage_WarningsAreLogged(t *testing.T) {
 	}
 	// The growers' room of 100 mass holds the upkeep but not a household's recipe
 	// output with no store, and the two classes are then named by no row.
+	// The reference pack's warm start holds 664 staple for the growers, which no room
+	// of 100 mass holds, and a warm group that does not fit is ErrRoomShape at
+	// construction (FR-STO-045); the scenario is of the warnings, so it has none.
 	c := storageConfig()
+	c.WarmStart = nil
 	c.Modules.Storage.Roles[1].Base = &economysim.Capacity{Mass: 100, Bulk: 2_000}
 	c.Modules.Storage.Roles[1].Stores = nil
 	h := newCaptureHandler()

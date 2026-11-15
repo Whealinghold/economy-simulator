@@ -133,7 +133,7 @@ func (l *Ledger) SetRoom(id int, limited bool, mass, bulk int64) error {
 	}
 	r := a.room
 	if r == nil {
-		r = &Room{}
+		r = l.newRoom()
 		if r.LoadMass, r.LoadBulk, err = l.loadOfLots(a); err != nil {
 			return err
 		}
@@ -144,6 +144,19 @@ func (l *Ledger) SetRoom(id int, limited bool, mass, bulk int64) error {
 	r.Limited, r.Mass, r.Bulk = true, mass, bulk
 	a.room = r
 	return nil
+}
+
+// roomBlock is the number of rooms allocated together.
+const roomBlock = 64
+
+// newRoom returns a zero Room cut from the current block, so that a household that
+// enters a limited world costs one allocation in roomBlock, not one each.
+func (l *Ledger) newRoom() *Room {
+	if len(l.rooms) == cap(l.rooms) {
+		l.rooms = make([]Room, 0, roomBlock)
+	}
+	l.rooms = append(l.rooms, Room{})
+	return &l.rooms[len(l.rooms)-1]
 }
 
 // loadOfLots sums quantity times size over the lots of a, per dimension.
