@@ -143,10 +143,16 @@ func (w *World) scanRegion(g RegionID) {
 		s.rings, s.weights, s.targets, s.free = s.rings[:0], s.weights[:0], s.targets[:0], s.free[:0]
 	}
 	for i := w.firstHousehold; i < len(w.agents); i++ {
-		if a := &w.agents[i]; a.weight >= 1 && w.regionOf(a) == g {
+		if a := &w.agents[i]; w.inRegion(a, g) {
 			w.addAgentRow(a)
 		}
 	}
+}
+
+// inRegion reports whether agent a is a household of region g (householdRegion).
+func (w *World) inRegion(a *agent, g RegionID) bool {
+	r, ok := w.householdRegion(a)
+	return ok && r == g
 }
 
 // addAgentRow adds agent a to the view and to the set of its role.
