@@ -344,7 +344,7 @@ with the slice (`vision.md` section 4).
 | Create | Specs | Needs |
 |--------|-------|-------|
 | `skills.go`, `skills_queue.go`, `skills_report.go`, `internal/skill` (core data: no `Modules` pointer, no hash id; tag 10; plan 3-skl, status: PR A in development) | SKL | PRO, WEL |
-| `settlements.go`, `internal/settlement` | SET | REG, SCL |
+| `settlements.go`, `settlements_validate.go`, `settlements_report.go`, `internal/settlement` (plan 3-set, status: PR A in development) | SET | REG, SCL |
 | `storage.go`, `internal/room` (and the `Losses` preset of `indicator/`, FR-IND-059, with RSK) | STO | LED, GDS, PRO, TRN, AGT, CLR, MON, REG, EST, INT, CHK |
 | `employment.go`, `internal/employment` (the hire form, sections 3 to 17, extending the payroll form of the Stage 2 table; and the presets `Unemployment`, `WageBill`, `Employment` of `indicator/`, FR-IND-056 to 058) | EMP | AGT, WEL, PRO |
 | `tenure.go`, `internal/tenure` | LND | RES, EST, MON |
@@ -357,7 +357,7 @@ with the slice (`vision.md` section 4).
 | `institutions.go`, `internal/institution` | ORG | POL, SKL, SET |
 | `policy.go`, `internal/policy` (`Policy`, `WithPolicy`, `DirectPolicy`) | PLC | POL, FIS, INT |
 | `saving.go`, `internal/saving` | SAV | CAP, WEL |
-| `technology.go`, `internal/technology` | TEC | PRO, REG, CAL |
+| `technology.go`, `internal/technology` | TEC | PRO, REG, CAL (plan 3-tec; PR A in progress) |
 
 Each ships as a stage 2 module does. The checkpoint tag of each is appended
 (`spec-checkpoint.md` 4.2); `testdata/golden/all/` moves once per module, with

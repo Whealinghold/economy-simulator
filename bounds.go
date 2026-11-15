@@ -535,3 +535,73 @@ const (
 	// MaxStoreClasses is the most store classes.
 	MaxStoreClasses = 64
 )
+
+// The bounds of the settlements module (spec-settlements.md 8.1). All five are
+// placeholders (N-015, N-027).
+const (
+	// MaxSettlementClasses is the most settlement classes: a ranking of settlements
+	// is short, and each region holds one threshold per class.
+	MaxSettlementClasses = 16
+	// MaxClassFlags is the most distinct flag names over the classes of the module,
+	// so that the flags of a class fit one 64-bit word.
+	MaxClassFlags = 64
+	// MaxClassLimits is the most distinct limit names over the classes of the module,
+	// so that which limits a class carries fits one 64-bit word.
+	MaxClassLimits = 64
+	// MaxBandBP is the largest band, in basis points of an enter threshold: a leave
+	// threshold is at least half the enter threshold, so a region that has just
+	// reached a class is not a few households from losing it.
+	MaxBandBP = 5_000
+	// MaxThresholdBP is the largest scale of the enter thresholds of a region, in
+	// basis points: ten times, as MaxYieldBP.
+	MaxThresholdBP = 100_000
+)
+
+// The bounds of the technology module (spec-technology.md 9.2). All are
+// placeholders (N-015, N-027), chosen so that every product of spec-technology.md
+// 9.5 fits int64 or the checked 128-bit helper.
+const (
+	// MaxTechFields is the most technology fields: fields are authored by hand.
+	MaxTechFields = 64
+	// MaxFieldRecipes is the most recipes of one field.
+	MaxFieldRecipes = 64
+	// MaxTechBase is the largest Base of a field, in executions: 10^12, so that
+	// X + Base fits int64 with MaxExperience.
+	MaxTechBase = 1_000_000_000_000
+	// MaxDoublingBP is the largest gain per doubling of the cumulative work: a
+	// doubling doubles the table's yield at most.
+	MaxDoublingBP = 10_000
+	// MaxTechTrendBP is the largest trend a year: a year adds at most the table's
+	// yield again.
+	MaxTechTrendBP = 10_000
+	// MaxDiscoveryBP is the largest discovery rate: ten discoveries a year.
+	MaxDiscoveryBP = 100_000
+	// MaxGainBP is the largest cap of a field: a technique raises the table's
+	// yield at most elevenfold.
+	MaxGainBP = 100_000
+	// MaxStepBP is the largest gain of one discovery: the largest cap.
+	MaxStepBP = MaxGainBP
+	// MaxCatchUpBP is the largest share of the gap closed a year: the whole gap.
+	MaxCatchUpBP = 10_000
+	// MaxTechBP is the largest technology factor, in basis points: 10 000 plus the
+	// largest cap.
+	MaxTechBP = 10_000 + MaxGainBP
+	// MaxExperience is the most executions a cell counts, 2^50: unreachable in any
+	// run, it only keeps X + Base inside int64 (spec-technology.md 4.2.4).
+	MaxExperience = 1 << 50
+)
+
+// The bounds of the credit module (spec-credit.md 14). All three are placeholders
+// (N-015, N-027).
+const (
+	// MaxCreditRateBP is the largest yearly rate of a lender, of a borrower's limit
+	// and of an effective rate: ten times the principal a year. A rate above it is a
+	// typing error, and with MaxCreditTerm and MaxMoney the interest product fits 128
+	// bits.
+	MaxCreditRateBP = 100_000
+	// MaxCreditTerm is the longest term, shield, write-off, keep and slack, in ticks:
+	// ten years of daily ticks. spec-insurance.md reuses it for PayoutTicks.
+	MaxCreditTerm = 3_650
+	// MaxOpenClaims is the most open claims at once, the bound of Credit.MaxClaims.
+	MaxOpenClaims = 1_000_000
+)

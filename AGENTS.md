@@ -141,6 +141,10 @@ economy-sim/
 │   integration_estate.go integration_directive.go integration_slots.go (INT)
 │   storage_validate.go storage_commit.go storage_report.go (STO)
 │   skills_queue.go skills_report.go (SKL)
+│   settlements_validate.go settlements_report.go (SET)
+│   technology_validate.go technology_report.go (TEC)
+│   credit_round.go credit_settle.go credit_strategy.go credit_report.go
+│   credit_state.go (CRD)
 │                           # CONTINUATION files: a concept past the Lizard limits
 │                           #   of N-243 is split; each maps to the area code of
 │                           #   its concept, and its _test.go carries that area's

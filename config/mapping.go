@@ -322,6 +322,110 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Storage = l.storage(ss)
 		ss.finish()
 	}
+	if ss := m.sub("settlements"); ss != nil {
+		cfg.Modules.Settlements = l.settlements(ss)
+		ss.finish()
+	}
+	if ts := m.sub("technology"); ts != nil {
+		cfg.Modules.Technology = l.technology(ts)
+		ts.finish()
+	}
+	if cs := m.sub("credit"); cs != nil {
+		cfg.Modules.Credit = creditModule(cs)
+		cs.finish()
+	}
+}
+
+// settlements reads [modules.settlements] over DefaultSettlements (spec-config.md 6.2,
+// spec-settlements.md 3.1): the keys band_bp and dwell, a class as [class.<id>] (keys
+// enter, flags, label, and a [class.<id>.limits] table with one key per limit) and a
+// region row as [region.<id>] (keys threshold_bp, floor) over DefaultRegionSettlement.
+// A key-less table switches the module on. The rows come out in ID order because every
+// level is read in the order of the keys, and the limits in the order of their names.
+func (l *loader) settlements(t *tbl) *economysim.Settlements {
+	m := economysim.DefaultSettlements()
+	integer(t, "band_bp", &m.BandBP)
+	integer(t, "dwell", &m.Dwell)
+	t.entities("class", func(id string, e *tbl) {
+		c := economysim.SettlementClass{ID: id}
+		e.need("enter", integer(e, "enter", &c.Enter))
+		e.strings("flags", &c.Flags)
+		e.text("label", &c.Label)
+		if lt := e.sub("limits"); lt != nil {
+			for _, name := range slices.Sorted(maps.Keys(lt.m)) {
+				lim := economysim.ClassLimit{Name: name}
+				lt.need(name, integer(lt, name, &lim.Value))
+				c.Limits = append(c.Limits, lim)
+			}
+			lt.finish()
+		}
+		m.Classes = append(m.Classes, c)
+	})
+	t.entities("region", func(id string, e *tbl) {
+		r := economysim.DefaultRegionSettlement(id)
+		integer(e, "threshold_bp", &r.ThresholdBP)
+		e.text("floor", &r.Floor)
+		m.Regions = append(m.Regions, r)
+	})
+	return &m
+}
+
+// technology reads [modules.technology] (spec-config.md 6.2, spec-technology.md 9.1):
+// a field as [field.<id>] with the keys recipes (a list of recipe IDs), cap_bp,
+// base, doubling_bp, trend_bp, discovery_bp, step_bp, catch_up_bp, reach and label.
+// A key-less table switches the module on with no field. The fields come out in ID
+// order because the entities are read in the order of the keys.
+func (l *loader) technology(t *tbl) *economysim.Technology {
+	var m economysim.Technology
+	t.entities("field", func(id string, e *tbl) {
+		f := economysim.TechField{ID: id}
+		e.strings("recipes", &f.Recipes)
+		readInts(e, []intField{
+			{"cap_bp", &f.CapBP}, {"base", &f.Base}, {"doubling_bp", &f.DoublingBP},
+			{"trend_bp", &f.TrendBP}, {"discovery_bp", &f.DiscoveryBP}, {"step_bp", &f.StepBP},
+			{"catch_up_bp", &f.CatchUpBP}, {"reach", &f.Reach},
+		})
+		e.text("label", &f.Label)
+		m.Fields = append(m.Fields, f)
+	})
+	return &m
+}
+
+// creditModule reads [modules.credit] (spec-config.md 6.2, spec-credit.md 4.1): the
+// four keys of the module. A key-less table switches the module on, and every key is
+// optional here: the bounds of Validate say MinPrincipal and MaxClaims must be set.
+func creditModule(t *tbl) *economysim.Credit {
+	var m economysim.Credit
+	readInts(t, []intField{
+		{"min_principal", &m.MinPrincipal}, {"shield_ticks", &m.ShieldTicks},
+		{"write_off_ticks", &m.WriteOffTicks}, {"max_claims", &m.MaxClaims},
+	})
+	return &m
+}
+
+// creditTerms reads the table [role.<id>.credit] (spec-credit.md 4.2): the sub-tables
+// lend and borrow, each a block of its own, so that layers merge by key. A rate is
+// required in a block that is written: a file that omits rate_bp or max_rate_bp is
+// ErrMissingField, since a missing rate must never be a silent interest-free loan
+// (FR-CRD-011). A table with neither sub-table is an empty block, which Validate
+// refuses with ErrCreditShape.
+func creditTerms(t *tbl) *economysim.CreditTerms {
+	var c economysim.CreditTerms
+	if ls := t.sub("lend"); ls != nil {
+		var l economysim.LendTerms
+		ls.need("rate_bp", integer(ls, "rate_bp", &l.RateBP))
+		readInts(ls, []intField{{"max_term_ticks", &l.MaxTermTicks}, {"keep_ticks", &l.KeepTicks}, {"share_bp", &l.ShareBP}})
+		ls.finish()
+		c.Lend = &l
+	}
+	if bs := t.sub("borrow"); bs != nil {
+		var b economysim.BorrowTerms
+		bs.need("max_rate_bp", integer(bs, "max_rate_bp", &b.MaxRateBP))
+		readInts(bs, []intField{{"max_debt_ticks", &b.MaxDebtTicks}, {"slack_ticks", &b.SlackTicks}})
+		bs.finish()
+		c.Borrow = &b
+	}
+	return &c
 }
 
 // storage reads [modules.storage] (spec-config.md 6.2.1, spec-storage.md 12.5): the
@@ -564,6 +668,12 @@ func (l *loader) role(id string, t *tbl) economysim.Role {
 		integer(es, "payroll_bp", &e.PayrollBP)
 		es.finish()
 		r.Employer = &e
+	}
+	t.text("needs", &r.Needs)
+	t.text("ceiling", &r.Ceiling)
+	if cs := t.sub("credit"); cs != nil {
+		r.Credit = creditTerms(cs)
+		cs.finish()
 	}
 	t.text("label", &r.Label)
 	return r

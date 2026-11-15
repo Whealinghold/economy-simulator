@@ -48,11 +48,26 @@ type ResourceID int
 // exchange.
 type ModeID int
 
+// TechFieldID is the index of a technology field in ascending order of its ID
+// string in the effective configuration (spec-technology.md 3.1.4). A consumer
+// persists the string ID and resolves it once from Config().
+type TechFieldID int
+
 // StoreClassID is the index of a store class in ascending order of its ID
 // string, which is its position in Config().Modules.Storage.Classes (spec-storage.md
 // 3.6.2). It is not stable across configurations; use the string ID to persist or
 // exchange.
 type StoreClassID int
+
+// SettlementClassID is the index of a settlement class in ascending order of Enter,
+// which is its position in the canonical Config().Modules.Settlements.Classes
+// (spec-settlements.md 3.2). It is not the rank of the ID string, and it is not
+// stable across configurations: adding a class renumbers the others. Use the string
+// ID to persist or exchange.
+type SettlementClassID int
+
+// NoSettlementClass means no class: the From of the event of a founding.
+const NoSettlementClass SettlementClassID = -1
 
 // ShipmentID identifies a shipment. IDs are assigned in order of dispatch from 0
 // and are never reused within a world.

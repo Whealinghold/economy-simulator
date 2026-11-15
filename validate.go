@@ -125,6 +125,9 @@ func (v *validator) structural() {
 	v.validateExternal()
 	v.validatePolity()
 	v.validateStorage()
+	v.validateSettlements()
+	v.validateTechnology()
+	v.validateCredit()
 	v.overflow()
 }
 
@@ -1491,6 +1494,18 @@ func (v *validator) baselineCost(region string, extra []Item) (cost int64, ok bo
 	return cost, true
 }
 
+// yieldMax is the factor a recipe's outputs can be multiplied by, in basis
+// points: entry is the largest table entry of each recipe, and a recipe that
+// is not Sited has 10 000 where no entry says otherwise. At most 10^5 * 10^5 /
+// 10^4.
+func (v *validator) yieldMax(entry map[string]int64, rc *Recipe) int64 {
+	top := entry[rc.ID]
+	if !rc.Sited {
+		top = max(top, wholeBP)
+	}
+	return v.withTech(rc.ID, top*MaxYieldBP/wholeBP)
+}
+
 // overflow is phase 5: the derived products of spec-config.md 4.2 that the
 // field bounds do not already keep inside their limits, with ErrOverflow. A
 // product whose inputs are outside their own bounds is not computed: that rule
@@ -1525,16 +1540,7 @@ func (v *validator) overflow() {
 		}
 		hasEntry[y.Recipe] = true
 	}
-	// yieldMax is the factor a recipe's outputs can be multiplied by, in basis
-	// points: a recipe that is not Sited has 10 000 where no entry says
-	// otherwise. At most 10^5 * 10^5 / 10^4.
-	yieldMax := func(rc *Recipe) int64 {
-		top := entry[rc.ID]
-		if !rc.Sited {
-			top = max(top, wholeBP)
-		}
-		return top * MaxYieldBP / wholeBP
-	}
+	yieldMax := func(rc *Recipe) int64 { return v.yieldMax(entry, rc) }
 	// price is the dearest a commodity can be in any region (spec-regions.md
 	// 5.2), because a product must fit wherever the household is.
 	price := func(id string) (int64, bool) {
@@ -2101,6 +2107,9 @@ func warnings(c *Config) []Warning {
 	out = append(out, externalWarnings(c, lk)...)
 	out = append(out, polityWarnings(c)...)
 	out = append(out, storageWarnings(c)...)
+	out = append(out, settlementsWarnings(c)...)
+	out = append(out, technologyWarnings(c, lk)...)
+	out = append(out, creditWarnings(c, lk)...)
 	sortWarnings(out)
 	return out
 }

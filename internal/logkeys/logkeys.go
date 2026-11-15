@@ -169,6 +169,17 @@ const (
 	Governed      = "governed"
 )
 
+// The keys of the settlements module (spec-settlements.md 10.3): a class (an
+// int64 SettlementClassID) and the two ends and the target of a change, and a count
+// of classes in the construction summary.
+const (
+	SettlementClass       = "settlement_class"
+	FromSettlementClass   = "from_settlement_class"
+	ToSettlementClass     = "to_settlement_class"
+	TargetSettlementClass = "target_settlement_class"
+	SettlementClasses     = "settlement_classes"
+)
+
 // StoreClass is a store class ID, and StoreClasses a count of store classes in the
 // construction summary, in the lines of the storage module.
 const (
@@ -181,4 +192,13 @@ const (
 const (
 	Trainer = "trainer"
 	Served  = "served"
+)
+
+// Field is a technology field ID, Fields a count of technology fields in the
+// construction summary, and Gain a technology gain in basis points, in the lines
+// of the technology module.
+const (
+	Field  = "field"
+	Fields = "fields"
+	Gain   = "gain"
 )

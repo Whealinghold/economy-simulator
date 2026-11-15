@@ -134,6 +134,172 @@ type Modules struct {
 	// module has no limited role and does nothing). It needs no other module. Its
 	// hash id is 12, whatever its place in this struct.
 	Storage *Storage
+	// Settlements is the settlements module: a region has a size class derived from
+	// its households, and a role may need a flag of the class or be bounded by its
+	// limit (spec-settlements.md). Nil is off; non-nil is on. It needs no other
+	// module. Its hash id is 11, whatever its place in this struct.
+	Settlements *Settlements
+	// Credit is the credit module: roles that lend and borrow, requests and offers
+	// matched in a round at a posted rate, interest fixed at formation and repayment
+	// at the due tick (spec-credit.md). Nil is off; non-nil is on, even when no role
+	// has a block. It needs no other module. Its hash id is 15, whatever its place in
+	// this struct.
+	Credit *Credit
+	// Technology is the technology module: a gain in yield held per region and
+	// technology field, raised by doing, a trend, discovery and contact
+	// (spec-technology.md). Nil is off; non-nil is on, even when empty (an empty
+	// module has no field and does nothing). It needs no other module. Its hash id is
+	// 24, whatever its place in this struct.
+	Technology *Technology
+}
+
+// Credit is the configuration of the credit module (spec-credit.md 4.1, 14). Its
+// presence switches the module on. Every field is a placeholder (N-015, N-027):
+// MinPrincipal and MaxClaims have no default and must be set, ShieldTicks and
+// WriteOffTicks have the off value 0.
+type Credit struct {
+	// MinPrincipal is the smallest principal of a claim, in minor units, 1 to
+	// MaxMoney. Required.
+	MinPrincipal int64
+	// ShieldTicks is the ticks of a debtor's upkeep cost kept out of reach of
+	// repayment (spec-credit.md 8.2), 0 to MaxCreditTerm. 0 is no shield.
+	ShieldTicks int64
+	// WriteOffTicks is the ticks after the due tick at which an unpaid claim is
+	// written off, 0 to MaxCreditTerm. 0 means never.
+	WriteOffTicks int64
+	// MaxClaims is the most open claims at once, of either origin, 1 to
+	// MaxOpenClaims. Required.
+	MaxClaims int64
+}
+
+// CreditTerms is the credit block of a role, a pointer of Role: nil means the role
+// does not deal in credit, and exactly one of Lend and Borrow is set (spec-credit.md
+// 4.2). It needs Modules.Credit. It is hashed when non-nil, even when empty.
+type CreditTerms struct {
+	// Lend is the block of a role whose households post offers.
+	Lend *LendTerms
+	// Borrow is the block of a role whose households post requests.
+	Borrow *BorrowTerms
+}
+
+// LendTerms is what a lender posts and keeps (spec-credit.md 4.2). It is hashed
+// when non-nil, even when every field is zero.
+type LendTerms struct {
+	// RateBP is the posted yearly rate in basis points, simple interest, 0 to
+	// MaxCreditRateBP. 0 lends at no interest, is written to a hash and is never a
+	// default: a file that omits it is ErrMissingField.
+	RateBP int64
+	// MaxTermTicks is the longest term the lender lends for, 1 to MaxCreditTerm.
+	MaxTermTicks int64
+	// KeepTicks is the ticks of its upkeep cost the lender keeps out of its offers,
+	// 0 to MaxCreditTerm.
+	KeepTicks int64
+	// ShareBP is the share of its lendable money offered in one tick, 1 to 10 000.
+	ShareBP int64
+}
+
+// BorrowTerms is what a borrower accepts and may owe (spec-credit.md 4.2). It is
+// hashed when non-nil, even when every field is zero.
+type BorrowTerms struct {
+	// MaxRateBP is the highest yearly rate it accepts, 0 to MaxCreditRateBP. 0
+	// accepts only interest-free credit, is written to a hash and is never a
+	// default: a file that omits it is ErrMissingField.
+	MaxRateBP int64
+	// MaxDebtTicks is the exposure cap in ticks of the agent's upkeep cost, 1 to
+	// MaxCreditTerm.
+	MaxDebtTicks int64
+	// SlackTicks is the ticks added to the horizon of the borrower's gap, 0 to
+	// MaxCreditTerm.
+	SlackTicks int64
+}
+
+// Technology is the configuration of the technology module (spec-technology.md
+// 9.1): the technology fields. Its presence switches the module on; every rate
+// of a field defaults to 0, which turns its mechanism off. After construction the
+// fields are in ID order (spec-config.md 3.4).
+type Technology struct {
+	// Fields are the technology fields, at most MaxTechFields, canonical by ID; the
+	// index of a field in this order is its TechFieldID.
+	Fields []TechField
+}
+
+// TechField is a body of knowledge shared by a set of recipes (spec-technology.md
+// 3.1): plain data. A mechanism is on when its rate is above 0; a value that an
+// off mechanism does not use must be 0, and one an on mechanism needs must be set
+// (spec-technology.md 3.1.2).
+type TechField struct {
+	// ID is [a-z][a-z0-9_]* of at most MaxIDLength bytes, unique among fields.
+	ID string
+	// Recipes are the recipe IDs that share what is learned, canonical by ID: 1 to
+	// MaxFieldRecipes, each in at most one field.
+	Recipes []string
+	// CapBP is the largest gain of a cell, in basis points: 1 to MaxGainBP.
+	// Required.
+	CapBP int64
+	// Base is the executions already behind the field (learning): 1 to MaxTechBase,
+	// required with DoublingBP above 0 and 0 otherwise.
+	Base int64
+	// DoublingBP is the gain per doubling of the cumulative work: 0 (off) to
+	// MaxDoublingBP.
+	DoublingBP int64
+	// TrendBP is the gain added a year to every cell: 0 (off) to MaxTechTrendBP.
+	TrendBP int64
+	// DiscoveryBP is the expected discoveries a year of a cell that practises, in
+	// basis points of one: 0 (off) to MaxDiscoveryBP.
+	DiscoveryBP int64
+	// StepBP is the gain of one discovery: 1 to MaxStepBP, required with
+	// DiscoveryBP above 0 and 0 otherwise.
+	StepBP int64
+	// CatchUpBP is the share of the gap to the frontier closed a year (diffusion): 0
+	// (off) to MaxCatchUpBP.
+	CatchUpBP int64
+	// Reach is the distance at which contact is lost, in the distance unit of the
+	// pack: 1 to MaxDistance, required with CatchUpBP above 0 and 0 otherwise.
+	Reach int64
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// canonical returns a copy of the module, nil for nil. It has no list to sort.
+func (m *Credit) canonical() *Credit {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	return &out
+}
+
+// canonical returns a copy of the block with a copy of each sub-block, nil for nil,
+// so a change of the consumer's Config after construction moves no role block.
+func (c *CreditTerms) canonical() *CreditTerms {
+	if c == nil {
+		return nil
+	}
+	out := *c
+	if c.Lend != nil {
+		l := *c.Lend
+		out.Lend = &l
+	}
+	if c.Borrow != nil {
+		b := *c.Borrow
+		out.Borrow = &b
+	}
+	return &out
+}
+
+// canonical returns a copy of the module with the fields by ID and each field's
+// recipes sorted (spec-config.md 3.4, spec-technology.md 9.1), nil for nil. The
+// recipe lists are copied, so the copy owns them.
+func (m *Technology) canonical() *Technology {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Fields = sortedBy(m.Fields, func(a, b TechField) int { return cmp.Compare(a.ID, b.ID) })
+	for i := range out.Fields {
+		out.Fields[i].Recipes = sortedBy(out.Fields[i].Recipes, cmp.Compare[string])
+	}
+	return &out
 }
 
 // Storage is the configuration of the storage module (spec-storage.md 12.1): a
@@ -150,6 +316,90 @@ type Storage struct {
 	// Classes are the store classes, at most MaxStoreClasses, canonical by ID; the
 	// index of a class in this order is its StoreClassID.
 	Classes []StoreClass
+}
+
+// Settlements is the configuration of the settlements module
+// (spec-settlements.md 3.1): the size classes with what each carries, the band and
+// the dwell that keep a class from flapping, and the rows that scale the thresholds
+// of one region or give it a floor. Its presence switches the module on. After
+// construction the classes are in canonical order, by Enter, and the flags, the
+// limits and the region rows are sorted (spec-config.md 3.4).
+type Settlements struct {
+	// Classes are the size classes, 1 to MaxSettlementClasses. The class with the
+	// smallest Enter is the first and has Enter 0; the index in canonical order is
+	// the SettlementClassID.
+	Classes []SettlementClass
+	// BandBP is the band, in basis points of an enter threshold, 0 to MaxBandBP: how
+	// far below an enter threshold the count may fall before a class is given up.
+	// DefaultSettlements gives 1 000. Its hash id is 2.
+	BandBP int64
+	// Dwell is the least ticks between two changes of a region's class, 0 to
+	// MaxWelfareWindow. DefaultSettlements gives 30. Its hash id is 3.
+	Dwell int64
+	// Regions are the region rows, at most one per region that is not an outside
+	// node, canonical by region.
+	Regions []RegionSettlement
+}
+
+// SettlementClass is one size class (spec-settlements.md 3.1).
+type SettlementClass struct {
+	// ID is [a-z][a-z0-9_]* of at most MaxIDLength bytes, unique among classes.
+	ID string
+	// Enter is the households at or above which the class is reached, 0 to
+	// MaxHouseholds; 0 for the first class and distinct over the classes.
+	Enter int64
+	// Flags are the flag names the class carries, each at most once, sorted by name
+	// after construction.
+	Flags []string
+	// Limits are the limits the class carries, each name at most once, sorted by
+	// name after construction.
+	Limits []ClassLimit
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// ClassLimit names a limit and gives its value for one class: a count of
+// households, agents, units or places, 0 to MaxQuantity (spec-settlements.md
+// 3.3.2). Without a row a class has no limit; a value of 0 is a closed gate.
+type ClassLimit struct {
+	// Name is the limit's name, [a-z][a-z0-9_]* of at most MaxIDLength bytes.
+	Name string
+	// Value is the count, 0 to MaxQuantity.
+	Value int64
+}
+
+// RegionSettlement is a row of the region-keyed table of the settlements module
+// (spec-settlements.md 3.5, spec-regions.md 5.1).
+type RegionSettlement struct {
+	// Region is the ID of a defined region that is not an outside node; one row per
+	// region.
+	Region string
+	// ThresholdBP scales every enter threshold of the region but the first, in basis
+	// points, 1 to MaxThresholdBP (10 000 leaves them as written; the zero is out of
+	// bounds, DefaultRegionSettlement sets it).
+	ThresholdBP int64
+	// Floor is the ID of the lowest class the region may have; empty for none.
+	Floor string
+}
+
+// canonical returns a copy of the module with the classes by Enter (ID breaks a
+// tie, so the order is total even for a configuration that validation refuses),
+// each class's flags by name and limits by name, and the region rows by region
+// (spec-config.md 3.4, spec-settlements.md 3.2), nil for nil.
+func (m *Settlements) canonical() *Settlements {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Classes = sortedBy(m.Classes, func(a, b SettlementClass) int {
+		return cmp.Or(cmp.Compare(a.Enter, b.Enter), cmp.Compare(a.ID, b.ID))
+	})
+	for i := range out.Classes {
+		out.Classes[i].Flags = sortedBy(out.Classes[i].Flags, cmp.Compare[string])
+		out.Classes[i].Limits = sortedBy(out.Classes[i].Limits, func(a, b ClassLimit) int { return cmp.Compare(a.Name, b.Name) })
+	}
+	out.Regions = sortedBy(m.Regions, func(a, b RegionSettlement) int { return cmp.Compare(a.Region, b.Region) })
+	return &out
 }
 
 // Capacity is a pair of room: a mass room and a bulk room (spec-goods.md 3.2).
@@ -1137,6 +1387,21 @@ type Role struct {
 	// Employer is the employer block: non-nil makes the role a payer
 	// (spec-employment.md 24.3.2). It is hashed when non-nil. Its hash id is 24.
 	Employer *Employer
+	// Credit is the credit block: non-nil makes the role a lender or a borrower
+	// (spec-credit.md 4.2), exactly one of Lend and Borrow. It needs Modules.Credit
+	// and is hashed when non-nil, even when empty. Its hash id is 25.
+	Credit *CreditTerms
+	// Needs is the flag a settlement class must carry for the role to be open in a
+	// region: a role with Needs is closed, as Closed is, where the region's class
+	// lacks the flag (spec-settlements.md 6.4.1). Empty is none. It needs
+	// Modules.Settlements (a value with the module nil is ErrModuleDependency) and a
+	// flag some class carries. Its hash id is 26.
+	Needs string
+	// Ceiling is the limit that bounds the households of the role in a region: the
+	// default spawner admits only what fits the limit of the region's class
+	// (spec-settlements.md 6.4.2). Empty is none. It needs Modules.Settlements and a
+	// limit some class carries. Its hash id is 27.
+	Ceiling string
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string
@@ -1315,6 +1580,7 @@ func (c Config) canonical() Config {
 		r.StartStock = sortedBy(r.StartStock, byCommodity)
 		r.Merchant = r.Merchant.canonical()
 		r.Employer = r.Employer.canonical()
+		r.Credit = r.Credit.canonical()
 	}
 	out.Regions = sortedBy(c.Regions, func(a, b Region) int { return cmp.Compare(a.ID, b.ID) })
 	for i := range out.Regions {
@@ -1355,6 +1621,9 @@ func (c Config) canonical() Config {
 	out.Modules.External = c.Modules.External.canonical(c.Calendar.Seasons)
 	out.Modules.Polity = c.Modules.Polity.canonical()
 	out.Modules.Storage = c.Modules.Storage.canonical()
+	out.Modules.Settlements = c.Modules.Settlements.canonical()
+	out.Modules.Credit = c.Modules.Credit.canonical()
+	out.Modules.Technology = c.Modules.Technology.canonical()
 	return out
 }
 
