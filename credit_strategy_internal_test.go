@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"math"
 	"math/rand/v2"
 	"testing"
 )
@@ -283,5 +284,26 @@ func TestCredit_ViewGroupAbsent(t *testing.T) {
 		if !none {
 			t.Errorf("agent %d was given the credit group, want none for a role with no block", id)
 		}
+	}
+}
+
+// TestDefaultCredit_WrappingFigures verifies that a hand-built view whose figures
+// would wrap an int64 gives no request and no offer, instead of a wrapped one.
+//
+// Arithmetic: a duration of MaxInt64 plus the one of the phase order wraps H; a
+// Money of -MaxMoney less a keep of MaxInt64 wraps the lendable figure to a positive.
+//
+// Requirement: FR-CRD-051, FR-CRD-052
+func TestDefaultCredit_WrappingFigures(t *testing.T) {
+	t.Parallel()
+	if r, ok := DefaultBorrow(creditBorrowView(0), 0, math.MaxInt64); ok {
+		t.Errorf("DefaultBorrow(duration MaxInt64) = %+v, true, want none", r)
+	}
+	v := &AgentView{Money: -MaxMoney, Credit: &CreditView{
+		Lend:         &LendTerms{RateBP: 600, MaxTermTicks: 90, KeepTicks: 1, ShareBP: 10_000},
+		MinPrincipal: 1, UpkeepCost: math.MaxInt64,
+	}}
+	if o, ok := DefaultLend(v, MaxMoney); ok {
+		t.Errorf("DefaultLend(wrapping lendable) = %+v, true, want none", o)
 	}
 }

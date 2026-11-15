@@ -134,8 +134,15 @@ func DefaultBorrow(v *AgentView, tier2, duration int64) (CreditRequest, bool) {
 	if j <= 0 {
 		return CreditRequest{}, false
 	}
-	h := j + 1 + late + cv.Borrow.SlackTicks // the one is the rule constant of the phase order (10.2.1.1)
 	var need sum
+	var hz sum // the one is the rule constant of the phase order (10.2.1.1)
+	hz.add(j, true)
+	hz.add(1+late, true)
+	hz.add(cv.Borrow.SlackTicks, true)
+	if hz.bad {
+		return CreditRequest{}, false // a hand-built view; a world's Remaining is far below
+	}
+	h := hz.v
 	need.add(checked.Mul(cv.UpkeepCost, h))
 	need.add(tier2, true)
 	need.add(checked.Sub(0, v.Money))
@@ -164,7 +171,14 @@ func DefaultLend(v *AgentView, bids int64) (CreditOffer, bool) {
 	if !ok {
 		return CreditOffer{}, false
 	}
-	lendable := max(0, v.Money-bids-keep)
+	lendable, fits := checked.Sub(v.Money, bids)
+	if fits {
+		lendable, fits = checked.Sub(lendable, keep)
+	}
+	if !fits {
+		return CreditOffer{}, false // a hand-built view whose figures wrap: nothing is lendable
+	}
+	lendable = max(0, lendable)
 	offer, ok := checked.MulDiv(l.ShareBP, lendable, wholeBP)
 	if !ok || offer < cv.MinPrincipal {
 		return CreditOffer{}, false

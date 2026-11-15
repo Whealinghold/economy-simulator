@@ -152,7 +152,11 @@ func (w *World) admitCreditRequests() {
 		}
 		limit := s.r.MaxRateBP
 		if cr.rateCap != nil {
-			if limitCap, ok := cr.rateCap(g); ok && limit > limitCap {
+			limitCap, ok := cr.rateCap(g)
+			if ok && limitCap < 0 {
+				invariant("a negative rate cap from the rate limit seam")
+			}
+			if ok && limit > limitCap {
 				limit = limitCap
 				c.priceControlled++
 			}
@@ -279,9 +283,18 @@ func (w *World) matchCreditLanes() {
 			rd.halted = crd.Match(l.requests, l.offers, cr.cfg.MinPrincipal, rd.form)
 		}
 		for i := range l.requests {
-			rd.counts[g].unfilled += l.requests[i].Principal
+			rd.counts[g].unfilled = addSat(rd.counts[g].unfilled, l.requests[i].Principal)
 		}
 	}
+}
+
+// addSat is a plus b for a count of money, saturating at MaxMoney: the sum over a
+// region of many principals near MaxMoney must not wrap in a report.
+func addSat(a, b int64) int64 {
+	if s, ok := checked.Add(a, b); ok && s <= MaxMoney {
+		return s
+	}
+	return MaxMoney
 }
 
 // formLoan forms the loan of one tentative fill (spec-credit.md 6.4), in this order:
@@ -316,8 +329,8 @@ func (w *World) formLoan(f crd.Fill) crd.Outcome {
 	}
 	cr.idx.add(claim)
 	c.formed++
-	c.principal += f.Principal
-	c.interest += interest
+	c.principal = addSat(c.principal, f.Principal)
+	c.interest = addSat(c.interest, interest)
 	w.reportFormed(rq.region, &claim, of.agent, rq.agent)
 	return crd.Formed
 }
