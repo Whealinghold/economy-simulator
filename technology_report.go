@@ -4,7 +4,9 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
+	tec "github.com/Whealinghold/economy-sim/internal/technology"
 )
 
 // This file is the reporting of the technology module (spec-technology.md 11; the
@@ -89,4 +91,50 @@ func (w *World) snapshotTechnology(s *Snapshot) {
 				Experience: c.Experience, AdvanceBP: c.Advance, GainBP: t.gain[i]})
 		}
 	}
+}
+
+// saveTechnology writes tag 33 (spec-checkpoint.md 4.2, spec-technology.md 12.1): for
+// each cell in ascending (RegionID, TechFieldID) order its Experience, Advance and
+// CatchUp as unsigned varints (the count is R * F from the configuration and is not
+// written), then for each field in ascending order its TrendCarry. The key is derived
+// from the effective seed, the gains from the cells and the counters are empty at a
+// boundary, so none of them is written.
+func (w *World) saveTechnology(cw *codec.Writer) error {
+	t := w.tec
+	for _, c := range t.cells {
+		cw.U(uint64(c.Experience))
+		cw.U(uint64(c.Advance))
+		cw.U(uint64(c.CatchUp))
+	}
+	for _, c := range t.trendCarry {
+		cw.U(uint64(c))
+	}
+	return nil
+}
+
+// loadTechnology reads tag 33 into the state built for the configuration, in the order
+// of spec-checkpoint.md 6.2: Experience in [0, MaxExperience], Advance in [0, CapBP] of
+// its field, CatchUp in [0, 10 000 * TicksPerYear), TrendCarry in [0, TicksPerYear);
+// each violation is ErrCheckpointCorrupt and the caller refuses a byte after the last
+// field. It then derives the gain of every cell, which is never saved (FR-TEC-028).
+func (w *World) loadTechnology(_ *restoreCtx, r *codec.Reader) error {
+	t := w.tec
+	for i := range t.cells {
+		f := &t.fields[i%t.nf]
+		t.cells[i] = tec.Cell{
+			Experience: r.Bounded("technology experience", MaxExperience),
+			Advance:    r.Bounded("technology advance", f.CapBP),
+			CatchUp:    r.Bounded("technology catch-up carry", 10_000*t.tpy-1),
+		}
+	}
+	for i := range t.trendCarry {
+		t.trendCarry[i] = r.Bounded("technology trend carry", t.tpy-1)
+	}
+	if r.Err() != nil {
+		return nil
+	}
+	for i := range t.cells {
+		t.regain(i)
+	}
+	return nil
 }
