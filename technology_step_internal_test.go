@@ -32,27 +32,35 @@ func executionsIn(rec *evLog) (sum int64) {
 func TestCount_FoldsExecutions(t *testing.T) {
 	t.Parallel()
 	for _, duration := range []int64{1, 2, 3} {
-		rec := &evLog{}
-		w := newMill(t, techMill(duration, 3, techField()), WithObserver(rec))
-		step(t, w, 1)
-		if duration == 3 { // every job is under way: one agent leaves with its job
-			if err := w.removeAgent(&w.agents[w.firstHousehold], CauseConsumer); err != nil {
-				t.Fatalf("removeAgent() = %v, want nil", err)
-			}
+		checkFolds(t, duration)
+	}
+}
+
+// checkFolds runs a mill of the given recipe duration for 12 ticks and checks that the
+// counted executions match the executions done, and the removed agent's job counts
+// nothing.
+func checkFolds(t *testing.T, duration int64) {
+	t.Helper()
+	rec := &evLog{}
+	w := newMill(t, techMill(duration, 3, techField()), WithObserver(rec))
+	step(t, w, 1)
+	if duration == 3 { // every job is under way: one agent leaves with its job
+		if err := w.removeAgent(&w.agents[w.firstHousehold], CauseConsumer); err != nil {
+			t.Fatalf("removeAgent() = %v, want nil", err)
 		}
-		step(t, w, 11)
-		var counted, last int64
-		for _, e := range of[TechnologyAdvanced](rec) {
-			counted += e.Executions
-			last = e.Experience
-		}
-		if done := executionsIn(rec); done == 0 || counted != done || last != done || w.tec.cells[0].Experience != done {
-			t.Errorf("duration %d: RecipeExecuted %d, TechnologyAdvanced executions %d, experience %d (cell %d), want all equal and above 0",
-				duration, done, counted, last, w.tec.cells[0].Experience)
-		}
-		if abandoned := of[RecipeAbandoned](rec); duration == 3 && len(abandoned) != 1 {
-			t.Errorf("duration 3: %d RecipeAbandoned, want 1 (the removed agent's job)", len(abandoned))
-		}
+	}
+	step(t, w, 11)
+	var counted, last int64
+	for _, e := range of[TechnologyAdvanced](rec) {
+		counted += e.Executions
+		last = e.Experience
+	}
+	if done := executionsIn(rec); done == 0 || counted != done || last != done || w.tec.cells[0].Experience != done {
+		t.Errorf("duration %d: RecipeExecuted %d, TechnologyAdvanced executions %d, experience %d (cell %d), want all equal and above 0",
+			duration, done, counted, last, w.tec.cells[0].Experience)
+	}
+	if abandoned := of[RecipeAbandoned](rec); duration == 3 && len(abandoned) != 1 {
+		t.Errorf("duration 3: %d RecipeAbandoned, want 1 (the removed agent's job)", len(abandoned))
 	}
 }
 

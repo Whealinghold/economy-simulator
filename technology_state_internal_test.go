@@ -40,6 +40,28 @@ func techTwoByTwo() Config {
 	return c
 }
 
+// checkCellsZero reports every cell of w that is not zero.
+func checkCellsZero(t *testing.T, w *World) {
+	t.Helper()
+	for i, c := range w.tec.cells {
+		if c != (tec.Cell{}) || w.tec.gain[i] != 0 || w.tec.counter[i] != 0 {
+			t.Errorf("cell %d = %+v, gain %d, counter %d, want all zero", i, c, w.tec.gain[i], w.tec.counter[i])
+		}
+	}
+}
+
+// checkCellOrder reports every (region, field) of the 2 x 2 world whose cell is not at
+// its place in ascending order.
+func checkCellOrder(t *testing.T, w *World) {
+	t.Helper()
+	for cell, want := range [][2]RegionID{{0, 0}, {0, 1}, {1, 0}, {1, 1}} {
+		region, ok := w.tec.cellOf(want[0], int(want[1]))
+		if !ok || region != cell {
+			t.Errorf("cellOf(region %d, field %d) = %d, %v, want %d", want[0], want[1], region, ok, cell)
+		}
+	}
+}
+
 // TestNewTechnology_CellsAscendingZero verifies that a world with two regions and two
 // fields holds four cells, all zero, in ascending (region, field) order, and that the
 // module is nil when it is off.
@@ -51,17 +73,8 @@ func TestNewTechnology_CellsAscendingZero(t *testing.T) {
 	if got := len(w.tec.cells); got != 4 {
 		t.Fatalf("len(cells) = %d, want 4 (2 regions x 2 fields)", got)
 	}
-	for i, c := range w.tec.cells {
-		if c != (tec.Cell{}) || w.tec.gain[i] != 0 || w.tec.counter[i] != 0 {
-			t.Errorf("cell %d = %+v, gain %d, counter %d, want all zero", i, c, w.tec.gain[i], w.tec.counter[i])
-		}
-	}
-	for cell, want := range [][2]RegionID{{0, 0}, {0, 1}, {1, 0}, {1, 1}} {
-		region, ok := w.tec.cellOf(want[0], int(want[1]))
-		if !ok || region != cell {
-			t.Errorf("cellOf(region %d, field %d) = %d, %v, want %d", want[0], want[1], region, ok, cell)
-		}
-	}
+	checkCellsZero(t, w)
+	checkCellOrder(t, w)
 	if off := newMill(t, millConfig(2, 2)); off.tec != nil || off.prod.tec != nil {
 		t.Errorf("a world with the module off has tec %v and prod.tec %v, want nil", off.tec, off.prod.tec)
 	}
@@ -208,24 +221,27 @@ func TestGain_PositionsReadOneValue(t *testing.T) {
 	if got := w.prod.anchor[0].YieldBP; got != 11_000 {
 		t.Errorf("anchor yield = %d, want 11 000", got)
 	}
-	var started int
-	for i := range w.agents {
-		if a := &w.agents[i]; a.hasJob() {
-			started++
-			if a.job.yield != 11_000 {
-				t.Errorf("job of agent %d has yield %d, want 11 000", a.id, a.job.yield)
-			}
-		}
-	}
-	if started == 0 {
+	if started := jobsWithYield(t, w, 11_000); started == 0 {
 		t.Fatalf("no job started, want the households to start the recipe")
 	}
 	if err := w.AdjustTechnology([]TechnologyAdjustment{{Region: 0, Field: 0, DeltaBP: 1_000}}); err != nil {
 		t.Fatalf("AdjustTechnology() error = %v, want nil", err)
 	}
+	jobsWithYield(t, w, 11_000)
+}
+
+// jobsWithYield reports each job of w whose yield is not want and returns the number of
+// jobs.
+func jobsWithYield(t *testing.T, w *World, want int64) int {
+	t.Helper()
+	var jobs int
 	for i := range w.agents {
-		if a := &w.agents[i]; a.hasJob() && a.job.yield != 11_000 {
-			t.Errorf("a gain set during a job moved its yield to %d, want 11 000 kept", a.job.yield)
+		if a := &w.agents[i]; a.hasJob() {
+			jobs++
+			if a.job.yield != want {
+				t.Errorf("job of agent %d has yield %d, want %d", a.id, a.job.yield, want)
+			}
 		}
 	}
+	return jobs
 }

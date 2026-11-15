@@ -112,6 +112,51 @@ func TestTechnology_GainReachesProduction(t *testing.T) {
 	}
 }
 
+// checkModuleOff checks that a world of cfg with the module off refuses the call.
+func checkModuleOff(t *testing.T, cfg economysim.Config) {
+	t.Helper()
+	cfg.Modules.Technology = nil
+	w := mustWorld(t, cfg, economysim.WithSeed(1))
+	if err := w.AdjustTechnology(nil); !errors.Is(err, economysim.ErrModuleOff) {
+		t.Errorf("AdjustTechnology with the module off = %v, want ErrModuleOff", err)
+	}
+}
+
+// adjustRegion0 adjusts the advance of region 0, field 0 by delta.
+func adjustRegion0(t *testing.T, w *economysim.World, delta int64) {
+	t.Helper()
+	if err := w.AdjustTechnology([]economysim.TechnologyAdjustment{{Region: 0, Field: 0, DeltaBP: delta}}); err != nil {
+		t.Fatalf("AdjustTechnology(%d) error = %v, want nil", delta, err)
+	}
+}
+
+// techRowOf returns the row of region 0, field 0 of the snapshot of w.
+func techRowOf(t *testing.T, w *economysim.World) economysim.TechRow {
+	t.Helper()
+	s, err := w.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot() error = %v, want nil", err)
+	}
+	for _, r := range s.Tech {
+		if r.Region == 0 && r.Field == 0 {
+			return r
+		}
+	}
+	t.Fatalf("Snapshot.Tech has no row for region 0, field 0, want one")
+	return economysim.TechRow{}
+}
+
+// lastAdjusted returns the last TechnologyAdjusted the recorder saw.
+func lastAdjusted(rec *recorder) economysim.TechnologyAdjusted {
+	var last economysim.TechnologyAdjusted
+	for _, e := range rec.events {
+		if x, ok := e.(economysim.TechnologyAdjusted); ok {
+			last = x
+		}
+	}
+	return last
+}
+
 // TestTechnology_AdjustThroughThePublicAPI verifies a consumer's use of the call on a
 // running world of pack three: with the module off the call is ErrModuleOff; with it
 // on, a raise of 500 bp in region 0 emits TechnologyAdjusted with the tick of the next
@@ -126,68 +171,39 @@ func TestTechnology_AdjustThroughThePublicAPI(t *testing.T) {
 		t.Skip("end-to-end test, skipped with -short")
 	}
 	cfg := fastLearning(t)
-	offCfg := cfg
-	offCfg.Modules.Technology = nil
-	offW := mustWorld(t, offCfg, economysim.WithSeed(1))
-	if err := offW.AdjustTechnology(nil); !errors.Is(err, economysim.ErrModuleOff) {
-		t.Errorf("AdjustTechnology with the module off = %v, want ErrModuleOff", err)
-	}
+	checkModuleOff(t, cfg)
 
 	rec := &recorder{}
 	w := mustWorld(t, cfg, economysim.WithSeed(1), economysim.WithObserver(rec))
-	for range 20 {
-		if err := w.Step(); err != nil {
-			t.Fatalf("Step() error = %v, want nil", err)
-		}
-	}
-	rowOf := func() economysim.TechRow {
-		s, err := w.Snapshot()
-		if err != nil {
-			t.Fatalf("Snapshot() error = %v, want nil", err)
-		}
-		for _, r := range s.Tech {
-			if r.Region == 0 && r.Field == 0 {
-				return r
-			}
-		}
-		t.Fatalf("Snapshot.Tech has no row for region 0, field 0 after 20 ticks, want one")
-		return economysim.TechRow{}
-	}
+	runTicks(t, w, 20)
+	rowOf := func() economysim.TechRow { return techRowOf(t, w) }
 	gainOf := func() int64 { return rowOf().GainBP }
 	before := gainOf()
-	if err := w.AdjustTechnology([]economysim.TechnologyAdjustment{{Region: 0, Field: 0, DeltaBP: 500}}); err != nil {
-		t.Fatalf("AdjustTechnology(+500) error = %v, want nil", err)
-	}
+	adjustRegion0(t, w, 500)
 	if got, want := gainOf(), min(before+500, cfg.Modules.Technology.Fields[0].CapBP); got != want {
 		t.Errorf("gain after +500 = %d, want %d (the gain before, %d, plus 500, cut at the cap)", got, want, before)
 	}
-	var ev economysim.TechnologyAdjusted
-	for _, e := range rec.events {
-		if x, ok := e.(economysim.TechnologyAdjusted); ok {
-			ev = x
-		}
-	}
+	ev := lastAdjusted(rec)
 	if ev.Tick != w.Tick() || ev.BeforeBP != before || ev.AfterBP != gainOf() || ev.DeltaBP != 500 {
 		t.Errorf("TechnologyAdjusted = %+v, want tick %d, DeltaBP 500, BeforeBP %d, AfterBP %d", ev, w.Tick(), before, gainOf())
 	}
 
 	row := rowOf()
-	if err := w.AdjustTechnology([]economysim.TechnologyAdjustment{{Region: 0, Field: 0, DeltaBP: -economysim.MaxGainBP}}); err != nil {
-		t.Fatalf("AdjustTechnology(-MaxGainBP) error = %v, want nil", err)
-	}
+	adjustRegion0(t, w, -economysim.MaxGainBP)
 	if got := rowOf(); got.AdvanceBP != 0 || got.GainBP != row.GainBP-row.AdvanceBP {
 		t.Errorf("row after the fall = %+v, want AdvanceBP 0 and the gain %d (the gain learned from experience stays)", got, row.GainBP-row.AdvanceBP)
 	}
-	var cut economysim.TechnologyAdjusted
-	for _, e := range rec.events {
-		if x, ok := e.(economysim.TechnologyAdjusted); ok {
-			cut = x
-		}
-	}
+	cut := lastAdjusted(rec)
 	if want := economysim.MaxGainBP - row.AdvanceBP; cut.LostBP != want {
 		t.Errorf("LostBP of the fall = %d, want %d (the part of %d the advance of %d did not absorb)", cut.LostBP, want, economysim.MaxGainBP, row.AdvanceBP)
 	}
 
+	checkRefusedCall(t, w, rec)
+}
+
+// checkRefusedCall checks that a call with an unknown region is refused and emits nothing.
+func checkRefusedCall(t *testing.T, w *economysim.World, rec *recorder) {
+	t.Helper()
 	n := len(rec.events)
 	if err := w.AdjustTechnology([]economysim.TechnologyAdjustment{{Region: 99, Field: 0, DeltaBP: 1}}); !errors.Is(err, economysim.ErrUnknownRegion) {
 		t.Errorf("AdjustTechnology(region 99) = %v, want ErrUnknownRegion", err)

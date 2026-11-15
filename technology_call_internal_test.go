@@ -23,6 +23,17 @@ func callWorld(t *testing.T, opts ...Option) (*World, *evLog) {
 	return w, rec
 }
 
+// refusedAt reports whether err wraps want and is a *ValidationError at changes[1] and
+// the field; it returns the error it found.
+func refusedAt(err, want error, field string) (*ValidationError, bool) {
+	var ve *ValidationError
+	if !errors.Is(err, want) || !errors.As(err, &ve) {
+		return ve, false
+	}
+	n := len(ve.Path)
+	return ve, ve.Path[n-2] == "changes[1]" && ve.Path[n-1] == field
+}
+
 // TestAdjustTechnology_AtomicAndErrors verifies the errors of the call in the order of
 // spec-technology.md 7.1.3 and that a refusal changes nothing: the module off is
 // ErrModuleOff; a region outside the range, an outside node, a field outside the
@@ -56,8 +67,7 @@ func TestAdjustTechnology_AtomicAndErrors(t *testing.T) {
 	for _, tt := range tests {
 		w, rec := callWorld(t)
 		err := w.AdjustTechnology([]TechnologyAdjustment{ok, tt.bad})
-		var ve *ValidationError
-		if !errors.Is(err, tt.want) || !errors.As(err, &ve) || ve.Path[len(ve.Path)-2] != "changes[1]" || ve.Path[len(ve.Path)-1] != tt.path {
+		if ve, good := refusedAt(err, tt.want, tt.path); !good {
 			t.Errorf("%s: error = %v (path %v), want %v at changes[1].%s", tt.name, err, ve, tt.want, tt.path)
 		}
 		if w.tec.cells[0].Advance != 0 || len(of[TechnologyAdjusted](rec)) != 0 {
@@ -70,6 +80,25 @@ func TestAdjustTechnology_AtomicAndErrors(t *testing.T) {
 	}
 	if err := w.AdjustTechnology(nil); err != nil {
 		t.Errorf("an empty call = %v, want nil", err)
+	}
+}
+
+// checkClamp sets the advance to start, adjusts it by delta and checks the one event
+// and the advance and gain that follow.
+func checkClamp(t *testing.T, start, delta, wantA, wantLost int64) {
+	t.Helper()
+	w, rec := callWorld(t)
+	if err := w.AdjustTechnology([]TechnologyAdjustment{{Region: 1, Field: 0, DeltaBP: start}}); err != nil {
+		t.Fatalf("AdjustTechnology(%d) = %v, want nil", start, err)
+	}
+	rec.events = nil
+	if err := w.AdjustTechnology([]TechnologyAdjustment{{Region: 1, Field: 0, DeltaBP: delta}}); err != nil {
+		t.Fatalf("AdjustTechnology(%d) = %v, want nil", delta, err)
+	}
+	got := of[TechnologyAdjusted](rec)
+	want := TechnologyAdjusted{Tick: w.Tick(), Region: 1, Field: 0, DeltaBP: delta, BeforeBP: start, AfterBP: wantA, LostBP: wantLost}
+	if len(got) != 1 || got[0] != want || w.tec.cells[0].Advance != wantA || w.tec.gain[0] != wantA {
+		t.Errorf("start %d, delta %d: events %+v, advance %d, gain %d, want %+v and both %d", start, delta, got, w.tec.cells[0].Advance, w.tec.gain[0], want, wantA)
 	}
 }
 
@@ -89,19 +118,7 @@ func TestAdjustTechnology_ClampAndLost(t *testing.T) {
 		{1_900, 500, 2_000, 400},
 	}
 	for _, tt := range tests {
-		w, rec := callWorld(t)
-		if err := w.AdjustTechnology([]TechnologyAdjustment{{Region: 1, Field: 0, DeltaBP: tt.start}}); err != nil {
-			t.Fatalf("AdjustTechnology(%d) = %v, want nil", tt.start, err)
-		}
-		rec.events = nil
-		if err := w.AdjustTechnology([]TechnologyAdjustment{{Region: 1, Field: 0, DeltaBP: tt.delta}}); err != nil {
-			t.Fatalf("AdjustTechnology(%d) = %v, want nil", tt.delta, err)
-		}
-		got := of[TechnologyAdjusted](rec)
-		want := TechnologyAdjusted{Tick: w.Tick(), Region: 1, Field: 0, DeltaBP: tt.delta, BeforeBP: tt.start, AfterBP: tt.wantA, LostBP: tt.wantLost}
-		if len(got) != 1 || got[0] != want || w.tec.cells[0].Advance != tt.wantA || w.tec.gain[0] != tt.wantA {
-			t.Errorf("start %d, delta %d: events %+v, advance %d, gain %d, want %+v and both %d", tt.start, tt.delta, got, w.tec.cells[0].Advance, w.tec.gain[0], want, tt.wantA)
-		}
+		checkClamp(t, tt.start, tt.delta, tt.wantA, tt.wantLost)
 	}
 	w, rec := callWorld(t)
 	for _, d := range []int64{0, -50} { // nothing to cut, and a cut of everything: no change, no event
@@ -167,6 +184,13 @@ func TestTechnologyAdvanced_PerCellOnlyWhenAccrued(t *testing.T) {
 	}
 }
 
+// advancedHolds reports whether e satisfies the identity of the event after a cell
+// whose last After was last, under the cap of 60.
+func advancedHolds(e TechnologyAdvanced, last int64) bool {
+	sum := e.BeforeBP + e.DoingAddedBP + e.TrendAddedBP + e.DiscoveryAddedBP + e.CatchUpAddedBP - e.ClampedBP
+	return e.AfterBP == sum && e.ClampedBP >= 0 && e.BeforeBP == last && e.AtCap == (e.AfterBP == 60) && e.AfterBP <= 60
+}
+
 // TestTechnologyAdvanced_Fields verifies the identity of the event, over 120 ticks of a
 // field with every mechanism on and a cap of 60 that the trend reaches: After = Before +
 // Doing + Trend + Discovery + CatchUp - Clamped, Clamped never negative, AtCap exactly
@@ -184,15 +208,19 @@ func TestTechnologyAdvanced_Fields(t *testing.T) {
 	last, cut := int64(0), false
 	events := of[TechnologyAdvanced](rec)
 	for _, e := range events {
-		sum := e.BeforeBP + e.DoingAddedBP + e.TrendAddedBP + e.DiscoveryAddedBP + e.CatchUpAddedBP - e.ClampedBP
-		if e.AfterBP != sum || e.ClampedBP < 0 || e.BeforeBP != last || e.AtCap != (e.AfterBP == 60) || e.AfterBP > 60 {
-			t.Fatalf("event %+v: sum %d, last After %d, want the identity, Clamped >= 0, Before = last After and AtCap at the cap", e, sum, last)
+		if !advancedHolds(e, last) {
+			t.Fatalf("event %+v, last After %d, want the identity, Clamped >= 0, Before = last After and AtCap at the cap", e, last)
 		}
 		last, cut = e.AfterBP, cut || e.ClampedBP > 0
 	}
 	if len(events) == 0 || !cut || last != 60 {
 		t.Errorf("%d events, cut %v, last gain %d, want events, the cap cutting and the gain at 60", len(events), cut, last)
 	}
+}
+
+// keyAfter reports whether the (region, field) key is above prev.
+func keyAfter(key, prev [2]int64) bool {
+	return key[0] > prev[0] || key[0] == prev[0] && key[1] > prev[1]
 }
 
 // TestEvents_OrderAfterP83b verifies that the events of a tick keep their order with the
@@ -220,7 +248,7 @@ func TestEvents_OrderAfterP83b(t *testing.T) {
 			if firstAdv < 0 {
 				firstAdv = i
 			}
-			if key := [2]int64{int64(e.Region), int64(e.Field)}; key[0] < prev[0] || key[0] == prev[0] && key[1] <= prev[1] {
+			if key := [2]int64{int64(e.Region), int64(e.Field)}; !keyAfter(key, prev) {
 				t.Errorf("TechnologyAdvanced (%v) after (%v) in tick 1, want ascending", key, prev)
 			} else {
 				prev = key
@@ -285,17 +313,7 @@ func TestLogs_TechnologyDebugOnly(t *testing.T) {
 		t.Fatalf("AdjustTechnology() = %v, want nil", err)
 	}
 	step(t, w, 10)
-	var adjusted, advanced []logRec
-	for _, l := range *lg.lines {
-		switch {
-		case l.msg == "technology adjusted":
-			adjusted = append(adjusted, l)
-		case l.msg == "technology advanced":
-			advanced = append(advanced, l)
-		case l.level > slog.LevelDebug && strings.Contains(l.msg, "technolog"):
-			t.Errorf("line %q at level %v, want the module to log nothing above Debug in a tick", l.msg, l.level)
-		}
-	}
+	adjusted, advanced := splitTechLogs(t, *lg.lines)
 	if len(adjusted) != 1 || len(advanced) != 10 {
 		t.Fatalf("%d adjusted and %d advanced lines, want 1 and 10", len(adjusted), len(advanced))
 	}
@@ -306,10 +324,32 @@ func TestLogs_TechnologyDebugOnly(t *testing.T) {
 		t.Errorf("a logger at Info received %q, want no tick line of the module", quiet.String())
 	}
 	for _, l := range append(adjusted, advanced...) {
-		if l.level != slog.LevelDebug || l.strs["field"] != "milling" || l.attrs["region"] != 0 || l.attrs["gain"] <= 0 {
+		if !isMillDebug(l) {
 			t.Errorf("line %+v, want Debug with field milling, region 0 and a gain above 0", l)
 		}
 	}
+}
+
+// splitTechLogs sorts the lines into the adjusted and the advanced ones and reports
+// any other line of the module above Debug.
+func splitTechLogs(t *testing.T, lines []logRec) (adjusted, advanced []logRec) {
+	t.Helper()
+	for _, l := range lines {
+		switch {
+		case l.msg == "technology adjusted":
+			adjusted = append(adjusted, l)
+		case l.msg == "technology advanced":
+			advanced = append(advanced, l)
+		case l.level > slog.LevelDebug && strings.Contains(l.msg, "technolog"):
+			t.Errorf("line %q at level %v, want the module to log nothing above Debug in a tick", l.msg, l.level)
+		}
+	}
+	return adjusted, advanced
+}
+
+// isMillDebug reports whether l is a Debug line of field milling in region 0 with a gain.
+func isMillDebug(l logRec) bool {
+	return l.level == slog.LevelDebug && l.strs["field"] == "milling" && l.attrs["region"] == 0 && l.attrs["gain"] > 0
 }
 
 // TestNonInterference_Technology verifies that an observer and a Debug logger change
