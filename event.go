@@ -585,6 +585,9 @@ type Names struct {
 	// StoreClasses holds the string ID of each StoreClassID; nil when the storage
 	// module is off.
 	StoreClasses []string
+	// TechFields holds the string ID of each TechFieldID; nil when the technology
+	// module is off.
+	TechFields []string
 }
 
 // Amount is a quantity of one commodity.
@@ -1950,3 +1953,47 @@ type TraineeshipEnded struct {
 }
 
 func (TraineeshipEnded) isEvent() {}
+
+// TechnologyAdvanced is emitted at P8.3c for each technology cell in which anything
+// accrued in the step: executions counted, a trend, a discovery, a catch-up or a
+// cut of the cap, in ascending (Region, Field) order after the events of P8.3b and
+// before TickEnded (spec-technology.md 11.1, 4.6.3). AfterBP = BeforeBP +
+// DoingAddedBP + TrendAddedBP + DiscoveryAddedBP + CatchUpAddedBP - ClampedBP. Every
+// count is present even when 0.
+type TechnologyAdvanced struct {
+	Tick int64
+	// Region is the ordinary region of the cell and Field its technology field.
+	Region RegionID
+	Field  TechFieldID
+	// Executions is the cell's counter of this tick, Experience the executions
+	// counted after the step and Discoveries the hits of the step.
+	Executions, Experience, Discoveries int64
+	// BeforeBP and AfterBP are the gain of the cell before and after the step, in
+	// basis points.
+	BeforeBP, AfterBP int64
+	// DoingAddedBP, TrendAddedBP, DiscoveryAddedBP and CatchUpAddedBP are what each
+	// mechanism added before the cap, and ClampedBP the part the cap cut.
+	DoingAddedBP, TrendAddedBP, DiscoveryAddedBP, CatchUpAddedBP, ClampedBP int64
+	// AtCap is whether the gain is at the field's cap after the step.
+	AtCap bool
+}
+
+func (TechnologyAdvanced) isEvent() {}
+
+// TechnologyAdjusted is emitted by AdjustTechnology for each cell whose advance
+// changed, in ascending (Region, Field) order, with the tick of the next step
+// (spec-technology.md 7.1.4, 11.1).
+type TechnologyAdjusted struct {
+	Tick int64
+	// Region is the ordinary region of the cell and Field its technology field.
+	Region RegionID
+	Field  TechFieldID
+	// DeltaBP is the change asked, signed.
+	DeltaBP int64
+	// BeforeBP and AfterBP are the gain of the cell before and after the call.
+	BeforeBP, AfterBP int64
+	// LostBP is the part of the change, in magnitude, that the bounds cut.
+	LostBP int64
+}
+
+func (TechnologyAdjusted) isEvent() {}

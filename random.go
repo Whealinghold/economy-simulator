@@ -51,6 +51,10 @@ const (
 	// two creation words of AddAgent are taken from this stream, so the order of
 	// calls changes no agent's draws (spec-world.md 7.1.4, ADR 0008).
 	siteAddAgent uint64 = 0xE00949043F800843
+	// siteTechnology keys the technology module's discovery hash: no draw, the key
+	// is derived from the effective seed with tick 0 and entity 0 and takes no word
+	// (spec-technology.md 4.4.1, 6.3, ADR 0008). A key, not a draw.
+	siteTechnology uint64 = 0xF68B3E6A63DA053C
 )
 
 // stream is the one random source of a world (architecture.md 7.3, ADR 0008):
