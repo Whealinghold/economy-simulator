@@ -1011,6 +1011,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-storage.md` 3.2.3, 3.6.3, 8.3, 10.
 - **Note:** RSK reads the stored load and the stores by class (8.3). CAP calls `addStore` and `removeStore` (3.6.3), and the away test of `ErrAgentAway` is in `addStore`, so the completion of a store facility meets it and keeps the facility until the arrival. SET gates a store class by `StoreClass.Needs` and `ErrStoreLocked` (3.2.3, 10.3). A buffer store over a treasury's goods (a pack's word for it is flagged in STO's header) is FIS's (`spec-fiscal.md` 9.6.1; N-186): STO may accept a treasury as a holder later (FIS open question 8), and the release is PLC's lever or FIS's standing order. A keeper and a lease are a contract over the same room (LND, ORG; 10.4).
 - **Update (2026-11-14, plan 3-lnd Phase 1):** read: LND builds no keeper and no lease over a room (`spec-land.md` 7.4); a title is a share of an endowment, not of a room. Left open for ORG.
+- **Update (2026-11-14, plan 3-set Phase 1):** read; left open. SET PR A turns the validator rule `needs_module_off` into the real rule (a flag some class carries, the module on); the runtime gate is `regionHas`, wired in SET PR C (H-11).
 
 ### N-142 A job start and a dispatch leave the upkeep room free
 
@@ -1099,6 +1100,7 @@ PR description.
 - **Update (2026-10-17, spawner edits):** read; not settled by them. Left open.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: no view carries a settlement class (`spec-agents.md` 6.4.1). Left open for SPN and POP.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Waits for SET. The view's Closed is Role.Closed in the slice; headroom and NoLimit are appended with SET (D112).
+- **Update (2026-11-14, plan 3-set Phase 1):** read; left open until SET PR C builds the readers (`Closed` by `Needs`, `Headroom`, `RoleCeiling`, `BirthsCeiling`).
 
 ### N-155 Reserved hooks of the settlement class
 
@@ -1359,6 +1361,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-institutions.md` 3.4.3 (cross-reference N-153).
 - **Note:** The headroom of a role is the least of its class limit's (`spec-settlements.md` 6.4.2) and its body's; the spawner's view and POP's births read it.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Not this row's.
+- **Update (2026-11-14, plan 3-set Phase 1):** read; left open. SET ships the class half of the headroom and the slot `roleHeadroom`; ORG supplies the body's half.
 
 ### N-193 A completion of a traineeship is held without headroom
 
@@ -1367,6 +1370,7 @@ PR description.
 - **Note:** A trainee stays a trainee, and holds its trainer's place, until the target role has headroom of 1; counted `Held`.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Waits for SKL; no traineeship exists in the slice (D111).
 - **Update (2026-11-13, plan 3-skl Phase 1):** read; left open until SET supplies headroom. The held path is built with a no-limit hook and unit-tested (plan 3-skl SK9).
+- **Update (2026-11-14, plan 3-set Phase 1):** read; left open until SET PR C assigns `skills.headroom` (H-10) and adds the live count (H-14).
 
 ### N-194 Reserved, not offered: a charter over carriage, a store or a facility; a wage control; a named holder; a call that admits or expels
 
@@ -1876,6 +1880,7 @@ PR description.
 - **Update (2026-11-09, plan 2-14 Phase 1):** MIG: `on_journey` (a `Refusal` after the existing values, a `region_bound` obligation) and the `RoleSince` of an arrival are built in plan 2-14 Phase 5; the tree has `offStage`, `regionBounds.add` and `reseedAtArrival` for it. Left open for SET, SUB, POP, SKL.
 - **Update (2026-11-11, plan 2-11):** POP fields `PopBirths`, `PopDeaths` and the effective `Renewal` 0 are appended in plan 2-11. Left open.
 - **Update (2026-11-13, plan 3-skl Phase 1):** applied for SKL (the refusals `in_traineeship`, `needs_weight_one`, `needs_traineeship`, `already_queued` and the cause `traineeship`, appended in module order, plan 3-skl); keep for SET.
+- **Update (2026-11-14, plan 3-set Phase 1):** read; left open for SET until PR C appends `RoleView.Headroom`, `NoLimit` and `EntryLimited.RoleCeiling`.
 
 ### N-306 The census formula is pinned against `one`: the work share cancels
 
@@ -2162,6 +2167,7 @@ PR description.
 - **Areas:** POP, SET
 - **Raised:** 2026-11-11, plan 2-11.
 - **Note:** `PopulationChanged.BirthsCeiling` and the `Needs` half of FR-POP-007 are tested when SET lands.
+- **Update (2026-11-14, plan 3-set Phase 1):** read; left open until SET PR C tests `BirthsCeiling` and the `Needs` half of FR-POP-007.
 
 ### N-349 A warning that counts needs a count and a log key
 
@@ -2317,4 +2323,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 63cf40ae1a018b046c85e6f9
+NOTES-TAG: 148a53a0b79f47a9753d774b

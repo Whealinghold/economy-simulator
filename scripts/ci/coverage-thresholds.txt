@@ -37,6 +37,7 @@ internal/production 90
 internal/reduce 90
 internal/room 90
 internal/rumour 90
+internal/settlement 90
 internal/skill 90
 internal/steady 90
 internal/technology 90
