@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/codec"
@@ -211,7 +212,7 @@ func (t *tenure) readSparse(w *World, r *codec.Reader, k int, set func(cell int,
 	for range r.Count(2 + k) {
 		region, resource := r.Index(uint64(t.regions)), r.Index(uint64(t.resources))
 		for i := range v {
-			v[i] = int64(r.U())
+			v[i] = r.Bounded("tenure value", math.MaxInt64)
 		}
 		cell := int(region)*t.resources + int(resource)
 		switch {

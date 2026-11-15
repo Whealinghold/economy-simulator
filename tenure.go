@@ -184,7 +184,6 @@ func (t *tenure) give(cell int, holder AgentID, share int64) {
 		list[i].share += share
 	} else {
 		t.holds[cell] = slices.Insert(list, i, title{holder: holder, share: share})
-		i = slices.IndexFunc(t.holds[cell], func(x title) bool { return x.holder == holder })
 	}
 	got := t.holds[cell][i].share
 	if t.sum(cell) > wholeBP || (holder >= AgentID(t.regions) && got > t.capBP) {
