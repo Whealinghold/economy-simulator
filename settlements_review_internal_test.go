@@ -3,6 +3,8 @@ package economysim
 import (
 	"slices"
 	"testing"
+
+	"github.com/Whealinghold/economy-sim/internal/codec"
 )
 
 // The tests of the settlement review at the level of the world (spec-settlements.md
@@ -368,4 +370,70 @@ func TestSettlements_WorkIsCounted(t *testing.T) {
 	if agents := int64(len(w.agents) - w.firstHousehold); sum != 47 || agents != 47 {
 		t.Errorf("sum of the counts = %d over %d agents, want 47 over 47", sum, agents)
 	}
+}
+
+// TestClass_ConstantWithinTheTickUntilP72a verifies that the class of a region is
+// written at P7.2a and nowhere else: a world is run through the straight line of one
+// step, position by position, with a count that gives a change in that step (Dwell 0),
+// and the class is the same after every position until P7.2a, where it changes.
+//
+// Requirement: FR-SET-014
+//
+// Guard: a second writer of the class, or a review at another position, would let a
+// reader see two values in one tick (spec-settlements.md 5.2.1).
+func TestClass_ConstantWithinTheTickUntilP72a(t *testing.T) {
+	t.Parallel()
+	c := setConfig()
+	c.Modules.Settlements.Dwell = 0
+	w := newMill(t, c)
+	setHouseholds(t, w, setA, 13)
+	if err := w.beginStep(); err != nil {
+		t.Fatalf("beginStep() error = %v, want nil", err)
+	}
+	prev, changedAt := slices.Clone(w.set.class), []string{}
+	for _, s := range stepSites {
+		if err := s.call(w); err != nil {
+			t.Fatalf("%s error = %v, want nil", s.name, err)
+		}
+		if !slices.Equal(prev, w.set.class) {
+			changedAt, prev = append(changedAt, s.name), slices.Clone(w.set.class)
+		}
+	}
+	if err := w.endStep(nil); err != nil {
+		t.Fatalf("endStep() error = %v, want nil", err)
+	}
+	if want := []string{"P7.2a"}; !slices.Equal(changedAt, want) || w.set.class[setA] != 1 {
+		t.Errorf("the class changed after %v and is %d, want %v and 1", changedAt, w.set.class[setA], want)
+	}
+}
+
+// FuzzDecodeSettlements verifies that the decoder of tag 23 never panics on any bytes and
+// that what it accepts is a state of the module: every class is below the number of
+// classes and not below the floor of its region, and Since is at most the tick less 1.
+//
+// Requirement: NFR-SET-004, FR-SET-029
+func FuzzDecodeSettlements(f *testing.F) {
+	w0 := newMill(f, setConfig())
+	var cw codec.Writer
+	if err := w0.saveSettlements(&cw); err != nil {
+		f.Fatalf("saveSettlements() error = %v, want nil", err)
+	}
+	f.Add(cw.Out(), int64(5))
+	f.Add([]byte{}, int64(0))
+	f.Add([]byte{9, 9, 9, 9, 9, 9, 9, 9}, int64(100))
+	f.Fuzz(func(t *testing.T, body []byte, tick int64) {
+		w := newMill(t, setConfig())
+		rs := &restoreCtx{tick: tick}
+		r := codec.NewReader(body)
+		w.loadSettlements(rs, r) // the error of a bad body is the reader's
+		if r.Err() != nil || r.Remaining() != 0 {
+			return
+		}
+		s := w.set
+		for g := range s.class {
+			if s.class[g] < s.floor[g] || s.class[g] >= s.n || s.since[g] > max(tick-1, 0) {
+				t.Fatalf("accepted class %d (floor %d, %d classes) and since %d at tick %d, want a state of the module", s.class[g], s.floor[g], s.n, s.since[g], tick)
+			}
+		}
+	})
 }
