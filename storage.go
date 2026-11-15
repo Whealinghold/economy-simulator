@@ -309,6 +309,7 @@ func (w *World) roleChangedStorage(a *agent, region RegionID) {
 		for c := range s.classes {
 			for s.count(a.id, c) > 0 {
 				s.take(a.id, c)
+				w.logStore(a, c, KindRemoved, CauseRoleChanged)
 				if w.obs.supplied {
 					s.ended = append(s.ended, w.storeEvent(a, region, c, KindRemoved, CauseRoleChanged))
 				}
@@ -594,4 +595,44 @@ func (s *storage) admitsStock(n NewAgent, stock []itemRow) error {
 		return ErrNoRoom
 	}
 	return nil
+}
+
+// storeClassCount is the number of store classes of the configuration, 0 with the
+// module off; it sizes the scratch of the view's stores.
+func storeClassCount(c *Config) int {
+	if c.Modules.Storage == nil {
+		return 0
+	}
+	return len(c.Modules.Storage.Classes)
+}
+
+// fillRoomView is the filler of the room group of the AgentView (spec-storage.md 6.1.1,
+// FR-STO-021): for a limited agent its room, load, pledge and free room, its stores
+// by class and the size of one unit of each commodity of the tradable set. An agent
+// with no room has none of it. The stores are a scratch copy valid for the call.
+func (w *World) fillRoomView(v *AgentView, a *agent, kind viewKind) {
+	s := w.sto
+	rm, free, ok := s.roomState(w.ledger, a)
+	if !ok {
+		return
+	}
+	r := &v.Room
+	r.Limited = true
+	r.Room, r.Load = Capacity{Mass: rm.Mass, Bulk: rm.Bulk}, Capacity{Mass: rm.LoadMass, Bulk: rm.LoadBulk}
+	r.Pledge, r.Free = Capacity{Mass: rm.PledgeMass, Bulk: rm.PledgeBulk}, Capacity{Mass: free.Mass, Bulk: free.Bulk}
+	if v.scratch != nil {
+		r.Stores = v.scratch.stores[:0]
+	}
+	for c := range s.classes {
+		if n := s.count(a.id, c); n > 0 {
+			r.Stores = append(r.Stores, StoreCount{Class: StoreClassID(c), Count: int64(n)})
+		}
+	}
+	for i := range v.Commodities {
+		sz := s.sizes[v.Commodities[i].Commodity]
+		v.Commodities[i].Mass, v.Commodities[i].Bulk = sz.Mass, sz.Bulk
+	}
+	if kind == viewTrade {
+		s.viewed(w.cellOf(w.regionOf(a), a), a.weight, free)
+	}
 }

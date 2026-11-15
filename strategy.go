@@ -130,6 +130,10 @@ type TradePlan struct {
 	Offers []DeliveryOffer
 	Takes  []DeliveryTake
 	Notes  PlanNotes
+	// Cuts are the bids the default strategy sized down or dropped for room, one per
+	// commodity in commodity order, for the world to count and log (spec-storage.md
+	// 6.3.1); empty for any other strategy and with the storage module off.
+	Cuts []RoomCut
 }
 
 // ShipmentRequest asks the world to move goods, or the agent itself
@@ -345,6 +349,9 @@ type CommodityView struct {
 	Market MarketReport
 	// Window is the price window of the agent's region.
 	Window PriceWindowView
+	// Mass and Bulk are the size of one unit, set for the view of a limited agent
+	// and 0 otherwise (spec-storage.md 6.1.1).
+	Mass, Bulk int64
 }
 
 // RecipeView is the view of one recipe of the agent's role.
@@ -491,6 +498,11 @@ type AgentView struct {
 	// tick and a strategy must treat it as read-only.
 	HasMerchant bool
 	Merchant    MerchantView
+	// Room is the room group of a limited agent: its room, load, pledge, free room
+	// and stores as they are when the view is built, the stores a scratch copy valid
+	// for the call (spec-storage.md 6.1.1). Limited is false with the storage module
+	// off and for an agent with no room.
+	Room RoomState
 	// scratch is the working arrays of DefaultStrategy.Trade, set by the world's
 	// filler and nil in a view built by hand, for which Trade allocates its own
 	// (spec-agents.md 6.4.1; NFR-AGT-001 binds the world's views only).

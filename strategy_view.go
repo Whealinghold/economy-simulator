@@ -29,6 +29,7 @@ type viewScratch struct {
 	outputs     []RecipeOutput
 	tools       []RecipeTool
 	endowments  []EndowmentView
+	stores      []StoreCount
 
 	// The copy of the agent's pending directive (D97).
 	dirJob      JobRequest
@@ -71,6 +72,7 @@ func newViewScratch(cfg *Config, rt *roleTable, rc *recipeTable) *viewScratch {
 		inputs:      make([]RecipeLine, 0, in),
 		outputs:     make([]RecipeOutput, 0, out),
 		tools:       make([]RecipeTool, 0, tl),
+		stores:      make([]StoreCount, 0, storeClassCount(cfg)),
 		costQ:       make([]int64, 0, len(cfg.Commodities)),
 		costP:       make([]int64, 0, len(cfg.Commodities)),
 		plan:        TradePlan{Intents: make([]Intent, 0, com)},
@@ -80,7 +82,7 @@ func newViewScratch(cfg *Config, rt *roleTable, rc *recipeTable) *viewScratch {
 // tradePlan returns the empty, reused plan Trade appends to.
 func (sc *viewScratch) tradePlan() *TradePlan {
 	sc.plan.Intents, sc.plan.Discards, sc.plan.WantFunded = sc.plan.Intents[:0], sc.plan.Discards[:0], sc.plan.WantFunded[:0]
-	sc.plan.Shipments = sc.plan.Shipments[:0]
+	sc.plan.Shipments, sc.plan.Cuts = sc.plan.Shipments[:0], sc.plan.Cuts[:0]
 	sc.plan.Offers, sc.plan.Takes, sc.plan.Notes = sc.plan.Offers[:0], sc.plan.Takes[:0], PlanNotes{}
 	return &sc.plan
 }

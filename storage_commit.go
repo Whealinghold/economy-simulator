@@ -188,14 +188,20 @@ func (s *storage) linesLoad(lines []Line) (load room.Pair, ok bool) {
 
 // roomCount is the counters of one (region, role) for RoomLimited (spec-storage.md
 // 14.1): plain integer adds made always, because the start sizing needs them with no
-// observer, cleared at the end of every step (P8.6). The counts of the default
-// strategy's bids and discards and of the households given a view join with Phase 6.
+// observer, cleared at the end of every step (P8.6).
 type roomCount struct {
 	// startsCut is the executions not started for room though the inputs allowed
 	// them, startsRefused the requests refused whole (no_room), bidsRejected the
 	// orders rejected no_room and shipmentsRefused the shipments refused
 	// consignee_full.
 	startsCut, startsRefused, bidsRejected, shipmentsRefused int64
+	// bidsCut is the intents the default strategy sized down or dropped for room and
+	// discarded the units it discarded to make room for tier 1 (6.3).
+	bidsCut, discarded int64
+	// limitedHouseholds is the households of limited agents given a view for Trade
+	// and fullHouseholds those whose free room was 0 in a dimension then; they ride
+	// along and trigger nothing.
+	limitedHouseholds, fullHouseholds int64
 }
 
 // clearTick clears the counters at the end of a step (P8.6): none survives it.

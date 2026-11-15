@@ -34,6 +34,9 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 		}
 	}
 	w.fillBoard(v, a)
+	if w.sto != nil {
+		w.fillRoomView(v, a, kind)
+	}
 	return nil
 }
 
@@ -75,6 +78,9 @@ func (w *World) checkTradePlan(a *agent, p *TradePlan) {
 	}
 	if w.mer != nil {
 		w.checkMerchantPlan(a, p)
+	}
+	if w.sto != nil {
+		w.checkRoomPlan(a, p)
 	}
 }
 

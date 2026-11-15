@@ -1452,9 +1452,10 @@ func (t *tradeCtx) buyWants() {
 			if r == nil {
 				continue
 			}
-			if q = min(q, r.t4-r.q4); q < 1 {
+			if q = t.roomBound(r, min(q, r.t4-r.q4)); q < 1 {
 				continue
 			}
+			t.roomTake(r, q)
 			r.qty, r.q4, r.bought = r.qty+q, r.q4+q, true
 			funded += q
 		}

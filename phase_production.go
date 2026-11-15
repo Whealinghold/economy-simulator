@@ -331,6 +331,9 @@ func (w *World) startReq(a *agent, region RegionID, recipe RecipeID, maximum int
 func (w *World) refuse(a *agent, region RegionID, recipe RecipeID, reason Reason) {
 	if w.sto != nil {
 		w.sto.refusedStart(w.cellOf(region, a), reason)
+		if reason == ReasonNoRoom {
+			w.logRefusedJob(a, recipe, reason)
+		}
 	}
 	ctx := context.Background()
 	if w.log.Enabled(ctx, slog.LevelDebug) {
