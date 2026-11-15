@@ -477,7 +477,7 @@ func pairsModules(e *encoder, m Modules) {
 	pairsLaterModules(e, m)
 }
 
-// pairsLaterModules writes the pairs of the modules of ids 9, 10, 11, 12, 13, 14, 15, 19, 24 and 25 of
+// pairsLaterModules writes the pairs of the modules of ids 9, 10, 11, 12, 13 and 14 of
 // Modules, after those pairsModules writes (a continuation for the Lizard limit).
 func pairsLaterModules(e *encoder, m Modules) {
 	if m.Migration != nil {
@@ -509,6 +509,12 @@ func pairsLaterModules(e *encoder, m Modules) {
 		pairsTenure(e, *m.Tenure)
 		e.end()
 	}
+	pairsLastModules(e, m)
+}
+
+// pairsLastModules writes the pairs of the modules of ids 15, 19, 24 and 25 of Modules,
+// after those pairsLaterModules writes (a continuation for the Lizard limit).
+func pairsLastModules(e *encoder, m Modules) {
 	if m.Credit != nil {
 		e.id(15)
 		pairsCredit(e, *m.Credit)

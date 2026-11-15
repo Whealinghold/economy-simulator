@@ -326,6 +326,12 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Settlements = l.settlements(ss)
 		ss.finish()
 	}
+	l.lastModules(m, cfg)
+}
+
+// lastModules reads the tables of technology, credit and tenure, in that order (a
+// continuation of laterModules for the Lizard limit).
+func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 	if ts := m.sub("technology"); ts != nil {
 		cfg.Modules.Technology = l.technology(ts)
 		ts.finish()

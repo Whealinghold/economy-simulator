@@ -279,6 +279,27 @@ func TestValidate_TenureErrorsInPhases(t *testing.T) {
 	}
 }
 
+// TestValidate_TenureSharesReportOncePerEndowment verifies that holdings on one
+// endowment that sum above 10 000 raise ErrTitleShares once, at the holding that
+// crosses, and not again at each holding after it.
+//
+// Requirement: FR-LND-038
+//
+// The grower holds 20 basis points over 253 households (5 060), the pool 6 000 takes
+// the sum to 11 060 and the cook's 1 over its households would take it further.
+func TestValidate_TenureSharesReportOncePerEndowment(t *testing.T) {
+	t.Parallel()
+	c := tenureConfig()
+	h := c.Modules.Tenure.Holdings
+	h[1].ShareBP = 6_000
+	c.Modules.Tenure.Holdings = append(h, economysim.Holding{Region: "north", Resource: "arable",
+		Holder: economysim.HolderRef{Kind: economysim.HolderKindRole, Role: "cook"}, ShareBP: 1})
+	vs, _ := violations(c.Validate())
+	if got := pathsOf(vs); len(got) != 1 || got[0][2] != "holding[1]" {
+		t.Errorf("Validate(three holdings above 10 000) paths = %q, want one, at holding[1]", got)
+	}
+}
+
 // TestSentinels_Tenure verifies that the four sentinels of the module are distinct,
 // non-nil errors that name their rule.
 //

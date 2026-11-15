@@ -184,6 +184,7 @@ func (v *validator) tenureShares(m *TenureConfig) bool {
 	n := len(v.rep.errs)
 	households, _ := v.tenureHouseholds()
 	total := make(map[[2]string]int64, len(m.Holdings))
+	over := make(map[[2]string]bool) // a membership test only
 	for i := range m.Holdings {
 		h := &m.Holdings[i]
 		if !v.inRangeAs(ErrTitleShares, tenureRow("holding", i, "share_bp"), h.ShareBP, 1, wholeBP) {
@@ -194,12 +195,15 @@ func (v *validator) tenureShares(m *TenureConfig) bool {
 			units = households[[2]string{h.Region, h.Holder.Role}]
 		}
 		key := [2]string{h.Region, h.Resource}
+		if over[key] {
+			continue // one error per endowment, at the row that crosses
+		}
 		row, mulOK := checked.Mul(h.ShareBP, units)
 		sum, addOK := checked.Add(total[key], row)
 		total[key] = sum
 		if !mulOK || !addOK || sum > wholeBP {
 			v.rep.add(ErrTitleShares, tenureRow("holding", i, "share_bp"), i64(sum), i64(wholeBP))
-			total[key] = wholeBP // one error per endowment, at the row that crosses
+			over[key] = true
 		}
 	}
 	return len(v.rep.errs) == n
