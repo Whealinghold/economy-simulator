@@ -116,7 +116,8 @@ func (w *World) saveTechnology(cw *codec.Writer) error {
 // of spec-checkpoint.md 6.2: Experience in [0, MaxExperience], Advance in [0, CapBP] of
 // its field, CatchUp in [0, 10 000 * TicksPerYear), TrendCarry in [0, TicksPerYear);
 // each violation is ErrCheckpointCorrupt and the caller refuses a byte after the last
-// field. It then derives the gain of every cell, which is never saved (FR-TEC-028).
+// field. It then derives the gain of every cell, which is never saved (FR-TEC-028); a gain that
+// does not fit is a corrupt section, not an invariant, and leaves the gains untouched.
 func (w *World) loadTechnology(_ *restoreCtx, r *codec.Reader) error {
 	t := w.tec
 	for i := range t.cells {
@@ -133,8 +134,15 @@ func (w *World) loadTechnology(_ *restoreCtx, r *codec.Reader) error {
 	if r.Err() != nil {
 		return nil
 	}
-	for i := range t.cells {
-		t.regain(i)
+	gains := make([]int64, len(t.cells))
+	for i, c := range t.cells {
+		g, ok := tec.Gain(t.fields[i%t.nf], c.Experience, c.Advance)
+		if !ok {
+			r.Failf("technology cell %d: a gain does not fit", i)
+			return nil
+		}
+		gains[i] = g
 	}
+	copy(t.gain, gains)
 	return nil
 }
