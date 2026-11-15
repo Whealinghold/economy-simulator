@@ -60,7 +60,7 @@ func (v *validator) storageClasses(base []string, m *Storage) bool {
 }
 
 // storageClassShape is the shape of one class: each capacity in 0 .. MaxRoom, not
-// both 0, a Needs flag only with a settlement module (which is not built), a label
+// both 0, a Needs flag only with the settlements module and a flag some class carries, a label
 // within its bound.
 func (v *validator) storageClassShape(p []string, c StoreClass) {
 	inside := true
@@ -74,7 +74,7 @@ func (v *validator) storageClassShape(p []string, c StoreClass) {
 		v.rep.add(ErrStoreShape, p, "0", "1")
 	}
 	if c.Needs != "" {
-		v.rep.add(ErrModuleDependency, path(p, "needs"), c.Needs, "settlements")
+		v.settlementFlagRule(path(p, "needs"), c.Needs)
 	}
 	v.label(p, "label", c.Label)
 }

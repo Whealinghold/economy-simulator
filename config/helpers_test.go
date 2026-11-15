@@ -31,6 +31,7 @@ var validationSentinels = []error{
 	economysim.ErrUnknownMode, economysim.ErrMerchantShape, economysim.ErrMerchantWeight,
 	economysim.ErrEmploymentShape, economysim.ErrFlowShape, economysim.ErrStoreShape,
 	economysim.ErrRoomShape, economysim.ErrNotLimited, economysim.ErrUnknownStoreClass,
+	economysim.ErrUnknownSettlementClass, economysim.ErrUnknownSettlementFlag, economysim.ErrUnknownLimit,
 	economysim.ErrTechShape, economysim.ErrTechRecipeOverlap,
 	economysim.ErrCreditShape,
 }

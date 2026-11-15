@@ -672,6 +672,7 @@ func buildFieldCases() []fieldCase {
 	add(externalFieldCases()...)
 	add(polityFieldCases()...)
 	add(storageFieldCases()...)
+	add(settlementsFieldCases()...)
 	add(technologyFieldCases()...)
 	add(creditFieldCases()...)
 
