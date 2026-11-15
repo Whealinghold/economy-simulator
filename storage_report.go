@@ -367,3 +367,27 @@ func (w *World) logStore(a *agent, c int, kind Kind, cause Cause) {
 		slog.Int64(logkeys.Tick, w.Tick()), slog.Int64(logkeys.Agent, int64(a.id)),
 		slog.Int64(logkeys.StoreClass, int64(c)), slog.String(logkeys.Cause, string(cause)))
 }
+
+// p36aRoomLimited is P3.6a, after WantShortfall: the RoomLimited of each (region,
+// role) in which a room cut or refused something, in ascending region then role
+// (spec-storage.md 14.1, FR-STO-036). The counters were made as the acts happened,
+// with or without an observer; the event is built only when one was supplied
+// (observability-and-logging.md 4.5). They are cleared at P8.6, so none survives it.
+func (w *World) p36aRoomLimited() {
+	if !w.obs.supplied {
+		return
+	}
+	roles := len(w.cfg.Roles)
+	for cell := range w.sto.counts {
+		c := &w.sto.counts[cell]
+		if c.startsCut == 0 && c.startsRefused == 0 && c.bidsCut == 0 && c.bidsRejected == 0 && c.shipmentsRefused == 0 && c.discarded == 0 {
+			continue
+		}
+		w.obs.deliver(RoomLimited{
+			Tick: w.Tick(), Region: RegionID(cell / roles), Role: RoleID(cell % roles),
+			LimitedHouseholds: c.limitedHouseholds, FullHouseholds: c.fullHouseholds,
+			StartsCut: c.startsCut, StartsRefused: c.startsRefused, BidsCut: c.bidsCut,
+			BidsRejected: c.bidsRejected, ShipmentsRefused: c.shipmentsRefused, Discarded: c.discarded,
+		})
+	}
+}

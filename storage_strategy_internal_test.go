@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"math/rand/v2"
+	"reflect"
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/room"
@@ -267,5 +268,19 @@ func checkViewSizes(t *testing.T, w *World, v *AgentView) {
 		if sz := w.sto.sizes[c.Commodity]; c.Mass != sz.Mass || c.Bulk != sz.Bulk {
 			t.Errorf("size of commodity %d = (%d, %d), want (%d, %d)", c.Commodity, c.Mass, c.Bulk, sz.Mass, sz.Bulk)
 		}
+	}
+}
+
+// TestDraws_CountUnchangedWhileNothingActs verifies FR-STO-037: while no scaling, cut or
+// discard acts, a limited agent's plan is the plan of an agent with no room and takes the
+// same draws.
+//
+// Requirement: FR-STO-037
+func TestDraws_CountUnchangedWhileNothingActs(t *testing.T) {
+	t.Parallel()
+	want, nWant := runTrade(exampleView(8000), exampleWords())
+	got, n := runTrade(roomView(8000, 1000, 1<<30), exampleWords())
+	if n != nWant || !reflect.DeepEqual(got.Intents, want.Intents) {
+		t.Errorf("limited plan %+v after %d draws, want %+v after %d, those of an agent with no room", got.Intents, n, want.Intents, nWant)
 	}
 }

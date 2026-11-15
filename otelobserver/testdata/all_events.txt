@@ -36,6 +36,7 @@ RecipeExecuted
 RecipeRefused
 ReliefPaid
 RoleChanged
+RoomLimited
 RumoursServed
 RunEnded
 RunStarted

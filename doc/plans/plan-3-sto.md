@@ -158,6 +158,20 @@ Files: `strategy.go`, `strategy_view.go` (the room group: room, load, pledge, fr
 Tests: `TestDefault_ScalesTargetsToRoom` (FR-STO-022, example 6.2.2), `TestDefault_BidsSizedToFreeRoom_NoRejectedBid`, `TestDefault_DrawsEveryIntent` (FR-STO-023: the stream position is equal with and without a binding room), `TestDefault_DiscardsOnlyForTierOne` (FR-STO-024), `TestDefault_TierOneAlwaysFits` (FR-STO-025 as a property over random rooms satisfying `room_below_upkeep`), `TestStoresFlow_AmountPerStore`, `_ShapeErrors`, `_UnknownClass`, `_ModuleOff`, `_NoNewReason` (FR-STO-026, 027), `TestStoresFlow_CarryRestored` (tag 13), `TestLeaky_NoChargeAtExempt`.
 Exit check: the existing strategy tests unchanged; `TestStep_AllocationsStayAtTheBaseline` (off rows) and `TestClearMarket_ZeroAllocations`/`TestEmit_ZeroAllocationsWithDefaults` (`clearing_step_internal_test.go`) at their baselines with the module off.
 
+**Result of Phase 6 (worker, PR 4, 2026-11-15).** A limited agent behaves in its room and the cost of a store is charged.
+
+- Built: the room group of `AgentView` (`RoomState`, the size of a unit in `CommodityView`; `fillRoomView` in `storage.go`, one guarded call in `fillAgentView`); the default strategy's scaling `f`, the bids sized to the free room in the order of the money stack (tiers 1 to 3 and the wants), the tier 1 discard (`storage_strategy.go`, listed in `architecture.md` 2.6 with a fresh RULE-TAG and in the `AGENTS.md` layout; the hooks in `strategy_default.go` and `demand.go` are one call each); `TradePlan.Cuts` (the bids cut, for the world to count and log); the stores flow (`moneyflow.go` fields and one branch in `runFlow`, the scan and the visit in `storage_commit.go`; the last validator rule "built" is deleted).
+- Deviation 1: the carry of a stores target is the household carry table unchanged (per account, tag 13 as before), so tag 13 needed no change of code; `TestStoresFlow_CarryRestored` saves and loads the section of a world. A restore of a whole world with the module on still waits for Phase 8.
+- Deviation 2: the discard candidates are the commodities with a surplus above `Keep'` on any row, not only the ones with an ask, so a tool the role does not make can be discarded to feed the household.
+- Deviation 3: `Exempt` of a stores levy is per account, not per store: `plan` multiplies it by 1 for a stores flow (`exemptCount`), and the amount by the number of matching stores.
+- The golden of the module alone moves (see `dp3-sto-4-questions.md` Q-A): it is not re-recorded in this PR.
+
+**Result of Phase 7 (worker, PR 4, 2026-11-15).** `RoomLimited` at P3.6a, the Debug lines, the cardinality check.
+
+- Built: `RoomLimited` (declared, emitted at P3.6a under `w.obs.supplied` from counters made always), `p36aRoomLimited` in `storage_report.go`, the position `P3.6a` in `tick.go` (out of `notBuiltPositions`), the counters `bidsCut`, `discarded`, `limitedHouseholds` and `fullHouseholds`, the Debug lines "bid cut for room", "job refused for room", "store added" and "store removed", the cardinality check of `RoomLimited` and `StoreChanged`, the storage scenario in `logScenarios`, and the four benchmarks.
+- `AgentSpawned.StoresLocked` was never in `notBuiltFields` (PR 3 declared it), so nothing to delete.
+- The otelobserver module only gains the event in its test lists; its instruments are the separate PR of D16.
+
 ### Phase 7: observability (PR 4, or PR 5)
 
 Goal: the event, the `Debug` lines, the metric inputs.
