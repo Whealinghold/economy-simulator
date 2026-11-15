@@ -1232,7 +1232,7 @@ colony's classes and the one-class setting.
 
 For `AGENTS.md`: each open note tagged `SET` or `ALL`, and the others that name this
 spec, is applied, rejected or left open here, with the text to append in the handoff.
-No open note carries the code `SET` (the index of `notes.md` has no such row).
+Four open notes carry the code `SET` in the index of `notes.md` (N-140, N-192, N-268, N-348); plan 3-set read them and N-153 and N-193, which name this spec's seams, and their verdicts are in the table below.
 
 | Note | Decision | Where |
 |------|----------|-------|
@@ -1249,6 +1249,10 @@ No open note carries the code `SET` (the index of `notes.md` has no such row).
 | N-126 A new event or `Warn` adds a row | **Applied**: two events and no runtime `Warn`; the rows for `spec-observability.md` 4.1 and the catalogue are in the handoff (10.1) | 10 |
 | N-128 A hosted per-agent field is saved once | **Applied**: the module hosts no per-agent field; its state is per region (11) | 11 |
 | N-130, N-131 What IND cannot measure; not in version 1 | **Left open, with this added**: a consumer-set class (a slot) is not offered (position 13); the class is read from the snapshot, and `Class` and `ClassTarget` are the fields an indicator needs | 2, 10.5 |
+| N-140 Seams STO leaves | **Left open, with this added**: SET gates a store class by the flag of `StoreClass.Needs` (`regionHas`); the validator rule of STO (`needs_module_off`) becomes "a flag some class carries, the module on" in plan 3-set PR A, and the runtime gate is the reader of PR C | 6.3 |
+| N-192 A body's places are a second limit into the headroom | **Left open, with this added**: SET ships the class half of the headroom and the slot (`roleHeadroom`); ORG supplies the body's half | 6.4.2 |
+| N-268 Module fields of the spawner's view and decision | **Left open until the reader is built**: SET appends `Headroom`, `NoLimit` and `EntryLimited.RoleCeiling` and folds `Role.Needs` into `Closed` in plan 3-set PR C | 6.3, 6.4 |
+| N-348 POP tests that wait for SET | **Left open until the reader is built**: `PopulationChanged.BirthsCeiling` and the `Needs` half of FR-POP-007 are tested in plan 3-set PR C | 6.4 |
 | N-023, N-030, N-084, N-092 | not read by this spec: none names a size class | |
 
 Proposed new notes are in the handoff.
@@ -1355,4 +1359,7 @@ Each is a single testable statement (testing.md 4.1). Tests cite the IDs.
 | The bounds `MaxSettlementClasses`, `MaxClassFlags`, `MaxClassLimits`, `MaxBandBP`, `MaxThresholdBP` | root package, `bounds.go` |
 | The defaults `BandBP` 1 000 and `Dwell` 30 | root package, `defaults.go` |
 | Validation, the sentinels `ErrUnknownSettlementClass`, `ErrUnknownSettlementFlag`, `ErrUnknownLimit` | root package, `validate.go`, `errors.go` |
-| The checkpoint section | `checkpoint.go` with the other module sections |
+| The checkpoint section (tag 23): a row of `checkpointSections` in `checkpoint_sections.go` with `save` and `load` method values | root package, `settlements_report.go` |
+| Validation, the warnings of 9.2 | root package, `settlements_validate.go` (continuation file, N-243) |
+| Events, snapshot fields, log lines | root package, `settlements_report.go` (continuation file, N-243) |
+| The household count of a region (4.1), shared by the snapshot row and the review | root package, one function `regionHouseholds` called from `snapshot.go` and `settlements.go` |

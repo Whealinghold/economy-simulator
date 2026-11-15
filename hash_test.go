@@ -32,6 +32,7 @@ var presentationOnly = map[string]bool{
 	"OutsideNode.Label":         true,
 	"Jurisdiction.Label":        true,
 	"StoreClass.Label":          true,
+	"SettlementClass.Label":     true,
 	"TechField.Label":           true,
 	"WorldParams.DistanceLabel": true,
 }
