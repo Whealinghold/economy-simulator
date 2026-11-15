@@ -619,3 +619,21 @@ var (
 	// role lends or borrows, never both.
 	ErrCreditShape = errors.New("credit block has the wrong shape")
 )
+
+// The sentinels of the tenure module (spec-land.md 9.4, 11.1, FR-LND-038). The module
+// reuses ErrModuleDependency, ErrUnknownRegion, ErrUnknownResource, ErrUnknownRole,
+// ErrOutsideNode, ErrDuplicateID, ErrOutOfBounds, ErrReasonCollision, ErrOverflow,
+// ErrModuleOff and ErrTooMany.
+var (
+	// ErrTitleShares is a share outside 1 to 10 000, or titles of one endowment whose
+	// total exceeds 10 000 (spec-land.md 3.1.2).
+	ErrTitleShares = errors.New("title shares are outside their bound")
+	// ErrTitleCap is a holding or a transfer that would give one agent more than
+	// MaxHolderShareBP of an endowment (spec-land.md 6.1.2).
+	ErrTitleCap = errors.New("title would exceed the holder share cap")
+	// ErrNoTitle is a transfer of a share that the sender does not hold.
+	ErrNoTitle = errors.New("sender holds no such title")
+	// ErrNotAHolder is a transfer to or from an agent that cannot hold a title: a
+	// pseudo-agent other than the estate of the endowment's region.
+	ErrNotAHolder = errors.New("agent cannot hold a title")
+)

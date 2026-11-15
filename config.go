@@ -151,6 +151,12 @@ type Modules struct {
 	// module has no field and does nothing). It needs no other module. Its hash id is
 	// 24, whatever its place in this struct.
 	Technology *Technology
+	// Tenure is the tenure module: titles to a share of an endowment's stock, the
+	// entitlement before the ration and rent for let units (spec-land.md). Nil is
+	// off; non-nil is on, even when empty (an empty module has no title and does
+	// nothing). It needs Modules.Resources. Its hash id is 14, whatever its place in
+	// this struct.
+	Tenure *TenureConfig
 }
 
 // Credit is the configuration of the credit module (spec-credit.md 4.1, 14). Its
@@ -523,6 +529,118 @@ func (m *PolityConfig) canonical() *PolityConfig {
 	out := *m
 	out.Jurisdictions = sortedBy(m.Jurisdictions, func(a, b Jurisdiction) int { return cmp.Compare(a.ID, b.ID) })
 	out.Members = sortedBy(m.Members, func(a, b Member) int { return cmp.Compare(a.Region, b.Region) })
+	return &out
+}
+
+// TenureConfig is the tenure module (spec-land.md 3.3). Its presence switches it on.
+// The type is called TenureConfig because Tenure is the name of the module in the
+// Modules row and of its scope in the parameter-owner table (spec-config.md 3.7.1).
+// After construction the lists are in canonical order (spec-config.md 3.4). Every
+// default is a placeholder (N-015, N-027).
+type TenureConfig struct {
+	// Terms are the region-keyed rows, one per (region, resource), at most
+	// MaxHoldings, canonical by region then resource. An endowment with no row has
+	// open access: no rent, not closed.
+	Terms []TenureTerm
+	// Holdings are the initial titles, one per (region, resource, holder), at most
+	// MaxHoldings, canonical by region, resource, then the pool before the roles and
+	// the roles by ID.
+	Holdings []Holding
+	// RentStepBP is the step of the posted rent each tick, in basis points of the
+	// configured rate, 0 to MaxRentStepBP. 0 means the rent does not move.
+	RentStepBP int64
+	// RentFloorBP is the lowest posted rent, in basis points of the configured
+	// rate, 0 to 10 000.
+	RentFloorBP int64
+	// RentCeilingBP is the highest posted rent, in basis points of the configured
+	// rate, 10 000 to MaxRentCeilingBP. 0 is the default, DefaultRentCeilingBP, and
+	// canonical writes it.
+	RentCeilingBP int64
+	// OwnUseExempt says an own-use request pays no rent (spec-land.md 5.3.4).
+	OwnUseExempt bool
+	// MaxHolderShareBP is the most one agent may hold of one endowment, the pool
+	// exempt, 1 to 10 000. 0 is the default, 10 000 (the cap is off), and canonical
+	// writes it.
+	MaxHolderShareBP int64
+}
+
+// TenureTerm is the row of one endowment: what a unit let from a holder costs and
+// whether the unused entitlement is let at all (spec-land.md 3.3). The file says
+// that a value applies by writing its key, which sets its Has flag.
+type TenureTerm struct {
+	// Region and Resource are the key of the row: an existing region that is not an
+	// outside node, and an existing resource.
+	Region, Resource string
+	// HasRent says Rent applies.
+	HasRent bool
+	// Rent is the money, in minor units, per unit drawn from a let unit, 0 to
+	// MaxPrice.
+	Rent int64
+	// HasClosed says Closed applies.
+	HasClosed bool
+	// Closed says the unused entitlement of a holder is not let to others.
+	Closed bool
+}
+
+// Holding is an initial title, or the share of every household of a role
+// (spec-land.md 3.3).
+type Holding struct {
+	// Region and Resource are the key of the endowment: an existing region that is
+	// not an outside node, and an existing resource.
+	Region, Resource string
+	// Holder is a role or the pool of the region.
+	Holder HolderRef
+	// ShareBP is the share in basis points, 1 to 10 000: per household when Holder is
+	// a role, the total when it is the pool.
+	ShareBP int64
+}
+
+// HolderKindRole and HolderKindPool are the two values of HolderRef.Kind.
+const (
+	HolderKindRole = "role"
+	HolderKindPool = "pool"
+)
+
+// HolderRef names a holder in configuration: a role, meaning every household of
+// the role in the region at construction, or the pool of the region
+// (spec-land.md 3.2, 3.3).
+type HolderRef struct {
+	// Kind is HolderKindRole or HolderKindPool.
+	Kind string
+	// Role is the role ID, and only when Kind is HolderKindRole.
+	Role string
+}
+
+// DefaultRentCeilingBP and DefaultMaxHolderShareBP are the defaults of the two
+// tunables of TenureConfig that a module owns and that are not 0 (N-345,
+// spec-land.md 10): a band of 0 to twice the configured rate, and a cap that is off.
+const (
+	DefaultRentCeilingBP    = 20_000
+	DefaultMaxHolderShareBP = 10_000
+)
+
+// canonical returns a copy of the module with the terms by (region, resource), the
+// holdings by (region, resource, holder) with the pool before the roles, and the
+// two defaults written, nil for nil (spec-config.md 3.4, spec-land.md 3.3.1).
+func (m *TenureConfig) canonical() *TenureConfig {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Terms = sortedBy(m.Terms, func(a, b TenureTerm) int {
+		return cmp.Or(cmp.Compare(a.Region, b.Region), cmp.Compare(a.Resource, b.Resource))
+	})
+	// "pool" sorts before "role", so the pool comes first.
+	out.Holdings = sortedBy(m.Holdings, func(a, b Holding) int {
+		return cmp.Or(cmp.Compare(a.Region, b.Region), cmp.Compare(a.Resource, b.Resource),
+			cmp.Compare(a.Holder.Kind, b.Holder.Kind), cmp.Compare(a.Holder.Role, b.Holder.Role))
+	})
+	if out.RentCeilingBP == 0 {
+		out.RentCeilingBP = DefaultRentCeilingBP
+	}
+	if out.MaxHolderShareBP == 0 {
+		out.MaxHolderShareBP = DefaultMaxHolderShareBP
+	}
 	return &out
 }
 
@@ -1624,6 +1742,7 @@ func (c Config) canonical() Config {
 	out.Modules.Settlements = c.Modules.Settlements.canonical()
 	out.Modules.Credit = c.Modules.Credit.canonical()
 	out.Modules.Technology = c.Modules.Technology.canonical()
+	out.Modules.Tenure = c.Modules.Tenure.canonical()
 	return out
 }
 

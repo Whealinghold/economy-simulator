@@ -340,7 +340,10 @@ func TestSolveSteadyState_OverlaysSolve(t *testing.T) {
 	// second-skill.toml names the recipe and the role of the pack `second`, which `one` does not
 	// carry (TestConfigOnly_SkillNeedsOnlyConfiguration loads, validates and runs it over its
 	// own layers).
-	notOnOne := []string{"overhang.toml", "resources-five.toml", "resources-five-binding.toml", "merchants.toml", "merchants-three.toml", "chain-payroll.toml", "polity.toml", "polity-governed.toml", "second-skill.toml"}
+	// tenure.toml titles the endowments of resources.toml, which `one` alone lacks, so it
+	// needs the module of that overlay (TestPacks_TenureOverlayLoadsAndSolves loads,
+	// validates and solves it over the layers it needs).
+	notOnOne := []string{"overhang.toml", "resources-five.toml", "resources-five-binding.toml", "merchants.toml", "merchants-three.toml", "chain-payroll.toml", "polity.toml", "polity-governed.toml", "second-skill.toml", "tenure.toml"}
 	entries, err := os.ReadDir("testdata/chains/overlay")
 	if err != nil {
 		t.Fatalf("ReadDir(overlay) = %v", err)
