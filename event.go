@@ -2166,3 +2166,48 @@ type SettlementHeld struct {
 }
 
 func (SettlementHeld) isEvent() {}
+
+// TitleTransferred is emitted once per title that moves: at a removal, before
+// AgentBankrupted, for each title the removed agent held (cause removal, spec-land.md
+// 6.4.1), and at a TransferTitles call, for each entry (cause consumer, 6.3.3). It is
+// emitted only when the tenure module is on. A removal moves no money, so its Price is 0.
+type TitleTransferred struct {
+	Tick int64
+	// Region and Resource are the endowment the title is of.
+	Region   RegionID
+	Resource ResourceID
+	// From and To are the agents that lose and gain the share; NoAgent is the commons.
+	// The estate pseudo-agent of Region is the pool.
+	From, To AgentID
+	// ShareBP is the share that moved, in basis points.
+	ShareBP int64
+	// Price is the money To paid From with the reason title_sale; 0 is a gift.
+	Price Money
+	// Cause is removal or consumer.
+	Cause Cause
+	// FromAfter and ToAfter are the shares of From and To after the move, in basis
+	// points; the commons share after it is 10 000 less the titles.
+	FromAfter, ToAfter int64
+	// FromRegion and ToRegion are the regions of the accounts that pay and are paid the
+	// price: the region of an agent's account, or Region for the pool and for NoAgent.
+	FromRegion, ToRegion RegionID
+	// FromPool and ToPool say the account is the pool of that region: the pool itself,
+	// or NoAgent, whose price the pool pays or receives (spec-land.md 6.3.2).
+	FromPool, ToPool bool
+}
+
+func (TitleTransferred) isEvent() {}
+
+// RentScaled is emitted once per endowment whose rent scale a SetRentScales call
+// changes, in (Region, Resource) order, after the whole call has been applied
+// (spec-land.md 9.1). It is emitted only when the tenure module is on.
+type RentScaled struct {
+	Tick int64
+	// Region and Resource are the endowment.
+	Region   RegionID
+	Resource ResourceID
+	// From and To are the scale before and after, in basis points.
+	From, To int64
+}
+
+func (RentScaled) isEvent() {}
