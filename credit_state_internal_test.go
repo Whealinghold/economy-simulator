@@ -28,6 +28,8 @@ func TestClaimIndex_FollowsTheClaimList(t *testing.T) {
 		x.add(cl)
 	}
 	wantIndex(t, &x, list, "three claims formed")
+	x.add(a) // an index of IDs lists a claim once, so a second add changes nothing
+	wantIndex(t, &x, list, "a claim indexed twice")
 	if got := *x.bucket(5); !slices.Equal(got, []int64{0, 1}) {
 		t.Errorf("due bucket of tick 5 = %v, want [0 1]", got)
 	}

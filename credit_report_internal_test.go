@@ -282,3 +282,46 @@ func TestCredit_Observation(t *testing.T) {
 		t.Errorf("the checkpoint with a logger, an observer and the audit has %d bytes and differs from the one without (%d)", len(watched), len(plain))
 	}
 }
+
+// TestCredit_SummaryNamesTheModule verifies that the Info line "world created" lists
+// credit among the modules that are on and carries the counts of the agents with a
+// Lend block and with a Borrow block (spec-credit.md 16.2).
+//
+// Arithmetic: in the credit world the five millers have a Borrow block and the
+// two weavers a Lend block.
+//
+// Requirement: FR-CRD-001
+func TestCredit_SummaryNamesTheModule(t *testing.T) {
+	t.Parallel()
+	c := creditConfig(0, 0)
+	c.Roles[0].Credit = &CreditTerms{Borrow: &BorrowTerms{MaxRateBP: 1_000, MaxDebtTicks: 10}}
+	c.Roles[1].Credit = &CreditTerms{Lend: &LendTerms{RateBP: 500, MaxTermTicks: 30, ShareBP: 5_000}}
+	lg := newCapture()
+	newMill(t, c, WithSeed(exitSeed), WithLogger(slog.New(lg)))
+	lines := lg.take("world created")
+	if len(lines) != 1 || lines[0].attrs["lenders"] != 2 || lines[0].attrs["borrowers"] != 5 {
+		t.Fatalf(`"world created" lines = %+v, want one with lenders 2 and borrowers 5`, lines)
+	}
+}
+
+// TestSettle_PayoutClaimEndsWithItsOwnEvent verifies that a payout claim paid in full
+// ends with a LoanEnded of origin payout, cause repaid, and that CreditSettled, which
+// counts loans only, is not emitted for it.
+//
+// Requirement: FR-CRD-071, FR-CRD-073
+func TestSettle_PayoutClaimEndsWithItsOwnEvent(t *testing.T) {
+	t.Parallel()
+	w, rec := settleAt(t, 0, 0)
+	id := plantPayout(t, w, homeB, homeA, 500, 2)
+	step(t, w, 1)
+	setBalances(t, w, map[AgentID]int64{homeA: 500})
+	rec.events = nil
+	w.p17aSettle()
+	wantOne(t, rec, LoanEnded{Tick: 2, Claim: ClaimID(id), Origin: OriginPayout, Creditor: homeB, Debtor: homeA, Principal: 500, Cause: CauseRepaid})
+	if got := of[CreditSettled](rec); len(got) != 0 {
+		t.Errorf("CreditSettled = %+v for a payout claim alone, want none", got)
+	}
+	if got := heldMoney(t, w, homeB); got != 500 {
+		t.Errorf("creditor holds %d, want the 500 paid", got)
+	}
+}
