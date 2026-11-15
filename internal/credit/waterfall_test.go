@@ -119,3 +119,38 @@ func TestWaterfall_Refused(t *testing.T) {
 		}
 	}
 }
+
+// TestRoom_CapLessDebt verifies the exposure room of spec-credit.md 5.3.3: the cap
+// of MaxDebtTicks times the upkeep cost less the debt, never below 0, saturating at
+// maxMoney when the product overflows or passes it, and refused for a negative
+// argument.
+//
+// Requirement: FR-CRD-015
+func TestRoom_CapLessDebt(t *testing.T) {
+	t.Parallel()
+	const maxMoney = 1_000_000
+	tests := []struct {
+		name                          string
+		ticks, upkeep, debt, wantRoom int64
+		wantOK                        bool
+	}{
+		{"nothing owed", 90, 100, 0, 9_000, true},
+		{"some debt", 90, 100, 2_500, 6_500, true},
+		{"debt at the cap", 90, 100, 9_000, 0, true},
+		{"debt above the cap after a fall in weight", 90, 100, 12_000, 0, true},
+		{"no upkeep", 90, 0, 0, 0, true},
+		{"the cap passes maxMoney", 3_650, 1_000_000, 10, maxMoney - 10, true},
+		{"the product overflows int64", math.MaxInt64, math.MaxInt64, 0, maxMoney, true},
+		{"negative debt", 1, 1, -1, 0, false},
+		{"negative ticks", -1, 1, 0, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			room, ok := credit.Room(tt.ticks, tt.upkeep, tt.debt, maxMoney)
+			if room != tt.wantRoom || ok != tt.wantOK {
+				t.Errorf("Room(%d, %d, %d, %d) = %d, %v, want %d, %v", tt.ticks, tt.upkeep, tt.debt, maxMoney, room, ok, tt.wantRoom, tt.wantOK)
+			}
+		})
+	}
+}

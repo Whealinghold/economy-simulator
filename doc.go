@@ -1578,6 +1578,11 @@
 //     claims before the rest goes to the estate.
 //   - Passed (claim): a claim whose creditor was removed; it becomes the estate account's
 //     with no money moved.
+//   - ClaimID: the ID of a claim, issued in order of formation.
+//   - Origin (of a claim): what formed it, a closed set: OriginLoan, a loan of the credit
+//     round, or OriginPayout, a payout claim of an insurance cover; both are settled alike.
+//   - LoanEnded, LoanPassed, CreditSettled: the events of a claim that ends, of a claim that
+//     passes to an estate and of the settlement pass of a region.
 //   - Written off (claim): a claim ended with its owed lost, after the write-off ticks or at
 //     the removal of its debtor.
 //   - Forgiven (claim): a loan ended by the call that forgives claims; no money moves.

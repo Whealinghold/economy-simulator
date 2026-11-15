@@ -80,7 +80,7 @@ func (w *World) checkTradePlan(a *agent, p *TradePlan) {
 
 // removeAgent is the one removal path of an agent (spec-agents.md 3.6,
 // architecture.md 2.10.4): the job abandoned with agent_removed, the steps of the
-// modules (2b to 2g: none in the slice), the money and the lots to the estate of
+// modules (2b to 2g: the credit claims, 2d and 2e, are the only ones built), the money and the lots to the estate of
 // the region the account is in (steps 3 and 4, counted in lots), the account
 // closed, the events in the order of spec-world.md 6.11 item 8 (RecipeAbandoned,
 // then AgentBankrupted, then EstateOpened) and the counters. The cause is the
@@ -102,6 +102,7 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 	if err := w.dropContracts(a); err != nil { // the contracts it delivers end, the escrow returned
 		return fmt.Errorf("remove agent %d at tick %d: %w", a.id, tick, err)
 	}
+	w.dropClaims(a) // steps 2d and 2e, nil-safe: a debtor's creditors are paid from its whole balance, a creditor's claims pass to the estate
 	money, lots, err := w.estates.receive(w.ledger, a.account, region)
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 	// refusal of the world's own accounts, which a valid configuration cannot cause

@@ -143,6 +143,7 @@ func (w *World) allocate() {
 	w.employment = newEmployment(&w.cfg)
 	w.polity = newPolity(&w.cfg)
 	w.skills = newSkills(&w.cfg)
+	w.credit = newCredit(&w.cfg)
 	w.registerBounds()
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
@@ -343,6 +344,7 @@ func modulesOn(c *Config) []string {
 		{"resources", m.Resources != nil}, {"subsistence", m.Subsistence != nil}, {"population", m.Population != nil},
 		{"transport", m.Transport != nil}, {"information", m.Information != nil}, {"migration", m.Migration != nil},
 		{"merchants", m.Merchants != nil}, {"external", m.External != nil}, {"polity", m.Polity != nil},
+		{"credit", m.Credit != nil},
 	}
 	on := []string{}
 	for _, t := range table {
@@ -430,6 +432,10 @@ func (w *World) summary() []slog.Attr {
 	if w.polity != nil {
 		total, governed := polityTotals(&w.cfg)
 		attrs = append(attrs, slog.Int(logkeys.Jurisdictions, total), slog.Int(logkeys.Governed, governed))
+	}
+	if w.credit != nil {
+		lenders, borrowers := w.creditAgents()
+		attrs = append(attrs, slog.Int64(logkeys.Lenders, lenders), slog.Int64(logkeys.Borrowers, borrowers))
 	}
 	return attrs
 }

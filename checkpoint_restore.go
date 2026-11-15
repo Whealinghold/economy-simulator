@@ -351,6 +351,11 @@ func (w *World) checkpointCross() error {
 			return err
 		}
 	}
+	if w.credit != nil {
+		if err := w.creditCross(); err != nil {
+			return err
+		}
+	}
 	if w.pop != nil {
 		if err := w.populationCross(); err != nil {
 			return err

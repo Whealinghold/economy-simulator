@@ -77,6 +77,11 @@ type ShipmentID int64
 // formation from 0 and never reused (spec-merchants.md 16).
 type ContractID int64
 
+// ClaimID identifies a claim of the credit module, a loan or a payout claim. IDs are
+// assigned in order of formation from 0 and never reused within a world
+// (spec-credit.md 3.1.1).
+type ClaimID int64
+
 // AgentID identifies an agent. IDs are assigned in order of creation and are
 // never reused within a world.
 type AgentID int64
