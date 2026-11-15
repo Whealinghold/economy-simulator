@@ -307,6 +307,13 @@ const (
 	// an internal transfer of money, agent to agent in the payroll form of the
 	// employment module (spec-employment.md 24.1.6), no faucet and no sink.
 	ReasonWagePay Reason = "wage_pay"
+	// ReasonRent is the money a tenant pays a lessor for the units it drew from a let
+	// unit, and ReasonTitleSale the price of a title in a TransferTitles call
+	// (spec-land.md 5.8): internal transfers of money, agent to agent or estate, no
+	// faucet and no sink. Both are reserved words for a money flow ID while the
+	// tenure module is on.
+	ReasonRent      Reason = "rent"
+	ReasonTitleSale Reason = "title_sale"
 )
 
 // The declared ledger reasons of the external module, six rows declared while
@@ -541,6 +548,9 @@ const (
 	// CauseFacility is the cause of a StoreChanged that a store facility makes
 	// (spec-storage.md 3.6.3); the infrastructure module sets it.
 	CauseFacility Cause = "facility"
+	// CauseRemoval is the cause of a TitleTransferred that moves the titles of a
+	// removed agent to the pool of each endowment's region (spec-land.md 6.4.1).
+	CauseRemoval Cause = "removal"
 )
 
 // Kind is the kind of a boundary flow, a member of a closed set: a faucet

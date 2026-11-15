@@ -27,7 +27,7 @@ func wantRowCfg(declared ...Reason) Config {
 func TestLedger_DeclaredBitReplacesThreshold(t *testing.T) {
 	t.Parallel()
 	declarable := []Reason{LoanOut, LoanRepay, LoanInterest, WantConsumption, Relief, Deaths, TransitOut, TransitIn, HaulUse, TransitUse, EscrowIn, EscrowOut, EscrowRefund,
-		OutsideBudget, OutsideUnspent, OutsideReceipts, OutsideOffer, OutsideUnsold, OutsidePurchases, WagePay}
+		OutsideBudget, OutsideUnspent, OutsideReceipts, OutsideOffer, OutsideUnsold, OutsidePurchases, WagePay, Rent, TitleSale}
 	for r := Reason(0); r <= NumReasons; r++ {
 		want := slices.Contains(declarable, r)
 		t.Run(fmt.Sprintf("reason %d", r), func(t *testing.T) {
@@ -89,9 +89,9 @@ func TestRank_DeclaredRowsFollowTheTable(t *testing.T) {
 	t.Parallel()
 	got := DeclaredByRank(nil)
 	// want_consumption is row 6 of the table, relief row 12, the outside rows 13 to 18, the escrow rows 19 to 21, wage_pay 23, the loan rows 25 to
-	// 27 and deaths rank 41 (its pinned code, registry.go); the numbers of the first two are the highest, so the
+	// 27, rent and title_sale 28 and 29 and deaths rank 41 (its pinned code, registry.go); the numbers of the first two are the highest, so the
 	// two orders differ.
-	want := []Reason{WantConsumption, Relief, OutsideBudget, OutsideUnspent, OutsideReceipts, OutsideOffer, OutsideUnsold, OutsidePurchases, EscrowIn, EscrowOut, EscrowRefund, WagePay, LoanOut, LoanRepay, LoanInterest, TransitOut, TransitIn, HaulUse, TransitUse, Deaths}
+	want := []Reason{WantConsumption, Relief, OutsideBudget, OutsideUnspent, OutsideReceipts, OutsideOffer, OutsideUnsold, OutsidePurchases, EscrowIn, EscrowOut, EscrowRefund, WagePay, LoanOut, LoanRepay, LoanInterest, Rent, TitleSale, TransitOut, TransitIn, HaulUse, TransitUse, Deaths}
 	if !slices.Equal(got, want) {
 		t.Errorf("DeclaredByRank(nil) = %v, want %v", got, want)
 	}
