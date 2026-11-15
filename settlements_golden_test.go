@@ -139,30 +139,35 @@ func TestGolden_SettlementsExercisesTheModule(t *testing.T) {
 	cfg := loadValidPack(t, fiveSettlements...)
 	for seed := uint64(1); seed <= 4; seed++ {
 		res := runPack(t, cfg, runSpec{Seed: seed, Ticks: goldenTicks, Drive: driveRun(goldenTicks), Observe: true})
-		var founded, shrank, held int
-		for _, e := range res.Events {
-			switch x := e.(type) {
-			case economysim.SettlementClassChanged:
-				switch x.Cause {
-				case economysim.CauseFounded:
-					founded++
-				case economysim.CauseShrank:
-					shrank++
-				}
-			case economysim.SettlementHeld:
-				held++
-			}
-		}
-		atFloor := 0
-		for _, r := range res.Final.Regions {
-			if r.ClassAtFloor {
-				atFloor++
-			}
-		}
+		founded, shrank, held, atFloor := settlementsTally(res)
 		if founded != 5 || shrank == 0 || held == 0 || atFloor == 0 {
 			t.Errorf("seed %d: founded %d, shrank %d, held %d, regions at the floor %d, want 5 and each of the others above 0", seed, founded, shrank, held, atFloor)
 		}
 	}
+}
+
+// settlementsTally counts the founded events, the changes down and the held ticks of a
+// run, and the regions of its final snapshot that stand on their floor.
+func settlementsTally(res result) (founded, shrank, held, atFloor int) {
+	for _, e := range res.Events {
+		switch x := e.(type) {
+		case economysim.SettlementClassChanged:
+			switch x.Cause {
+			case economysim.CauseFounded:
+				founded++
+			case economysim.CauseShrank:
+				shrank++
+			}
+		case economysim.SettlementHeld:
+			held++
+		}
+	}
+	for _, r := range res.Final.Regions {
+		if r.ClassAtFloor {
+			atFloor++
+		}
+	}
+	return founded, shrank, held, atFloor
 }
 
 // TestGolden_SettlementsOffUnmoved verifies that the module leaves no trace while it is

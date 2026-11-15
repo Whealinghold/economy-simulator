@@ -150,22 +150,35 @@ func TestScenarioSET1_GrowingRegion(t *testing.T) {
 		if len(changes) == 0 || len(changes) > 2 {
 			t.Fatalf("seed %d: %d changes of class, want 1 or 2 (K - 1)", seed, len(changes))
 		}
-		for i, ch := range changes {
-			if ch.Cause != economysim.CauseGrew || ch.To <= ch.From {
-				t.Errorf("seed %d: change %d = %+v, want grew and upwards", seed, i, ch)
-			}
-			if i > 0 && ch.Tick-changes[i-1].Tick < 20 {
-				t.Errorf("seed %d: changes at ticks %d and %d are less than the dwell 20 apart", seed, changes[i-1].Tick, ch.Tick)
-			}
-		}
-		first := changes[0].Tick
-		for _, s := range seen.seen {
-			if want := s.tick <= first; s.closed != want {
-				t.Errorf("seed %d: grower closed = %v at tick %d, want %v (the gate opens in the tick after the change at %d)", seed, s.closed, s.tick, want, first)
-			}
-		}
+		checkStaircase(t, seed, changes, 20)
+		checkGateOpensAfter(t, seed, seen.seen, changes[0].Tick)
 		if heldTicks(rec) == 0 {
 			t.Errorf("seed %d: no SettlementHeld, want the founding hold and the dwell to show", seed)
+		}
+	}
+}
+
+// checkGateOpensAfter asserts that the grower is closed in every view up to the tick of
+// the first change and open in every view after it.
+func checkGateOpensAfter(t testing.TB, seed uint64, seen []gateSeen, first int64) {
+	t.Helper()
+	for _, s := range seen {
+		if want := s.tick <= first; s.closed != want {
+			t.Errorf("seed %d: grower closed = %v at tick %d, want %v (the gate opens in the tick after the change at %d)", seed, s.closed, s.tick, want, first)
+		}
+	}
+}
+
+// checkStaircase asserts that every change is a growth to a higher class and that no two
+// are less than the dwell apart.
+func checkStaircase(t testing.TB, seed uint64, changes []economysim.SettlementClassChanged, dwell int64) {
+	t.Helper()
+	for i, ch := range changes {
+		if ch.Cause != economysim.CauseGrew || ch.To <= ch.From {
+			t.Errorf("seed %d: change %d = %+v, want grew and upwards", seed, i, ch)
+		}
+		if i > 0 && ch.Tick-changes[i-1].Tick < dwell {
+			t.Errorf("seed %d: changes at ticks %d and %d are less than the dwell %d apart", seed, changes[i-1].Tick, ch.Tick, dwell)
 		}
 	}
 }
@@ -234,20 +247,36 @@ func TestScenarioSET2_NoisyCountOnAThreshold(t *testing.T) {
 	}
 	const ticks = 60
 	calm, calmHeld := noisyRun(t, noiseConfig(1_000, 30), ticks)
-	if len(calm) != 1 || calm[0].Cause != economysim.CauseGrew || calm[0].Tick != 30 || calmHeld == 0 {
-		t.Errorf("default band and dwell: changes %+v, held %d, want one grew at tick 30 and holds before it", calm, calmHeld)
+	if calmHeld == 0 || len(calm) != 1 {
+		t.Errorf("default band and dwell: changes %+v, held %d, want one change and holds before it", calm, calmHeld)
+	} else if calm[0].Tick != 30 {
+		t.Errorf("default band and dwell: the change is at tick %d, want 30 (the first release of the founding)", calm[0].Tick)
 	}
+	checkFlaps(t, ticks)
+}
+
+// checkFlaps asserts the two runs without a band or a dwell that bind: with neither the
+// class changes at about every tick and nothing is held; with a dwell of 5 changes are
+// held, at least 5 ticks apart and at most one in 5.
+func checkFlaps(t testing.TB, ticks int) {
+	t.Helper()
 	flap, flapHeld := noisyRun(t, noiseConfig(0, 0), ticks)
 	if len(flap) < ticks/2 || flapHeld != 0 {
 		t.Errorf("band 0, dwell 0: %d changes, %d held, want a change at about every tick and no hold", len(flap), flapHeld)
 	}
 	slow, slowHeld := noisyRun(t, noiseConfig(0, 5), ticks)
-	if slowHeld == 0 || len(slow) > ticks/5+1 || len(slow) < 2 {
-		t.Errorf("band 0, dwell 5: %d changes, %d held, want holds and at most %d changes", len(slow), slowHeld, ticks/5+1)
+	if n := len(slow); slowHeld == 0 || n < 2 || n > ticks/5+1 {
+		t.Errorf("band 0, dwell 5: %d changes, %d held, want holds and 2 to %d changes", n, slowHeld, ticks/5+1)
 	}
-	for i := 1; i < len(slow); i++ {
-		if slow[i].Tick-slow[i-1].Tick < 5 {
-			t.Errorf("band 0, dwell 5: changes at ticks %d and %d are less than 5 apart", slow[i-1].Tick, slow[i].Tick)
+	checkSpacing(t, slow, 5)
+}
+
+// checkSpacing asserts that no two changes are less than the dwell apart.
+func checkSpacing(t testing.TB, changes []economysim.SettlementClassChanged, dwell int64) {
+	t.Helper()
+	for i := 1; i < len(changes); i++ {
+		if changes[i].Tick-changes[i-1].Tick < dwell {
+			t.Errorf("changes at ticks %d and %d are less than the dwell %d apart", changes[i-1].Tick, changes[i].Tick, dwell)
 		}
 	}
 }
@@ -284,11 +313,10 @@ func TestScenarioSET3_FamineWithAGatedRole(t *testing.T) {
 	if testing.Short() || raceEnabled {
 		t.Skip("multi-seed test: runs in gate F, not in the short or race runs (testing.md 9.1)")
 	}
-	const ticks = 200
 	for _, floor := range []string{"", "big"} {
 		c := famineSettlements(t, 500, floor)
 		w, seen, rec := seatedWorld(t, c, "grower", 1)
-		for tick := range ticks {
+		for tick := range 200 {
 			if err := w.Step(); err != nil {
 				t.Fatalf("floor %q: Step() at tick %d = %v, want nil", floor, tick, err)
 			}
@@ -299,35 +327,51 @@ func TestScenarioSET3_FamineWithAGatedRole(t *testing.T) {
 		}
 		changes := classChanges(rec)
 		t.Logf("floor %q: %d changes of class, final class %d, %d households", floor, len(changes), snap.Regions[0].Class, snap.Regions[0].Households)
-		if floor == "big" && snap.Regions[0].Class != 1 {
-			t.Errorf("floor big: final class %d, want 1 (never below the floor)", snap.Regions[0].Class)
+		if floor == "big" {
+			checkFloorHeld(t, snap, changes)
 		}
-		for _, ch := range changes {
-			if floor == "big" && ch.To < 1 {
-				t.Errorf("floor big: a change to class %d, want none below the floor", ch.To)
-			}
-		}
-		class := economysim.SettlementClassID(1) // the founding class: 600 households is big
-		next := 0
-		for _, s := range seen.seen {
-			for next < len(changes) && changes[next].Tick < s.tick {
-				class = changes[next].To
-				next++
-			}
-			if s.closed != (class == 0) {
-				t.Errorf("floor %q: grower closed = %v at tick %d in class %d, want closed exactly in small", floor, s.closed, s.tick, class)
-			}
-		}
+		checkGateFollowsClass(t, floor, seen.seen, changes)
 	}
-	warned := func(c economysim.Config) bool {
-		for _, w := range c.Warnings() {
+	warned := func(enter int64) bool {
+		for _, w := range famineSettlements(t, enter, "").Warnings() {
 			if w.Rule == "needs_unmet_at_start" && strings.Join(w.Path, ".") == "roles.grower.needs" {
 				return true
 			}
 		}
 		return false
 	}
-	if warned(famineSettlements(t, 500, "")) || !warned(famineSettlements(t, 700, "")) {
-		t.Errorf("needs_unmet_at_start = %v with enter 500 and %v with enter 700, want false and true", warned(famineSettlements(t, 500, "")), warned(famineSettlements(t, 700, "")))
+	if warned(500) || !warned(700) {
+		t.Errorf("needs_unmet_at_start = %v with enter 500 and %v with enter 700, want false and true", warned(500), warned(700))
+	}
+}
+
+// checkFloorHeld asserts that a region with a floor of the class big ends in it and
+// never changes to a class below it.
+func checkFloorHeld(t testing.TB, snap economysim.Snapshot, changes []economysim.SettlementClassChanged) {
+	t.Helper()
+	if snap.Regions[0].Class != 1 {
+		t.Errorf("floor big: final class %d, want 1 (never below the floor)", snap.Regions[0].Class)
+	}
+	for _, ch := range changes {
+		if ch.To < 1 {
+			t.Errorf("floor big: a change to class %d, want none below the floor", ch.To)
+		}
+	}
+}
+
+// checkGateFollowsClass asserts that the grower is closed in a view exactly while the
+// class of the region is the small one, the founding class being big.
+func checkGateFollowsClass(t testing.TB, floor string, seen []gateSeen, changes []economysim.SettlementClassChanged) {
+	t.Helper()
+	class := economysim.SettlementClassID(1) // 600 households at the founding: big
+	next := 0
+	for _, s := range seen {
+		for next < len(changes) && changes[next].Tick < s.tick {
+			class = changes[next].To
+			next++
+		}
+		if s.closed != (class == 0) {
+			t.Errorf("floor %q: grower closed = %v at tick %d in class %d, want closed exactly in small", floor, s.closed, s.tick, class)
+		}
 	}
 }
