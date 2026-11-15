@@ -32,6 +32,8 @@ var stageTwoScenarios = []struct {
 	// Stage 3: S112 (POL-S1) in the first pull request of plan 3-pol, S113 (POL-S2) with the
 	// treasury in the second.
 	{112, 113, "plan 3-pol (POL-S1, POL-S2)"},
+	// S148 (TEC-S1) in the second pull request of plan 3-tec; S149 to S154 in the third.
+	{148, 154, "plan 3-tec (TEC-S1 to TEC-S7)"},
 }
 
 // scenariosNotBuilt are the numbers of stageTwoScenarios that have no test yet, the staged
@@ -39,8 +41,14 @@ var stageTwoScenarios = []struct {
 // entry) and on a number with no test that is not listed. Whoever builds a scenario deletes
 // its entry.
 var scenariosNotBuilt = map[int]string{
-	35: "plan 7 (MON-S3, the pool grant); not built when plan 2-24 was written",
-	75: "plan 24: WLD-S3, the cold leg of S18 and the Duration 10 leg, which waits for a pack with such a recipe",
+	35:  "plan 7 (MON-S3, the pool grant); not built when plan 2-24 was written",
+	149: "plan 3-tec PR C (TEC-S2, learning with POP and RES)",
+	150: "plan 3-tec PR C (TEC-S3, diffusion on three)",
+	151: "plan 3-tec PR C (TEC-S4, the logistic stock)",
+	152: "plan 3-tec PR C (TEC-S5, the staple with inelastic demand)",
+	153: "plan 3-tec PR C (TEC-S6, the checkpoint and the reseed: needs tag 33)",
+	154: "plan 3-tec PR C (TEC-S7, the call)",
+	75:  "plan 24: WLD-S3, the cold leg of S18 and the Duration 10 leg, which waits for a pack with such a recipe",
 }
 
 var scenarioTestRe = regexp.MustCompile(`(?m)^func TestScenarioS(\d+)_`)
