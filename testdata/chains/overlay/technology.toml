@@ -1,0 +1,13 @@
+# The technology module on the growers, learning only (spec-technology.md 14.4, spec-reference-chain.md
+# 4.5, plan 3-tec). Layer it after the pack: base.toml, one.toml (or three.toml),
+# warm-one.toml (or warm-three.toml), this file. One field holds the staple growers' recipe; every
+# rate but the doubling is off, so the gain follows the executions counted in each region and nothing
+# else (scenario S149). Variants for the other mechanisms are made in the tests by editing the loaded
+# Config. A test double, not a design: every number is a placeholder (N-015, N-027).
+
+[modules.technology.field.farming]
+recipes = [ "grow_staple" ]
+label = "Farming"
+cap_bp = 3000
+base = 1000
+doubling_bp = 300

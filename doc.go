@@ -339,6 +339,43 @@
 //   - TraineeshipStarted, TraineeshipCompleted, TraineeshipEnded: the events of a
 //     place filled, a course completed (the agent changes role) and a course that
 //     ends without completing (the reason names why).
+//   - Technology: the module of productivity growth: a gain in yield held per region
+//     and technology field (Technology is the module's configuration, TechField its
+//     field row, TechFieldID the typed ID of a field, an index in ascending order of the
+//     ID string). It is not the technology matrix of the viability check.
+//   - Cell: a region and a technology field; it holds the experience, the advance and
+//     the catch-up carry, and has no account, no price and no owner.
+//   - Experience: the executions of a field's recipes that completed in a cell,
+//     cumulative, saturating at MaxExperience.
+//   - Learned gain: the gain from experience, DoublingBP for each doubling of the
+//     experience plus the base over the base; exact at a doubling.
+//   - Advance: the gain a cell has from the trend, discoveries, contact and the call
+//     of AdjustTechnology, in basis points, stored between 0 and the cap.
+//   - Technology gain: the learned gain plus the advance, at most the cap of the field; the
+//     technology factor of a recipe in the field is 10 000 plus the gain.
+//   - Doubling: a doubling of the experience plus the base over the base; the gain
+//     of one is DoublingBP.
+//   - Base: the executions already behind a field, which sets how slowly it learns.
+//   - Trend: a gain added a year to every cell of a field, by a carried remainder.
+//   - Discovery: a step of gain with a chance each tick, for a cell that practises;
+//     the chance is a keyed hash of the key, the tick and the cell, with no draw.
+//   - Key (of the technology module): a 64-bit value derived from the effective seed,
+//     never drawn and never saved.
+//   - Practises: a cell practises in a tick when an execution of its field completed
+//     in it that tick.
+//   - Contact: the link between two regions at a distance below the reach of a field;
+//     the contact weight falls linearly with the distance and is 0 at the reach.
+//   - Reach: the distance at which contact is lost, in the distance unit of the pack.
+//   - Frontier: the best contact-weighted gain of the other regions for a cell, read
+//     from a snapshot taken once in the step.
+//   - Gap: the frontier less the gain of a cell.
+//   - Catch-up: the share of the gap a cell closes a year, by a carried remainder.
+//   - Cap (of a field): CapBP, the largest gain of a cell of the field.
+//   - Premium: the ratio above the replacement ratio at which a population settles
+//     while a gain grows.
+//   - TechnologyAdjustment, TechRow, TechnologyAdvanced, TechnologyAdjusted: the entry
+//     of a call that moves the advance of a cell, the snapshot row of a cell, the event
+//     of a step and the event of a call.
 //   - Upkeep: the goods one household must consume each tick to stay alive.
 //   - Warning: a configuration that is legal but probably a mistake; Warnings
 //     returns it as a value with a path and a rule and it never fails
@@ -1434,4 +1471,53 @@
 //   - Combining mode: how the rows of a table keyed by jurisdiction combine along a
 //     chain: innermost (the first row), added (the sum) or scaled (the product, rounded
 //     once).
+//   - Credit: the optional module that puts the ledger's claims to use: a role with a Lend or
+//     Borrow block posts offers and requests, a round matches them at a posted rate, and a
+//     debtor repays at the due tick; its presence in Config.Modules switches it on
+//     (spec-credit.md 4.1). A credit of goods is the ledger's posting of goods, not this.
+//   - CreditTerms: the credit block of a role: exactly one of Lend and Borrow.
+//   - LendTerms: what a lender posts and keeps: the posted rate, the longest term, the ticks
+//     of its upkeep it keeps out of its offers and the share of its lendable money it offers.
+//   - BorrowTerms: what a borrower accepts and may owe: its highest rate, its exposure cap in
+//     ticks of upkeep and the slack added to the horizon of its gap.
+//   - CreditRequest: a plan field that asks for a loan of a principal, a term and a highest
+//     rate; it lasts one tick.
+//   - CreditOffer: a plan field that offers money on a longest term at a posted rate; it lasts
+//     one tick.
+//   - ClaimFilter: the region and role filter of the call that forgives claims.
+//   - ClaimRow: the snapshot row of an open claim.
+//   - CreditTotals: the seven cumulative totals of the claim list in the snapshot.
+//   - Loan: a claim formed by the credit round: the lender's principal moves to the borrower
+//     at formation and the interest is fixed then.
+//   - Lender, Borrower: a role with a Lend block and a role with a Borrow block; the agents of
+//     the role are the households that offer and request. No role has both.
+//   - Posted rate: the yearly rate in basis points a lender offers at, simple interest; 0
+//     lends at no interest.
+//   - Effective rate: the posted rate times the rate scale of the lane, half to even, clamped
+//     to the bound; the rate a loan is formed at.
+//   - Rate scale: the world state, per region, that scales the posted rates of a round; 10 000
+//     leaves them as posted. It is not configuration and is not hashed.
+//   - Term (of a loan): the ticks from formation to the due tick.
+//   - Interest (of a claim): the amount fixed at formation, simple, paid at the end with the
+//     principal; it never grows, there is no penalty and no interest on arrears.
+//   - Owed: what is left to pay of a claim: its principal owed and its interest owed.
+//   - Due tick: the tick at which a claim falls due, the tick of formation plus the term.
+//   - Overdue: a claim with an amount owed after its due tick; it is paid on every later
+//     tick as money above the shield allows.
+//   - Arrears: the state of a debtor with an overdue claim; it is refused a new request.
+//   - Shield: the ticks of a debtor's upkeep cost that credit settlement leaves with it.
+//   - Credit settlement: the pass at P1.7a in which each debtor with a claim due or overdue
+//     pays pro rata with the largest remainder, interest first.
+//   - Waterfall: the payment of a removed debtor's whole balance, with no shield, to its
+//     claims before the rest goes to the estate.
+//   - Passed (claim): a claim whose creditor was removed; it becomes the estate account's
+//     with no money moved.
+//   - Written off (claim): a claim ended with its owed lost, after the write-off ticks or at
+//     the removal of its debtor.
+//   - Forgiven (claim): a loan ended by the call that forgives claims; no money moves.
+//   - Exposure cap: the most principal a borrower may owe, in ticks of its upkeep cost.
+//   - Credit room: the principal a borrower may still ask for under its exposure cap.
+//   - Cash gap: the money a borrower's job needs before the job pays, over its horizon.
+//   - Round (of credit): the matching at P3.3b of the admitted requests and offers of a
+//     region at the lenders' posted rates; a lane of it is a region.
 package economysim

@@ -84,8 +84,8 @@ func ledgerReason(r Reason) (ledger.Reason, bool) {
 // on declare (moduleReasons), and the boundary accounts in the four groups of
 // openBoundaries (spec-ledger.md 3.4.2), so that the first account of an estate
 // or an agent has the ID that section counts. It opens no other account. The
-// claims limit is 0: the credit module sets it when it is on
-// (plan-phase-1-1.md A1).
+// claims limit is the credit module's MaxClaims, 0 while the module is off
+// (plan-phase-1-1.md A1, spec-credit.md 4.1).
 func newLedger(cfg Config) (*ledger.Ledger, error) {
 	comms := make([]ledger.Commodity, len(cfg.Commodities))
 	for i, c := range cfg.Commodities {
@@ -105,6 +105,7 @@ func newLedger(cfg Config) (*ledger.Ledger, error) {
 		MaxQuantity: MaxQuantity,
 		Declared:    declared,
 		Flows:       classes,
+		MaxClaims:   cfg.Modules.Credit.claimsLimit(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("build ledger: %w", err)
@@ -144,6 +145,9 @@ func moduleReasons(c *Config) [][]ledger.Reason {
 	}
 	if c.Modules.Employment != nil {
 		m = append(m, []ledger.Reason{ledger.WagePay})
+	}
+	if c.Modules.Credit != nil {
+		m = append(m, creditReasons())
 	}
 	return m
 }

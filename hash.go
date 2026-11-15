@@ -294,12 +294,13 @@ func pairsSeasonYield(e *encoder, s SeasonYield) {
 	e.num(2, s.BP)
 }
 
-// pairsRole writes the pairs of a Role: ids 1 to 24. Label is presentation only
+// pairsRole writes the pairs of a Role: ids 1 to 25. Label is presentation only
 // and has no id. Informed 19 is the information module's and is a pair only
 // while it is on (informationOn) and the flag is true; Fixed 20 is the migration
 // module's, on the same terms (migrationOn); MerchantFeeShare 21 and Merchant 22
 // are the merchants', pairs only when the block is non-nil; Hireable 23 is a pair
-// only when true and Employer 24 only when non-nil (the employment module's).
+// only when true and Employer 24 only when non-nil (the employment module's);
+// Credit 25 only when non-nil (the credit module's).
 func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	e.text(1, r.ID)
 	e.texts(2, r.Recipes)
@@ -331,6 +332,11 @@ func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	if r.Employer != nil {
 		e.id(24) // written even when PayrollBP is zero: a non-nil block is an employer role
 		e.num(1, r.Employer.PayrollBP)
+		e.end()
+	}
+	if r.Credit != nil {
+		e.id(25) // written even when empty: a non-nil block is a credit role
+		pairsCreditTerms(e, *r.Credit)
 		e.end()
 	}
 }
@@ -469,7 +475,7 @@ func pairsModules(e *encoder, m Modules) {
 	pairsLaterModules(e, m)
 }
 
-// pairsLaterModules writes the pairs of the modules of ids 9, 10, 12, 13, 19 and 25 of
+// pairsLaterModules writes the pairs of the modules of ids 9, 10, 12, 13, 15, 19, 24 and 25 of
 // Modules, after those pairsModules writes (a continuation for the Lizard limit).
 func pairsLaterModules(e *encoder, m Modules) {
 	if m.Migration != nil {
@@ -491,15 +497,44 @@ func pairsLaterModules(e *encoder, m Modules) {
 		e.id(13)
 		e.end()
 	}
+	if m.Credit != nil {
+		e.id(15)
+		pairsCredit(e, *m.Credit)
+		e.end()
+	}
 	if m.Polity != nil {
 		e.id(19)
 		pairsPolity(e, *m.Polity)
+		e.end()
+	}
+	if m.Technology != nil {
+		e.id(24)
+		pairsTechnology(e, *m.Technology)
 		e.end()
 	}
 	if m.Estates != nil {
 		e.id(25)
 		e.end()
 	}
+}
+
+// pairsTechnology writes the pairs of a Technology: Fields 1, in ID order. A
+// TechField has ID 1, Recipes 2 (the recipe IDs, sorted), CapBP 3, Base 4,
+// DoublingBP 5, TrendBP 6, DiscoveryBP 7, StepBP 8, CatchUpBP 9 and Reach 10
+// (Label is presentation only and has no id, spec-technology.md 12.3).
+func pairsTechnology(e *encoder, t Technology) {
+	encodeList(e, 1, t.Fields, func(e *encoder, f TechField) {
+		e.text(1, f.ID)
+		e.texts(2, f.Recipes)
+		e.num(3, f.CapBP)
+		e.num(4, f.Base)
+		e.num(5, f.DoublingBP)
+		e.num(6, f.TrendBP)
+		e.num(7, f.DiscoveryBP)
+		e.num(8, f.StepBP)
+		e.num(9, f.CatchUpBP)
+		e.num(10, f.Reach)
+	})
 }
 
 // pairsStorage writes the pairs of a Storage: Base 1, Roles 2, Classes 3. A
@@ -534,6 +569,39 @@ func pairsBase(e *encoder, id uint16, c *Capacity) {
 	e.num(1, c.Mass)
 	e.num(2, c.Bulk)
 	e.end()
+}
+
+// pairsCredit writes the pairs of a Credit: MinPrincipal 1, ShieldTicks 2,
+// WriteOffTicks 3, MaxClaims 4 (spec-config.md 8.2.2). The rate scales of
+// SetRateScales are state and are not hashed.
+func pairsCredit(e *encoder, c Credit) {
+	e.num(1, c.MinPrincipal)
+	e.num(2, c.ShieldTicks)
+	e.num(3, c.WriteOffTicks)
+	e.num(4, c.MaxClaims)
+}
+
+// pairsCreditTerms writes the pairs of a CreditTerms: Lend 1 and Borrow 2, each
+// written when non-nil even if every field is zero, so a lender of rate 0 and a
+// role with no block differ, and so do a lender and a borrower. A LendTerms has
+// RateBP 1, MaxTermTicks 2, KeepTicks 3, ShareBP 4; a BorrowTerms has MaxRateBP 1,
+// MaxDebtTicks 2, SlackTicks 3.
+func pairsCreditTerms(e *encoder, t CreditTerms) {
+	if l := t.Lend; l != nil {
+		e.id(1)
+		e.num(1, l.RateBP)
+		e.num(2, l.MaxTermTicks)
+		e.num(3, l.KeepTicks)
+		e.num(4, l.ShareBP)
+		e.end()
+	}
+	if b := t.Borrow; b != nil {
+		e.id(2)
+		e.num(1, b.MaxRateBP)
+		e.num(2, b.MaxDebtTicks)
+		e.num(3, b.SlackTicks)
+		e.end()
+	}
 }
 
 // pairsPolity writes the pairs of a PolityConfig: Jurisdictions 1, Members 2.

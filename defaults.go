@@ -300,3 +300,15 @@ func DefaultEmployer() Employer { return Employer{PayrollBP: 5_000} }
 // role row are structure. The sorts of its lists are in Storage.canonical
 // (config.go) and its bounds are in bounds.go (MaxRoom, MaxStoresPerAgent,
 // MaxStoreClasses).
+
+// The technology module (spec-technology.md 9.1.2) has no tunable of its own and no
+// default field: every rate of a field defaults to 0, which turns its mechanism off,
+// and CapBP is required, because a default would be a claim about how much a
+// technique may grow. The sorts of its lists are in Technology.canonical (config.go)
+// and its bounds are in bounds.go (MaxTechFields to MaxExperience).
+// The credit module (spec-credit.md 4.1.2, 14) has no tunable with a non-nil
+// default and no default macro constant (N-027): MinPrincipal and MaxClaims are
+// required, ShieldTicks, WriteOffTicks, KeepTicks and SlackTicks default to 0 (no
+// shield, never written off, no keep, no slack), and a rate is required and never
+// defaulted, 0 being interest-free. Its bounds are in bounds.go (MaxCreditRateBP,
+// MaxCreditTerm, MaxOpenClaims).
