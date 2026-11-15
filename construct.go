@@ -153,6 +153,7 @@ func (w *World) allocate() {
 	if w.sto != nil {
 		w.sto.world = w
 	}
+	w.credit = newCredit(&w.cfg)
 	w.set = newSettlements(&w.cfg)
 	w.registerBounds()
 	if w.cfg.Modules.Estates != nil {
@@ -364,6 +365,7 @@ func modulesOn(c *Config) []string {
 		{"transport", m.Transport != nil}, {"information", m.Information != nil}, {"migration", m.Migration != nil},
 		{"merchants", m.Merchants != nil}, {"external", m.External != nil}, {"polity", m.Polity != nil},
 		{"storage", m.Storage != nil},
+		{"credit", m.Credit != nil},
 		{"technology", m.Technology != nil},
 		{"settlements", m.Settlements != nil},
 	}
@@ -463,6 +465,10 @@ func (w *World) summary() []slog.Attr {
 	if w.polity != nil {
 		total, governed := polityTotals(&w.cfg)
 		attrs = append(attrs, slog.Int(logkeys.Jurisdictions, total), slog.Int(logkeys.Governed, governed))
+	}
+	if w.credit != nil {
+		lenders, borrowers := w.creditAgents()
+		attrs = append(attrs, slog.Int64(logkeys.Lenders, lenders), slog.Int64(logkeys.Borrowers, borrowers))
 	}
 	if w.set != nil {
 		attrs = append(attrs, slog.Int(logkeys.SettlementClasses, w.set.n))

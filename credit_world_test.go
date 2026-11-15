@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"reflect"
+	"slices"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -144,6 +145,10 @@ func TestCredit_InertOverARun(t *testing.T) {
 					t.Errorf("seed %d: the configuration hash with %s = that of the module off, want different", seed, v.name)
 				}
 				res := sameButHash(raw, base.World.ConfigHash())
+				// The module names itself among the modules that are on (spec-credit.md
+				// 16.2), the one thing besides the hash that it may change while it has no
+				// claim; the lists are compared without it.
+				res.Final.Modules = slices.DeleteFunc(slices.Clone(res.Final.Modules), func(m string) bool { return m == "credit" })
 				if !bytes.Equal(renderEvents(res), renderEvents(base)) {
 					t.Errorf("seed %d: the run with %s renders differently from the run with the module off, want identical", seed, v.name)
 				}

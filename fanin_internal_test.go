@@ -87,7 +87,7 @@ func TestFanIns_AreCompositionsOfTheExpectedCalls(t *testing.T) {
 	}{
 		{"fillAgentView", []string{"fillCore", "fillWants", "fillEndowments", "fillTransport", "fillTradeOnly", "fillView", "fillBoard"}},
 		{"checkTradePlan", []string{"normalisePlan", "checkDiscards", "checkWants", "checkMerchantPlan"}},
-		{"removeAgent", []string{"Tick", "regionOf", "dropAgent", "hasJob", "abandonJob", "dropTraveller", "dropJourney", "dropContracts", "Errorf", "receive", "Errorf", "mustClose", "Close", "deliver", "deliver", "pool", "dropModules", "logRemoval", "forget"}},
+		{"removeAgent", []string{"Tick", "regionOf", "dropAgent", "hasJob", "abandonJob", "dropTraveller", "dropJourney", "dropContracts", "Errorf", "dropClaims", "receive", "Errorf", "mustClose", "Close", "deliver", "deliver", "pool", "dropModules", "logRemoval", "forget"}},
 		{"dropModules", []string{"dropAgent", "dropAgent", "drop", "dropExternal", "dropStorage"}},
 		{"relocationRefusal", []string{"refusal"}},
 		{"tradableItems", []string{"demandItems", "subsistenceItems"}},

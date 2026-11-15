@@ -849,3 +849,31 @@ func TestBalanceSheet_Refusals(t *testing.T) {
 		}
 	})
 }
+
+// TestClaim_ReadsOneOpenClaimByID verifies that Claim returns a copy of the open
+// claim with the ID, that a copy cannot change the list, and that an ID that was
+// never formed or that has ended reports false.
+//
+// Requirement: FR-CRD-008, NFR-CRD-003
+func TestClaim_ReadsOneOpenClaimByID(t *testing.T) {
+	t.Parallel()
+	c := newCfix(t)
+	id := c.lend(t)
+	got, ok := c.l.Claim(id)
+	if !ok || got.ID != id || got.PrincipalOwed != 60 || got.InterestOwed != 6 {
+		t.Fatalf("Claim(%d) = %+v, %v, want the loan of 60 and 6", id, got, ok)
+	}
+	got.PrincipalOwed = 1
+	if again, _ := c.l.Claim(id); again.PrincipalOwed != 60 {
+		t.Errorf("Claim(%d) after a change of the copy = %d owed, want 60", id, again.PrincipalOwed)
+	}
+	if _, ok := c.l.Claim(id + 1); ok {
+		t.Errorf("Claim(%d) = true for an ID never formed, want false", id+1)
+	}
+	if _, _, err := c.l.WriteOff(id); err != nil {
+		t.Fatalf("setup: WriteOff: %v", err)
+	}
+	if _, ok := c.l.Claim(id); ok {
+		t.Errorf("Claim(%d) = true after the claim ended, want false", id)
+	}
+}

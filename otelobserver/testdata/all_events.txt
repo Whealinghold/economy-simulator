@@ -6,11 +6,14 @@ BoundaryFlow
 ContractFormed
 ContractRound
 ContractSettled
+CreditSettled
 EdgeStatusChanged
 EndowmentAdjusted
 EndowmentChanged
 EntryLimited
 EstateOpened
+LoanEnded
+LoanPassed
 MarketCleared
 MerchantsPlanned
 MigrationReviewed

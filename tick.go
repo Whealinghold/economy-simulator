@@ -36,6 +36,7 @@ var positionList = [...]position{
 	{"P1.5", "MIG", line},
 	{"P1.6", "EST", line},
 	{"P1.7", "MON", line},
+	{"P1.7a", "CRD", line},
 	{"P1.8", "EXT", line},
 	{"P1.9", "AGT", line},
 	{"P2.1", "PRO", line},
@@ -83,7 +84,7 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P0.3a",
-	"P1.3a", "P1.7a", "P1.7b", "P1.9a",
+	"P1.3a", "P1.7b", "P1.9a",
 	"P2.5a", "P2.8b",
 	"P3.1a", "P3.3b", "P3.3c", "P3.4a", "P3.6a", "P3.6b", "P3.6c",
 	"P4.1a",
@@ -122,7 +123,19 @@ func (w *World) positions() error {
 	if err := w.p16Relief(); err != nil {
 		return err
 	}
+	return w.positionsFlows()
+}
+
+// positionsFlows is the money part of phase 1, from P1.7 to the directives (P1.9),
+// split from positions to stay within the Lizard complexity limit when the credit
+// settlement joined it (N-243, plan 3-crd hook 1, plan 2-14 O7). The position test
+// reads it as part of the straight line, in source order between positions and
+// positionsProduce.
+func (w *World) positionsFlows() error {
 	w.p17Flows()
+	if w.credit != nil {
+		w.p17aSettle()
+	}
 	if w.external != nil {
 		w.p18Walk()
 	}
@@ -135,7 +148,7 @@ func (w *World) positions() error {
 // positionsProduce is the middle of the straight line, from phase 2 to the
 // plans and the contract round of the trade phase (P3.3), split from positions to stay within the Lizard complexity limit
 // (N-243, plan 2-14 O7). The position test reads it as part of the straight line,
-// in source order between positions and positionsTail.
+// in source order between positionsFlows and positionsTrade.
 func (w *World) positionsProduce() error {
 	w.p21Complete()
 	if w.skills != nil {

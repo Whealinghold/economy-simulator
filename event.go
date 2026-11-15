@@ -1957,6 +1957,109 @@ type TraineeshipEnded struct {
 
 func (TraineeshipEnded) isEvent() {}
 
+// Origin is what formed a claim, a member of a closed set (spec-credit.md 3.1.5):
+// its values are the values of the origin field of LoanEnded.
+type Origin string
+
+const (
+	// OriginLoan is a claim formed by the credit round: the principal moved from the
+	// lender to the borrower at formation.
+	OriginLoan Origin = "loan"
+	// OriginPayout is a claim formed by the insurance module with no transfer.
+	OriginPayout Origin = "payout"
+)
+
+// The causes of LoanEnded (spec-credit.md 16.1), constants of Cause. A claim that
+// is paid in full at P1.7a ends repaid; one that is written off at its write-off
+// tick ends written off; one that a removal ends, paid in full or not, ends with its
+// debtor removed; one that the call ForgiveClaims ends ends forgiven.
+const (
+	// CauseRepaid is a claim whose owed fell to 0 in the settlement pass.
+	CauseRepaid Cause = "repaid"
+	// CauseWrittenOff is an overdue claim written off at Due + WriteOffTicks.
+	CauseWrittenOff Cause = "written_off"
+	// CauseDebtorRemoved is a claim ended by the removal of its debtor: paid from the
+	// debtor's whole balance and the rest written off.
+	CauseDebtorRemoved Cause = "debtor_removed"
+	// CauseForgiven is a loan ended at the call ForgiveClaims, with no money moved.
+	CauseForgiven Cause = "forgiven"
+)
+
+// LoanEnded is emitted when a claim ends, once, of either origin: at P1.7a in
+// ascending claim ID (repaid or written off), with a removal after the steps of the
+// other modules and before AgentBankrupted (the cause debtor_removed, step 2d of
+// spec-agents.md 3.6), and at the call ForgiveClaims (spec-credit.md 16.1;
+// spec-observability.md 4.1). Region is the debtor's region at the event and
+// CreditorRegion the creditor account's; ToEstate says the creditor is an estate,
+// whose Creditor is the agent ID of its region.
+type LoanEnded struct {
+	Tick int64
+	// Claim is the claim and Origin what formed it.
+	Claim  ClaimID
+	Origin Origin
+	// Creditor and Debtor are the two agents.
+	Creditor, Debtor AgentID
+	// Region and CreditorRegion are the regions of the debtor's and of the creditor's
+	// account at the event.
+	Region, CreditorRegion RegionID
+	// ToEstate says the creditor is the estate of CreditorRegion.
+	ToEstate bool
+	// Principal is the principal fixed at formation.
+	Principal Money
+	// PaidPrincipal and PaidInterest are the waterfall's payment of a removal (0 for
+	// every other cause: a payment of P1.7a is in CreditSettled).
+	PaidPrincipal, PaidInterest Money
+	// LostPrincipal and LostInterest are what was still owed when the claim ended
+	// without being paid.
+	LostPrincipal, LostInterest Money
+	// Cause says why the claim ended.
+	Cause Cause
+}
+
+func (LoanEnded) isEvent() {}
+
+// LoanPassed is emitted when the removal of a creditor passes one of its claims to
+// the estate of its region, once per claim in ascending claim ID, after the
+// LoanEnded events of the same removal and before AgentBankrupted (step 2e of
+// spec-agents.md 3.6; spec-credit.md 9.2). No money moves. Region is the estate's.
+type LoanPassed struct {
+	Tick int64
+	// Claim is the claim, Creditor the removed agent and Debtor the debtor.
+	Claim    ClaimID
+	Creditor AgentID
+	Debtor   AgentID
+	// Region is the region of the estate that now holds the claim.
+	Region RegionID
+	// Owed is the principal and interest owed when it passed.
+	Owed Money
+}
+
+func (LoanPassed) isEvent() {}
+
+// CreditSettled is emitted once per region per tick at P1.7a, in ascending RegionID
+// after the LoanEnded events of the tick, when a count or a sum is not 0
+// (spec-credit.md 16.1; spec-observability.md 4.1). It counts the claims of origin
+// loan only: the payments on a payout claim are the insurance module's. The first
+// ten fields are the region's debtors, the last two its creditors.
+type CreditSettled struct {
+	Tick   int64
+	Region RegionID
+	// Due is the claims that fell due this tick, Repaid the claims that ended repaid,
+	// Defaulted the claims that went overdue this tick and WrittenOff the claims
+	// written off.
+	Due, Repaid, Defaulted, WrittenOff int64
+	// PrincipalPaid and InterestPaid are the money the debtors paid, Lost what the
+	// write-offs lost (principal and interest), Shielded the money the shield kept out
+	// of a payment, Headroom the money cut at a creditor's headroom and Arrears the
+	// owed on the overdue claims of the region at the end of the pass.
+	PrincipalPaid, InterestPaid, Lost, Shielded, Headroom, Arrears Money
+	// Received is the money received by the agents whose account is in the region and
+	// ReceivedByEstate the money received by the region's estate.
+	Received, ReceivedByEstate Money
+}
+
+func (CreditSettled) isEvent() {}
+
 // TechnologyAdvanced is emitted at P8.3c for each technology cell in which anything
 // accrued in the step: executions counted, a trend, a discovery, a catch-up or a
 // cut of the cap, in ascending (Region, Field) order after the events of P8.3b and

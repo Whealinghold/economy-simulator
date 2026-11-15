@@ -366,3 +366,26 @@ Deviations from the plan text:
 - `internal/credit` takes the scratch of the allocation as a `Scratch` value (methods `Allocate` and `Waterfall`, a `dst` slice, an `ok` result) so that the settlement allocates nothing once it has grown (NFR-CRD-001), and adds `Interest`, `Effective`, `Pay`, `Split` and `Fit` beside the matching functions; the order is `SortOffers`, `SortRequests` and `Match` with a formation callback that answers `Formed`, `Dropped` or `Halted`.
 - The validator reports paths as `roles.<id>.credit.borrow.max_debt_ticks` (the validator's own form), and the loader paths as `role.<id>...`.
 - A phase of `validateCredit` that finds an error ends the run, as `validateStorage` does: bounds, then shape, then dependency.
+
+## PR 2 result (Phases 4 and 5, recorded when PR 2 was built)
+
+Rule tags read: architecture=b6524107bea39ff4a416ead3, observability=9ebd6516273680595f477c95, testing=66af7645b01fef4e2796c367. `doc/notes.md` was not edited, so it was not read in full and no notes tag applies; the leads below are for whoever next changes a spec or a note.
+
+Built: the state `credit` and the derived indexes (`credit.go`, `credit_state.go`), P1.7a and the steps 2d and 2e (`credit_settle.go`), `LoanEnded`, `LoanPassed`, `CreditSettled`, the causes and the types `ClaimID` and `Origin` (`event.go`, `value.go`), the log lines and the Warn "claims overdue" (`credit_report.go`), the audit of the indexes, tag 26 and its cross-check, the split `positionsFlows` (hook 1), `dropClaims` in `removeAgent` (hook 4) and the summary counts. Nothing forms a claim: the tests plant them through `ledger.Lend` and `ledger.Obligate` and index them.
+
+Deviations and choices the plan left open:
+
+- `internal/ledger` gains `Claim(id)`, the accessor R5 allows, so a pass reads one claim by ID and never copies the list. `internal/credit` gains `NextRun` and `Room`.
+- The import of `internal/credit` in the root is aliased `crd`, because the root's type is `credit`.
+- The Warn "claim cap reached" and its run `capRun` are saved in tag 26, but the Warn itself waits for PR 3: its trigger, a request cut for `MaxClaims`, is in the round.
+- Interest paid is netted from the debtor's income through `addInputSpend`, and interest received is `addUnearned` for an agent creditor (hook 5: both accessors existed).
+- `valuePrices` is called at P1.7a when `ShieldTicks` is above 0, so the upkeep cost is the one relief reads at P1.6; it is idempotent in a tick.
+- `CreditSettled.Shielded` counts a debtor only when it has a claim of origin loan, so a debtor of payout claims alone adds nothing to it. For a debtor with both origins the figure is the whole debtor's, not split by origin.
+- The waterfall also credits interest received to an agent creditor as unearned income.
+- A claim whose due tick is a ring away from another's shares its bucket and is skipped by its `Due`: a payout claim of any term is found.
+
+Tests: the claim index, the pot and the shield, the allocation (spec-credit.md 20.2) and its ties by `K(t, claim ID)`, the headroom cut, arrears and the write-off, both origins, the events and their order, the welfare terms, the waterfall at both balances of 20.2, the passing, the audit, the checkpoint round trip, the draw guard and the allocation test.
+
+Test pyramid pass (stage 6): `credit_guards_internal_test.go` covers the invariant guards, the room of a role with no Borrow block and the summary counts; `credit_scenario_internal_test.go` holds two end-to-end tests over 30 ticks of the credit world with planted claims (`TestScenario_CreditClaimsInLife`: repaid, arrears, write-off, a removed debtor and a removed creditor, audit and money conserved every tick; `TestFork_CreditClaimsInLife`: a checkpoint at tick 7 finishes with the original's bytes). They stand in for the real-config scenarios S114 to S118 of PR 5, which still need the round.
+
+Left open: `TestSettle_AwayDebtor` uses the transport module's away flag, but a journey (migration module) is not exercised; the scenario S117 and the fork tests of PR 4 and 5 cover the rest of FR-CRD-045 and 087. The counter test of NFR-CRD-003 is `TestSettle_OneBucketServesTwoTicks` (visits, not timings).

@@ -264,6 +264,11 @@ var stepSites = []site{
 	})},
 	{"P1.6", (*World).p16Relief},
 	{"P1.7", noError((*World).p17Flows)},
+	{"P1.7a", noError(func(w *World) {
+		if w.credit != nil {
+			w.p17aSettle()
+		}
+	})},
 	{"P1.8", noError(func(w *World) {
 		if w.external != nil {
 			w.p18Walk()

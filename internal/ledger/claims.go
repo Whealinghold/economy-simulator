@@ -72,6 +72,18 @@ func (l *Ledger) ClaimTotals() ClaimTotals { return l.claimTot }
 // it. It allocates only when dst has no room.
 func (l *Ledger) AppendClaims(dst []Claim) []Claim { return append(dst, l.claims...) }
 
+// Claim returns the open claim with the ID, and false when no open claim has it
+// (it never existed or it has ended). The claim is a copy; it allocates nothing.
+// The root reads the claims of a pass by ID through it, so that a settlement does
+// not copy the whole list (NFR-CRD-003).
+func (l *Ledger) Claim(id int64) (Claim, bool) {
+	i, ok := l.findClaim(id)
+	if !ok {
+		return Claim{}, false
+	}
+	return l.claims[i], true
+}
+
 // findClaim returns the index in the open-claim list of the claim with the ID.
 func (l *Ledger) findClaim(id int64) (int, bool) {
 	return slices.BinarySearchFunc(l.claims, id, func(c Claim, id int64) int {

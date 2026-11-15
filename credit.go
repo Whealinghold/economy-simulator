@@ -2,14 +2,57 @@ package economysim
 
 import "github.com/Whealinghold/economy-sim/internal/ledger"
 
-// This file is the credit module (spec-credit.md; architecture.md 2.10.1): what
-// the module reads of its configuration and its validator. The warnings are in
-// credit_report.go. At this stage the module is configured, validated and hashed
-// and does nothing: it has no state, no position and no event (plan 3-crd Phase 3);
-// its arithmetic is in internal/credit. Outside this file and its continuation the
-// module appears only in the catalogue files (config.go, hash.go, bounds.go,
-// defaults.go, errors.go, validate.go), in ledger.go (the reasons and the claims
-// limit) and at the named hooks of ADR 0010.
+// This file is the credit module (spec-credit.md; architecture.md 2.10.1): its
+// state, what it reads of its configuration and its validator. The continuation
+// files are credit_state.go (the derived indexes, the per-agent figures, the
+// checkpoint and the audit), credit_settle.go (P1.7a and the removal of an agent's
+// claims) and credit_report.go (the warnings, the events and the logs); the
+// arithmetic is in internal/credit. The module is built in claims-in-life order
+// (plan 3-crd Phases 4 and 5): the settlement, the waterfall, the passing, the
+// audit and tag 26 exist, and nothing forms a claim yet. Outside this file and its
+// continuation the module appears only in the catalogue files (config.go, hash.go,
+// bounds.go, defaults.go, errors.go, validate.go, event.go, tick.go), in ledger.go
+// (the reasons and the claims limit) and at the named hooks of ADR 0010.
+
+// credit is the state of the credit module, nil when Config.Modules.Credit is nil.
+// The claims are the ledger's list and are saved there (spec-credit.md 17.1); what
+// is here is derived from it and rebuilt at a restore (the indexes), scratch (the
+// settlement), or the module's own saved state (the scales and the runs).
+type credit struct {
+	// cfg is the module's configuration of the world's canonical Config.
+	cfg *Credit
+	// idx is the derived indexes of the claim list (spec-credit.md 17.3).
+	idx claimIndex
+	// scale is the rate scale of each region in basis points, 10 000 by default
+	// (spec-credit.md 13.1). It is state, not configuration, and is not hashed.
+	scale []int64
+	// overdueRun is the run of the Warn "claims overdue" of each region, and capRun
+	// the run of the Warn "claim cap reached" (spec-credit.md 16.2). Both are saved.
+	overdueRun []int64
+	capRun     int64
+	// pass is the scratch of the settlement and of a waterfall.
+	pass settleScratch
+}
+
+// newCredit builds the state of the module for a canonical configuration, or nil
+// when the module is off (a nil receiver is the off state everywhere it is read).
+func newCredit(c *Config) *credit {
+	if c.Modules.Credit == nil {
+		return nil
+	}
+	n := len(c.Regions)
+	cr := &credit{
+		cfg:        c.Modules.Credit,
+		idx:        newClaimIndex(),
+		scale:      make([]int64, n),
+		overdueRun: make([]int64, n),
+	}
+	for i := range cr.scale {
+		cr.scale[i] = wholeBP
+	}
+	cr.pass.rows = make([]settleRow, n)
+	return cr
+}
 
 // claimsLimit is the most open claims the ledger takes: the module's MaxClaims, and
 // 0 for the module off, which makes the ledger refuse any claim (nil-safe, so the

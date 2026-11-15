@@ -1,11 +1,15 @@
 package economysim
 
 import (
+	"context"
+	"log/slog"
 	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
-	"github.com/Whealinghold/economy-sim/internal/credit"
+	crd "github.com/Whealinghold/economy-sim/internal/credit"
+	"github.com/Whealinghold/economy-sim/internal/ledger"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 )
 
 // This file is the reporting of the credit module (spec-credit.md 15.2; the
@@ -141,7 +145,7 @@ func roundsToZero(c *Config, m *Credit, cr creditRoles) bool {
 	if rate == 0 || tpy < 1 || m.MinPrincipal < 1 {
 		return false
 	}
-	interest, ok := credit.Interest(m.MinPrincipal, rate, 1, tpy)
+	interest, ok := crd.Interest(m.MinPrincipal, rate, 1, tpy)
 	return ok && interest == 0
 }
 
@@ -290,4 +294,84 @@ func flowTargets(c *Config, role string) bool {
 	return ms != nil && slices.ContainsFunc(ms.Flows, func(f MoneyFlow) bool {
 		return f.Target.Kind == TargetHouseholds && f.Target.Role == role
 	})
+}
+
+// endRec is how a claim ended, for LoanEnded and its Debug line: the cause, the
+// parts a waterfall paid and the parts lost.
+type endRec struct {
+	cause                      Cause
+	paidP, paidI, lostP, lostI int64
+}
+
+// reportLoanEnded reports the end of claim c (spec-credit.md 16.1, 16.2): the Debug
+// line "loan ended" and, with an observer, LoanEnded. The regions are those of the
+// two accounts at the event.
+func (w *World) reportLoanEnded(t int64, c *ledger.Claim, e endRec) {
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "loan ended", slog.Int64(logkeys.Claim, c.ID),
+			slog.Int64(logkeys.Agent, int64(w.accountView(c.Debtor).Owner)), slog.String(logkeys.Cause, string(e.cause)),
+			slog.Int64(logkeys.Lost, e.lostP+e.lostI))
+	}
+	if !w.obs.supplied {
+		return
+	}
+	dv, cv := w.accountView(c.Debtor), w.accountView(c.Creditor)
+	w.obs.deliver(LoanEnded{
+		Tick: t, Claim: ClaimID(c.ID), Origin: originOf(c.Origin),
+		Creditor: AgentID(cv.Owner), Debtor: AgentID(dv.Owner),
+		Region: RegionID(dv.Region), CreditorRegion: RegionID(cv.Region), ToEstate: cv.Kind == ledger.KindEstate,
+		Principal: Money(c.Principal), PaidPrincipal: Money(e.paidP), PaidInterest: Money(e.paidI),
+		LostPrincipal: Money(e.lostP), LostInterest: Money(e.lostI), Cause: e.cause,
+	})
+}
+
+// originOf is the origin constant of a ledger claim's origin.
+func originOf(o int) Origin {
+	if o == ledger.OriginPayout {
+		return OriginPayout
+	}
+	return OriginLoan
+}
+
+// reportPassed reports a claim passed to the estate of region (spec-credit.md 9.2,
+// 16.1): the Debug line "claim passed" and, with an observer, LoanPassed.
+func (w *World) reportPassed(t int64, c *ledger.Claim, from *agent, region RegionID) {
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "claim passed", slog.Int64(logkeys.Claim, c.ID),
+			slog.Int64(logkeys.Agent, int64(from.id)), slog.Int64(logkeys.Region, int64(region)))
+	}
+	if w.obs.supplied {
+		w.obs.deliver(LoanPassed{Tick: t, Claim: ClaimID(c.ID), Creditor: from.id, Debtor: AgentID(w.accountView(c.Debtor).Owner),
+			Region: region, Owed: Money(c.PrincipalOwed + c.InterestOwed)})
+	}
+}
+
+// logOverdue is the Debug line "claim overdue" of a claim that went unpaid at its due
+// tick (spec-credit.md 16.2).
+func (w *World) logOverdue(c *ledger.Claim) {
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "claim overdue", slog.Int64(logkeys.Claim, c.ID),
+			slog.Int64(logkeys.Agent, int64(w.accountView(c.Debtor).Owner)), slog.Int64(logkeys.Owed, c.PrincipalOwed+c.InterestOwed))
+	}
+}
+
+// logArrears is the Warn "claims overdue" (spec-credit.md 16.2, pattern B): the
+// debtors of region g have owed overdue claims of origin loan at the end of P1.7a in
+// each of the last warnRun ticks, and at every warnRun after. Its counterpart is
+// CreditSettled.Arrears and the Claims rows of the snapshot.
+func (w *World) logArrears(g RegionID, r *settleRow) {
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelWarn) {
+		w.log.LogAttrs(ctx, slog.LevelWarn, "claims overdue", slog.Int64(logkeys.Region, int64(g)),
+			slog.Int64(logkeys.Claims, r.overdueClaims), slog.Int64(logkeys.Arrears, r.arrears))
+	}
+}
+
+// event is the CreditSettled of a region from its row.
+func (r settleRow) event(t int64, g RegionID) CreditSettled {
+	return CreditSettled{
+		Tick: t, Region: g, Due: r.due, Repaid: r.repaid, Defaulted: r.defaulted, WrittenOff: r.writtenOff,
+		PrincipalPaid: Money(r.principal), InterestPaid: Money(r.interest), Lost: Money(r.lost),
+		Shielded: Money(r.shielded), Headroom: Money(r.headroom), Arrears: Money(r.arrears),
+		Received: Money(r.received), ReceivedByEstate: Money(r.receivedEstate),
+	}
 }

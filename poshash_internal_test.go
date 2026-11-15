@@ -465,6 +465,10 @@ func employmentOn(w *World) bool { return w.employment != nil }
 // trains has no state, and the replay leaves the row out.
 func skillsOn(w *World) bool { return w.skills != nil }
 
+// creditOn is the guard of the rows of the credit module (P1.7a, plan 3-crd): an off
+// world records no line for them.
+func creditOn(w *World) bool { return w.credit != nil }
+
 // noErr adapts a position method with no error result.
 func noErr(f func(*World)) func(*World) error {
 	return func(w *World) error { f(w); return nil }
@@ -484,6 +488,7 @@ var replayRows = []replayRow{
 	{id: "P1.5", run: noErr((*World).p15Arrivals), on: migrationOn},
 	{id: "P1.6", run: (*World).p16Relief, on: reliefOn},
 	{id: "P1.7", run: noErr((*World).p17Flows), on: moneyOn},
+	{id: "P1.7a", run: noErr((*World).p17aSettle), on: creditOn},
 	{id: "P1.8", run: noErr((*World).p18Walk), on: externalOn},
 	{id: "P1.9", run: noErr((*World).p19Directives), on: externalAgentOn},
 	{id: "P2.1", run: noErr((*World).p21Complete)},
