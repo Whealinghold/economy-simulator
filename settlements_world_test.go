@@ -9,7 +9,9 @@ import (
 
 // runSettlementsWorld builds a world from c with the seed, runs ticks steps and
 // returns every event after WorldCreated (which carries the configuration hash and
-// so differs by design) and the final snapshot with its hash zeroed.
+// so differs by design) except the module's own two, and the final snapshot with its
+// hash and the fields the module owns zeroed: the names of the classes, the module
+// list and the four class fields of the region rows.
 func runSettlementsWorld(t *testing.T, c economysim.Config, seed uint64, ticks int) ([]economysim.Event, economysim.Snapshot) {
 	t.Helper()
 	rec := &recorder{}
@@ -26,29 +28,35 @@ func runSettlementsWorld(t *testing.T, c economysim.Config, seed uint64, ticks i
 	if err != nil {
 		t.Fatalf("Snapshot(seed %d) error = %v, want nil", seed, err)
 	}
-	snap.ConfigHash = [32]byte{}
+	snap.ConfigHash, snap.Names.SettlementClasses, snap.Modules = [32]byte{}, nil, nil
+	for i := range snap.Regions {
+		r := &snap.Regions[i]
+		r.Class, r.ClassSince, r.ClassTarget, r.ClassAtFloor = 0, 0, 0, false
+	}
 	var events []economysim.Event
 	for _, e := range rec.events {
-		if _, created := e.(economysim.WorldCreated); !created {
+		switch e.(type) {
+		case economysim.WorldCreated, economysim.SettlementClassChanged, economysim.SettlementHeld:
+		default:
 			events = append(events, e)
 		}
 	}
 	return events, snap
 }
 
-// TestScenario_SettlementsOnIsInert verifies that, in this change, a configuration
+// TestScenario_SettlementsLeaveOtherResultsUnchanged verifies that a configuration
 // with the module on (three classes, a flag, a limit, a gated grower and refiner, a
-// region row) builds a world, runs 40 ticks and gives the same events and the same
-// final snapshot as the same world with the module off, for three seeds. The module
-// is data only until its review is built; a world that already reacted to a class
-// would move the golden of the reference chain.
+// region row) builds a world, runs 40 ticks and gives the same events, other than the
+// module's two, and the same final snapshot, other than the module's fields, as the
+// same world with the module off, for three seeds. The review draws nothing, moves
+// nothing and, until a reader reads the class (the next pull request), gates nothing.
 //
-// Requirement: FR-SET-001, FR-SET-015
+// Requirement: FR-SET-001, FR-SET-015, FR-SET-016
 //
-// Guard: PR A adds a configuration surface and no behaviour. If a later change makes
-// the module do something, this test must be replaced by its behaviour tests; until
-// then it fails if the surface leaks into a result (a gate, a draw, an event).
-func TestScenario_SettlementsOnIsInert(t *testing.T) {
+// Guard: a class that leaked into a result before its readers exist (a draw, a
+// ledger move, a gate) would move the golden of the reference chain; this test
+// fails first. The readers' pull request replaces it with the gate's behaviour.
+func TestScenario_SettlementsLeaveOtherResultsUnchanged(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
 		t.Skip("integration test, skipped with -short")

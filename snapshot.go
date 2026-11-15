@@ -160,6 +160,18 @@ type RegionRow struct {
 	// MoneyTreasury is the money of the treasuries seated in the region; 0 with none
 	// (spec-polity.md 10.5).
 	MoneyTreasury Money
+	// Class is the settlement class of the region as of its last review, and
+	// ClassSince the tick of its last change (0 at construction); both are 0 with the
+	// settlements module off, and Modules says whether it is on, because 0 is the
+	// first class (spec-settlements.md 10.5). Saved state.
+	Class      SettlementClassID
+	ClassSince int64
+	// ClassTarget is the class a review at the current Households would give,
+	// ignoring the dwell, and ClassAtFloor says that the class is the region's floor
+	// and the count alone would give a lower one. Both are derived (spec-settlements.md
+	// 4.3, 10.5).
+	ClassTarget  SettlementClassID
+	ClassAtFloor bool
 }
 
 // PopulationState is the figures of the population module in the snapshot: the
@@ -595,6 +607,9 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 	}
 	if w.pop != nil {
 		w.popSnapshotRegion(s, g, v)
+	}
+	if w.set != nil {
+		w.fillRegionClass(rr, g)
 	}
 	w.marketRows(s, g, acc)
 	s.Jobs = appendJobs(s.Jobs, g, acc)

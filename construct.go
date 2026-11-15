@@ -72,6 +72,7 @@ func (w *World) construct(warnings []Warning) error {
 	b := w.beginConstruction()
 	b.createAgents()
 	checkCensus(b.plans, &b.w.cfg, b.w.live.agents, b.w.live.households)
+	b.w.set.found(b.w)
 	if err := b.warm(); err != nil {
 		return err
 	}
@@ -143,6 +144,7 @@ func (w *World) allocate() {
 	w.employment = newEmployment(&w.cfg)
 	w.polity = newPolity(&w.cfg)
 	w.skills = newSkills(&w.cfg)
+	w.set = newSettlements(&w.cfg)
 	w.registerBounds()
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
@@ -327,6 +329,7 @@ func namesOf(c *Config) Names {
 	n.Resources = resourceNames(c)
 	n.Modes = modeNames(c)
 	n.Jurisdictions = polityNames(c)
+	n.SettlementClasses = settlementNames(c)
 	return n
 }
 
@@ -343,6 +346,7 @@ func modulesOn(c *Config) []string {
 		{"resources", m.Resources != nil}, {"subsistence", m.Subsistence != nil}, {"population", m.Population != nil},
 		{"transport", m.Transport != nil}, {"information", m.Information != nil}, {"migration", m.Migration != nil},
 		{"merchants", m.Merchants != nil}, {"external", m.External != nil}, {"polity", m.Polity != nil},
+		{"settlements", m.Settlements != nil},
 	}
 	on := []string{}
 	for _, t := range table {
@@ -374,6 +378,7 @@ func (b *builder) announce(warnings []Warning) {
 	for _, e := range b.spawned {
 		w.obs.deliver(e)
 	}
+	w.set.announce(w)
 }
 
 // logWarnings logs each configuration warning at Warn, once, with its rule and
@@ -430,6 +435,9 @@ func (w *World) summary() []slog.Attr {
 	if w.polity != nil {
 		total, governed := polityTotals(&w.cfg)
 		attrs = append(attrs, slog.Int(logkeys.Jurisdictions, total), slog.Int(logkeys.Governed, governed))
+	}
+	if w.set != nil {
+		attrs = append(attrs, slog.Int(logkeys.SettlementClasses, w.set.n))
 	}
 	return attrs
 }

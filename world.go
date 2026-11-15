@@ -117,6 +117,8 @@ type World struct {
 	external *external
 	// polity is the state of the polity module, nil when it is off (polity.go).
 	polity *polity
+	// set is the state of the settlements module, nil when it is off (settlements.go).
+	set *settlements
 	// integ is what INT keeps (integration.go).
 	integ integrationState
 	// firstHousehold is the agent ID of the first household: the number of
