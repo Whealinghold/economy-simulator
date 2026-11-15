@@ -29,3 +29,17 @@ func Allow(due, households, limit int64) (allowed, dropped int64) {
 	allowed = min(due, max(limit-households, 0))
 	return allowed, due - allowed
 }
+
+// Ceil applies the role ceiling to the births a region's household cap allowed:
+// room is the households the role's headroom leaves, counted at the start of the
+// entry step, and a negative room is no ceiling (spec-population.md 4.4.4). It
+// returns the births kept and the births the ceiling dropped, kept + dropped =
+// births. Negative births count as 0.
+func Ceil(births, room int64) (kept, dropped int64) {
+	births = max(births, 0)
+	if room < 0 {
+		return births, 0
+	}
+	kept = min(births, room)
+	return kept, births - kept
+}
