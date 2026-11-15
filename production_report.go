@@ -181,9 +181,10 @@ func (s *productionScratch) markRunnable(g int, runnable [][]RecipeID, yt *yield
 			}
 			r := &s.anchor[id]
 			ab := s.abundance(RegionID(g), id, true)
-			e, _, ok := yt.effectiveAt(sh, RegionID(g), id, season, s.cfg.Recipes[id].Sited, ab)
+			tech := s.techFactor(RegionID(g), id)
+			e, _, ok := yt.effectiveAt(sh, RegionID(g), id, season, s.cfg.Recipes[id].Sited, ab, tech)
 			if ok && e == 0 {
-				e = s.bestSeasonFactor(yt, sh, g, id, ab)
+				e = s.bestSeasonFactor(yt, sh, g, id, ab, tech)
 			}
 			if ok {
 				r.Runnable, r.YieldBP = true, e
@@ -197,9 +198,9 @@ func (s *productionScratch) markRunnable(g int, runnable [][]RecipeID, yt *yield
 // recipe with a factor of 0 only in this season is costed at the factor it has in
 // its open season, so a seasonal crop keeps its anchor all year. It is a function
 // of the table and the shocks, with no state.
-func (s *productionScratch) bestSeasonFactor(yt *yieldTable, sh *yieldShocks, g int, id RecipeID, abundance int64) (best int64) {
+func (s *productionScratch) bestSeasonFactor(yt *yieldTable, sh *yieldShocks, g int, id RecipeID, abundance, tech int64) (best int64) {
 	for season := range s.cfg.Calendar.Seasons {
-		if e, _, ok := yt.effectiveAt(sh, RegionID(g), id, season, s.cfg.Recipes[id].Sited, abundance); ok {
+		if e, _, ok := yt.effectiveAt(sh, RegionID(g), id, season, s.cfg.Recipes[id].Sited, abundance, tech); ok {
 			best = max(best, e)
 		}
 	}

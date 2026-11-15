@@ -170,6 +170,11 @@ func gainOf(f Field, x, a int64) (int64, bool) {
 	return min(f.CapBP, sum), true
 }
 
+// Gain is the gain of a cell of field f with experience x and advance a:
+// min(CapBP, g(X) + A) (spec-technology.md 3.3.1). ok is false when a step does
+// not fit int64, which the bounds of the configuration rule out.
+func Gain(f Field, x, a int64) (gain int64, ok bool) { return gainOf(f, x, a) }
+
 // learnedOf is g(X) alone, the part that doing contributes.
 func learnedOf(f Field, x int64) (int64, bool) {
 	return Learned(f.DoublingBP, max(f.Base, 1), x)
