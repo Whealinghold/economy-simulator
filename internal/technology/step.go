@@ -156,9 +156,11 @@ func phases(in Input, s *Scratch, out []Result) bool {
 		snapshot(in, s, out) && diffuseAll(in, s, out) && finish(in, out)
 }
 
-// gainOf is min(CapBP, g(X) + A) for a cell of field f (spec-technology.md
-// 3.3.1), with the learned part 0 when learning is off.
-func gainOf(f Field, x, a int64) (int64, bool) {
+// Gain is min(CapBP, g(X) + A) for a cell of field f with experience x and
+// advance a (spec-technology.md 3.3.1), with the learned part 0 when learning
+// is off. ok is false when a step does not fit int64, which the bounds of the
+// configuration rule out.
+func Gain(f Field, x, a int64) (int64, bool) {
 	g, ok := Learned(f.DoublingBP, max(f.Base, 1), x)
 	if !ok {
 		return 0, false
@@ -201,7 +203,7 @@ func foldAll(in Input, out []Result) bool {
 		if x0 < 0 || x0 > in.MaxExperience || in.Cells[i].Advance < 0 {
 			return false
 		}
-		before, ok := gainOf(f, x0, in.Cells[i].Advance)
+		before, ok := Gain(f, x0, in.Cells[i].Advance)
 		if !ok {
 			return false
 		}
@@ -273,7 +275,7 @@ func discoverAll(in Input, out []Result) bool {
 func snapshot(in Input, s *Scratch, out []Result) bool {
 	nf := len(in.Fields)
 	for i := range out {
-		g, ok := gainOf(in.Fields[i%nf], out[i].Experience, out[i].Advance)
+		g, ok := Gain(in.Fields[i%nf], out[i].Experience, out[i].Advance)
 		if !ok {
 			return false
 		}
@@ -326,7 +328,7 @@ func finish(in Input, out []Result) bool {
 	for i := range out {
 		f := in.Fields[i%nf]
 		a := min(f.CapBP, out[i].Advance)
-		g, ok := gainOf(f, out[i].Experience, a)
+		g, ok := Gain(f, out[i].Experience, a)
 		if !ok {
 			return false
 		}

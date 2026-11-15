@@ -121,6 +121,9 @@ type World struct {
 	sto *storage
 	// credit is the state of the credit module, nil when it is off (credit.go).
 	credit *credit
+	// tec is the state of the technology module, nil when it is off
+	// (technology.go).
+	tec *technology
 	// integ is what INT keeps (integration.go).
 	integ integrationState
 	// firstHousehold is the agent ID of the first household: the number of

@@ -358,6 +358,11 @@ var stepSites = []site{
 	{"P8.1", (*World).p81Age},
 	{"P8.2", noError((*World).p82Flows)},
 	{"P8.3", noError((*World).p83Regen)},
+	{"P8.3c", noError(func(w *World) {
+		if w.tec != nil {
+			w.p83cTechnology()
+		}
+	})},
 	{"P8.4", (*World).p84Audit},
 }
 

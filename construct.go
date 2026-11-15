@@ -159,6 +159,7 @@ func (w *World) allocate() {
 	}
 	w.external = newExternal(&w.cfg)
 	w.outside = outsideMarks(&w.cfg)
+	w.tec = newTechnology(&w.cfg, w.outside, &w.geo, w.rnd.seed)
 	w.firstHousehold = regions + w.external.counterpartyCount() + w.polity.treasuryCount()
 	if w.external != nil {
 		w.external.assignAgents(regions)
@@ -172,6 +173,7 @@ func (w *World) allocate() {
 	w.prod = newProductionScratch(&w.cfg, &w.recipes)
 	w.prod.res = w.res
 	w.prod.sto = w.sto
+	w.prod.tec = w.tec
 	w.refused = newRefusalTally(regions, len(w.cfg.Recipes))
 	w.reads = newReadBuf(len(w.cfg.Commodities))
 	w.views = newViewScratch(&w.cfg, &w.roles, &w.recipes)
@@ -342,6 +344,7 @@ func namesOf(c *Config) Names {
 	n.Modes = modeNames(c)
 	n.Jurisdictions = polityNames(c)
 	n.StoreClasses = storeClassNames(c)
+	n.TechFields = techNames(c)
 	return n
 }
 
@@ -360,6 +363,7 @@ func modulesOn(c *Config) []string {
 		{"merchants", m.Merchants != nil}, {"external", m.External != nil}, {"polity", m.Polity != nil},
 		{"storage", m.Storage != nil},
 		{"credit", m.Credit != nil},
+		{"technology", m.Technology != nil},
 	}
 	on := []string{}
 	for _, t := range table {
@@ -426,6 +430,9 @@ func (w *World) summary() []slog.Attr {
 		slog.Int64(logkeys.Households, w.live.households),
 		slog.Any(logkeys.Modules, modulesOn(&w.cfg)),
 		slog.Bool(logkeys.WarmStart, present),
+	}
+	if m := w.cfg.Modules.Technology; m != nil {
+		attrs = append(attrs, slog.Int(logkeys.Fields, len(m.Fields)))
 	}
 	if present {
 		attrs = append(attrs, slog.Int64(logkeys.Prices, warm.prices), slog.Int64(logkeys.Wages, warm.wages),

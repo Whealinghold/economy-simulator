@@ -283,6 +283,7 @@ func TestSiteConstants_Guard(t *testing.T) {
 		{"siteContract", siteContract},
 		{"siteOutsideWalk", siteOutsideWalk},
 		{"siteAddAgent", siteAddAgent},
+		{"siteTechnology", siteTechnology},
 	}
 	for i, a := range sites {
 		sum := sha256.Sum256([]byte("economy-sim/site/" + a.name))
