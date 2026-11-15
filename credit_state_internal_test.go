@@ -170,6 +170,9 @@ func TestFigures_OfAnAgentsClaims(t *testing.T) {
 	if none := w.figuresOf(w.agents[yonderB].account); none != (claimFigures{NextDue: -1}) {
 		t.Errorf("figuresOf(an agent with no claim) = %+v, want zeros and NextDue -1", none)
 	}
+	if off := (&World{}).figuresOf(0); off != (claimFigures{NextDue: -1}) {
+		t.Errorf("figuresOf(a world without the module) = %+v, want zeros and NextDue -1", off)
+	}
 	w.valuePrices()
 	u := w.creditUpkeep(&w.agents[homeB])
 	if room, wantRoom := w.creditRoom(&w.agents[homeB], 400), max(0, 10*u-400); room != wantRoom {

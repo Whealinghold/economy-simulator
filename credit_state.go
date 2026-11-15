@@ -182,9 +182,12 @@ type claimFigures struct {
 }
 
 // figuresOf reads the figures of an account from the indexes in time proportional
-// to its claims.
+// to its claims. It is nil-safe: a world without the module has no claims.
 func (w *World) figuresOf(account int) claimFigures {
 	f := claimFigures{NextDue: -1}
+	if w.credit == nil {
+		return f
+	}
 	x := &w.credit.idx
 	if account < len(x.byDebtor) {
 		for _, id := range x.byDebtor[account] {
