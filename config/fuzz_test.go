@@ -49,6 +49,7 @@ func FuzzLoad(f *testing.F) {
 	f.Add([]byte(settlementsDoc), []byte("[modules.settlements.class.a]\nenter = 1.5\n"), []byte("[modules.settlements.class.a.limits]\nplaces = \"1\"\n[role.a]\nneeds = 1\n"))
 	f.Add([]byte(minimal+"[modules.storage]\n"), []byte("[role.a]\ntarget_ratio = 1.5\n"), []byte("world = 1\n"))
 	f.Add([]byte(technologyDoc), []byte("[modules.technology.field.a]\ncap_bp = 1.5\n"), []byte("[modules.technology.field.a]\nrecipes = [ 1 ]\n"))
+	f.Add([]byte(tenureDoc), []byte("[modules.tenure.term.a.b]\nrent = 1.5\n"), []byte("[modules.tenure.holding.a.b.pool]\nshare_bp = \"1\"\n"))
 	f.Add([]byte(minimal+"[region.a.edge.b]\ndistance = 3\n[region.b.edge.a]\ndistance = 0\n"), []byte("[region.a.edge.a]\ndistance = 2\n"), []byte("[region.a.reference_price]\nx = 1\n"))
 	f.Add([]byte(minimal+"[region.a.edge.b]\n"), []byte("[region.a.edge.b]\ndistance = 1.5\n"), []byte("[region.a.reference_price]\nx = \"1\"\n"))
 	f.Fuzz(loadProperties)
