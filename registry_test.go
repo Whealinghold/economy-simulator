@@ -42,7 +42,6 @@ var notBuilt = []string{
 	"Modules.Infrastructure", "Modules.Institutions", "Modules.Insurance",
 	"Modules.Policy",
 	"Modules.Risk", "Modules.Saving",
-	"Modules.Tenure",
 	// Fields of FlowTarget that the targets of the stores and treasury kinds add.
 	"FlowTarget.Jurisdiction",
 	// Fields that a module appends to the core types Recipe, Region and Role.
@@ -55,7 +54,7 @@ var notBuilt = []string{
 	"Employer.WorkerShareBP", "Employer.HireYieldBP",
 	// Scopes (Go type names) of the modules that are not built.
 	"Body", "Control", "CoverTerms", "Duty",
-	"FacilityBuild", "FacilityClass", "FacilityRepair", "Fiscal", "Holding",
+	"FacilityBuild", "FacilityClass", "FacilityRepair", "Fiscal",
 	"Infrastructure", "InitialFacility", "Institutions", "Insurance", "Insure",
 	"Lever",
 	"Payout", "Policy", "PolicyActor", "ProjectWorth", "Purchase",
@@ -63,7 +62,7 @@ var notBuilt = []string{
 	"Release", "Right", "Risk", "RouteRisk",
 	"Saver", "Saving", "ScheduleStep",
 	"StoreRisk", "Tax",
-	"Tenure", "TenureTerm", "Toll", "Underwrite",
+	"Toll", "Underwrite",
 	"Window",
 }
 
@@ -78,17 +77,20 @@ var exemptFields = map[string]bool{
 	"Config.Groups": true, "Config.Modules": true,
 	// The demand module: its pointer is the switch (spec-config.md 6.2.1), and the
 	// two taste lists are containers whose fields are the rows (spec-demand.md 9).
-	"Modules.Demand": true, "Modules.External": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Modules.Migration": true, "Modules.Merchants": true, "Modules.Employment": true, "Modules.Polity": true, "Modules.Storage": true, "Modules.Settlements": true, "Modules.Credit": true, "Modules.Technology": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
+	"Modules.Demand": true, "Modules.External": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Modules.Migration": true, "Modules.Merchants": true, "Modules.Employment": true, "Modules.Polity": true, "Modules.Storage": true, "Modules.Settlements": true, "Modules.Credit": true, "Modules.Technology": true, "Modules.Tenure": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
 	"YieldProfile.HasAll": true,
 	// The Has flags of an Endowment row only spell in Go what the file says by writing the key.
 	"Endowment.HasCapacity": true, "Endowment.HasInitial": true, "Endowment.HasRegenScale": true,
+	// The Has flags of a TenureTerm row, and the Go form of the <holder> key of a Holding row
+	// (doc/specs/README.md, Parameter owners: the row Holder).
+	"TenureTerm.HasRent": true, "TenureTerm.HasClosed": true, "HolderRef.Kind": true, "HolderRef.Role": true,
 }
 
 // scopeAlias maps a scope of the owner table to the Go type that holds it, where
 // the table names the module and the type is called after its configuration
 // (spec-config.md 3.7.1: the scope Subsistence is the type SubsistenceConfig, as
 // Tenure is TenureConfig).
-var scopeAlias = map[string]string{"Subsistence": "SubsistenceConfig", "Polity": "PolityConfig", "Lend": "LendTerms", "Borrow": "BorrowTerms"}
+var scopeAlias = map[string]string{"Subsistence": "SubsistenceConfig", "Polity": "PolityConfig", "Tenure": "TenureConfig", "Lend": "LendTerms", "Borrow": "BorrowTerms"}
 
 // readOwnerTable reads the parameter-owner table of doc/specs/README.md by a
 // plain text parse: the pipe rows under the heading "Parameter owners".
@@ -323,15 +325,17 @@ func TestParameterRegistry_StagedChecks(t *testing.T) {
 // Validate rejects, each with the reason (spec-config.md 9.2, check 5). A row
 // is here because no value is wrong, not because a test is missing.
 var noFailingCase = map[string]string{
-	"WorldParams.Spawner":  "a registered name: NewWorld checks it with the registrations (spec-config.md 7.1.4), Validate cannot",
-	"WorldParams.Clearing": "a registered name: NewWorld checks it with the registrations (spec-config.md 7.1.4), Validate cannot",
-	"Role.Strategy":        "a registered name: NewWorld checks it with the registrations (spec-config.md 7.1.4), Validate cannot",
-	"Role.Unskilled":       "a bool: both values are valid",
-	"Role.Closed":          "a bool: both values are valid",
-	"Role.Fixed":           "a bool: both values are valid",
-	"Recipe.Sited":         "a bool: both values are valid",
-	"Output.Discard":       "a bool: both values are valid",
-	"Commodity.Raw":        "a bool: both values are valid",
+	"WorldParams.Spawner":       "a registered name: NewWorld checks it with the registrations (spec-config.md 7.1.4), Validate cannot",
+	"WorldParams.Clearing":      "a registered name: NewWorld checks it with the registrations (spec-config.md 7.1.4), Validate cannot",
+	"Role.Strategy":             "a registered name: NewWorld checks it with the registrations (spec-config.md 7.1.4), Validate cannot",
+	"Role.Unskilled":            "a bool: both values are valid",
+	"Role.Closed":               "a bool: both values are valid",
+	"Role.Fixed":                "a bool: both values are valid",
+	"Recipe.Sited":              "a bool: both values are valid",
+	"Output.Discard":            "a bool: both values are valid",
+	"Commodity.Raw":             "a bool: both values are valid",
+	"TenureConfig.OwnUseExempt": "a bool: both values are valid",
+	"TenureTerm.Closed":         "a bool: both values are valid",
 }
 
 // builtRows returns the rows of the owner table that are built and are not

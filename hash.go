@@ -477,7 +477,7 @@ func pairsModules(e *encoder, m Modules) {
 	pairsLaterModules(e, m)
 }
 
-// pairsLaterModules writes the pairs of the modules of ids 9, 10, 11, 12, 13, 15, 19, 24 and 25 of
+// pairsLaterModules writes the pairs of the modules of ids 9, 10, 11, 12, 13, 14, 15, 19, 24 and 25 of
 // Modules, after those pairsModules writes (a continuation for the Lizard limit).
 func pairsLaterModules(e *encoder, m Modules) {
 	if m.Migration != nil {
@@ -502,6 +502,11 @@ func pairsLaterModules(e *encoder, m Modules) {
 	}
 	if m.Employment != nil {
 		e.id(13)
+		e.end()
+	}
+	if m.Tenure != nil {
+		e.id(14)
+		pairsTenure(e, *m.Tenure)
 		e.end()
 	}
 	if m.Credit != nil {
@@ -634,6 +639,38 @@ func pairsCreditTerms(e *encoder, t CreditTerms) {
 		e.num(3, b.SlackTicks)
 		e.end()
 	}
+}
+
+// pairsTenure writes the pairs of a TenureConfig: Terms 1, Holdings 2, RentStepBP 3,
+// RentFloorBP 4, RentCeilingBP 5, OwnUseExempt 6, MaxHolderShareBP 7 (spec-config.md
+// 8.2.2). A TenureTerm has Region 1, Resource 2, HasRent 3, Rent 4, HasClosed 5 and
+// Closed 6; a Holding has Region 1, Resource 2, Holder 3 and ShareBP 4; a HolderRef
+// has Kind 1 and Role 2. The lists are written in canonical order, and the pointer
+// is written even when the module is empty, so a module that is on differs from one
+// that is off.
+func pairsTenure(e *encoder, t TenureConfig) {
+	encodeList(e, 1, t.Terms, func(e *encoder, r TenureTerm) {
+		e.text(1, r.Region)
+		e.text(2, r.Resource)
+		e.flag(3, r.HasRent)
+		e.num(4, r.Rent)
+		e.flag(5, r.HasClosed)
+		e.flag(6, r.Closed)
+	})
+	encodeList(e, 2, t.Holdings, func(e *encoder, h Holding) {
+		e.text(1, h.Region)
+		e.text(2, h.Resource)
+		e.nested(3, func(e *encoder) {
+			e.text(1, h.Holder.Kind)
+			e.text(2, h.Holder.Role)
+		})
+		e.num(4, h.ShareBP)
+	})
+	e.num(3, t.RentStepBP)
+	e.num(4, t.RentFloorBP)
+	e.num(5, t.RentCeilingBP)
+	e.flag(6, t.OwnUseExempt)
+	e.num(7, t.MaxHolderShareBP)
 }
 
 // pairsPolity writes the pairs of a PolityConfig: Jurisdictions 1, Members 2.
