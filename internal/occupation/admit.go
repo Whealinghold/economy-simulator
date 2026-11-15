@@ -55,18 +55,47 @@ type Admission struct {
 // Limits are the caps of spec-spawner.md 6.3, as Allowance computes them:
 // RegionCap bounds the households changed in the region and RoleCap[r] the
 // households entering role r (indexed like Dest.Role).
+//
+// Room is the role ceiling (spec-spawner.md 6.3.1): Room[r] is the households
+// role r may still take, or negative for a role with no ceiling; a nil Room has
+// none. Unlike RoleCap, a ceiling is never exceeded by the candidate that
+// reaches it: a candidate is admitted into a role only if all its households fit
+// the room, and Admit lowers Room by what it admits, as it advances used, so a
+// second call continues the first.
 type Limits struct {
 	RegionCap int64
 	RoleCap   []int64
+	Room      []int64
+}
+
+// room returns the room left in the ceiling of role r and whether it has one.
+func (l *Limits) room(r int) (int64, bool) {
+	if r >= len(l.Room) || l.Room[r] < 0 {
+		return 0, false
+	}
+	return l.Room[r], true
 }
 
 // Counts are the candidate households Admit refused: RegionCap by the region
-// cap, RoleCap because every destination that qualified for them was full.
-// A household is counted once; one with no qualifying destination and the
-// region cap not reached is counted in neither (it stays, spec-spawner.md
-// 6.4).
+// cap, RoleCap because every destination that qualified for them was full,
+// Ceiling because a destination that qualified had no room left under its
+// ceiling (a ceiling wins over RoleCap when both applied). A household is
+// counted once; one with no qualifying destination and the region cap not
+// reached is counted in neither (it stays, spec-spawner.md 6.4).
 type Counts struct {
-	RegionCap, RoleCap int64
+	RegionCap, RoleCap, Ceiling int64
+}
+
+// Fit splits n households entering a role whose ceiling has room households left
+// into the part that fits and the part the ceiling cuts. A negative room is no
+// ceiling; a negative n counts as 0.
+func Fit(n, room int64) (take, cut int64) {
+	n = max(n, 0)
+	if room < 0 {
+		return n, 0
+	}
+	take = min(n, room)
+	return take, n - take
 }
 
 // Admit sorts cs in place by the key of Candidate and admits them in that order
@@ -93,9 +122,9 @@ func Admit(adm []Admission, dc []DestCount, cs []Candidate, lim Limits, regionUs
 		cand := &cs[i]
 		start := len(dc)
 		if cand.Kind == CandReplace {
-			dc = admitBatch(dc, cand, lim, regionUsed, used, &c)
+			dc = admitBatch(dc, cand, &lim, regionUsed, used, &c)
 		} else {
-			dc = admitWhole(dc, cand, lim, regionUsed, used, &c)
+			dc = admitWhole(dc, cand, &lim, regionUsed, used, &c)
 		}
 		if len(dc) > start {
 			adm = append(adm, Admission{Ref: cand.Ref, Admitted: dc[start:len(dc):len(dc)]})
@@ -115,38 +144,64 @@ func compareCandidates(a, b Candidate) int {
 	)
 }
 
-func admitWhole(dc []DestCount, cand *Candidate, lim Limits, regionUsed *int64, used []int64, c *Counts) []DestCount {
+func admitWhole(dc []DestCount, cand *Candidate, lim *Limits, regionUsed *int64, used []int64, c *Counts) []DestCount {
 	if *regionUsed >= lim.RegionCap {
 		c.RegionCap += cand.Households
 		return dc
 	}
-	qualified := false
+	qualified, ceilingCut := false, false
 	for _, d := range cand.Dests {
 		if !d.Qualifies {
 			continue
 		}
 		qualified = true
-		if used[d.Role] < lim.RoleCap[d.Role] {
-			used[d.Role] += cand.Households
-			*regionUsed += cand.Households
-			return append(dc, DestCount{Dest: d.Role, Households: cand.Households})
+		if used[d.Role] >= lim.RoleCap[d.Role] {
+			continue
 		}
+		if room, ok := lim.room(d.Role); ok {
+			if cand.Households > room {
+				ceilingCut = true
+				continue
+			}
+			lim.Room[d.Role] -= cand.Households
+		}
+		used[d.Role] += cand.Households
+		*regionUsed += cand.Households
+		return append(dc, DestCount{Dest: d.Role, Households: cand.Households})
 	}
-	if qualified {
+	switch {
+	case ceilingCut:
+		c.Ceiling += cand.Households
+	case qualified:
 		c.RoleCap += cand.Households
 	}
 	return dc
 }
 
-func admitBatch(dc []DestCount, cand *Candidate, lim Limits, regionUsed *int64, used []int64, c *Counts) []DestCount {
+// batchTake is the households of a batch of left that role r takes: what the
+// region cap and the role's cap leave, then what its ceiling leaves, which it
+// takes from the room. cut says the ceiling was the binding limit.
+func (l *Limits) batchTake(r int, left, regionUsed, roleUsed int64) (take int64, cut bool) {
+	take = max(0, min(left, l.RegionCap-regionUsed, l.RoleCap[r]-roleUsed))
+	if room, ok := l.room(r); ok {
+		if room < take {
+			take, cut = room, true
+		}
+		l.Room[r] -= take
+	}
+	return take, cut
+}
+
+func admitBatch(dc []DestCount, cand *Candidate, lim *Limits, regionUsed *int64, used []int64, c *Counts) []DestCount {
 	left := cand.Households
-	qualified := false
+	qualified, ceilingCut := false, false
 	for _, d := range cand.Dests {
 		if !d.Qualifies {
 			continue
 		}
 		qualified = true
-		take := max(0, min(left, lim.RegionCap-*regionUsed, lim.RoleCap[d.Role]-used[d.Role]))
+		take, cut := lim.batchTake(d.Role, left, *regionUsed, used[d.Role])
+		ceilingCut = ceilingCut || cut
 		if take == 0 {
 			continue
 		}
@@ -159,6 +214,8 @@ func admitBatch(dc []DestCount, cand *Candidate, lim Limits, regionUsed *int64, 
 	case left <= 0:
 	case *regionUsed >= lim.RegionCap:
 		c.RegionCap += left
+	case ceilingCut:
+		c.Ceiling += left
 	case qualified:
 		c.RoleCap += left
 	}
