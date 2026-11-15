@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"reflect"
 	"slices"
@@ -165,4 +166,33 @@ func mechanismsSeen(events []economysim.Event) (seen [4]bool) {
 		}
 	}
 	return seen
+}
+
+// TestPacks_TechnologyGoldenExercisesEveryMechanism verifies the choice of the pack of the
+// module-alone golden (plan 3-tec Phase 8): pack three with overlay/technology-four.toml
+// records, in the length of the golden and at each of seeds 1 to 4, a learning gain, a
+// trend gain, a discovery and a catch-up add, so the golden is not blind to a mechanism.
+//
+// Arithmetic: a discovery needs a practising cell and the three growers practise in about
+// 120 cell-ticks of 400, so at the bound of ten discoveries a year (1 in 36.5 a tick) the
+// expectation is about 3 a run; the probe found 2 to 7 on seeds 1 to 3.
+//
+// Requirement: FR-TEC-006, FR-TEC-008, FR-TEC-009, FR-TEC-015, FR-REF-025
+//
+// Guard: without every mechanism in the run the golden would not move if one were broken.
+func TestPacks_TechnologyGoldenExercisesEveryMechanism(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test, skipped with -short")
+	}
+	cfg := loadValidPack(t, technologyThree...)
+	for seed := uint64(1); seed <= 4; seed++ {
+		t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
+			t.Parallel()
+			res := runPack(t, cfg, runSpec{Seed: seed, Ticks: goldenTicks, Drive: driveStep, Observe: true})
+			if m := mechanismsSeen(res.Events); slices.Contains(m[:], false) {
+				t.Errorf("seed %d: learning, trend, discovery, catch-up seen = %v, want each true", seed, m)
+			}
+		})
+	}
 }
