@@ -102,6 +102,9 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 	if err := w.dropContracts(a); err != nil { // the contracts it delivers end, the escrow returned
 		return fmt.Errorf("remove agent %d at tick %d: %w", a.id, tick, err)
 	}
+	if w.tenure != nil {
+		w.tenure.dropAgent(a) // step 2b: the titles go to the pool of each endowment's region, before the money moves
+	}
 	w.dropClaims(a) // steps 2d and 2e, nil-safe: a debtor's creditors are paid from its whole balance, a creditor's claims pass to the estate
 	money, lots, err := w.estates.receive(w.ledger, a.account, region)
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
