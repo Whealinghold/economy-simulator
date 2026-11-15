@@ -188,10 +188,7 @@ func (w *World) figuresOf(account int) claimFigures {
 	x := &w.credit.idx
 	if account < len(x.byDebtor) {
 		for _, id := range x.byDebtor[account] {
-			c, ok := w.ledger.Claim(id)
-			if !ok {
-				invariant("an indexed claim is not in the ledger's list")
-			}
+			c := w.indexed(id)
 			f.Debt += c.PrincipalOwed
 			f.Owed += c.PrincipalOwed + c.InterestOwed
 			if c.Overdue >= 0 {
@@ -204,10 +201,7 @@ func (w *World) figuresOf(account int) claimFigures {
 	}
 	if account < len(x.byCreditor) {
 		for _, id := range x.byCreditor[account] {
-			c, ok := w.ledger.Claim(id)
-			if !ok {
-				invariant("an indexed claim is not in the ledger's list")
-			}
+			c := w.indexed(id)
 			f.Lent += c.PrincipalOwed
 			f.Receivable += c.PrincipalOwed + c.InterestOwed
 		}
