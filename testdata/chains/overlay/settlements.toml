@@ -1,0 +1,54 @@
+# The settlements module alone on pack five (plan 3-set Phase 7, spec-settlements.md 12.1 and 12.4): four size
+# classes by households, one flag and one limit. Every number is a placeholder (N-015, N-027). The thresholds sit
+# between the 800 to 1 200 households each region of the pack starts with and the 50 to 170 it ends with, and a
+# dwell of 100 ticks is longer than the gap between two thresholds on the way down, so a run records changes
+# downwards (the pack collapses, spec-reference-chain.md), holds under the dwell, and the floor of one region.
+# The gate is the maker's: it needs a market, which village and above carry. The ceiling is the refiner's: a
+# limit on workers, above every group's start, so the warning ceiling_below_start stays silent.
+# Layer it after the pack: base.toml, lines.toml, five.toml, warm-five.toml, this file.
+
+[modules.settlements]
+band_bp = 1000
+dwell = 100
+
+[modules.settlements.class.hamlet]
+enter = 0
+label = "a hamlet"
+
+[modules.settlements.class.village]
+enter = 150
+flags = [ "market" ]
+label = "a village"
+
+[modules.settlements.class.village.limits]
+workers = 120
+
+[modules.settlements.class.town]
+enter = 300
+flags = [ "market" ]
+label = "a town"
+
+[modules.settlements.class.town.limits]
+workers = 240
+
+[modules.settlements.class.city]
+enter = 600
+flags = [ "market" ]
+label = "a city"
+
+[modules.settlements.class.city.limits]
+workers = 480
+
+# The west is a small realm: its thresholds are scaled to 60 %, and the east never falls below a hamlet's
+# neighbour: its floor is village.
+[modules.settlements.region.west]
+threshold_bp = 6000
+
+[modules.settlements.region.east]
+floor = "village"
+
+[role.maker]
+needs = "market"
+
+[role.refiner]
+ceiling = "workers"
