@@ -18,11 +18,11 @@ import (
 
 // completionHeadroom is the headroom a role has for the completion of a trainee in
 // region g, the least of the class limit and the body's (spec-institutions.md
-// 4.5.2). Neither exists before the settlement and institutions modules, so
-// skills.headroom is nil and there is no limit: noLimit is true and a completion
-// is never held. It is the slot those modules fill (plan 3-skl SK9), read again
-// after each completion, so the headroom shared by the held trainees is spent in
-// order.
+// 4.5.2). With neither the settlements nor the institutions module skills.headroom is
+// nil and there is no limit: noLimit is true and a completion is never held. It is
+// the slot those modules fill (plan 3-skl SK9; the settlements module sets it to
+// roleHeadroom), read again after each completion, so the headroom shared by the
+// held trainees is spent in order.
 func (w *World) completionHeadroom(g RegionID, r RoleID) (headroom int64, noLimit bool) {
 	if w.skills.headroom != nil {
 		return w.skills.headroom(g, r)
@@ -75,9 +75,12 @@ func (w *World) completeReady(g RegionID) error {
 		if skill.Complete(rec.served, w.cfg.Roles[rec.role].TrainingTicks, headroom, a.weight, noLimit) != skill.Done {
 			continue
 		}
-		d := Decision{Kind: DecideSwitch, Agent: a.id, Role: rec.role, Cause: CauseTraineeship}
+		d, from := Decision{Kind: DecideSwitch, Agent: a.id, Role: rec.role, Cause: CauseTraineeship}, a.role
 		if err := w.changeRole(g, a, d, true); err != nil {
 			return err
+		}
+		if w.set != nil {
+			w.set.noteRoleMove(g, from, d.Role, a.weight)
 		}
 	}
 	return nil

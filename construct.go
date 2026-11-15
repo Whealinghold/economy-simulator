@@ -73,6 +73,7 @@ func (w *World) construct(warnings []Warning) error {
 	b.createAgents()
 	checkCensus(b.plans, &b.w.cfg, b.w.live.agents, b.w.live.households)
 	b.w.set.found(b.w)
+	b.wireSeams()
 	if err := b.warm(); err != nil {
 		return err
 	}

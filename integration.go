@@ -215,7 +215,7 @@ func (w *World) createExternal(n NewAgent, strategy int, stock []itemRow) AgentI
 	w.agentJoined(&w.agents[id], g)
 	w.integ.watch(int32(id))
 	if w.obs.supplied {
-		w.obs.deliver(AgentSpawned{Tick: w.Tick(), Agent: id, Region: g, Role: n.Role, Weight: 1, StartMoney: n.Money, External: true})
+		w.obs.deliver(AgentSpawned{Tick: w.Tick(), Agent: id, Region: g, Role: n.Role, Weight: 1, StartMoney: n.Money, External: true, StoresLocked: w.storesLocked()})
 	}
 	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
 		w.log.LogAttrs(ctx, slog.LevelDebug, "agent added", slog.Int64(logkeys.Tick, w.Tick()),

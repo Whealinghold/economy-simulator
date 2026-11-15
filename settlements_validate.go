@@ -361,7 +361,39 @@ func settlementsWarnings(c *Config) []Warning {
 	out = append(out, s.dwellWarning(c, lk)...)
 	out = append(out, s.thresholdWarnings()...)
 	out = append(out, s.unreachableWarnings(c)...)
-	return append(out, s.unusedWarnings(c)...)
+	out = append(out, s.unusedWarnings(c)...)
+	return append(out, s.storeWarnings(c)...)
+}
+
+// storeWarnings is store_locked_at_start (spec-storage.md 13.2): for each role row of
+// the storage module, the count of (region, listed class) pairs where a group of the
+// role starts in a region whose class lacks the Needs flag of the class, so the store
+// is not given there.
+func (s *settlementCensus) storeWarnings(c *Config) []Warning {
+	st := c.Modules.Storage
+	if st == nil {
+		return nil
+	}
+	needs := make(map[string]string, len(st.Classes)) // lookup only
+	for _, k := range st.Classes {
+		needs[k.ID] = k.Needs
+	}
+	var out []Warning
+	for _, row := range st.Roles {
+		var n int64
+		for ri := range s.regions {
+			if _, has := s.byRole[[2]string{s.regions[ri].ID, row.Role}]; !has || s.outside[s.regions[ri].ID] {
+				continue
+			}
+			for _, id := range row.Stores {
+				if f := needs[id]; f != "" && !slices.Contains(s.m.Classes[s.class[ri]].Flags, f) {
+					n++
+				}
+			}
+		}
+		out = appendCount(out, []string{"modules", "storage", "roles", row.Role, "stores"}, "store_locked_at_start", n)
+	}
+	return out
 }
 
 // roleWarnings are needs_unmet_at_start and ceiling_below_start: for each role with

@@ -702,7 +702,7 @@ func (w *World) spawnEntrant(g RegionID, d Decision) error {
 	w.state.hadAgent[cell] = true
 	w.agentJoined(&w.agents[id], g)
 	if w.obs.supplied {
-		w.obs.deliver(AgentSpawned{Tick: w.Tick(), Agent: id, Region: g, Role: d.Role, Weight: 1, StartMoney: given})
+		w.obs.deliver(AgentSpawned{Tick: w.Tick(), Agent: id, Region: g, Role: d.Role, Weight: 1, StartMoney: given, StoresLocked: w.storesLocked()})
 	}
 	return nil
 }

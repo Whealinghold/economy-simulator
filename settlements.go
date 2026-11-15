@@ -228,3 +228,109 @@ func (w *World) fillRoleGates(g RegionID) {
 		}
 	}
 }
+
+// roleHeadroom is the class half of the headroom of role r in region g for the
+// completion of a trainee, the slot skills.headroom (spec-institutions.md 4.5.2, plan
+// 3-skl SK9): no limit for a role with no ceiling in the class, else the limit less the
+// households of the role, which a completion has already moved, so two held trainees
+// share the room in order.
+func (w *World) roleHeadroom(g RegionID, r RoleID) (headroom int64, noLimit bool) {
+	s := w.set
+	if s.ceil[r] < 0 {
+		return 0, true
+	}
+	limit, ok := w.regionLimit(g, s.ceil[r])
+	if !ok {
+		return 0, true
+	}
+	return settlement.Headroom(limit, s.roleCount(w, g, r)), false
+}
+
+// roleCount is the households of role r in region g. One scan of the agents per
+// (tick, region) fills it at the first read (O(A), NFR-SET-001); noteRoleMove keeps it
+// exact after.
+func (s *settlements) roleCount(w *World, g RegionID, r RoleID) int64 {
+	if t := w.Tick(); !s.cntOK || s.cntTick != t || s.cntRegion != g {
+		clear(s.cnt)
+		for i := w.firstHousehold; i < len(w.agents); i++ {
+			a := &w.agents[i]
+			if rg, ok := w.householdRegion(a); ok && rg == g {
+				s.cnt[a.role] = satAdd(s.cnt[a.role], a.weight)
+			}
+		}
+		s.cntOK, s.cntTick, s.cntRegion = true, t, g
+	}
+	return s.cnt[r]
+}
+
+// noteRoleMove is called after a completed traineeship moved weight households of
+// region g from one role to another, so a count read before it stays exact for the
+// next held trainee (hook H-14). It does nothing when no count is held for the region.
+func (s *settlements) noteRoleMove(g RegionID, from, to RoleID, weight int64) {
+	if s.cntOK && s.cntRegion == g {
+		s.cnt[from] -= weight
+		s.cnt[to] = satAdd(s.cnt[to], weight)
+	}
+}
+
+// storeClassGate is the gate of STO (spec-storage.md 3.2.3): a store class may be
+// given in a region whose class carries the flag its Needs names. It is nil when no
+// store class has a Needs, which leaves every class open.
+func (w *World) storeClassGate() func(RegionID, int) bool {
+	m := w.cfg.Modules.Storage
+	if m == nil {
+		return nil
+	}
+	flags := make([]int, len(m.Classes))
+	any := false
+	for i := range m.Classes {
+		flags[i] = nameIndex(w.set.flags, m.Classes[i].Needs)
+		any = any || flags[i] >= 0
+	}
+	if !any {
+		return nil
+	}
+	return func(g RegionID, class int) bool { return flags[class] < 0 || w.regionHas(g, flags[class]) }
+}
+
+// wireSeams fills the seams of the modules built before this one, once the classes
+// of the regions exist: the gate of the store classes, and the slot of the headroom
+// of a completion (hook H-10). The stores of the initial agents a class lacks are not
+// given, and each such agent's AgentSpawned says how many (spec-storage.md 3.2.3).
+func (b *builder) wireSeams() {
+	w := b.w
+	if w.set == nil {
+		return
+	}
+	if w.skills != nil {
+		w.skills.headroom = w.roleHeadroom
+	}
+	if w.sto != nil {
+		w.sto.gate = w.storeClassGate()
+		b.lockStores()
+	}
+}
+
+// lockStores takes from each initial agent the stores of its role's row whose class
+// the region lacks the flag of, and records the count for its AgentSpawned. Nothing
+// has moved yet, no room is set (the storage module defers it) and no event exists.
+func (b *builder) lockStores() {
+	w := b.w
+	s := w.sto
+	if s.gate == nil {
+		return
+	}
+	for i := w.firstHousehold; i < len(w.agents); i++ {
+		a := &w.agents[i]
+		var locked int64
+		for _, c := range s.given[a.role] {
+			if !s.gate(w.regionOf(a), c) {
+				s.take(a.id, c)
+				locked++
+			}
+		}
+		if k := i - w.firstHousehold; k < len(b.spawned) {
+			b.spawned[k].StoresLocked = locked
+		}
+	}
+}
