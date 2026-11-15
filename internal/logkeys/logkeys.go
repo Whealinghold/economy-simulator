@@ -202,3 +202,11 @@ const (
 	Fields = "fields"
 	Gain   = "gain"
 )
+
+// Rent is money per unit of an endowment, in minor units (int64), and Share a share
+// in basis points (int64), as the share of a title or of a strike, in the lines of
+// the tenure module.
+const (
+	Rent  = "rent"
+	Share = "share"
+)

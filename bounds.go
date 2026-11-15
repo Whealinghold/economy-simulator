@@ -605,3 +605,18 @@ const (
 	// MaxOpenClaims is the most open claims at once, the bound of Credit.MaxClaims.
 	MaxOpenClaims = 1_000_000
 )
+
+// The bounds of the tenure module (spec-land.md 10). All are placeholders (N-015,
+// N-027).
+const (
+	// MaxRentStepBP is the largest step of the posted rent: a tick moves it by at
+	// most the configured rate.
+	MaxRentStepBP = 10_000
+	// MaxRentCeilingBP is the largest ceiling of the posted rent: ten times the
+	// configured rate.
+	MaxRentCeilingBP = 100_000
+	// MaxHoldings is the most term rows, and the most holding rows, of the module.
+	MaxHoldings = 4_096
+	// MaxTitleTransfers is the most entries of one call of TransferTitles.
+	MaxTitleTransfers = 1_024
+)
