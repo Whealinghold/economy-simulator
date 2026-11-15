@@ -389,3 +389,20 @@ Tests: the claim index, the pot and the shield, the allocation (spec-credit.md 2
 Test pyramid pass (stage 6): `credit_guards_internal_test.go` covers the invariant guards, the room of a role with no Borrow block and the summary counts; `credit_scenario_internal_test.go` holds two end-to-end tests over 30 ticks of the credit world with planted claims (`TestScenario_CreditClaimsInLife`: repaid, arrears, write-off, a removed debtor and a removed creditor, audit and money conserved every tick; `TestFork_CreditClaimsInLife`: a checkpoint at tick 7 finishes with the original's bytes). They stand in for the real-config scenarios S114 to S118 of PR 5, which still need the round.
 
 Left open: `TestSettle_AwayDebtor` uses the transport module's away flag, but a journey (migration module) is not exercised; the scenario S117 and the fork tests of PR 4 and 5 cover the rest of FR-CRD-045 and 087. The counter test of NFR-CRD-003 is `TestSettle_OneBucketServesTwoTicks` (visits, not timings).
+
+## PR 3 result (Phases 6 and 7, recorded when PR 3 was built)
+
+Rule tags read: architecture=607ad1934df33a08dc5a9569, observability=9ebd6516273680595f477c95, testing=66af7645b01fef4e2796c367. No rule file, spec or note was edited, so no notes tag applies.
+
+Built: the plan fields `TradePlan.Borrow` and `Lend`, the credit group of the view (`CreditView`, hook 2), `DefaultBorrow`, `DefaultLend` and `DefaultCredit` (hook 6), the plan check `checkCreditPlan` (hook 3), admission, the round P3.3b (`p33bRound`, hook 1b), formation, `LoanFormed`, `CreditRound`, the nine refusal reasons, the Debug lines and the Warn "claim cap reached". The position P3.3b leaves `notBuiltPositions`.
+
+Deviations and choices the plan left open:
+
+- `DefaultBorrow(v, tier2, duration)` and `DefaultLend(v, bids)` take the figures the default `Trade` knows and the view does not hold (the limits are drawn inside `Trade`, so tier 2 at the plan's limits is read there before the money stack lowers one); `DefaultCredit(v, p, tier2, duration)` is the one guarded call.
+- Hook 3 is an unguarded, nil-safe `checkCreditPlan`, so that a request with the module off is a `credit_off` Debug line (5.2 row 1) and the fan-in holds no branch.
+- `internal/ledger` gains `OpenClaims()`, so the round ends at the claims limit before the ledger would refuse a loan.
+- The rate cap of ORG is `credit.rateCap`, a nil function value; `creditCount.priceControlled` is its counter and no event carries it yet.
+- The prices are valued once per tick for the upkeep cost (`creditPrices`).
+- `TestCredit_InertOverARun` keeps the empty-module identity; the case with blocks is replaced by `TestCredit_PackRoundRuns`, which holds that the round runs with the audit on. On the pack one with the placeholder block of `creditPackDoc` no request is made (the grower asks for less than `min_principal`): the golden pack and the placeholders are Phase 10.
+
+Left open: the `ErrBalanceOverflow` branch of formation (the borrower's balance at `MaxMoney`) has no test, since no world can fund it; the fold of `TestCredit_MoneyRebuild` covers a region-local loan, a payment to an estate and a waterfall.
