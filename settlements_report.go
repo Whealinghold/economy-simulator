@@ -32,12 +32,12 @@ func settlementNames(c *Config) []string {
 // SettlementClassChanged per region that is not an outside node, in ascending
 // RegionID, with From NoSettlementClass and the cause founded, after the AgentSpawned
 // events of the initial agents (spec-settlements.md 5.4.1). A nil module reports
-// nothing.
+// nothing. The household counts are those found() took: nothing between the two adds
+// or reweights an agent (the warm start moves goods and money only).
 func (s *settlements) announce(w *World) {
 	if s == nil {
 		return
 	}
-	w.householdCounts(s.hh)
 	for g := range s.class {
 		if !w.isOutsideNode(RegionID(g)) {
 			w.reportClassChanged(RegionID(g), NoSettlementClass, SettlementClassID(s.class[g]), s.hh[g], CauseFounded)
