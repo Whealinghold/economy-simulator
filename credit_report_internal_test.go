@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"bytes"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -246,5 +247,38 @@ func TestCredit_AllocsPerRun(t *testing.T) {
 	run() // grows the scratch
 	if got := testing.AllocsPerRun(5, run); got != 0 {
 		t.Errorf("AllocsPerRun(p17aSettle) = %v, want 0", got)
+	}
+}
+
+// TestCredit_Observation verifies that a run with a logger at Debug, an observer and
+// the audit on gives the same state as one with none of them: the same bytes of the
+// checkpoint after a scripted run with claims that fall due, go overdue, are paid and
+// are written off, and a removal that runs the waterfall.
+//
+// Requirement: FR-CRD-075
+func TestCredit_Observation(t *testing.T) {
+	t.Parallel()
+	run := func(opts ...Option) []byte {
+		w := creditWorld(t, 1, 3, opts...)
+		step(t, w, 1)
+		setBalances(t, w, map[AgentID]int64{homeWeaver: 600})
+		plantLoan(t, w, homeWeaver, homeA, 500, 50, 2)
+		plantLoan(t, w, homeWeaver, homeB, 100, 10, 3)
+		for range 5 {
+			stepSet(t, w, map[AgentID]int64{homeA: 700, homeB: 20})
+		}
+		if err := w.removeAgent(&w.agents[homeA], CauseConsumer); err != nil {
+			t.Fatalf("removeAgent error = %v, want nil", err)
+		}
+		cp, err := w.Checkpoint()
+		if err != nil {
+			t.Fatalf("Checkpoint error = %v, want nil", err)
+		}
+		return cp.b
+	}
+	plain := run()
+	watched := run(WithObserver(&evLog{}), WithLogger(slog.New(newCapture())), WithAudit())
+	if !bytes.Equal(plain, watched) {
+		t.Errorf("the checkpoint with a logger, an observer and the audit has %d bytes and differs from the one without (%d)", len(watched), len(plain))
 	}
 }

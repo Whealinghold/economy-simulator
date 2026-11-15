@@ -304,18 +304,27 @@ func (w *World) loadCredit(rs *restoreCtx, r *codec.Reader) error {
 // [Due, tick). Every failure names the claim.
 func (w *World) creditCross() error {
 	claims := w.ledger.AppendClaims(nil)
-	tick := w.Tick()
 	for _, c := range claims {
-		switch {
-		case c.Due <= c.Formed:
-			return fmt.Errorf("%w: claim %d is due at %d, not after its formation %d", ErrCheckpointCorrupt, c.ID, c.Due, c.Formed)
-		case c.Formed > tick:
-			return fmt.Errorf("%w: claim %d was formed at %d, after the tick %d", ErrCheckpointCorrupt, c.ID, c.Formed, tick)
-		case c.Overdue != -1 && (c.Overdue < c.Due || c.Overdue >= tick):
-			return fmt.Errorf("%w: claim %d is overdue from %d, want -1 or a tick in [%d, %d)", ErrCheckpointCorrupt, c.ID, c.Overdue, c.Due, tick)
+		if err := claimTimesFault(c, w.Tick()); err != nil {
+			return fmt.Errorf("%w: %w", ErrCheckpointCorrupt, err)
 		}
 	}
 	w.credit.idx.rebuild(claims)
+	return nil
+}
+
+// claimTimesFault checks the ticks of a restored claim against the tick of the
+// boundary (spec-credit.md 17.5): the due tick after the formation, the formation not
+// after the tick, and an overdue tick that is -1 or in [Due, tick).
+func claimTimesFault(c ledger.Claim, tick int64) error {
+	switch {
+	case c.Due <= c.Formed:
+		return fmt.Errorf("claim %d is due at %d, not after its formation %d", c.ID, c.Due, c.Formed)
+	case c.Formed > tick:
+		return fmt.Errorf("claim %d was formed at %d, after the tick %d", c.ID, c.Formed, tick)
+	case c.Overdue != -1 && (c.Overdue < c.Due || c.Overdue >= tick):
+		return fmt.Errorf("claim %d is overdue from %d, want -1 or a tick in [%d, %d)", c.ID, c.Overdue, c.Due, tick)
+	}
 	return nil
 }
 
