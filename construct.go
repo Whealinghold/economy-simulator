@@ -370,15 +370,21 @@ func (b *builder) announce(warnings []Warning) {
 	if w.log.Enabled(ctx, slog.LevelInfo) {
 		w.log.LogAttrs(ctx, slog.LevelInfo, "world created", w.summary()...)
 	}
-	if !w.obs.supplied {
-		return
+	if w.obs.supplied {
+		b.deliverCreated()
 	}
+	w.set.announce(w) // after the AgentSpawned events; the events only with an observer
+}
+
+// deliverCreated delivers WorldCreated and the AgentSpawned events of the initial
+// agents, in ascending ID.
+func (b *builder) deliverCreated() {
+	w := b.w
 	_, present := warmCountsOf(&w.cfg)
 	w.obs.deliver(WorldCreated{Seed: w.state.seed, ConfigHash: w.hash, WarmStart: present, Names: namesOf(&w.cfg), Jurisdictions: w.polity.startRows()})
 	for _, e := range b.spawned {
 		w.obs.deliver(e)
 	}
-	w.set.announce(w)
 }
 
 // logWarnings logs each configuration warning at Warn, once, with its rule and
