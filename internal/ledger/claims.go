@@ -84,6 +84,11 @@ func (l *Ledger) Claim(id int64) (Claim, bool) {
 	return l.claims[i], true
 }
 
+// OpenClaims returns the number of open claims, of either origin. The credit round
+// reads it to end a round at the claims limit before it forms a loan that the ledger
+// would refuse (spec-credit.md 6.4 step 1).
+func (l *Ledger) OpenClaims() int { return len(l.claims) }
+
 // findClaim returns the index in the open-claim list of the claim with the ID.
 func (l *Ledger) findClaim(id int64) (int, bool) {
 	return slices.BinarySearchFunc(l.claims, id, func(c Claim, id int64) int {

@@ -877,3 +877,28 @@ func TestClaim_ReadsOneOpenClaimByID(t *testing.T) {
 		t.Errorf("Claim(%d) = true after the claim ended, want false", id)
 	}
 }
+
+// TestOpenClaims verifies the count of open claims the credit round reads: it rises
+// with a loan and a payout claim, and falls when a claim ends.
+//
+// Requirement: FR-CRD-005
+func TestOpenClaims(t *testing.T) {
+	t.Parallel()
+	c := newCfix(t)
+	if got := c.l.OpenClaims(); got != 0 {
+		t.Fatalf("OpenClaims() = %d on a new ledger, want 0", got)
+	}
+	id := c.lend(t)
+	if _, err := c.l.Obligate(c.lender, c.borrower, 50, 9); err != nil {
+		t.Fatalf("Obligate() error = %v, want nil", err)
+	}
+	if got := c.l.OpenClaims(); got != 2 {
+		t.Errorf("OpenClaims() = %d after a loan and a payout claim, want 2", got)
+	}
+	if _, _, err := c.l.WriteOff(id); err != nil {
+		t.Fatalf("WriteOff() error = %v, want nil", err)
+	}
+	if got := c.l.OpenClaims(); got != 1 {
+		t.Errorf("OpenClaims() = %d after a write-off, want 1", got)
+	}
+}
