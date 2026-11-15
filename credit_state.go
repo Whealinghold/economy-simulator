@@ -238,8 +238,11 @@ func (w *World) creditUpkeep(a *agent) int64 {
 
 // auditCredit is the audit of the module (spec-credit.md 3.6, FR-CRD-082): the
 // identities of the claim list are the ledger's, and this adds that the indexes are
-// the list. It changes nothing.
+// the list. It is nil with the module off and changes nothing.
 func (w *World) auditCredit() error {
+	if w.credit == nil {
+		return nil
+	}
 	if err := w.credit.idx.check(w.ledger.AppendClaims(nil)); err != nil {
 		return fmt.Errorf("credit indexes: %w", err)
 	}

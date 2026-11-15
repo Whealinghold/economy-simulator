@@ -886,10 +886,8 @@ func (w *World) auditModules() error {
 	if err := w.auditTreasuries(); err != nil {
 		return auditFailure(w.Tick(), err)
 	}
-	if w.credit != nil {
-		if err := w.auditCredit(); err != nil {
-			return auditFailure(w.Tick(), err)
-		}
+	if err := w.auditCredit(); err != nil {
+		return auditFailure(w.Tick(), err)
 	}
 	if w.money == nil {
 		return nil

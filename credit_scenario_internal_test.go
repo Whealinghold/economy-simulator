@@ -114,6 +114,13 @@ func TestScenario_CreditClaimsInLife(t *testing.T) {
 	if err := w.credit.idx.check(nil); err != nil {
 		t.Errorf("claim indexes at the end: %v, want empty", err)
 	}
+	checkClaimsLifeTotals(t, w)
+	checkClaimsLifeEvents(t, rec, repaid, writtenOff, late, payout)
+}
+
+// checkClaimsLifeTotals verifies the money the claims of the scenario moved.
+func checkClaimsLifeTotals(t *testing.T, w *World) {
+	t.Helper()
 	tot := w.ledger.ClaimTotals()
 	if tot.Lent+tot.Awarded != tot.Repaid+tot.LostPrincipal {
 		t.Errorf("ClaimTotals = %+v: lent plus awarded is %d, want repaid plus lost principal %d",
@@ -122,7 +129,12 @@ func TestScenario_CreditClaimsInLife(t *testing.T) {
 	if tot.Lent != 1_200 || tot.Awarded != 200 || tot.InterestPaid != 54 || tot.LostPrincipal != 300 || tot.LostInterest != 26 {
 		t.Errorf("ClaimTotals = %+v, want 1200 lent, 200 awarded, 54 interest paid, 300 principal and 26 interest lost", tot)
 	}
+}
 
+// checkClaimsLifeEvents verifies how each claim of the scenario ended and the one
+// claim that passed to the estate.
+func checkClaimsLifeEvents(t *testing.T, rec *evLog, repaid, writtenOff, late, payout int64) {
+	t.Helper()
 	want := map[int64]Cause{repaid: CauseRepaid, writtenOff: CauseWrittenOff, late: CauseRepaid, payout: CauseDebtorRemoved}
 	ended := map[int64]LoanEnded{}
 	for _, e := range of[LoanEnded](rec) {
@@ -136,15 +148,28 @@ func TestScenario_CreditClaimsInLife(t *testing.T) {
 			t.Errorf("claim %d ended with %+v, want the cause %q", id, e, cause)
 		}
 	}
-	if e := ended[payout]; e.PaidPrincipal != 200 || e.LostPrincipal != 0 || e.Tick != 7 {
-		t.Errorf("payout LoanEnded = %+v, want 200 paid and nothing lost at tick 7", e)
-	}
-	if e := ended[writtenOff]; !e.ToEstate || e.Tick != 11 || e.LostPrincipal != 300 || e.LostInterest != 26 {
-		t.Errorf("written-off LoanEnded = %+v, want the estate as creditor, tick 11, 300 and 26 lost", e)
-	}
-	passed := of[LoanPassed](rec)
-	if len(passed) != 1 || passed[0].Claim != ClaimID(writtenOff) || passed[0].Creditor != homeWeaver || passed[0].Tick != 10 || passed[0].Owed != 328 {
+	checkClaimsLifeLosses(t, ended[payout], ended[writtenOff])
+	checkClaimsLifePassed(t, of[LoanPassed](rec), ClaimID(writtenOff))
+}
+
+// checkClaimsLifePassed verifies that the one claim that passed to the estate is
+// the written-off one, from the removed weaver.
+func checkClaimsLifePassed(t *testing.T, passed []LoanPassed, claim ClaimID) {
+	t.Helper()
+	if len(passed) != 1 || passed[0].Claim != claim || passed[0].Creditor != homeWeaver || passed[0].Tick != 10 || passed[0].Owed != 328 {
 		t.Errorf("LoanPassed events = %+v, want one: the written-off claim, from the home weaver at tick 10, owing 328", passed)
+	}
+}
+
+// checkClaimsLifeLosses verifies the payment of the removal and the loss of the
+// write-off.
+func checkClaimsLifeLosses(t *testing.T, payout, writtenOff LoanEnded) {
+	t.Helper()
+	if payout.PaidPrincipal != 200 || payout.LostPrincipal != 0 || payout.Tick != 7 {
+		t.Errorf("payout LoanEnded = %+v, want 200 paid and nothing lost at tick 7", payout)
+	}
+	if !writtenOff.ToEstate || writtenOff.Tick != 11 || writtenOff.LostPrincipal != 300 || writtenOff.LostInterest != 26 {
+		t.Errorf("written-off LoanEnded = %+v, want the estate as creditor, tick 11, 300 and 26 lost", writtenOff)
 	}
 }
 
