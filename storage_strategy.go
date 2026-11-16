@@ -226,6 +226,7 @@ func (t *tradeCtx) roomPlan(p *TradePlan) {
 		r := &t.rows[i]
 		if r.discard > 0 {
 			p.Discards = append(p.Discards, Discard{Commodity: r.commodity, Quantity: Quantity(r.discard)})
+			p.roomDiscarded = satAdd(p.roomDiscarded, r.discard)
 		}
 		if r.cut > 0 && r.kind == bidOrder {
 			p.Cuts = append(p.Cuts, RoomCut{Commodity: r.commodity, Quantity: Quantity(min(r.cut, MaxQuantity))})

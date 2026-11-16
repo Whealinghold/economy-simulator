@@ -85,7 +85,7 @@ func newViewScratch(cfg *Config, rt *roleTable, rc *recipeTable) *viewScratch {
 // tradePlan returns the empty, reused plan Trade appends to.
 func (sc *viewScratch) tradePlan() *TradePlan {
 	sc.plan.Intents, sc.plan.Discards, sc.plan.WantFunded = sc.plan.Intents[:0], sc.plan.Discards[:0], sc.plan.WantFunded[:0]
-	sc.plan.Shipments, sc.plan.Cuts = sc.plan.Shipments[:0], sc.plan.Cuts[:0]
+	sc.plan.Shipments, sc.plan.Cuts, sc.plan.roomDiscarded = sc.plan.Shipments[:0], sc.plan.Cuts[:0], 0
 	sc.plan.Offers, sc.plan.Takes, sc.plan.Notes = sc.plan.Offers[:0], sc.plan.Takes[:0], PlanNotes{}
 	return &sc.plan
 }

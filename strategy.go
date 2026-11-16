@@ -134,6 +134,10 @@ type TradePlan struct {
 	// commodity in commodity order, for the world to count and log (spec-storage.md
 	// 6.3.1); empty for any other strategy and with the storage module off.
 	Cuts []RoomCut
+	// roomDiscarded is the units of Discards the default strategy made for room
+	// (spec-storage.md 6.3.2), which RoomLimited.Discarded counts; a directive's or
+	// a consumer's discard is not in it. Unexported: only the default sets it.
+	roomDiscarded int64
 }
 
 // ShipmentRequest asks the world to move goods, or the agent itself

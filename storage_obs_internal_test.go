@@ -155,3 +155,28 @@ func TestDebug_JobRefusedForRoom(t *testing.T) {
 		}
 	}
 }
+
+// TestRoomLimited_DiscardedCountsOnlyTheDefaultsDiscard verifies that the units of
+// RoomLimited.Discarded are the default strategy's discard of 6.3.2 and no other: a
+// plan whose Discards were added by a directive or a consumer's strategy leaves the
+// count at 0.
+//
+// Requirement: FR-STO-036
+//
+// Fix: review of STO PR 4. checkRoomPlan summed every Discard of a limited agent's plan,
+// so a directive's discard raised Discarded and could trigger a RoomLimited by itself.
+func TestRoomLimited_DiscardedCountsOnlyTheDefaultsDiscard(t *testing.T) {
+	t.Parallel()
+	w := newMill(t, storageMillConfig(), WithSeed(1))
+	a := &w.agents[1]
+	cell := w.cellOf(w.regionOf(a), a)
+	w.checkRoomPlan(a, &TradePlan{Discards: []Discard{{Commodity: 0, Quantity: 5}}})
+	if got := w.sto.counts[cell].discarded; got != 0 {
+		t.Errorf("discarded after a plan with a foreign discard = %d, want 0", got)
+	}
+	// Two units are the default's (roomDiscarded) and 5 more were added after them.
+	w.checkRoomPlan(a, &TradePlan{Discards: []Discard{{Commodity: 0, Quantity: 2}, {Commodity: 0, Quantity: 5}}, roomDiscarded: 2})
+	if got := w.sto.counts[cell].discarded; got != 2 {
+		t.Errorf("discarded after the default's 2 units and a foreign 5 = %d, want 2", got)
+	}
+}

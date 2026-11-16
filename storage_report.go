@@ -314,11 +314,12 @@ func (s *storage) viewed(cell int, weight int64, free room.Pair) {
 
 // checkRoomPlan is the module's step of checkTradePlan: it counts what the default
 // strategy cut for room (the bids sized down or dropped) and what it discards, in the
-// cell of the agent, and logs each bid cut at Debug. The discards are the ones that
-// survived the core check, so a refused discard is not counted. It changes nothing in
-// the plan and takes no random word.
+// cell of the agent, and logs each bid cut at Debug. Only the default strategy's
+// discard of 6.3.2 is counted (roomDiscarded): a directive's or a consumer's discard
+// is not (spec-storage.md 5.3.4). It changes nothing in the plan and takes no random
+// word.
 func (w *World) checkRoomPlan(a *agent, p *TradePlan) {
-	if len(p.Cuts) == 0 && len(p.Discards) == 0 {
+	if len(p.Cuts) == 0 && p.roomDiscarded == 0 {
 		return
 	}
 	if rm, _, ok := w.sto.roomState(w.ledger, a); !ok || !rm.Limited {
@@ -326,9 +327,7 @@ func (w *World) checkRoomPlan(a *agent, p *TradePlan) {
 	}
 	c := &w.sto.counts[w.cellOf(w.regionOf(a), a)]
 	c.bidsCut = satAdd(c.bidsCut, int64(len(p.Cuts)))
-	for _, d := range p.Discards {
-		c.discarded = satAdd(c.discarded, int64(d.Quantity))
-	}
+	c.discarded = satAdd(c.discarded, p.roomDiscarded)
 	ctx := context.Background()
 	if !w.log.Enabled(ctx, slog.LevelDebug) {
 		return
