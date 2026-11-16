@@ -313,8 +313,9 @@ func (v *validator) storesTarget(tp []string, f MoneyFlow, fp []string) {
 // storageWarnings are the warnings of spec-storage.md 13.2 that need no other
 // module: no_limited_role, room_below_cover, room_below_recipe, store_class_unused
 // and store_levy_below_upkeep. store_locked_at_start is the settlements module's
-// (settlementsWarnings), which has the census it needs. A warning never fails validation and is safe on a configuration that
-// does not validate: an undeclared ID is skipped.
+// (settlementsWarnings), which has the census it needs. A warning never fails
+// validation and is safe on a configuration that does not validate: an undeclared
+// ID is skipped.
 func storageWarnings(c *Config) []Warning {
 	m := c.Modules.Storage
 	if m == nil {

@@ -268,7 +268,7 @@ func (s *settlements) roleCount(w *World, g RegionID, r RoleID) int64 {
 // next held trainee (hook H-14). It does nothing when no count is held for the region.
 func (s *settlements) noteRoleMove(g RegionID, from, to RoleID, weight int64) {
 	if s.cntOK && s.cntRegion == g {
-		s.cnt[from] -= weight
+		s.cnt[from] = max(s.cnt[from]-weight, 0) // a count never goes below 0, so headroom is never inflated
 		s.cnt[to] = satAdd(s.cnt[to], weight)
 	}
 }
