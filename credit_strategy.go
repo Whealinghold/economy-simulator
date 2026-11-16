@@ -128,8 +128,14 @@ func DefaultBorrow(v *AgentView, tier2, duration int64) (CreditRequest, bool) {
 	switch {
 	case v.HasJob:
 		j = v.Remaining
-	case v.Money-cv.UpkeepCost < tier2:
-		late = 1 // the inputs cannot be bought at once (10.2.1.2)
+	default:
+		left, ok := checked.Sub(v.Money, cv.UpkeepCost)
+		if !ok {
+			return CreditRequest{}, false // a hand-built view; a world's money is far below the bound
+		}
+		if left < tier2 {
+			late = 1 // the inputs cannot be bought at once (10.2.1.2)
+		}
 	}
 	if j <= 0 {
 		return CreditRequest{}, false
