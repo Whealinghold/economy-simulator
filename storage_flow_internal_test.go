@@ -232,3 +232,43 @@ func TestStoresTarget_UnresolvedClassIsAnInvariant(t *testing.T) {
 		t.Errorf("storesTarget(every class) = %v, %d, want true, -1", stores, class)
 	}
 }
+
+// TestStoresTarget_Branches verifies the reading of a flow target for newFlowState: a
+// target that is not stores is not a stores flow (and carries the zero class, so the
+// hashed state of the flow is as it was before the module), a stores target of a class
+// names the index of the class, and a stores target that names a class with the module
+// off stops the construction with the invariant panic, as validation (ErrModuleDependency)
+// makes it unreachable.
+//
+// Requirement: FR-STO-026
+//
+// Guard: the class -1 means every class and 0 means the first; a target that read the
+// wrong one would charge a levy on the wrong stores with no error.
+func TestStoresTarget_Branches(t *testing.T) {
+	t.Parallel()
+	on := &Config{Modules: Modules{Storage: &Storage{Classes: []StoreClass{{ID: "bin"}, {ID: "shed"}}}}}
+	off := &Config{}
+	tests := []struct {
+		name       string
+		c          *Config
+		target     FlowTarget
+		wantStores bool
+		wantClass  int
+	}{
+		{"households are not stores", on, FlowTarget{Kind: "households", Role: "miller"}, false, 0},
+		{"the second class", on, FlowTarget{Kind: "stores", Store: "shed"}, true, 1},
+		{"every class", on, FlowTarget{Kind: "stores"}, true, -1},
+		{"every class with the module off", off, FlowTarget{Kind: "stores"}, true, -1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if stores, class := storesTarget(tt.c, tt.target); stores != tt.wantStores || class != tt.wantClass {
+				t.Errorf("storesTarget(%+v) = %v, %d, want %v, %d", tt.target, stores, class, tt.wantStores, tt.wantClass)
+			}
+		})
+	}
+	if msg := invariantMessage(func() { storesTarget(off, FlowTarget{Kind: "stores", Store: "bin"}) }); msg == "" {
+		t.Errorf("storesTarget(a class, module off) did not panic, want the invariant panic")
+	}
+}
