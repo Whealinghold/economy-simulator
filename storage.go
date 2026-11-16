@@ -202,7 +202,7 @@ func (s *storage) owned(id AgentID) int {
 
 // count is the number of stores of one class the agent owns.
 func (s *storage) count(id AgentID, class int) int {
-	if int(id) >= len(s.stores) || s.stores[id] == nil {
+	if int(id) >= len(s.stores) || s.stores[id] == nil || class < 0 || class >= len(s.classes) {
 		return 0
 	}
 	return int(s.stores[id][class])

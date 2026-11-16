@@ -206,3 +206,29 @@ func TestStoresFlow_Accepted(t *testing.T) {
 		t.Errorf("Config.Validate(a stores levy) = %v, want nil", err)
 	}
 }
+
+// TestStoresTarget_UnresolvedClassIsAnInvariant verifies that a stores target whose
+// class is not in the configuration stops the world's construction with the invariant
+// panic instead of reading as "every class" (the index -1 of a failed lookup).
+//
+// Guard: the validator rejects such a class (ErrUnknownStoreClass), so only a broken
+// caller reaches it; without the panic a levy meant for one class would be charged on
+// every store silently.
+func TestStoresTarget_UnresolvedClassIsAnInvariant(t *testing.T) {
+	t.Parallel()
+	c := &Config{Modules: Modules{Storage: &Storage{Classes: []StoreClass{{ID: "bin"}}}}}
+	for _, tt := range []struct{ name, class string }{{"unknown class", "shed"}} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if msg := invariantMessage(func() { storesTarget(c, FlowTarget{Kind: "stores", Store: tt.class}) }); msg == "" {
+				t.Errorf("storesTarget(class %q) did not panic, want the invariant panic", tt.class)
+			}
+		})
+	}
+	if stores, class := storesTarget(c, FlowTarget{Kind: "stores", Store: "bin"}); !stores || class != 0 {
+		t.Errorf("storesTarget(bin) = %v, %d, want true, 0", stores, class)
+	}
+	if stores, class := storesTarget(c, FlowTarget{Kind: "stores"}); !stores || class != -1 {
+		t.Errorf("storesTarget(every class) = %v, %d, want true, -1", stores, class)
+	}
+}

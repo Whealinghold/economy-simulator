@@ -497,7 +497,12 @@ func storesTarget(c *Config, t FlowTarget) (stores bool, class int) {
 	}
 	class = -1
 	if t.Store != "" {
-		class = slices.IndexFunc(c.Modules.Storage.Classes, func(k StoreClass) bool { return k.ID == t.Store })
+		if c.Modules.Storage == nil {
+			invariant("a stores flow's module is off after validation: " + t.Store)
+		}
+		if class = slices.IndexFunc(c.Modules.Storage.Classes, func(k StoreClass) bool { return k.ID == t.Store }); class < 0 {
+			invariant("a stores flow's store class does not resolve after validation: " + t.Store) // -1 would mean every class
+		}
 	}
 	return true, class
 }

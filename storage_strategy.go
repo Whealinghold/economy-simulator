@@ -211,8 +211,8 @@ func (t *tradeCtx) discardForRoom(sc *roomScratch) {
 	for _, st := range steps {
 		r := &t.rows[sc.rows[st.Cand]]
 		r.discard += st.Units
-		tr.free.Mass += st.Units * r.size.Mass
-		tr.free.Bulk += st.Units * r.size.Bulk
+		tr.free.Mass = satAdd(tr.free.Mass, mulOrMax(st.Units, r.size.Mass))
+		tr.free.Bulk = satAdd(tr.free.Bulk, mulOrMax(st.Units, r.size.Bulk))
 	}
 }
 
