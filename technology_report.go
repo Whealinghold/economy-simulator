@@ -114,10 +114,12 @@ func (w *World) saveTechnology(cw *codec.Writer) error {
 
 // loadTechnology reads tag 33 into the state built for the configuration, in the order
 // of spec-checkpoint.md 6.2: Experience in [0, MaxExperience], Advance in [0, CapBP] of
-// its field, CatchUp in [0, 10 000 * TicksPerYear), TrendCarry in [0, TicksPerYear);
+// its field, CatchUp in [0, tec.Basis * TicksPerYear), TrendCarry in [0, TicksPerYear);
 // each violation is ErrCheckpointCorrupt and the caller refuses a byte after the last
 // field. It then derives the gain of every cell, which is never saved (FR-TEC-028); a gain that
 // does not fit is a corrupt section, not an invariant, and leaves the gains untouched.
+// A reader error leaves the cells and carries partly written: the restore discards the
+// world on any ErrCheckpointCorrupt, so none of them is observable.
 func (w *World) loadTechnology(_ *restoreCtx, r *codec.Reader) error {
 	t := w.tec
 	for i := range t.cells {
@@ -125,7 +127,7 @@ func (w *World) loadTechnology(_ *restoreCtx, r *codec.Reader) error {
 		t.cells[i] = tec.Cell{
 			Experience: r.Bounded("technology experience", MaxExperience),
 			Advance:    r.Bounded("technology advance", f.CapBP),
-			CatchUp:    r.Bounded("technology catch-up carry", 10_000*t.tpy-1),
+			CatchUp:    r.Bounded("technology catch-up carry", tec.Basis*t.tpy-1),
 		}
 	}
 	for i := range t.trendCarry {
