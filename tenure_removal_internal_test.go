@@ -120,3 +120,34 @@ func TestRemoval_CohortWeightChangeKeepsTitles(t *testing.T) {
 		t.Errorf("titles after a weight change = %v, want %v unchanged", got, before)
 	}
 }
+
+// TestRemoval_PoolShareKeptWhenTheAgentIsTheLastTitle verifies that the pool of a region
+// above 0 keeps the share it held when the removed agent's title is the last of a list of
+// two: the removal moves the agent's share onto the pool's, it does not replace it.
+//
+// Fix: the removal read the pool's share after deleting the agent's title in place, from the
+// list header of the old length, whose last element was zeroed; the search for the pool
+// missed it and the pool was left with the moved share alone.
+func TestRemoval_PoolShareKeptWhenTheAgentIsTheLastTitle(t *testing.T) {
+	t.Parallel()
+	w := tenureWorld(t, func(m *TenureConfig) {
+		m.Holdings = []Holding{
+			{Region: "home", Resource: "ore", Holder: HolderRef{Kind: HolderKindPool}, ShareBP: 1_000},
+			{Region: "yonder", Resource: "ore", Holder: HolderRef{Kind: HolderKindPool}, ShareBP: 500},
+		}
+	})
+	id := addHolder(t, w, 1, 500, 0)
+	if err := w.TransferTitles([]TitleTransfer{tr(1, 1, id, 40, 0)}); err != nil {
+		t.Fatalf("the gift of the ore of yonder error = %v, want nil", err)
+	}
+	if err := w.RemoveAgent(id); err != nil {
+		t.Fatalf("RemoveAgent error = %v, want nil", err)
+	}
+	got, err := w.Holders(1, 0)
+	if err != nil {
+		t.Fatalf("Holders(1, 0) error = %v, want nil", err)
+	}
+	if want := [][2]int64{{1, 500}}; !reflect.DeepEqual(tnPairs(got), want) {
+		t.Errorf("titles of yonder after the removal = %v, want %v", tnPairs(got), want)
+	}
+}

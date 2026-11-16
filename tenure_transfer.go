@@ -29,7 +29,10 @@ func (t *tenure) dropAgent(a *agent) {
 		}
 		region := t.regionOf(cell)
 		pool := AgentID(region)
-		t.holds[cell] = setShare(setShare(list, a.id, 0), pool, shareIn(list, pool)+share)
+		// The pool's share is read first: setShare deletes in place and leaves the old
+		// list header over a shifted, zeroed tail.
+		pooled := shareIn(list, pool) + share
+		t.holds[cell] = setShare(setShare(list, a.id, 0), pool, pooled)
 		if w.obs.supplied {
 			w.obs.deliver(TitleTransferred{
 				Tick: w.Tick(), Region: region, Resource: t.resourceOf(cell), From: a.id, To: pool, ShareBP: share,
