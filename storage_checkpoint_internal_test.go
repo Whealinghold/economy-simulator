@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/codec"
+	"github.com/Whealinghold/economy-sim/internal/room"
 )
 
 // The world of the checkpoint tests is the mill of the storage tests (stoMillWorld):
@@ -164,6 +165,7 @@ func TestCheckpoint_RestoreRejects_StoreBlock(t *testing.T) {
 			stoAdd(t, w, shipHome, 0)
 			stoAdd(t, w, shipHome, 1)
 			stoAdd(t, w, shipFar, 1)
+			step(t, w, 2) // a world at tick 0 is refused for its ledger, whatever the block says
 			ck := tamperedTail(t, w, tt.edit)
 			got, err := RestoreWorld(w.Config(), ck, WithStrategy("script", stoMiller{max: 1}))
 			if !errors.Is(err, ErrCheckpointCorrupt) || got != nil {
@@ -181,6 +183,7 @@ func TestCheckpoint_RestoreRejects_StoreBlock(t *testing.T) {
 func TestCheckpoint_RestoreRejects_StoreOnUnlimitedRole(t *testing.T) {
 	t.Parallel()
 	w := stoCkptWorld(t, 60, 40, stoMiller{max: 1}, nil)
+	step(t, w, 2) // a world at tick 0 is refused for its ledger, whatever the block says
 	stoAdd(t, w, shipHome, 0)
 	w.agents[shipHome].role = RoleID(len(w.cfg.Roles) - 1) // the monk, no base room
 	ck, err := w.Checkpoint()
@@ -205,6 +208,7 @@ func TestCheckpoint_RestoreRejects_StoreOnUnlimitedRole(t *testing.T) {
 func TestCheckpoint_RestoreRejects_LoadOverRoom(t *testing.T) {
 	t.Parallel()
 	w := stoCkptWorld(t, 60, 40, stoMiller{max: 1}, nil)
+	step(t, w, 2) // a world at tick 0 is refused for its ledger, whatever the block says
 	stoAdd(t, w, shipHome, 0)
 	stoGrain(t, w, shipHome, 40) // 10 of the start and 40: 50 grain
 	ck := tamperedTail(t, w, func(b []byte) { b[1] = 1 })
@@ -312,6 +316,75 @@ func TestCheckpoint_RestoreRejects_PledgeOverflow(t *testing.T) {
 				t.Errorf("rebuildStorage() = %v, want ErrCheckpointCorrupt", err)
 			}
 		})
+	}
+}
+
+// TestCheckpoint_RestoreRejects_CargoOverflow verifies that cargo in flight whose load
+// does not fit int64 is ErrCheckpointCorrupt from rebuildStorage, and that a shipment
+// with no line or a consignee outside the table adds nothing to the cargo.
+//
+// Arithmetic: a line of MaxInt64 units of grain, whose size is above 1 in a dimension
+// (shipConfig: mass 3, bulk 2), has the load MaxInt64*3, which overflows.
+//
+// Requirement: FR-STO-039, FR-STO-043
+//
+// Guard: the cargo is rebuilt from the shipments of the checkpoint, which are input; an
+// unchecked sum would wrap or raise an invariant instead of refusing the checkpoint.
+func TestCheckpoint_RestoreRejects_CargoOverflow(t *testing.T) {
+	t.Parallel()
+	w := stoCkptWorld(t, 60, 40, stoMiller{max: 1}, nil)
+	step(t, w, 2)
+	grain := commodityOf(t, w, "grain")
+	w.transport.ships = append(w.transport.ships,
+		shipment{consignee: shipHome}, // no line: skipped
+		shipment{consignee: AgentID(1 << 20), lines: []Line{{Commodity: grain, Quantity: 1}}}, // outside the table: skipped
+	)
+	got, err := w.sto.cargoInFlight(w)
+	if err != nil {
+		t.Fatalf("cargoInFlight() with skipped shipments error = %v, want nil", err)
+	}
+	for id, p := range got {
+		if p != (room.Pair{}) {
+			t.Errorf("cargoInFlight()[%d] = %+v, want the zero load", id, p)
+		}
+	}
+	w.transport.ships = append(w.transport.ships, shipment{consignee: shipHome, lines: []Line{{Commodity: grain, Quantity: math.MaxInt64}}})
+	if _, err := w.sto.cargoInFlight(w); err == nil {
+		t.Error("cargoInFlight() of a line of MaxInt64 units error = nil, want the overflow")
+	}
+	if err := w.rebuildStorage(); !errors.Is(err, ErrCheckpointCorrupt) {
+		t.Errorf("rebuildStorage() = %v, want ErrCheckpointCorrupt", err)
+	}
+}
+
+// TestCheckpoint_RestoreRejects_PledgePlusCargoOverflow verifies that a pledge of a job
+// and a cargo in flight that each fit int64 but whose sum does not are refused by
+// rebuildStorage as ErrCheckpointCorrupt.
+//
+// Arithmetic: grain and the first output weigh the same per unit, so MaxInt64/size units
+// of each fit alone and together load twice what int64 holds in the larger dimension.
+//
+// Requirement: FR-STO-039, FR-STO-020
+//
+// Guard: the pledge of an account is its jobs' load plus its cargo; syncJob and repledge
+// raise an invariant on an overflowing sum, so the restore checks it first.
+func TestCheckpoint_RestoreRejects_PledgePlusCargoOverflow(t *testing.T) {
+	t.Parallel()
+	w := stoCkptWorld(t, 60, 40, stoMiller{max: 1}, nil)
+	step(t, w, 2)
+	grain := commodityOf(t, w, "grain")
+	out := w.sto.recipes.row(0).outputs[0]
+	sz := w.sto.sizes[out.commodity]
+	if sz != w.sto.sizes[grain] {
+		t.Fatalf("size of the first output = %+v, want grain's %+v", sz, w.sto.sizes[grain])
+	}
+	per := math.MaxInt64 / max(sz.Mass, sz.Bulk)
+	pending := make([]int64, len(w.sto.recipes.row(0).outputs))
+	pending[0] = per
+	w.agents[shipHome].job = job{recipe: 0, remaining: 1, executions: 1, principal: shipHome, pending: pending}
+	w.transport.ships = append(w.transport.ships, shipment{consignee: shipHome, lines: []Line{{Commodity: grain, Quantity: Quantity(per)}}})
+	if err := w.rebuildStorage(); !errors.Is(err, ErrCheckpointCorrupt) {
+		t.Errorf("rebuildStorage() = %v, want ErrCheckpointCorrupt", err)
 	}
 }
 
