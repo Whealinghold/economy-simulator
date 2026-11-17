@@ -1,0 +1,660 @@
+format 1
+config three
+hash 33069597ca513040aa211e72151f14930445bb7c84d3a42197b4dd353a1cc743
+seed 1 ticks 400
+warning entry_share_window world/entry_share
+warning target_above_surplus regions/south
+warning tool_unaffordable roles/cook/start_money
+warning tool_unaffordable roles/grower/start_money
+warning window_extended roles/grower/recipes
+solver surplus_bp=26655 labour_share_bp=3752 pivots=10
+sample t=0
+market far_south fuel price=144 volume=126 unmatched_bid=9 unmatched_ask=1615 best_bid=130 best_ask=132 held_agents=3534 cost_anchor=159
+market far_south mineral price=592 age=1 unmatched_ask=143 best_ask=475 held_agents=193 cost_anchor=593
+market far_south prepared price=638 age=1 unmatched_ask=1475 best_ask=512 held_agents=2492 cost_anchor=639
+market far_south refined price=2870 age=1 unmatched_ask=243 best_ask=2332 held_agents=261 pending=81 cost_anchor=2870
+market far_south seed price=235 age=1 unmatched_ask=14180 best_ask=188 held_agents=14180 cost_anchor=236
+market far_south staple price=92 volume=250 unmatched_ask=422180 best_ask=82 held_agents=426096 pending=149400 cost_anchor=102
+market far_south tool_a price=13737 age=1 held_agents=179 pending=29 cost_anchor=13738
+market far_south tool_b price=16607 age=1 unmatched_bid=17 unmatched_ask=9 best_bid=11374 best_ask=13442 held_agents=134 pending=19 cost_anchor=16608
+market far_south waste price=50 age=1 pending=27
+market north fuel price=162 volume=123 unmatched_bid=6 unmatched_ask=1575 best_bid=147 best_ask=148 held_agents=3492 cost_anchor=180
+market north mineral price=837 age=1 unmatched_ask=140 best_ask=671 held_agents=190 cost_anchor=838
+market north prepared price=628 age=1 unmatched_ask=1430 best_ask=503 held_agents=2444 cost_anchor=628
+market north refined price=3190 age=1 unmatched_ask=237 best_ask=2557 held_agents=255 pending=78 cost_anchor=3189
+market north seed price=222 age=1 unmatched_ask=15180 best_ask=178 held_agents=15180 cost_anchor=222
+market north staple price=86 volume=238 unmatched_ask=161092 best_ask=77 held_agents=164930 cost_anchor=97
+market north tool_a price=13915 age=1 held_agents=253 pending=27 cost_anchor=13916
+market north tool_b price=17105 age=1 unmatched_bid=17 unmatched_ask=9 best_bid=11360 best_ask=15509 held_agents=128 pending=19 cost_anchor=17106
+market north waste price=50 age=1 pending=26
+market south fuel price=227 volume=128 unmatched_bid=8 unmatched_ask=1623 best_bid=203 best_ask=204 held_agents=3543 cost_anchor=246
+market south mineral price=1373 age=1 unmatched_ask=142 best_ask=1102 held_agents=192 cost_anchor=1374
+market south prepared price=585 age=1 unmatched_ask=1480 best_ask=470 held_agents=2503 cost_anchor=586
+market south refined price=3826 age=1 unmatched_ask=246 best_ask=3074 held_agents=264 pending=84 cost_anchor=3825
+market south seed price=188 age=1 unmatched_ask=7500 best_ask=152 held_agents=7500 cost_anchor=188
+market south staple price=77 volume=252 unmatched_ask=164640 best_ask=68 held_agents=168514 pending=55440 cost_anchor=68
+market south tool_a price=13831 age=1 held_agents=95 pending=30 cost_anchor=13832
+market south tool_b price=17657 age=1 unmatched_bid=17 unmatched_ask=9 best_bid=11415 best_ask=14550 held_agents=135 pending=19 cost_anchor=17658
+market south waste price=50 age=1 pending=28
+role far_south cook agents=142 households=142
+role far_south digger agents=21 households=21
+role far_south forester agents=78 households=78
+role far_south grower agents=265 households=265
+role far_south maker agents=57 households=57
+role far_south refiner agents=37 households=37
+role north cook agents=136 households=136
+role north digger agents=30 households=30
+role north forester agents=90 households=90
+role north grower agents=253 households=253
+role north maker agents=55 households=55
+role north refiner agents=36 households=36
+role south cook agents=143 households=143
+role south digger agents=63 households=63
+role south forester agents=158 households=158
+role south grower agents=140 households=140
+role south maker agents=58 households=58
+role south refiner agents=38 households=38
+region far_south mean_money=42604
+region north mean_money=41063
+region south mean_money=28452
+sample t=1
+market far_south fuel price=142 volume=192 unmatched_bid=4 unmatched_ask=2318 best_bid=130 best_ask=131 held_agents=4077 cost_anchor=159
+market far_south mineral price=580 volume=70 unmatched_bid=15 unmatched_ask=119 best_bid=546 best_ask=549 held_agents=239 cost_anchor=593
+market far_south prepared price=582 volume=204 unmatched_bid=22 unmatched_ask=1753 best_bid=528 best_ask=530 held_agents=2676 cost_anchor=634
+market far_south refined price=2870 age=2 unmatched_ask=299 best_ask=2235 held_agents=319 pending=30 cost_anchor=2860
+market far_south seed price=235 age=2 unmatched_ask=14240 best_ask=181 held_agents=14240 cost_anchor=226
+market far_south staple price=90 volume=356 unmatched_ask=426250 best_ask=77 held_agents=429952 pending=144000 cost_anchor=102
+market far_south tool_a price=13737 age=2 unmatched_ask=1 best_ask=15004 held_agents=180 pending=32 cost_anchor=13738
+market far_south tool_b price=16607 age=2 unmatched_bid=35 unmatched_ask=18 best_bid=11077 best_ask=13337 held_agents=125 pending=15 cost_anchor=16608
+market far_south waste price=50 age=2 pending=10
+market north fuel price=158 volume=182 unmatched_bid=1 unmatched_ask=2233 best_bid=144 best_ask=145 held_agents=3996 cost_anchor=180
+market north mineral price=799 volume=60 unmatched_bid=20 unmatched_ask=120 best_bid=755 best_ask=769 held_agents=230 cost_anchor=838
+market north prepared price=573 volume=206 unmatched_bid=22 unmatched_ask=1664 best_bid=518 best_ask=523 held_agents=2574 cost_anchor=624
+market north refined price=3190 age=2 unmatched_ask=293 best_ask=2556 held_agents=313 pending=30 cost_anchor=3178
+market north seed price=222 age=2 unmatched_ask=15180 best_ask=173 held_agents=15180 cost_anchor=212
+market north staple price=84 volume=340 unmatched_ask=159824 best_ask=73 held_agents=163458 cost_anchor=97
+market north tool_a price=13915 age=2 unmatched_ask=1 best_ask=11741 held_agents=254 pending=33 cost_anchor=13916
+market north tool_b price=17105 age=2 unmatched_bid=34 unmatched_ask=18 best_bid=11047 best_ask=13689 held_agents=120 pending=12 cost_anchor=17106
+market north waste price=50 age=2 pending=10
+market south fuel price=221 volume=199 unmatched_ask=2353 best_ask=197 held_agents=4116 cost_anchor=246
+market south mineral price=1331 volume=65 unmatched_bid=25 unmatched_ask=124 best_bid=1281 best_ask=1307 held_agents=239 cost_anchor=1374
+market south prepared price=536 volume=210 unmatched_bid=14 unmatched_ask=1762 best_bid=482 best_ask=486 held_agents=2685 cost_anchor=582
+market south refined price=3826 age=2 unmatched_ask=305 best_ask=2984 held_agents=325 pending=30 cost_anchor=3813
+market south seed price=188 age=2 unmatched_ask=7520 best_ask=146 held_agents=7520 cost_anchor=180
+market south staple price=76 volume=362 unmatched_ask=165850 best_ask=66 held_agents=169528 pending=52920 cost_anchor=68
+market south tool_a price=13831 age=2 unmatched_ask=1 best_ask=12469 held_agents=96 pending=33 cost_anchor=13832
+market south tool_b price=17657 age=2 unmatched_bid=35 unmatched_ask=18 best_bid=11065 best_ask=14490 held_agents=126 pending=15 cost_anchor=17658
+market south waste price=50 age=2 pending=10
+role far_south cook agents=142 households=142
+role far_south digger agents=21 households=21 unfed=1
+role far_south forester agents=78 households=78 unfed=2
+role far_south grower agents=265 households=265 unfed=6
+role far_south maker agents=57 households=57 unfed=1
+role far_south refiner agents=37 households=37 unfed=1
+role north cook agents=136 households=136
+role north digger agents=30 households=30
+role north forester agents=90 households=90
+role north grower agents=253 households=253 unfed=9
+role north maker agents=55 households=55 unfed=2
+role north refiner agents=36 households=36
+role south cook agents=143 households=143
+role south digger agents=63 households=63 unfed=1
+role south forester agents=158 households=158 unfed=2
+role south grower agents=140 households=140 unfed=4
+role south maker agents=58 households=58
+role south refiner agents=38 households=38
+region far_south mean_money=42604
+region north mean_money=41063
+region south mean_money=28452
+sample t=2
+market far_south fuel price=144 volume=658 unmatched_bid=76 unmatched_ask=2896 best_bid=134 best_ask=138 held_agents=4619 cost_anchor=159
+market far_south mineral price=591 volume=15 unmatched_ask=197 best_ask=513 held_agents=212 cost_anchor=593
+market far_south prepared price=592 volume=499 unmatched_bid=89 unmatched_ask=1970 best_bid=547 best_ask=548 held_agents=2877 cost_anchor=633
+market far_south refined price=2870 age=3 unmatched_ask=249 best_ask=2172 held_agents=325 pending=72 cost_anchor=2839
+market far_south seed price=235 age=3 unmatched_ask=14300 best_ask=177 held_agents=14300 cost_anchor=224
+market far_south staple price=87 volume=858 unmatched_ask=430208 best_ask=73 held_agents=432276 pending=138600 cost_anchor=102
+market far_south tool_a price=13737 age=3 unmatched_ask=29 best_ask=11104 held_agents=208 pending=10 cost_anchor=13738
+market far_south tool_b price=14722 volume=2 unmatched_bid=35 unmatched_ask=26 best_bid=13909 best_ask=14007 held_agents=118 pending=9 cost_anchor=16608
+market far_south waste price=50 age=3 pending=24
+market north fuel price=161 volume=650 unmatched_bid=59 unmatched_ask=2753 best_bid=149 best_ask=150 held_agents=4491 cost_anchor=180
+market north mineral price=710 volume=18 unmatched_bid=2 unmatched_ask=192 best_bid=687 best_ask=708 held_agents=210 cost_anchor=838
+market north prepared price=581 volume=505 unmatched_bid=88 unmatched_ask=1849 best_bid=536 best_ask=538 held_agents=2744 cost_anchor=623
+market north refined price=3190 age=3 unmatched_ask=244 best_ask=2486 held_agents=316 pending=66 cost_anchor=3112
+market north seed price=222 age=3 unmatched_ask=15180 best_ask=167 held_agents=15180 cost_anchor=210
+market north staple price=83 volume=869 unmatched_ask=158455 best_ask=71 held_agents=161378 cost_anchor=97
+market north tool_a price=13915 age=3 unmatched_ask=27 best_ask=11711 held_agents=280 pending=10 cost_anchor=13916
+market north tool_b price=15130 volume=4 unmatched_bid=31 unmatched_ask=24 best_bid=14998 best_ask=15087 held_agents=113 pending=9 cost_anchor=17106
+market north waste price=50 age=3 pending=22
+market south fuel price=222 volume=600 unmatched_bid=56 unmatched_ask=2917 best_bid=204 best_ask=205 held_agents=4664 cost_anchor=246
+market south mineral price=1222 volume=25 unmatched_ask=191 best_ask=1108 held_agents=216 cost_anchor=1374
+market south prepared price=529 volume=532 unmatched_bid=51 unmatched_ask=1965 best_bid=485 best_ask=486 held_agents=2902 cost_anchor=581
+market south refined price=3826 age=3 unmatched_ask=251 best_ask=2979 held_agents=329 pending=69 cost_anchor=3739
+market south seed price=188 age=3 unmatched_ask=7560 best_ask=145 held_agents=7560 cost_anchor=179
+market south staple price=73 volume=1118 unmatched_ask=165694 best_ask=62 held_agents=169292 pending=51660 cost_anchor=68
+market south tool_a price=13831 age=3 unmatched_ask=30 best_ask=11076 held_agents=125 pending=8 cost_anchor=13832
+market south tool_b price=15570 volume=3 unmatched_bid=31 unmatched_ask=25 best_bid=15069 best_ask=15538 held_agents=118 pending=11 cost_anchor=17658
+market south waste price=50 age=3 pending=23
+role far_south cook agents=142 households=142
+role far_south digger agents=21 households=21 unfed=1
+role far_south forester agents=78 households=78 unfed=5
+role far_south grower agents=265 households=265 unfed=14
+role far_south maker agents=57 households=57 unfed=1
+role far_south refiner agents=37 households=37 unfed=2
+role north cook agents=136 households=136
+role north digger agents=30 households=30 unfed=1
+role north forester agents=90 households=90 unfed=6
+role north grower agents=253 households=253 unfed=9
+role north maker agents=55 households=55 unfed=1
+role north refiner agents=36 households=36
+role south cook agents=143 households=143
+role south digger agents=63 households=63
+role south forester agents=158 households=158 unfed=5
+role south grower agents=140 households=140 unfed=1
+role south maker agents=58 households=58 unfed=2
+role south refiner agents=38 households=38 unfed=4
+region far_south mean_money=42604
+region north mean_money=41063
+region south mean_money=28452
+sample t=5
+market far_south fuel price=139 volume=157 unmatched_ask=3146 best_ask=115 held_agents=4324 cost_anchor=80
+market far_south mineral price=548 volume=5 unmatched_ask=364 best_ask=421 held_agents=369 cost_anchor=297
+market far_south prepared price=576 volume=210 unmatched_ask=1398 best_ask=479 held_agents=1462 cost_anchor=412
+market far_south refined price=2607 volume=35 unmatched_bid=4 unmatched_ask=201 best_bid=2102 best_ask=2234 held_agents=288 cost_anchor=1969
+market far_south seed price=235 age=6 unmatched_ask=14480 best_ask=157 held_agents=14480 cost_anchor=152
+market far_south staple price=82 volume=947 unmatched_ask=440441 best_ask=63 held_agents=442580 pending=122400 cost_anchor=58
+market far_south tool_a price=13737 age=6 unmatched_ask=76 best_ask=10738 held_agents=255 pending=16 cost_anchor=9379
+market far_south tool_b price=16389 volume=11 unmatched_bid=45 unmatched_ask=3 best_bid=16615 best_ask=16714 held_agents=91 pending=3 cost_anchor=12069
+market far_south waste price=50 age=6
+market north fuel price=154 volume=153 unmatched_ask=2623 best_ask=131 held_agents=3792 cost_anchor=90
+market north mineral price=770 volume=5 unmatched_ask=266 best_ask=637 held_agents=271 cost_anchor=419
+market north prepared price=602 volume=241 unmatched_bid=4 unmatched_ask=1067 best_bid=536 best_ask=537 held_agents=1422 cost_anchor=396
+market north refined price=2891 volume=28 unmatched_bid=13 unmatched_ask=201 best_bid=2551 best_ask=2618 held_agents=278 cost_anchor=2198
+market north seed price=222 age=6 unmatched_ask=15180 best_ask=156 held_agents=15180 cost_anchor=144
+market north staple price=79 volume=1118 unmatched_ask=153531 best_ask=63 held_agents=156592 cost_anchor=55
+market north tool_a price=13915 age=6 unmatched_ask=70 best_ask=10971 held_agents=323 pending=16 cost_anchor=9372
+market north tool_b price=17009 volume=9 unmatched_bid=52 unmatched_ask=10 best_bid=16335 best_ask=16573 held_agents=88 pending=3 cost_anchor=12174
+market north waste price=50 age=6
+market south fuel price=209 volume=225 unmatched_bid=2 unmatched_ask=3399 best_bid=175 best_ask=177 held_agents=4831 cost_anchor=123
+market south mineral price=1120 volume=5 unmatched_ask=364 best_ask=976 held_agents=369 cost_anchor=687
+market south prepared price=566 volume=886 unmatched_bid=632 unmatched_ask=748 best_bid=565 best_ask=566 held_agents=1540 cost_anchor=349
+market south refined price=3505 volume=42 unmatched_bid=8 unmatched_ask=196 best_bid=2990 best_ask=3047 held_agents=290 cost_anchor=2872
+market south seed price=188 age=6 unmatched_ask=7660 best_ask=129 held_agents=7660 cost_anchor=123
+market south staple price=69 volume=1147 unmatched_ask=166392 best_ask=54 held_agents=170135 pending=45360 cost_anchor=39
+market south tool_a price=13831 age=6 unmatched_ask=75 best_ask=10787 held_agents=170 pending=14 cost_anchor=9416
+market south tool_b price=17629 volume=8 unmatched_bid=33 unmatched_ask=14 best_bid=15925 best_ask=17735 held_agents=93 pending=5 cost_anchor=12579
+market south waste price=50 age=6
+role far_south cook agents=142 households=142
+role far_south digger agents=21 households=21
+role far_south forester agents=78 households=78
+role far_south grower agents=265 households=265
+role far_south maker agents=57 households=57
+role far_south refiner agents=37 households=37
+role north cook agents=136 households=136
+role north digger agents=30 households=30
+role north forester agents=90 households=90
+role north grower agents=253 households=253 unfed=4
+role north maker agents=55 households=55
+role north refiner agents=36 households=36
+role south cook agents=143 households=143 unfed=2
+role south digger agents=63 households=63 unfed=17
+role south forester agents=158 households=158 unfed=38
+role south grower agents=140 households=140 unfed=44
+role south maker agents=58 households=58 unfed=20
+role south refiner agents=38 households=38 unfed=8
+region far_south mean_money=42604
+region north mean_money=41063
+region south mean_money=28452
+sample t=10
+market far_south fuel price=139 volume=1092 unmatched_bid=13 unmatched_ask=2473 best_bid=131 best_ask=132 held_agents=4317 cost_anchor=80
+market far_south mineral price=490 volume=55 unmatched_ask=226 best_ask=396 held_agents=281 cost_anchor=297
+market far_south prepared price=592 volume=551 unmatched_bid=36 unmatched_ask=552 best_bid=566 best_ask=567 held_agents=1484 cost_anchor=406
+market far_south refined price=2701 volume=29 unmatched_bid=11 unmatched_ask=65 best_bid=2467 best_ask=2469 held_agents=95 pending=48 cost_anchor=1837
+market far_south seed price=235 age=11 unmatched_ask=14780 best_ask=124 held_agents=14780 cost_anchor=145
+market far_south staple price=78 volume=996 unmatched_bid=1 unmatched_ask=456854 best_bid=48 best_ask=55 held_agents=458992 pending=95400 cost_anchor=58
+market far_south tool_a price=13737 age=11 unmatched_ask=129 best_ask=8641 held_agents=308 pending=7 cost_anchor=9447
+market far_south tool_b price=19410 volume=3 unmatched_bid=76 best_bid=19970 held_agents=61 pending=35 cost_anchor=12171
+market far_south waste price=50 age=11 pending=16
+market north fuel price=156 volume=1093 unmatched_bid=12 unmatched_ask=2045 best_bid=146 best_ask=147 held_agents=3923 cost_anchor=90
+market north mineral price=739 volume=52 unmatched_bid=8 unmatched_ask=168 best_bid=714 best_ask=718 held_agents=220 cost_anchor=419
+market north prepared price=605 volume=719 unmatched_bid=275 unmatched_ask=412 best_bid=606 best_ask=607 held_agents=1328 cost_anchor=390
+market north refined price=2914 volume=33 unmatched_bid=6 unmatched_ask=57 best_bid=2692 best_ask=2751 held_agents=93 pending=39 cost_anchor=2168
+market north seed price=222 age=11 unmatched_ask=15180 best_ask=134 held_agents=15180 cost_anchor=138
+market north staple price=72 volume=968 unmatched_ask=145144 best_ask=52 held_agents=148828 cost_anchor=55
+market north tool_a price=13915 age=11 unmatched_ask=120 best_ask=9864 held_agents=373 pending=12 cost_anchor=9456
+market north tool_b price=19249 volume=4 unmatched_bid=63 unmatched_ask=2 best_bid=19756 best_ask=20193 held_agents=61 pending=28 cost_anchor=12300
+market north waste price=50 age=11 pending=13
+market south fuel price=208 volume=935 unmatched_bid=1 unmatched_ask=2598 best_bid=116 best_ask=193 held_agents=4533 cost_anchor=123
+market south mineral price=1164 volume=60 unmatched_bid=10 unmatched_ask=253 best_bid=1104 best_ask=1117 held_agents=313 cost_anchor=687
+market south prepared price=553 volume=579 unmatched_bid=314 unmatched_ask=462 best_bid=565 best_ask=568 held_agents=1266 cost_anchor=342
+market south refined price=3471 volume=39 unmatched_bid=14 unmatched_ask=87 best_bid=3073 best_ask=3311 held_agents=134 pending=27 cost_anchor=2800
+market south seed price=188 age=11 unmatched_ask=7820 best_ask=122 held_agents=7820 cost_anchor=119
+market south staple price=62 volume=714 unmatched_ask=168156 best_ask=43 held_agents=171597 pending=35280 cost_anchor=39
+market south tool_a price=13831 age=11 unmatched_ask=122 best_ask=9589 held_agents=217 pending=21 cost_anchor=10486
+market south tool_b price=16174 volume=6 unmatched_bid=20 unmatched_ask=11 best_bid=15456 best_ask=15755 held_agents=90 pending=14 cost_anchor=14184
+market south waste price=50 age=11 pending=9
+role far_south cook agents=142 households=142
+role far_south digger agents=21 households=21
+role far_south forester agents=78 households=78 unfed=2
+role far_south grower agents=265 households=265 unfed=8
+role far_south maker agents=57 households=57
+role far_south refiner agents=37 households=37 unfed=1
+role north cook agents=136 households=136 unfed=1
+role north digger agents=30 households=30 unfed=6
+role north forester agents=90 households=90 unfed=5
+role north grower agents=253 households=253 unfed=12
+role north maker agents=55 households=55 unfed=7
+role north refiner agents=36 households=36 unfed=3
+role south cook agents=143 households=143
+role south digger agents=63 households=63 unfed=7
+role south forester agents=158 households=158 unfed=15
+role south grower agents=140 households=140 unfed=12
+role south maker agents=58 households=58 unfed=13
+role south refiner agents=38 households=38 unfed=3
+region far_south mean_money=42604
+region north mean_money=41063
+region south mean_money=28452
+sample t=20
+market far_south fuel price=128 volume=672 unmatched_bid=1 unmatched_ask=2756 best_bid=54 best_ask=104 held_agents=4285 cost_anchor=80
+market far_south mineral price=475 volume=50 unmatched_ask=182 best_ask=437 held_agents=272 cost_anchor=297
+market far_south prepared price=570 volume=627 unmatched_bid=7 unmatched_ask=879 best_bid=551 best_ask=557 held_agents=2017 cost_anchor=398
+market far_south refined price=2722 volume=31 unmatched_bid=26 unmatched_ask=65 best_bid=2508 best_ask=2609 held_agents=139 pending=33 cost_anchor=1766
+market far_south seed price=235 age=21 unmatched_ask=15400 best_ask=94 held_agents=15400 cost_anchor=135
+market far_south staple price=68 volume=943 unmatched_ask=490954 best_ask=40 held_agents=494975 pending=39600 cost_anchor=58
+market far_south tool_a price=13737 age=21 unmatched_ask=141 best_ask=8459 held_agents=320 cost_anchor=9129
+market far_south tool_b price=16726 volume=11 unmatched_bid=10 unmatched_ask=8 best_bid=16574 best_ask=17468 held_agents=112 pending=23 cost_anchor=11694
+market far_south waste price=50 age=21 pending=11
+market north fuel price=149 volume=1148 unmatched_bid=2 unmatched_ask=2012 best_bid=42 best_ask=145 held_agents=4066 cost_anchor=97
+market north mineral price=725 volume=75 unmatched_ask=109 best_ask=717 held_agents=204 cost_anchor=450
+market north prepared price=561 volume=595 unmatched_bid=3 unmatched_ask=431 best_bid=539 best_ask=541 held_agents=1609 cost_anchor=405
+market north refined price=2946 volume=44 unmatched_bid=16 unmatched_ask=43 best_bid=2911 best_ask=2925 held_agents=116 pending=30 cost_anchor=2160
+market north seed price=222 age=21 unmatched_ask=15180 best_ask=111 held_agents=15180 cost_anchor=133
+market north staple price=66 volume=1016 unmatched_ask=127936 best_ask=43 held_agents=131903 cost_anchor=58
+market north tool_a price=13915 age=21 unmatched_ask=137 best_ask=6997 held_agents=390 cost_anchor=9834
+market north tool_b price=16833 volume=7 unmatched_bid=5 unmatched_ask=15 best_bid=17087 best_ask=17530 held_agents=117 pending=24 cost_anchor=12726
+market north waste price=50 age=21 pending=10
+market south fuel price=191 volume=936 unmatched_bid=18 unmatched_ask=2643 best_bid=140 best_ask=173 held_agents=4589 cost_anchor=123
+market south mineral price=1089 volume=40 unmatched_ask=250 best_ask=857 held_agents=295 cost_anchor=687
+market south prepared price=552 volume=445 unmatched_bid=34 unmatched_ask=253 best_bid=556 best_ask=557 held_agents=1032 cost_anchor=330
+market south refined price=2968 volume=28 unmatched_bid=9 unmatched_ask=123 best_bid=2772 best_ask=2871 held_agents=175 pending=24 cost_anchor=2657
+market south seed price=188 age=21 unmatched_ask=8140 best_ask=97 held_agents=8140 cost_anchor=106
+market south staple price=55 volume=1529 unmatched_ask=170926 best_ask=34 held_agents=174719 pending=15120 cost_anchor=39
+market south tool_a price=13831 age=21 unmatched_ask=157 best_ask=8244 held_agents=252 pending=3 cost_anchor=10100
+market south tool_b price=14607 volume=7 unmatched_bid=1 unmatched_ask=54 best_bid=13018 best_ask=13488 held_agents=169 held_estate=1 pending=12 cost_anchor=13605
+market south waste price=50 age=21 pending=8
+role far_south cook agents=142 households=142
+role far_south digger agents=21 households=21 unfed=1
+role far_south forester agents=78 households=78 unfed=2
+role far_south grower agents=265 households=265
+role far_south maker agents=57 households=57 unfed=1
+role far_south refiner agents=37 households=37
+role north cook agents=136 households=136 unfed=2
+role north digger agents=30 households=30
+role north forester agents=90 households=90
+role north grower agents=253 households=253
+role north maker agents=55 households=55
+role north refiner agents=36 households=36 unfed=1
+role south cook agents=142 households=142
+role south digger agents=63 households=63 unfed=5
+role south forester agents=158 households=158 unfed=5
+role south grower agents=140 households=140 unfed=1
+role south maker agents=58 households=58 unfed=21
+role south refiner agents=38 households=38
+region far_south mean_money=42604
+region north mean_money=41063
+region south mean_money=28499 pool=56
+sample t=50
+market far_south fuel price=107 volume=580 unmatched_bid=13 unmatched_ask=3483 best_bid=78 best_ask=86 held_agents=4946 cost_anchor=86
+market far_south mineral price=429 volume=15 unmatched_ask=483 best_ask=294 held_agents=512 held_estate=6 cost_anchor=320
+market far_south prepared price=599 volume=323 unmatched_bid=153 unmatched_ask=3 best_bid=645 best_ask=650 held_agents=305 cost_anchor=414
+market far_south refined price=2340 volume=5 unmatched_bid=2 unmatched_ask=261 best_bid=158 best_ask=1781 held_agents=271 held_estate=4 pending=18 cost_anchor=1727
+market far_south seed price=235 age=51 unmatched_ask=16396 best_ask=97 held_agents=16396 cost_anchor=134
+market far_south staple price=62 volume=821 unmatched_ask=471768 best_ask=42 held_agents=474109 cost_anchor=61
+market far_south tool_a price=13737 age=51 unmatched_ask=154 best_ask=5257 held_agents=263 held_estate=79 pending=3 cost_anchor=9290
+market far_south tool_b price=12707 volume=1 unmatched_ask=111 best_ask=6461 held_agents=170 held_estate=46 pending=2 cost_anchor=11778
+market far_south waste price=50 age=51 pending=6
+market north fuel price=124 volume=230 unmatched_bid=18 unmatched_ask=3596 best_bid=77 best_ask=87 held_agents=4351 held_estate=276 cost_anchor=117
+market north mineral price=495 volume=10 unmatched_ask=390 best_ask=405 held_agents=332 held_estate=77 cost_anchor=546
+market north prepared price=591 volume=530 unmatched_bid=358 best_bid=645 held_agents=614 cost_anchor=413
+market north refined price=2364 volume=2 unmatched_ask=261 best_ask=1643 held_agents=199 held_estate=65 pending=6 cost_anchor=2107
+market north seed price=222 age=51 unmatched_ask=15994 best_ask=111 held_agents=15994 cost_anchor=142
+market north staple price=60 volume=1158 unmatched_ask=79442 best_ask=47 held_agents=83456 cost_anchor=68
+market north tool_a price=13915 age=51 unmatched_ask=148 best_ask=5257 held_agents=299 held_estate=113 cost_anchor=9303
+market north tool_b price=11642 volume=1 unmatched_ask=102 best_ask=5001 held_agents=149 held_estate=68 pending=1 cost_anchor=11499
+market north waste price=50 age=51 pending=2
+market south fuel price=157 volume=459 unmatched_bid=52 unmatched_ask=3684 best_bid=105 best_ask=116 held_agents=4969 held_estate=90 cost_anchor=146
+market south mineral price=677 age=4 unmatched_ask=578 best_ask=457 held_agents=374 held_estate=209 cost_anchor=816
+market south prepared price=521 volume=350 unmatched_bid=31 unmatched_ask=633 best_bid=436 best_ask=452 held_agents=1329 cost_anchor=355
+market south refined price=2070 age=3 unmatched_ask=252 best_ask=939 held_agents=185 held_estate=69 cost_anchor=2049
+market south seed price=188 age=51 unmatched_ask=8900 best_ask=76 held_agents=8838 held_estate=62 cost_anchor=108
+market south staple price=46 volume=1036 unmatched_ask=143747 best_ask=30 held_agents=146942 cost_anchor=44
+market south tool_a price=13831 age=51 unmatched_ask=173 best_ask=3491 held_agents=98 held_estate=170 cost_anchor=7812
+market south tool_b price=12170 volume=3 unmatched_ask=86 best_ask=4289 held_agents=135 held_estate=83 cost_anchor=9882
+market south waste price=50 age=51
+role far_south cook agents=112 households=112
+role far_south digger agents=34 households=34 unfed=15
+role far_south forester agents=96 households=96 unfed=32
+role far_south grower agents=274 households=274 unfed=81
+role far_south maker agents=26 households=26 unfed=13
+role far_south refiner agents=58 households=58 unfed=25
+role north cook agents=125 households=125
+role north digger agents=41 households=41 unfed=23
+role north forester agents=104 households=104 unfed=42
+role north grower agents=272 households=272 unfed=107
+role north maker agents=12 households=12 unfed=5
+role north refiner agents=44 households=44 unfed=21
+role south cook agents=134 households=134
+role south digger agents=72 households=72 unfed=35
+role south forester agents=172 households=172 unfed=21
+role south grower agents=149 households=149 unfed=1
+role south maker agents=1 households=1 unfed=1
+role south refiner agents=32 households=32 unfed=20
+region far_south mean_money=41654 pool=570011
+region north mean_money=40783 pool=249662
+region south mean_money=30394 pool=50546
+sample t=100
+market far_south fuel price=112 volume=648 unmatched_bid=41 unmatched_ask=4482 best_bid=93 best_ask=94 held_agents=5354 held_estate=454 cost_anchor=127
+market far_south mineral price=338 age=37 unmatched_ask=976 best_ask=56 held_estate=976 cost_anchor=472
+market far_south prepared price=752 volume=309 unmatched_bid=113 unmatched_ask=14 best_bid=849 best_ask=884 held_agents=352 cost_anchor=443
+market far_south refined price=2041 age=47 unmatched_ask=387 best_ask=219 held_estate=387
+market far_south seed price=235 age=101 unmatched_ask=21912 best_ask=50 held_agents=20056 held_estate=1856 cost_anchor=169
+market far_south staple price=61 volume=959 unmatched_bid=14 unmatched_ask=383218 best_bid=57 best_ask=58 held_agents=384233 cost_anchor=84
+market far_south tool_a price=13737 age=101 unmatched_ask=168 best_ask=414 held_agents=177 held_estate=169
+market far_south tool_b price=9537 age=22 unmatched_bid=71 best_bid=28206 held_agents=18
+market far_south waste price=50 age=101
+market north fuel price=106 volume=150 unmatched_bid=19 unmatched_ask=6142 best_bid=64 best_ask=65 held_agents=6574 held_estate=323 cost_anchor=90
+market north mineral price=404 age=37 unmatched_ask=560 best_ask=54 held_estate=560
+market north prepared price=677 volume=440 unmatched_bid=33 unmatched_ask=189 best_bid=589 best_ask=595 held_agents=907 cost_anchor=363
+market north refined price=2364 age=50 unmatched_ask=316 best_ask=135 held_estate=316
+market north seed price=222 age=101 unmatched_ask=9214 best_ask=50 held_agents=6032 held_estate=3182 cost_anchor=103
+market north staple price=41 volume=1834 unmatched_bid=57 unmatched_ask=7056 best_bid=34 best_ask=35 held_agents=10537 pending=393236 cost_anchor=48
+market north tool_a price=1447 age=2 unmatched_ask=63 best_ask=414 held_agents=25 held_estate=63
+market north tool_b price=11573 age=17 unmatched_bid=47 best_bid=21935 held_agents=42
+market north waste price=50 age=101
+market south fuel price=125 volume=48 unmatched_bid=37 unmatched_ask=3578 best_bid=85 best_ask=87 held_agents=4334 held_estate=349 cost_anchor=123
+market south mineral price=440 age=48 unmatched_ask=691 best_ask=50 held_estate=691
+market south prepared price=406 volume=216 unmatched_bid=30 unmatched_ask=635 best_bid=264 best_ask=285 held_agents=1221 cost_anchor=306
+market south refined price=2070 age=53 unmatched_ask=254 best_ask=81 held_estate=254
+market south seed price=76 volume=32 unmatched_ask=6468 best_ask=75 held_agents=6001 held_estate=717 cost_anchor=81
+market south staple price=29 volume=1130 unmatched_bid=1 unmatched_ask=75831 best_bid=14 best_ask=21 held_agents=78697 held_estate=4 pending=247474 cost_anchor=31
+market south tool_a price=1258 volume=1 unmatched_bid=1 unmatched_ask=97 best_bid=77 best_ask=278 held_agents=28 held_estate=97
+market south tool_b price=14333 volume=1 unmatched_bid=35 best_bid=21299 held_agents=61
+market south waste price=50 age=101
+role far_south cook agents=124 households=124 unfed=1
+role far_south forester agents=90 households=90 unfed=37
+role far_south grower agents=347 households=347 unfed=89
+role north cook agents=152 households=152 unfed=1
+role north forester agents=152 households=152 unfed=29
+role north grower agents=246 households=246 unfed=24
+role south cook agents=142 households=142
+role south forester agents=150 households=150 unfed=30
+role south grower agents=186 households=186 unfed=42
+region far_south mean_money=43399 pool=1215770
+region north mean_money=43647 pool=632370
+region south mean_money=35656 pool=27562
+sample t=200
+market far_south fuel price=100 volume=353 unmatched_bid=214 unmatched_ask=2365 best_bid=83 best_ask=84 held_agents=2522 held_estate=520 cost_anchor=108
+market far_south mineral price=338 age=137 unmatched_ask=976 best_ask=50 held_estate=976
+market far_south prepared price=1286 volume=154 unmatched_bid=122 unmatched_ask=6 best_bid=1383 best_ask=1442 held_agents=196 cost_anchor=502
+market far_south refined price=2041 age=147 unmatched_ask=387 best_ask=50 held_estate=387
+market far_south seed price=235 age=201 unmatched_ask=65274 best_ask=50 held_agents=25888 held_estate=39386 cost_anchor=144
+market far_south staple price=52 volume=911 unmatched_bid=46 unmatched_ask=228062 best_bid=49 best_ask=50 held_agents=59324 held_estate=168525 cost_anchor=73
+market far_south tool_a price=13737 age=201 unmatched_ask=288 best_ask=50 held_agents=57 held_estate=289
+market far_south tool_b price=17040 age=87 unmatched_bid=56 best_bid=43190
+market far_south waste price=50 age=201
+market north fuel price=87 volume=197 unmatched_bid=2 unmatched_ask=7884 best_bid=34 best_ask=50 held_agents=8905 held_estate=444 cost_anchor=90
+market north mineral price=404 age=137 unmatched_ask=560 best_ask=50 held_estate=560
+market north prepared price=708 age=4 unmatched_bid=368 best_bid=1206 held_agents=3 cost_anchor=361
+market north refined price=2364 age=150 unmatched_ask=316 best_ask=50 held_estate=316
+market north seed price=222 age=201 unmatched_ask=12954 best_ask=50 held_estate=12954
+market north staple price=50 age=1 unmatched_bid=1606 unmatched_ask=141650 best_bid=48 best_ask=50 held_estate=141650
+market north tool_a price=7599 age=62 unmatched_ask=60 best_ask=50 held_estate=60
+market north tool_b price=11573 age=117 unmatched_bid=15 best_bid=23933
+market north waste price=50 age=201
+market south fuel price=116 volume=214 unmatched_bid=3 unmatched_ask=3365 best_bid=63 best_ask=80 held_agents=3818 held_estate=398 cost_anchor=123
+market south mineral price=440 age=148 unmatched_ask=691 best_ask=50 held_estate=691
+market south prepared price=309 volume=174 unmatched_bid=25 unmatched_ask=776 best_bid=217 best_ask=227 held_agents=1102 cost_anchor=293
+market south refined price=2070 age=153 unmatched_ask=254 best_ask=50 held_estate=254
+market south seed price=55 age=54 unmatched_ask=7670 best_ask=49 held_agents=906 held_estate=6764 cost_anchor=62
+market south staple price=11 volume=562 unmatched_ask=154555 best_ask=9 held_agents=50288 held_estate=105862 cost_anchor=30
+market south tool_a price=746 age=54 unmatched_ask=49 best_ask=50 held_estate=49
+market south tool_b price=18610 age=75 unmatched_bid=2 best_bid=26114 held_agents=22
+market south waste price=50 age=201
+role far_south cook agents=75 households=75 unfed=5
+role far_south forester agents=49 households=49 unfed=20
+role far_south grower agents=437 households=437 unfed=310
+role north cook agents=198 households=198 unfed=197
+role north forester agents=168 households=168 unfed=168
+role south cook agents=129 households=129
+role south forester agents=121 households=121 unfed=25
+role south grower agents=17 households=17 unfed=4
+region far_south mean_money=45199 pool=206265
+region north mean_money=67117 pool=73340
+region south mean_money=63753 pool=49267
+sample t=300
+market far_south fuel price=71 volume=151 unmatched_bid=16 unmatched_ask=5861 best_bid=38 best_ask=57 held_agents=5898 held_estate=689 cost_anchor=80
+market far_south mineral price=338 age=237 unmatched_ask=976 best_ask=50 held_estate=976
+market far_south prepared price=556 volume=86 unmatched_bid=61 unmatched_ask=553 best_bid=318 best_ask=352 held_agents=758 cost_anchor=377
+market far_south refined price=2041 age=247 unmatched_ask=387 best_ask=50 held_estate=387
+market far_south seed price=235 age=301 unmatched_ask=67760 best_ask=50 held_agents=762 held_estate=67118 cost_anchor=118
+market far_south staple price=51 volume=421 unmatched_bid=44 unmatched_ask=157329 best_bid=49 best_ask=50 held_agents=1024 held_estate=157327 pending=43679 cost_anchor=50
+market far_south tool_a price=2556 volume=1 unmatched_ask=268 best_ask=50 held_agents=1 held_estate=268
+market far_south tool_b price=17040 age=187 unmatched_bid=43 best_bid=37786
+market far_south waste price=50 age=301
+market north fuel price=94 volume=358 unmatched_ask=3588 best_ask=71 held_agents=4275 cost_anchor=90
+market north mineral price=404 age=237 unmatched_ask=560 best_ask=50 held_estate=560
+market north prepared price=361 volume=146 unmatched_bid=16 unmatched_ask=424 best_bid=312 best_ask=318 held_agents=744 cost_anchor=363
+market north refined price=2364 age=250 unmatched_ask=316 best_ask=50 held_estate=316
+market north seed price=222 age=301 unmatched_ask=12954 best_ask=50 held_estate=12954
+market north staple price=52 volume=570 unmatched_bid=43 unmatched_ask=86749 best_bid=49 best_ask=50 held_agents=1320 held_estate=86749
+market north tool_a price=7599 age=162 unmatched_ask=60 best_ask=50 held_estate=60
+market north tool_b price=11573 age=217 unmatched_bid=1 best_bid=8254
+market north waste price=50 age=301
+market south fuel price=110 volume=116 unmatched_ask=2070 best_ask=73 held_agents=1839 held_estate=603 cost_anchor=123
+market south mineral price=440 age=248 unmatched_ask=691 best_ask=50 held_estate=691
+market south prepared price=356 volume=104 unmatched_bid=46 unmatched_ask=61 best_bid=345 best_ask=351 held_agents=260 cost_anchor=272
+market south refined price=2070 age=253 unmatched_ask=254 best_ask=50 held_estate=254
+market south seed price=55 age=154 unmatched_ask=8144 best_ask=50 held_agents=66 held_estate=8078 cost_anchor=109
+market south staple price=57 volume=124 unmatched_bid=97 unmatched_ask=114961 best_bid=49 best_ask=50 held_agents=323 held_estate=114961 pending=3894 cost_anchor=50
+market south tool_a price=793 age=57 unmatched_ask=33 best_ask=50 held_estate=33
+market south tool_b price=5324 volume=1 unmatched_ask=14 best_ask=118 held_agents=7 held_estate=14
+market south waste price=50 age=301
+role far_south cook agents=84 households=84
+role far_south forester agents=104 households=104 unfed=70
+role far_south grower agents=31 households=31 unfed=18
+role north cook agents=96 households=96
+role north forester agents=93 households=93 unfed=3
+role south cook agents=39 households=39
+role south forester agents=57 households=57 unfed=6
+role south grower agents=3 households=3
+region far_south mean_money=112198 pool=991535
+region north mean_money=105391 pool=4719343
+region south mean_money=79903 pool=9160895
+sample t=399
+market far_south fuel price=65 volume=64 unmatched_ask=3131 best_ask=56 held_agents=3341 held_estate=115 cost_anchor=80
+market far_south mineral price=338 age=336 unmatched_ask=976 best_ask=50 held_estate=976
+market far_south prepared price=404 volume=152 unmatched_bid=61 best_bid=402 held_agents=203 cost_anchor=365
+market far_south refined price=2041 age=346 unmatched_ask=387 best_ask=50 held_estate=387
+market far_south seed price=235 age=400 unmatched_ask=69478 best_ask=50 held_estate=69478
+market far_south staple price=30 age=1 unmatched_bid=847 unmatched_ask=151172 best_bid=48 best_ask=50 held_agents=93 held_estate=151172
+market far_south tool_a price=5912 age=68 unmatched_ask=252 best_ask=50 held_estate=252
+market far_south tool_b price=17040 age=286
+market far_south waste price=50 age=400
+market north fuel price=76 volume=107 unmatched_bid=16 unmatched_ask=4424 best_bid=64 best_ask=65 held_agents=4750 held_estate=87 cost_anchor=90
+market north mineral price=404 age=336 unmatched_ask=560 best_ask=50 held_estate=560
+market north prepared price=386 volume=287 unmatched_bid=13 unmatched_ask=147 best_bid=319 best_ask=347 held_agents=515 cost_anchor=359
+market north refined price=2364 age=349 unmatched_ask=316 best_ask=50 held_estate=316
+market north seed price=222 age=400 unmatched_ask=12954 best_ask=50 held_estate=12954
+market north staple price=52 volume=446 unmatched_ask=38560 best_ask=50 held_agents=903 held_estate=38560
+market north tool_a price=7599 age=261 unmatched_ask=60 best_ask=50 held_estate=60
+market north tool_b price=11573 age=316 unmatched_bid=20 best_bid=17488
+market north waste price=50 age=400
+market south fuel price=104 volume=25 unmatched_bid=7 unmatched_ask=1355 best_bid=86 best_ask=87 held_agents=1559 held_estate=61 cost_anchor=123
+market south mineral price=440 age=347 unmatched_ask=691 best_ask=50 held_estate=691
+market south prepared price=332 volume=101 unmatched_bid=9 unmatched_ask=33 best_bid=309 best_ask=323 held_agents=237 cost_anchor=282
+market south refined price=2070 age=352 unmatched_ask=254 best_ask=50 held_estate=254
+market south seed price=64 age=69 unmatched_ask=7460 best_ask=50 held_estate=7460
+market south staple price=52 volume=213 unmatched_bid=1 unmatched_ask=94918 best_bid=47 best_ask=50 held_agents=392 held_estate=94918
+market south tool_a price=735 age=69 unmatched_ask=12 best_ask=50 held_estate=12
+market south tool_b price=8135 age=50 unmatched_bid=3 best_bid=10600 held_agents=7
+market south waste price=50 age=400
+role far_south cook agents=52 households=52 unfed=37
+role far_south forester agents=58 households=58 unfed=39
+role north cook agents=80 households=80
+role north forester agents=104 households=104 unfed=5
+role south cook agents=29 households=29 unfed=1
+role south forester agents=53 households=53 unfed=3
+region far_south mean_money=216547 pool=1742747
+region north mean_money=94839 pool=7187930
+region south mean_money=80641 pool=10458749
+events
+WorldCreated 1
+TickStarted 400
+TickEnded 400
+OrderPlaced 1370816
+TradeExecuted 653092
+MarketCleared 10800
+BeliefsUpdated 6435
+RecipeExecuted 150010
+RecipeRefused 1204
+RecipeAbandoned 482
+ProductionHalted 3702
+UpkeepShortfall 3080
+AgentSpawned 3352
+AgentBankrupted 2976
+EstateOpened 2976
+RoleChanged 1647
+EntryLimited 1200
+BoundaryFlow 12157
+WearApplied 314
+TechnologyAdvanced 446
+AgentBankrupted cause=insolvent 2764
+AgentBankrupted cause=starved 212
+RecipeAbandoned reason=agent_removed 309
+RecipeAbandoned reason=role_changed 173
+window 0 TradeExecuted=306906 RecipeExecuted=60350 OrderPlaced=551574 UpkeepShortfall=1211
+window 100 TradeExecuted=187590 RecipeExecuted=45519 OrderPlaced=431719 UpkeepShortfall=689
+window 200 TradeExecuted=89955 RecipeExecuted=26318 OrderPlaced=251410 UpkeepShortfall=678
+window 300 TradeExecuted=68641 RecipeExecuted=17823 OrderPlaced=136113 UpkeepShortfall=502
+construction_flow far_south initial faucet fuel 3040
+construction_flow far_south initial faucet mineral 285
+construction_flow far_south initial faucet money 25562988
+construction_flow far_south initial faucet prepared 2400
+construction_flow far_south initial faucet refined 373
+construction_flow far_south initial faucet seed 14040
+construction_flow far_south initial faucet staple 425760
+construction_flow far_south initial faucet tool_a 265
+construction_flow far_south initial faucet tool_b 142
+construction_flow far_south recipe_input sink fuel 40
+construction_flow far_south recipe_input sink mineral 100
+construction_flow far_south recipe_input sink refined 88
+construction_flow far_south recipe_input sink seed 3440
+construction_flow far_south wear sink tool_a 86
+construction_flow north initial faucet fuel 3040
+construction_flow north initial faucet mineral 280
+construction_flow north initial faucet money 24638321
+construction_flow north initial faucet prepared 2400
+construction_flow north initial faucet refined 363
+construction_flow north initial faucet seed 10120
+construction_flow north initial faucet staple 171462
+construction_flow north initial faucet tool_a 253
+construction_flow north initial faucet tool_b 136
+construction_flow north recipe_input sink fuel 40
+construction_flow north recipe_input sink mineral 100
+construction_flow north recipe_input sink refined 88
+construction_flow south initial faucet fuel 3040
+construction_flow south initial faucet mineral 290
+construction_flow south initial faucet money 17071359
+construction_flow south initial faucet prepared 2400
+construction_flow south initial faucet refined 378
+construction_flow south initial faucet seed 7400
+construction_flow south initial faucet staple 170640
+construction_flow south initial faucet tool_a 140
+construction_flow south initial faucet tool_b 143
+construction_flow south recipe_input sink fuel 40
+construction_flow south recipe_input sink mineral 100
+construction_flow south recipe_input sink refined 88
+construction_flow south recipe_input sink seed 1800
+construction_flow south wear sink tool_a 45
+flow far_south consumption sink fuel 136076
+flow far_south consumption sink prepared 104884
+flow far_south consumption sink staple 249008
+flow far_south disposal sink waste 538
+flow far_south recipe_input sink fuel 30439
+flow far_south recipe_input sink mineral 2590
+flow far_south recipe_input sink refined 1512
+flow far_south recipe_input sink seed 3760
+flow far_south recipe_input sink staple 119606
+flow far_south recipe_output faucet fuel 166971
+flow far_south recipe_output faucet mineral 3381
+flow far_south recipe_output faucet prepared 133492
+flow far_south recipe_output faucet refined 1614
+flow far_south recipe_output faucet seed 62638
+flow far_south recipe_output faucet staple 193020
+flow far_south recipe_output faucet tool_a 167
+flow far_south recipe_output faucet tool_b 416
+flow far_south recipe_output faucet waste 538
+flow far_south spoilage sink prepared 30805
+flow far_south spoilage sink staple 98901
+flow far_south wear sink tool_a 94
+flow far_south wear sink tool_b 558
+flow north consumption sink fuel 145047
+flow north consumption sink prepared 122849
+flow north consumption sink staple 254199
+flow north disposal sink waste 457
+flow north recipe_input sink fuel 38868
+flow north recipe_input sink mineral 2185
+flow north recipe_input sink refined 1330
+flow north recipe_input sink seed 14120
+flow north recipe_input sink staple 92708
+flow north recipe_output faucet fuel 185752
+flow north recipe_output faucet mineral 2565
+flow north recipe_output faucet prepared 166104
+flow north recipe_output faucet refined 1371
+flow north recipe_output faucet seed 16954
+flow north recipe_output faucet staple 227229
+flow north recipe_output faucet tool_a 160
+flow north recipe_output faucet tool_b 365
+flow north recipe_output faucet waste 457
+flow north spoilage sink prepared 45140
+flow north spoilage sink staple 12321
+flow north wear sink tool_a 353
+flow north wear sink tool_b 501
+flow south consumption sink fuel 114682
+flow south consumption sink prepared 101714
+flow south consumption sink staple 209402
+flow south disposal sink waste 318
+flow south recipe_input sink fuel 30969
+flow south recipe_input sink mineral 1490
+flow south recipe_input sink refined 990
+flow south recipe_input sink seed 10240
+flow south recipe_input sink staple 72406
+flow south recipe_output faucet fuel 144271
+flow south recipe_output faucet mineral 1991
+flow south recipe_output faucet prepared 131820
+flow south recipe_output faucet refined 954
+flow south recipe_output faucet seed 12100
+flow south recipe_output faucet staple 231415
+flow south recipe_output faucet tool_a 173
+flow south recipe_output faucet tool_b 244
+flow south recipe_output faucet waste 318
+flow south spoilage sink prepared 32269
+flow south spoilage sink staple 24937
+flow south wear sink tool_a 256
+flow south wear sink tool_b 380
+final
+agents 376 households 376 money 67272668
+role far_south cook agents=52 households=52
+role far_south forester agents=58 households=58
+role north cook agents=80 households=80
+role north forester agents=104 households=104
+role south cook agents=29 households=29
+role south forester agents=53 households=53
+goods fuel 9913
+goods mineral 2227
+goods prepared 955
+goods refined 957
+goods seed 89892
+goods staple 286038
+goods tool_a 324
+goods tool_b 7
+checkpoint_digest ee7425e235c635949fd0561e70a9de079aeba97d5bde58af67b2512ed148dd1b

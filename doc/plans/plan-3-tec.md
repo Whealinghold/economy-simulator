@@ -290,6 +290,15 @@ TEC needs PRO, REG and CAL only (roadmap), all merged; it needs no other Stage 3
 - The hoist of `yieldMax` leaves `overflow` at CCN 27 and NLOC 84 (111 lines, down from 120): an existing finding, as the plan says.
 - `Modules.Technology` is listed in `allPackNotYetOn` (all_pack_test.go), as Storage is: the all-on layer moves once at Stage 3 close.
 
+## Implementation notes, PR C (Phases 7 to 9)
+
+- Tag 33 is `saveTechnology` and `loadTechnology` in `technology_report.go`, with the row in `checkpoint_sections.go` (`notBuiltSections` loses 33). The load reads `Experience`, `Advance`, `CatchUp` and `TrendCarry` through `Reader.Bounded`, then derives every gain; the caller refuses a byte after the last field. The key is derived at construction from the effective seed, so `WithReseed` changes it with no code of its own (`TestFork_TechnologyReseed`).
+- `overlay/technology-four.toml` now has `discovery_bp = 100000` (the bound `MaxDiscoveryBP`). Probe: the three growers practise in about 120 cell-ticks of 400, so the placeholder 5 000 recorded no discovery on seeds 1 to 3 in 400 ticks, and 100 000 records 2 to 7. `TestPacks_TechnologyGoldenExercisesEveryMechanism` (seeds 1 to 4) fails if a run records no learning, trend, discovery or catch-up add. The loader test of `config/` expects the new value.
+- The module-alone golden is `testdata/golden/technology/{three.txt, events-three.txt, three.positions.txt}`, new files on pack three (the fall-back to `five` was not needed). `golden/off/`, `golden/all/`, the pinned hash and `testdata/checkpoints/` are untouched (`TestGolden_OffUnchangedByTechnology`). `invariantTable` gained the row `three+technology`.
+- S148 is the harness test of PR B. S149, S151 and S152 run on `one` with the fixed factor of resources, the population module and `overlay/technology.toml`; S150, S153 and S154 are in `scenario_s150_test.go` (S154 on `one`, after the first jobs complete). S150 and S153 assert exact checks (closed edges carry nothing, the carries restore, a reseed discovers on other ticks); S149 to S152 and S154 assert the chain of gains, the cap and the books, and record the rest. The outcomes are new blocks in `expected/one.scenarios.txt` and `expected/three.scenarios.txt`; no band key was added (no scenario reads one, N-027). The six entries of `scenariosNotBuilt` are deleted.
+- Deliberate-break pass (testing.md 9.3), each seen to fail and reverted: the sign of the learned gain, the stored clamp of the advance, the catch-up before the snapshot (all caught by `internal/technology`), and the tech term after the trainee term (caught by the new `TestEffective_TechTermOrder` of `internal/production`; before it only a root test caught it).
+- Not run in this change (the stage says cheap checks only): `check.sh`, gate R, gate F with `coverage-check.sh`, `gomu`, `arm64.sh`. They are the exit gate of the PR.
+
 ## Codacy hygiene (every phase)
 
 The Codacy gate fails on any new issue of level Info or higher (`phase-3-owner-questions.md`: PR #62 failed on 12 MD032 findings, PR #63 on two MD060 findings and one Lizard CCN 15). So, before a commit that opens or updates a PR, in every phase:
