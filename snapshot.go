@@ -131,6 +131,14 @@ type EndowmentRow struct {
 	ExhaustedRun int64
 	// CapacityScaleBP and RegenScaleBP are the shock scales, 10 000 when not shocked.
 	CapacityScaleBP, RegenScaleBP int64
+	// The tenure module's fields (spec-land.md 13.4), all 0 or false with it off:
+	// Holders is the number of titles, PoolBP the pool's share, CommonsBP the commons
+	// share, TopBP the largest share of an agent, Posted the posted rent, ScaleBP the
+	// rent scale, Closed whether the unused entitlement is not let, and NoTitleRun and
+	// RentFundsRun the consecutive ticks with requests refused for each reason.
+	Holders, PoolBP, CommonsBP, TopBP, Posted, ScaleBP int64
+	Closed                                             bool
+	NoTitleRun, RentFundsRun                           int64
 }
 
 // FlowRow is the state of one money flow: its cumulative total, its scale in
@@ -513,7 +521,11 @@ func (w *World) regionEndowments(g RegionID) []EndowmentRow {
 	}
 	rows := make([]EndowmentRow, r.resources)
 	for res := range rows {
-		rows[res] = r.row(r.cellOf(g, ResourceID(res)))
+		cell := r.cellOf(g, ResourceID(res))
+		rows[res] = r.row(cell)
+		if w.tenure != nil {
+			w.tenure.fillRow(&rows[res], cell)
+		}
 	}
 	return rows
 }

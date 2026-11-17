@@ -34,6 +34,9 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 		}
 	}
 	w.fillBoard(v, a)
+	if w.sto != nil {
+		w.fillRoomView(v, a, kind)
+	}
 	return nil
 }
 
@@ -76,6 +79,9 @@ func (w *World) checkTradePlan(a *agent, p *TradePlan) {
 	if w.mer != nil {
 		w.checkMerchantPlan(a, p)
 	}
+	if w.sto != nil {
+		w.checkRoomPlan(a, p)
+	}
 }
 
 // removeAgent is the one removal path of an agent (spec-agents.md 3.6,
@@ -101,6 +107,9 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 	}
 	if err := w.dropContracts(a); err != nil { // the contracts it delivers end, the escrow returned
 		return fmt.Errorf("remove agent %d at tick %d: %w", a.id, tick, err)
+	}
+	if w.tenure != nil {
+		w.tenure.dropAgent(a) // step 2b: the titles go to the pool of each endowment's region, before the money moves
 	}
 	w.dropClaims(a) // steps 2d and 2e, nil-safe: a debtor's creditors are paid from its whole balance, a creditor's claims pass to the estate
 	money, lots, err := w.estates.receive(w.ledger, a.account, region)

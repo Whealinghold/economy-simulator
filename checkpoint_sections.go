@@ -50,6 +50,7 @@ var checkpointSections = [...]section{
 	{tag: 21, name: "Merchants", present: func(c *Config) bool { return c.Modules.Merchants != nil }, save: (*World).saveMerchants, load: (*World).loadMerchants},
 	{tag: 22, name: "Integration", present: func(c *Config) bool { return c.Modules.Information != nil }, save: (*World).saveRumours, load: (*World).loadRumours},
 	{tag: 23, name: "Settlements", present: func(c *Config) bool { return c.Modules.Settlements != nil }, save: (*World).saveSettlements, load: (*World).loadSettlements},
+	{tag: 25, name: "Tenure", present: func(c *Config) bool { return c.Modules.Tenure != nil }, save: (*World).saveTenure, load: (*World).loadTenure},
 	{tag: 26, name: "Credit", present: func(c *Config) bool { return c.Modules.Credit != nil }, save: (*World).saveCredit, load: (*World).loadCredit},
 	{tag: 33, name: "Technology", present: func(c *Config) bool { return c.Modules.Technology != nil }, save: (*World).saveTechnology, load: (*World).loadTechnology},
 	{tag: 34, name: "Extensions", save: (*World).saveExtensions, load: (*World).loadExtensions},
@@ -74,7 +75,7 @@ type notBuiltSection struct {
 // append. The test fails on a listed tag that has a row in checkpointSections and
 // on a tag of the spec that is neither built nor listed.
 var notBuiltSections = [...]notBuiltSection{
-	{24, "Employment", "Employment"}, {25, "Tenure", "Tenure"},
+	{24, "Employment", "Employment"},
 	{27, "Facilities", "Infrastructure"}, {28, "Risk", "Risk"}, {29, "Insurance", "Insurance"},
 	{30, "Fiscal", "Fiscal"}, {31, "Institutions", "Institutions"}, {32, "Policy", "Policy"},
 }

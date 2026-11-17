@@ -120,6 +120,7 @@ func (c *cardChecker) jurisdictions(ev string, tick int64, rows []economysim.Jur
 
 // check applies the closed-set checks of OBS 6.2.1 to one event.
 func (c *cardChecker) check(e economysim.Event) {
+	c.checkStorage(e)
 	switch e := e.(type) {
 	case economysim.WorldCreated:
 		c.jurisdictions("WorldCreated", e.Tick, e.Jurisdictions)
@@ -224,6 +225,13 @@ func (c *cardChecker) check(e economysim.Event) {
 		c.role("PopulationChanged", e.Tick, e.Role)
 	case economysim.PopulationScaled:
 		c.region("PopulationScaled", e.Tick, e.Region)
+	case economysim.TitleTransferred:
+		c.region("TitleTransferred", e.Tick, e.Region)
+		c.id("TitleTransferred", e.Tick, "Resource", int(e.Resource), len(c.names.Resources))
+		c.member("TitleTransferred", e.Tick, "Cause", string(e.Cause))
+	case economysim.RentScaled:
+		c.region("RentScaled", e.Tick, e.Region)
+		c.id("RentScaled", e.Tick, "Resource", int(e.Resource), len(c.names.Resources))
 	}
 }
 
@@ -415,8 +423,8 @@ func (e *errCount) Errorf(string, ...any) { e.n++ }
 // stopped comparing IDs to the names table.
 func TestCardChecker_FlagsOutOfRangeAndOutsideSet(t *testing.T) {
 	t.Parallel()
-	names := economysim.Names{Regions: []string{"r"}, Commodities: []string{"c"}, Roles: []string{"o"}, Recipes: []string{"a", "b"}, Jurisdictions: []string{"j"}}
-	consts := map[string]map[string]bool{"Reason": {"ok": true}, "Cause": {}, "Kind": {}}
+	names := economysim.Names{Regions: []string{"r"}, Commodities: []string{"c"}, Roles: []string{"o"}, Recipes: []string{"a", "b"}, Jurisdictions: []string{"j"}, Resources: []string{"x"}}
+	consts := map[string]map[string]bool{"Reason": {"ok": true}, "Cause": {"removal": true, "consumer": true}, "Kind": {}}
 	tests := []struct {
 		name string
 		ev   economysim.Event
@@ -437,6 +445,10 @@ func TestCardChecker_FlagsOutOfRangeAndOutsideSet(t *testing.T) {
 		{"world created jurisdiction negative", economysim.WorldCreated{Jurisdictions: []economysim.JurisdictionRow{{Jurisdiction: -1}}}, true},
 		{"world created seat out of range", economysim.WorldCreated{Jurisdictions: []economysim.JurisdictionRow{{Seat: 1}}}, true},
 		{"outside cause outside set", economysim.OutsideEnded{Cause: economysim.CauseUnits}, true},
+		{"title cause in set", economysim.TitleTransferred{Cause: economysim.CauseRemoval}, false},
+		{"title cause outside set", economysim.TitleTransferred{Cause: "gift"}, true},
+		{"title resource out of range", economysim.TitleTransferred{Resource: 1, Cause: economysim.CauseConsumer}, true},
+		{"rent scale resource out of range", economysim.RentScaled{Resource: 1}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -448,5 +460,53 @@ func TestCardChecker_FlagsOutOfRangeAndOutsideSet(t *testing.T) {
 				t.Errorf("check(%+v) flagged = %t, want %t", tt.ev, got, tt.want)
 			}
 		})
+	}
+}
+
+// TestCardinality_StorageAttributesTakeConfiguredValues runs pack one with the
+// storage overlay for 400 ticks and checks that the
+// region and role of RoomLimited and StoreChanged are IDs of the configuration, the
+// store class of StoreChanged is a class of the configuration and its kind and cause
+// are constants of event.go: the metric attributes economysim.region, role and
+// store_class stay bounded by the configuration (observability-and-logging.md 5.4.1).
+// The room limit and the dimension are closed sets of the adapter.
+//
+// Requirement: FR-OBS-005, FR-OBS-006, FR-STO-035, FR-STO-036
+//
+// Guard: a class index out of range or a free-text cause in a storage event would be
+// an unbounded attribute value.
+func TestCardinality_StorageAttributesTakeConfiguredValues(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end: 400 ticks of pack one; skipped under -short")
+	}
+	res := runPack(t, loadValidPack(t, packOneStorage...), runSpec{Seed: 1, Ticks: 400, Observe: true})
+	c := &cardChecker{t: t, seed: 1, names: res.Final.Names, consts: eventConstants(t), seen: map[string]int{}}
+	limited := 0
+	for _, e := range res.Events {
+		c.check(e)
+		if _, ok := e.(economysim.RoomLimited); ok {
+			limited++
+		}
+	}
+	if limited == 0 || c.seen["Region"] == 0 {
+		t.Errorf("%d RoomLimited events and %d region values checked, want some: the run exercised nothing", limited, c.seen["Region"])
+	}
+}
+
+// checkStorage applies the closed-set checks to the events of the storage module: the
+// region and role of RoomLimited and StoreChanged, the class of StoreChanged (a class of
+// the configuration) and its kind and cause.
+func (c *cardChecker) checkStorage(e economysim.Event) {
+	switch e := e.(type) {
+	case economysim.RoomLimited:
+		c.region("RoomLimited", e.Tick, e.Region)
+		c.role("RoomLimited", e.Tick, e.Role)
+	case economysim.StoreChanged:
+		c.region("StoreChanged", e.Tick, e.Region)
+		c.role("StoreChanged", e.Tick, e.Role)
+		c.id("StoreChanged", e.Tick, "Class", int(e.Class), len(c.names.StoreClasses))
+		c.member("StoreChanged", e.Tick, "Kind", string(e.Kind))
+		c.member("StoreChanged", e.Tick, "Cause", string(e.Cause))
 	}
 }

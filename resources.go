@@ -398,6 +398,9 @@ func (w *World) snapshotEndowments() []EndowmentRow {
 	rows := make([]EndowmentRow, len(r.stock))
 	for cell := range rows {
 		rows[cell] = r.row(cell)
+		if w.tenure != nil {
+			w.tenure.fillRow(&rows[cell], cell)
+		}
 	}
 	return rows
 }

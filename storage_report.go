@@ -1,10 +1,13 @@
 package economysim
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/Whealinghold/economy-sim/internal/ledger"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 	"github.com/Whealinghold/economy-sim/internal/room"
 )
 
@@ -61,6 +64,7 @@ func (w *World) storeEvent(a *agent, region RegionID, c int, kind Kind, cause Ca
 // emitStore delivers the StoreChanged of a call, when an observer was supplied. It is
 // built after the change is complete (observability-and-logging.md 4.4).
 func (w *World) emitStore(a *agent, c int, kind Kind, cause Cause) {
+	w.logStore(a, c, kind, cause)
 	if w.obs.supplied {
 		w.obs.deliver(w.storeEvent(a, w.regionOf(a), c, kind, cause))
 	}
@@ -295,4 +299,94 @@ func (s *storage) pledgedByJobs(w *World) ([]room.Pair, error) {
 		out[a.job.principal] = sum
 	}
 	return out, nil
+}
+
+// viewed counts a household group given a Trade view: the households of a limited
+// agent, and those whose free room is 0 in a dimension (spec-storage.md 14.1). They
+// ride along in RoomLimited and are counted whether or not an observer is supplied.
+func (s *storage) viewed(cell int, weight int64, free room.Pair) {
+	c := &s.counts[cell]
+	c.limitedHouseholds = satAdd(c.limitedHouseholds, weight)
+	if free.Mass <= 0 || free.Bulk <= 0 {
+		c.fullHouseholds = satAdd(c.fullHouseholds, weight)
+	}
+}
+
+// checkRoomPlan is the module's step of checkTradePlan: it counts what the default
+// strategy cut for room (the bids sized down or dropped) and what it discards, in the
+// cell of the agent, and logs each bid cut at Debug. Only the default strategy's
+// discard of 6.3.2 is counted (roomDiscarded): a directive's or a consumer's discard
+// is not (spec-storage.md 5.3.4). It changes nothing in the plan and takes no random
+// word.
+func (w *World) checkRoomPlan(a *agent, p *TradePlan) {
+	if len(p.Cuts) == 0 && p.roomDiscarded == 0 {
+		return
+	}
+	if rm, _, ok := w.sto.roomState(w.ledger, a); !ok || !rm.Limited {
+		return
+	}
+	c := &w.sto.counts[w.cellOf(w.regionOf(a), a)]
+	c.bidsCut = satAdd(c.bidsCut, int64(len(p.Cuts)))
+	c.discarded = satAdd(c.discarded, p.roomDiscarded)
+	ctx := context.Background()
+	if !w.log.Enabled(ctx, slog.LevelDebug) {
+		return
+	}
+	for _, cut := range p.Cuts {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "bid cut for room",
+			slog.Int64(logkeys.Tick, w.Tick()), slog.Int64(logkeys.Agent, int64(a.id)),
+			slog.Int64(logkeys.Commodity, int64(cut.Commodity)), slog.Int64(logkeys.Quantity, int64(cut.Quantity)))
+	}
+}
+
+// logRefusedJob is the Debug line of a job request refused for room (spec-storage.md
+// 14.3), behind Enabled; the reason is no_room.
+func (w *World) logRefusedJob(a *agent, recipe RecipeID, reason Reason) {
+	ctx := context.Background()
+	if w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "job refused for room",
+			slog.Int64(logkeys.Tick, w.Tick()), slog.Int64(logkeys.Agent, int64(a.id)),
+			slog.Int64(logkeys.Recipe, int64(recipe)), slog.String(logkeys.Reason, string(reason)))
+	}
+}
+
+// logStore is the Debug line of a store added or removed, with the class and the
+// cause, behind Enabled (spec-storage.md 14.3); it is written with or without an
+// observer.
+func (w *World) logStore(a *agent, c int, kind Kind, cause Cause) {
+	ctx := context.Background()
+	if !w.log.Enabled(ctx, slog.LevelDebug) {
+		return
+	}
+	msg := "store added"
+	if kind == KindRemoved {
+		msg = "store removed"
+	}
+	w.log.LogAttrs(ctx, slog.LevelDebug, msg,
+		slog.Int64(logkeys.Tick, w.Tick()), slog.Int64(logkeys.Agent, int64(a.id)),
+		slog.Int64(logkeys.StoreClass, int64(c)), slog.String(logkeys.Cause, string(cause)))
+}
+
+// p36aRoomLimited is P3.6a, after WantShortfall: the RoomLimited of each (region,
+// role) in which a room cut or refused something, in ascending region then role
+// (spec-storage.md 14.1, FR-STO-036). The counters were made as the acts happened,
+// with or without an observer; the event is built only when one was supplied
+// (observability-and-logging.md 4.5). They are cleared at P8.6, so none survives it.
+func (w *World) p36aRoomLimited() {
+	if !w.obs.supplied {
+		return
+	}
+	roles := len(w.cfg.Roles)
+	for cell := range w.sto.counts {
+		c := &w.sto.counts[cell]
+		if c.startsCut == 0 && c.startsRefused == 0 && c.bidsCut == 0 && c.bidsRejected == 0 && c.shipmentsRefused == 0 && c.discarded == 0 {
+			continue
+		}
+		w.obs.deliver(RoomLimited{
+			Tick: w.Tick(), Region: RegionID(cell / roles), Role: RoleID(cell % roles),
+			LimitedHouseholds: c.limitedHouseholds, FullHouseholds: c.fullHouseholds,
+			StartsCut: c.startsCut, StartsRefused: c.startsRefused, BidsCut: c.bidsCut,
+			BidsRejected: c.bidsRejected, ShipmentsRefused: c.shipmentsRefused, Discarded: c.discarded,
+		})
+	}
 }

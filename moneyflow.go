@@ -427,6 +427,11 @@ type flowState struct {
 	// by RegionID, carryUnset until the first visit (spec-money-supply.md 6.2, 14).
 	// It is nil for any other target.
 	poolCarry []int64
+	// stores says the target is a class of store owners and class the store class
+	// (-1 for every class): the amount is per store, and the carry is per account
+	// as for households (spec-money-supply.md 4.3.4, spec-storage.md 7.1).
+	stores bool
+	class  int
 }
 
 // recipient is one account a flow visits: the account, its weight (1 for a pool),
@@ -457,6 +462,9 @@ type moneyFlows struct {
 	// flows ran in this tick.
 	agg []flowAgg
 	on  []bool
+	// owners lists, per region, the live agents in ascending AgentID, for the flows
+	// whose target is stores; nil when no flow has one (spec-money-supply.md 4.3.4).
+	owners [][]AgentID
 }
 
 // flowClass is the ledger class of the reason of a flow: a grant is a faucet and
@@ -508,6 +516,9 @@ func newMoneyFlows(c *Config, l *ledger.Ledger) *moneyFlows {
 	}
 	for i, f := range ms.Flows {
 		m.flows[i] = newFlowState(c, l, i, f)
+		if m.flows[i].stores && m.owners == nil {
+			m.owners = make([][]AgentID, len(c.Regions))
+		}
 	}
 	return m
 }
@@ -530,6 +541,7 @@ func newFlowState(c *Config, l *ledger.Ledger, i int, f MoneyFlow) flowState {
 	if f.Target.Kind == TargetPool {
 		st.poolCarry = slices.Repeat([]int64{carryUnset}, len(c.Regions))
 	}
+	st.stores, st.class = storesTarget(c, f.Target)
 	if f.Limit > 0 {
 		st.limit = min(f.Limit, MaxFlowTotal)
 	}
@@ -630,6 +642,7 @@ func (m *moneyFlows) scan(w *World) {
 	for i := range m.flows {
 		m.flows[i].fit(len(w.agents))
 	}
+	w.scanOwners(m)
 }
 
 // runFlow applies flow i to the accounts of its class.
@@ -640,6 +653,10 @@ func (w *World) runFlow(m *moneyFlows, i int) {
 		lo, hi = f.region, f.region+1
 	}
 	for g := lo; g < hi; g++ {
+		if f.stores {
+			w.visitStores(m, i, g)
+			continue
+		}
 		if f.poolCarry != nil {
 			w.visitFlow(m, i, g, recipient{account: w.estates.account(RegionID(g)), weight: 1, carry: &f.poolCarry[g]})
 			continue
@@ -699,7 +716,7 @@ func (f *flowState) plan(weight int64, c *int64, bal int64) (due, room int64) {
 		}
 		return due, MaxMoney - bal
 	}
-	avail := availableAbove(bal, weight, fl.Exempt)
+	avail := availableAbove(bal, f.exemptCount(weight), fl.Exempt)
 	var ok bool
 	switch {
 	case fl.Kind == FlowLevy && fl.RateBP != 0:
@@ -716,6 +733,16 @@ func (f *flowState) plan(weight int64, c *int64, bal int64) (due, room int64) {
 		invariant("a money flow's arithmetic left its validated bounds: " + fl.ID)
 	}
 	return due, room
+}
+
+// exemptCount is the count Exempt is multiplied by: the weight of a household, and 1
+// for an owner of stores, whose Exempt is an amount per account (spec-money-supply.md
+// 4.3.4).
+func (f *flowState) exemptCount(weight int64) int64 {
+	if f.stores {
+		return 1
+	}
+	return weight
 }
 
 // started returns the carry of a recipient, starting it at the first visit: from
@@ -886,7 +913,7 @@ func (w *World) auditModules() error {
 	if err := w.auditTreasuries(); err != nil {
 		return auditFailure(w.Tick(), err)
 	}
-	if err := w.auditCredit(); err != nil {
+	if err := w.auditLaterModules(); err != nil {
 		return auditFailure(w.Tick(), err)
 	}
 	if w.money == nil {
@@ -906,6 +933,15 @@ func (w *World) auditModules() error {
 		}
 	}
 	return nil
+}
+
+// auditLaterModules is the audit of the modules built after the money flows, in module
+// order: the credit claims and the tenure titles.
+func (w *World) auditLaterModules() error {
+	if err := w.auditCredit(); err != nil {
+		return err
+	}
+	return w.auditTenure()
 }
 
 // dropAgent drops the carries of a removed agent (spec-money-supply.md 14).

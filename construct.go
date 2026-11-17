@@ -73,6 +73,9 @@ func (w *World) construct(warnings []Warning) error {
 	b.createAgents()
 	checkCensus(b.plans, &b.w.cfg, b.w.live.agents, b.w.live.households)
 	b.w.set.found(b.w)
+	if b.w.tenure != nil {
+		b.w.tenure.found(b.w) // step 8a: the titles of the holdings, before the warm start
+	}
 	if err := b.warm(); err != nil {
 		return err
 	}
@@ -155,6 +158,10 @@ func (w *World) allocate() {
 	}
 	w.credit = newCredit(&w.cfg)
 	w.set = newSettlements(&w.cfg)
+	w.tenure = newTenure(&w.cfg)
+	if w.tenure != nil {
+		w.tenure.world = w
+	}
 	w.registerBounds()
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
@@ -368,6 +375,7 @@ func modulesOn(c *Config) []string {
 		{"credit", m.Credit != nil},
 		{"technology", m.Technology != nil},
 		{"settlements", m.Settlements != nil},
+		{"tenure", m.Tenure != nil},
 	}
 	on := []string{}
 	for _, t := range table {

@@ -39,7 +39,7 @@ func bindsOf(events []economysim.Event) roomBinds {
 
 // TestStorage_RoomBindsOnTheGoldenPack verifies, without reading the golden file,
 // that the provisional golden of the module shows a room that binds: in 400 ticks of
-// pack one with the module on, at least one bid is rejected for room and at least one
+// pack one with the module on, at least one bid is cut or rejected for room and at least one
 // role change moves goods above the new room to the estate, and the pack with the
 // module off has neither. A golden whose content never showed a refusal would pass
 // its own byte comparison and prove nothing about the module.
@@ -55,8 +55,16 @@ func TestStorage_RoomBindsOnTheGoldenPack(t *testing.T) {
 	}
 	on := runPack(t, loadValidPack(t, packOneStorage...), runSpec{Seed: goldenSeed, Ticks: goldenTicks, Drive: driveStep, Observe: true, Audit: true})
 	got := bindsOf(on.Events)
-	if got.rejected < 1 {
-		t.Errorf("bids rejected no_room in %d ticks, seed %d = %d, want at least 1", goldenTicks, goldenSeed, got.rejected)
+	// The default strategy sizes its bids to the free room (FR-STO-023), so the room
+	// shows as RoomLimited cuts and discards rather than as rejected bids.
+	cuts := 0
+	for _, e := range on.Events {
+		if rl, ok := e.(economysim.RoomLimited); ok {
+			cuts += int(rl.BidsCut + rl.Discarded + rl.BidsRejected)
+		}
+	}
+	if got.rejected+cuts < 1 {
+		t.Errorf("bids rejected or cut for room in %d ticks, seed %d = %d, want at least 1", goldenTicks, goldenSeed, got.rejected+cuts)
 	}
 	if got.firstCut < 0 {
 		t.Errorf("role changes that listed goods to the estate in %d ticks, seed %d: none, want at least 1", goldenTicks, goldenSeed)

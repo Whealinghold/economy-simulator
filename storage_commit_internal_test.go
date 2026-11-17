@@ -40,7 +40,7 @@ var _ Strategy = stoMiller{}
 // role's list is the mill only) of three ticks under strat, with the storage module
 // giving every role the base room (mass, bulk) and a class barn of (100, 120), changed
 // by mutate. The audit is on, so every step checks the pledge of every account.
-func stoMillWorld(t *testing.T, mass, bulk int64, strat Strategy, mutate func(c *Config)) (*World, *evLog) {
+func stoMillWorld(t *testing.T, mass, bulk int64, strat Strategy, mutate func(c *Config), extra ...Option) (*World, *evLog) {
 	t.Helper()
 	c := shipConfig()
 	c.Recipes[0].Duration = 3
@@ -53,7 +53,7 @@ func stoMillWorld(t *testing.T, mass, bulk int64, strat Strategy, mutate func(c 
 		mutate(&c)
 	}
 	rec := &evLog{}
-	w := newMill(t, c, WithObserver(rec), WithAudit(), WithStrategy("script", strat))
+	w := newMill(t, c, append([]Option{WithObserver(rec), WithAudit(), WithStrategy("script", strat)}, extra...)...)
 	if err := w.ledger.EndConstruction(); err != nil {
 		t.Fatalf("EndConstruction() = %v, want nil", err)
 	}
