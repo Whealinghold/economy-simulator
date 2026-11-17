@@ -375,3 +375,58 @@ func (r settleRow) event(t int64, g RegionID) CreditSettled {
 		Received: Money(r.received), ReceivedByEstate: Money(r.receivedEstate),
 	}
 }
+
+// logCreditRefused is the Debug line of a request or an offer refused at admission
+// (spec-credit.md 5.2, 16.2): msg is "request refused" or "offer refused".
+func (w *World) logCreditRefused(msg string, agent AgentID, reason Reason) {
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, msg, slog.Int64(logkeys.Agent, int64(agent)), slog.String(logkeys.Reason, string(reason)))
+	}
+}
+
+// reportFormed reports a loan formed (spec-credit.md 6.4 step 4, 16.1): the Debug line
+// "loan formed" and, with an observer, LoanFormed in formation order.
+func (w *World) reportFormed(region RegionID, c *ledger.Claim, lender, borrower AgentID) {
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "loan formed", slog.Int64(logkeys.Claim, c.ID),
+			slog.Int64(logkeys.Agent, int64(borrower)), slog.Int64(logkeys.Region, int64(region)),
+			slog.Int64(logkeys.Principal, c.Principal), slog.Int64(logkeys.Rate, c.RateBP),
+			slog.Int64(logkeys.Term, c.Due-c.Formed))
+	}
+	if w.obs.supplied {
+		w.obs.deliver(LoanFormed{
+			Tick: c.Formed, Claim: ClaimID(c.ID), Creditor: lender, Debtor: borrower, Region: region,
+			Principal: Money(c.Principal), Interest: Money(c.Interest), RateBP: c.RateBP, Term: c.Due - c.Formed, Due: c.Due,
+		})
+	}
+}
+
+// reportRound delivers CreditRound for each region, in ascending RegionID, that has a
+// count other than 0, after the last LoanFormed (spec-credit.md 16.1.1).
+func (w *World) reportRound() {
+	if !w.obs.supplied {
+		return
+	}
+	t := w.Tick()
+	for g, c := range w.credit.round.counts {
+		if c.quiet() {
+			continue
+		}
+		w.obs.deliver(CreditRound{
+			Tick: t, Region: RegionID(g), Requests: c.requests, Offers: c.offers,
+			RequestsRefused: c.requestsRefused, OffersRefused: c.offersRefused, InArrears: c.inArrears, Exposure: c.exposure,
+			Formed: c.formed, Principal: Money(c.principal), Interest: Money(c.interest), Unfilled: Money(c.unfilled),
+			TooMany: c.tooMany, Overflow: c.overflow,
+		})
+	}
+}
+
+// logCapReached is the Warn "claim cap reached" (spec-credit.md 16.2, pattern A): a
+// fill was dropped for want of room in the claim list in each of the last ticks of a
+// run, at the tenth and every tenth after. Its counterpart is CreditRound.TooMany and
+// the length of the snapshot's Claims.
+func (w *World) logCapReached() {
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelWarn) {
+		w.log.LogAttrs(ctx, slog.LevelWarn, "claim cap reached", slog.Int64(logkeys.Claims, int64(w.ledger.OpenClaims())))
+	}
+}

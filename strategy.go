@@ -130,6 +130,11 @@ type TradePlan struct {
 	Offers []DeliveryOffer
 	Takes  []DeliveryTake
 	Notes  PlanNotes
+	// Borrow and Lend are the request and the offer of the credit round
+	// (spec-credit.md 5.1), admitted at P3.3b after every agent's plan; at most one
+	// of each is admitted, and both are empty for a strategy that does not use them.
+	Borrow []CreditRequest
+	Lend   []CreditOffer
 	// Cuts are the bids the default strategy sized down or dropped for room, one per
 	// commodity in commodity order, for the world to count and log (spec-storage.md
 	// 6.3.1); empty for any other strategy and with the storage module off.
@@ -502,6 +507,10 @@ type AgentView struct {
 	// tick and a strategy must treat it as read-only.
 	HasMerchant bool
 	Merchant    MerchantView
+	// Credit is the credit group of the view passed to Trade, present only for an
+	// agent whose role has a credit block and nil for every other
+	// (spec-credit.md 10.1). It is a scratch copy valid for the call only.
+	Credit *CreditView
 	// Room is the room group of a limited agent: its room, load, pledge, free room
 	// and stores as they are when the view is built, the stores a scratch copy valid
 	// for the call (spec-storage.md 6.1.1). Limited is false with the storage module

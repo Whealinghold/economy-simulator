@@ -508,6 +508,7 @@ var replayRows = []replayRow{
 	{id: "P3.2", run: (*World).p32Trade},
 	{id: "P3.3", run: noErr((*World).p33Round), on: contractsOn},
 	{id: "P3.3a", run: noErr((*World).p33aPlanned), on: merchantRolesOn},
+	{id: "P3.3b", run: noErr((*World).p33bRound), on: creditOn},
 	{id: "P3.4", run: (*World).p34Estates},
 	{id: "P3.5", run: (*World).p35Orders, on: externalOn},
 	{id: "P3.6", run: noErr((*World).p36Aggregates), on: wantsOrInformationOn},

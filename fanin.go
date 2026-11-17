@@ -50,6 +50,9 @@ func (w *World) fillTradeOnly(v *AgentView, a *agent) {
 	if w.mer != nil {
 		w.fillMerchantView(v, a)
 	}
+	if w.credit != nil {
+		w.fillCreditView(v, a)
+	}
 }
 
 // viewKind says which call a view is built for: the rumours of the information
@@ -82,6 +85,7 @@ func (w *World) checkTradePlan(a *agent, p *TradePlan) {
 	if w.sto != nil {
 		w.checkRoomPlan(a, p)
 	}
+	w.checkCreditPlan(a, p) // nil-safe: with the module off a request or an offer is only a Debug line
 }
 
 // removeAgent is the one removal path of an agent (spec-agents.md 3.6,

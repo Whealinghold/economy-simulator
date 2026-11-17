@@ -1590,6 +1590,8 @@
 //     round, or OriginPayout, a payout claim of an insurance cover; both are settled alike.
 //   - LoanEnded, LoanPassed, CreditSettled: the events of a claim that ends, of a claim that
 //     passes to an estate and of the settlement pass of a region.
+//   - LoanFormed, CreditRound: the events of a loan formed at P3.3b and of the round of a
+//     region (its admissions, refusals, loans and unfilled principal).
 //   - Written off (claim): a claim ended with its owed lost, after the write-off ticks or at
 //     the removal of its debtor.
 //   - Forgiven (claim): a loan ended by the call that forgives claims; no money moves.
