@@ -276,6 +276,13 @@ check s66.outcomes_add_to_pushed: 10/10 pass
 check s66.pipeline_within_cap: 10/10 pass
 check s66.reconciles: 10/10 pass
 
+## S94 two+transport+storage two shippers one consignee, 40 ticks seeds 1-10
+measure shipments dispatched: 1=1 2=1 3=1 4=1 5=1 6=1 7=1 8=2 9=1 10=1 | median=1 n=10
+measure shipments refused consignee_full: 1=23 2=23 3=23 4=23 5=23 6=23 7=23 8=22 9=23 10=23 | median=23 n=10
+measure shippers refused more than once: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check a shipment is served while another is refused for room: 10/10 pass
+check the load of a role is within its room at every tick: 10/10 pass
+
 ## X1 two regions, arbitrage (dynamic, report-only)
 measure x1.contracts_formed: 1=0 2=0 | median=0 n=2
 measure x1.contracts_settled: 1=0 2=0 | median=0 n=2
