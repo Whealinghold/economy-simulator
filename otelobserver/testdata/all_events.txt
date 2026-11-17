@@ -35,6 +35,7 @@ RecipeAbandoned
 RecipeExecuted
 RecipeRefused
 ReliefPaid
+RentScaled
 RoleChanged
 RumoursServed
 RunEnded
@@ -49,6 +50,7 @@ TechnologyAdjusted
 TechnologyAdvanced
 TickEnded
 TickStarted
+TitleTransferred
 TradeExecuted
 TraineeshipCompleted
 TraineeshipEnded

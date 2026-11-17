@@ -26,7 +26,7 @@ var byName = map[string]ledger.Reason{
 	"transit_out": ledger.TransitOut, "transit_in": ledger.TransitIn, "haul_use": ledger.HaulUse, "transit_use": ledger.TransitUse,
 	"outside_budget": ledger.OutsideBudget, "outside_unspent": ledger.OutsideUnspent, "outside_receipts": ledger.OutsideReceipts,
 	"outside_offer": ledger.OutsideOffer, "outside_unsold": ledger.OutsideUnsold, "outside_purchases": ledger.OutsidePurchases,
-	"wage_pay": ledger.WagePay,
+	"wage_pay": ledger.WagePay, "rent": ledger.Rent, "title_sale": ledger.TitleSale,
 }
 
 // notBuilt lists the reasons of the starting registry that a module owns and
@@ -35,8 +35,8 @@ var byName = map[string]ledger.Reason{
 var notBuilt = []string{
 	"want_consumption",
 	"escrow_in", "escrow_out", "escrow_refund", "wage_escrow",
-	"wage_refund", "rent",
-	"title_sale", "premium", "payout", "loss",
+	"wage_refund",
+	"premium", "payout", "loss",
 }
 
 // specRow is one parsed row of the registry table of spec-ledger.md 7.2.
@@ -113,6 +113,11 @@ func pairing(between string) (from, to []ledger.Kind, back bool) {
 // only row that names it so far: the spec text of the trade and fiscal rows names it
 // too, but the fiscal module builds those (plan 3-pol D5, FR-POL-017).
 func withTreasury(name, between string, from, to []ledger.Kind) ([]ledger.Kind, []ledger.Kind) {
+	if name == "title_sale" {
+		// A release makes the pool pay the holder (spec-land.md 6.3.2); the row of 7.2
+		// lists only the sale to the pool, so the spec text owes "or back".
+		return append(from, ledger.KindEstate), to
+	}
 	if name == "initial" {
 		_, r, _ := strings.Cut(between, " to ")
 		if strings.Contains(r, "treasury") {
@@ -465,4 +470,38 @@ func TestWagePay_AgentToAgentMoneyOnly(t *testing.T) {
 			}
 		}
 	}
+}
+
+// TestRentAndTitleSale_AgentOrEstateMoneyOnly verifies the registry rows of rent and
+// title_sale: internal money, rent from an agent to an agent or an estate and title_sale
+// between agents and estates in either direction, no goods, no boundary and no faucet or sink.
+//
+// Requirement: FR-LND-017, FR-LND-045
+func TestRentAndTitleSale_AgentOrEstateMoneyOnly(t *testing.T) {
+	t.Parallel()
+	for _, r := range []ledger.Reason{ledger.Rent, ledger.TitleSale} {
+		if class, ok := ledger.ClassOf(r, false); !ok || class != ledger.Internal {
+			t.Errorf("ClassOf(%d, money) = %v, %v, want an internal row", r, class, ok)
+		}
+		if _, ok := ledger.ClassOf(r, true); ok {
+			t.Errorf("ClassOf(%d, goods) has a row, want none", r)
+		}
+		for a := ledger.Kind(0); a <= ledger.KindTreasury; a++ {
+			for b := ledger.Kind(0); b <= ledger.KindTreasury; b++ {
+				if got, want := ledger.Allowed(r, false, a, b), rentPairAllowed(r, a, b); got != want {
+					t.Errorf("Allowed(%d, money, %d -> %d) = %v, want %v", r, a, b, got, want)
+				}
+			}
+		}
+	}
+}
+
+// rentPairAllowed is the pairing of the two rows: rent from an agent to an agent or an
+// estate, title_sale between agents and estates in either direction.
+func rentPairAllowed(r ledger.Reason, a, b ledger.Kind) bool {
+	holder := func(k ledger.Kind) bool { return k == ledger.KindAgent || k == ledger.KindEstate }
+	if r == ledger.TitleSale {
+		return holder(a) && holder(b)
+	}
+	return a == ledger.KindAgent && holder(b)
 }
