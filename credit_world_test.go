@@ -70,6 +70,22 @@ func TestCredit_PackFileToWorld(t *testing.T) {
 	}
 }
 
+// badBlockCases are the packs of TestCredit_NewWorldRejectsABadBlock: a name, a
+// change to the credit pack and the sentinel construction must return.
+var badBlockCases = []struct {
+	name string
+	set  func(c *economysim.Config)
+	want error
+}{
+	{"a rate above the bound", func(c *economysim.Config) {
+		creditRole(c, "cook").Credit.Lend.RateBP = economysim.MaxCreditRateBP + 1
+	}, economysim.ErrOutOfBounds},
+	{"a block with both sides", func(c *economysim.Config) {
+		creditRole(c, "grower").Credit.Lend = &economysim.LendTerms{MaxTermTicks: 1, ShareBP: 1}
+	}, economysim.ErrCreditShape},
+	{"a block with the module off", func(c *economysim.Config) { c.Modules.Credit = nil }, economysim.ErrModuleDependency},
+}
+
 // TestCredit_NewWorldRejectsABadBlock verifies that construction refuses a pack
 // whose credit tables break a rule of 15.1, with the sentinel of the rule and no
 // world, so a file that breaks the module never reaches a run.
@@ -80,20 +96,7 @@ func TestCredit_NewWorldRejectsABadBlock(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test, skipped with -short")
 	}
-	tests := []struct {
-		name string
-		set  func(c *economysim.Config)
-		want error
-	}{
-		{"a rate above the bound", func(c *economysim.Config) {
-			creditRole(c, "cook").Credit.Lend.RateBP = economysim.MaxCreditRateBP + 1
-		}, economysim.ErrOutOfBounds},
-		{"a block with both sides", func(c *economysim.Config) {
-			creditRole(c, "grower").Credit.Lend = &economysim.LendTerms{MaxTermTicks: 1, ShareBP: 1}
-		}, economysim.ErrCreditShape},
-		{"a block with the module off", func(c *economysim.Config) { c.Modules.Credit = nil }, economysim.ErrModuleDependency},
-	}
-	for _, tt := range tests {
+	for _, tt := range badBlockCases {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			cfg := loadPackBytes(t, []byte(creditPackDoc), packOne...)
