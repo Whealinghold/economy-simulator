@@ -465,10 +465,11 @@ func (w *World) snapshotClaims(s *Snapshot) {
 		return
 	}
 	for _, c := range w.ledger.AppendClaims(nil) {
+		debtor := w.accountView(c.Debtor)
 		s.Claims = append(s.Claims, ClaimRow{
 			Claim: ClaimID(c.ID), Origin: originOf(c.Origin),
-			Creditor: AgentID(w.accountView(c.Creditor).Owner), Debtor: AgentID(w.accountView(c.Debtor).Owner),
-			Region:    RegionID(w.accountView(c.Debtor).Region),
+			Creditor: AgentID(w.accountView(c.Creditor).Owner), Debtor: AgentID(debtor.Owner),
+			Region:    RegionID(debtor.Region),
 			Principal: Money(c.Principal), Interest: Money(c.Interest),
 			PrincipalOwed: Money(c.PrincipalOwed), InterestOwed: Money(c.InterestOwed),
 			RateBP: c.RateBP, Formed: c.Formed, Due: c.Due, Overdue: c.Overdue,
