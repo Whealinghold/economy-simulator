@@ -249,11 +249,11 @@ func (t *tenure) ration(order []int) bool {
 func (t *tenure) capRequest(q *startReq, first, n int) {
 	r, rt := t.world.res, &t.rt
 	rt.lines, rt.noTitleCell, rt.rentCell = rt.lines[:0], -1, -1
-	cap, lifted := q.weight, false
+	most, lifted := q.weight, false
 	for i := first; i < first+n; i++ {
 		d := &r.reqs[i]
 		if !t.titled(d.cell) {
-			cap = min(cap, d.grant, r.stock[d.cell]/d.draw)
+			most = min(most, d.grant, r.stock[d.cell]/d.draw)
 			continue
 		}
 		g := rt.tg[i]
@@ -267,14 +267,14 @@ func (t *tenure) capRequest(q *startReq, first, n int) {
 			lifted = true
 			rt.rentCell = d.cell
 		default:
-			cap = min(cap, d.grant, r.stock[d.cell]/d.draw)
+			most = min(most, d.grant, r.stock[d.cell]/d.draw)
 		}
 		rent := t.chargeRent(d)
 		rt.lines = append(rt.lines, startLine{req: i, cell: d.cell, exempt: t.exempt(d),
 			line: tnr.Line{Rent: rent, Draw: d.draw, Own: g.own, Commons: g.commons}})
 	}
 	if lifted {
-		q.drawCap = cap
+		q.drawCap = most
 	}
 	t.capRent(q, lifted && rt.noTitleCell < 0)
 }
