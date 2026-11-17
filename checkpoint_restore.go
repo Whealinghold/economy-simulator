@@ -302,7 +302,9 @@ func loadExtensionState(have []extEntry, recs []extRecord) error {
 // with no base room. The room, the load and the pledge are derived, in rebuildStorage.
 func (w *World) loadStores(r *codec.Reader) {
 	s := w.sto
-	s.grow(AgentID(len(w.agents) - 1))
+	if len(w.agents) > 0 {
+		s.grow(AgentID(len(w.agents) - 1))
+	}
 	w.eachLive(func(a *agent) {
 		var prev uint64
 		total := int64(0)

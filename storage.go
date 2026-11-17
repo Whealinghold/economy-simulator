@@ -589,6 +589,20 @@ func (w *World) rebuildStorage() error {
 		}
 		copy(s.inbound, cargo)
 	}
+	// syncJob and repledge raise an invariant when a pledge does not fit int64; a
+	// checkpoint is input, so the sums are checked here first and refused.
+	pledged, err := s.pledgedByJobs(w)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrCheckpointCorrupt, err)
+	}
+	for i := range pledged {
+		if i >= len(s.inbound) {
+			break
+		}
+		if _, ok := addPair(pledged[i], s.inbound[i]); !ok {
+			return fmt.Errorf("%w: the pledge of agent %d does not fit int64", ErrCheckpointCorrupt, i)
+		}
+	}
 	w.eachLive(w.syncJob)
 	w.eachLive(w.repledge)
 	return nil
