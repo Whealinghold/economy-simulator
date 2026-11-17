@@ -207,8 +207,9 @@ func (t *tenure) simulate(changes []TitleTransfer, order []int) (transferPlan, e
 	for _, i := range order {
 		c := &changes[i]
 		cell := int(c.Region)*t.resources + int(c.Resource)
-		k := slices.Index(plan.cells, cell)
-		if k < 0 {
+		// order is ascending by (region, resource), so the endowment is the last one made or new.
+		k := len(plan.cells) - 1
+		if k < 0 || plan.cells[k] != cell {
 			k = len(plan.cells)
 			plan.cells, plan.holds = append(plan.cells, cell), append(plan.holds, slices.Clone(t.holds[cell]))
 		}
