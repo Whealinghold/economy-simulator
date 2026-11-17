@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"slices"
 
+	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/ordering"
 	tnr "github.com/Whealinghold/economy-sim/internal/tenure"
@@ -446,7 +447,10 @@ func (t *tenure) payRent(c *tenureCount, x rentStart, lessor AgentID, units int6
 	if x.exempt || x.rent == 0 || x.payer == lessor {
 		return
 	}
-	due := x.rent * units // checked at the cap: the total rent of the start fits
+	due, fits := checked.Mul(x.rent, units) // the cap checked the total rent of the start; not trusted here
+	if !fits {
+		invariant("the rent of a triple does not fit after the cap of the start")
+	}
 	to := t.account(lessor, t.regionOf(x.cell))
 	v, err := w.ledger.Account(to)
 	if err != nil {
