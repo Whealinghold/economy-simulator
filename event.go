@@ -1119,9 +1119,7 @@ type RoomLimited struct {
 }
 
 // EntryLimited is emitted once per region per tick in which a limit or refusal
-// of the spawner acted; it is never emitted when every count is zero. The
-// refusal by a role ceiling of the settlement module is appended with that
-// module.
+// of the spawner acted; it is never emitted when every count is zero.
 type EntryLimited struct {
 	Tick int64
 	// Region is the region.
@@ -1140,6 +1138,10 @@ type EntryLimited struct {
 	RegionCap int64
 	// RoleCap is the entries cut by a role's cap.
 	RoleCap int64
+	// RoleCeiling is the households a role ceiling of the settlements module
+	// refused: an entrant, a switcher or a replacement that did not fit the
+	// headroom of its role (spec-spawner.md 6.3.1).
+	RoleCeiling int64
 	// Cooldown is the households of agents due for a change that a cooldown
 	// held.
 	Cooldown int64
@@ -1409,8 +1411,7 @@ const (
 // the region's plan and after EntryLimited, when any count other than Exposed,
 // Unfed and NoRatio is non-zero, and never otherwise (spec-population.md 10.1,
 // FR-POP-031). It is emitted only when the population module is on. The counts
-// are households. BirthsCeiling, the births a role ceiling cut, is appended with
-// the settlements module.
+// are households.
 type PopulationChanged struct {
 	Tick int64
 	// Region and Role are the cell.
@@ -1427,6 +1428,10 @@ type PopulationChanged struct {
 	DeathsCut, DeathsHeld int64
 	// BirthsCapped is the births dropped by the region's HouseholdCap.
 	BirthsCapped int64
+	// BirthsCeiling is the births a role ceiling of the settlements module
+	// dropped, after the household cap (spec-population.md 4.4.4); BirthsCapped
+	// stays the count of the household cap.
+	BirthsCeiling int64
 	// BirthsUnfunded is the births the pool could not fund.
 	BirthsUnfunded int64
 	// RateClamped is the exposed households whose effective rate was clamped at

@@ -95,8 +95,8 @@ func TestBuildRegionView_EveryFieldEqualsItsSource(t *testing.T) {
 		ReviewTicks: 10, EntryShare: 50, RoleHysteresis: 1_000, RoleCooldown: 30, EntryRatio: 8_000,
 		ChangePrivation: 3, RemovePrivation: 10, DeathStep: 1_000, ExitShare: 100, Renewal: 10_000, EntryPoolShare: 5_000,
 		Roles: []RoleView{
-			{Role: 0, Households: 3, Agents: 2, Wage: 433, HasWage: true, Upkeep: 1_000, ExpectedWorkTicks: 250, StartMoney: 7_000, ToolPrice: 5_000, CapitalReturn: 1_000, RenewalCarry: 42},
-			{Role: 1, Closed: true, Households: 1, Agents: 1, Upkeep: 1_000, ExpectedWorkTicks: 200, StartMoney: 3_000, TrainingTicks: 4, CapitalReturn: 1_000, RenewalCarry: 7, Trainers: 1, MaxTrainees: 3},
+			{Role: 0, NoLimit: true, Households: 3, Agents: 2, Wage: 433, HasWage: true, Upkeep: 1_000, ExpectedWorkTicks: 250, StartMoney: 7_000, ToolPrice: 5_000, CapitalReturn: 1_000, RenewalCarry: 42},
+			{Role: 1, NoLimit: true, Closed: true, Households: 1, Agents: 1, Upkeep: 1_000, ExpectedWorkTicks: 200, StartMoney: 3_000, TrainingTicks: 4, CapitalReturn: 1_000, RenewalCarry: 7, Trainers: 1, MaxTrainees: 3},
 		},
 		Agents: []RegionAgent{
 			{Agent: 1, Role: 0, Weight: 2, Money: 14_000, Unfed: 1, Hunger: 2, Privation: 3, RoleSince: 4, Upkeep: 1_000, Surplus: 34},

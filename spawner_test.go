@@ -18,7 +18,7 @@ import (
 // V = 13 000, and E = 1 300 * 250 * 10 000 / (1 000 * 365) = 8 904.
 func spawnerView(agents ...economysim.RegionAgent) *economysim.RegionView {
 	role := func(id economysim.RoleID, wage economysim.Money, households int64) economysim.RoleView {
-		return economysim.RoleView{Role: id, Households: households, Agents: households, Wage: wage, HasWage: true, Upkeep: 1000, ExpectedWorkTicks: 250}
+		return economysim.RoleView{NoLimit: true, Role: id, Households: households, Agents: households, Wage: wage, HasWage: true, Upkeep: 1000, ExpectedWorkTicks: 250}
 	}
 	return &economysim.RegionView{
 		Tick: 100, TicksPerYear: 365, ReviewTicks: 1, EntryShare: 10000, RoleHysteresis: 1000,

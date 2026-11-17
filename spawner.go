@@ -125,6 +125,15 @@ type RoleView struct {
 	// that can take a trainee, and MaxTrainees the most trainees one of them may
 	// hold. All three are 0 for a role with no training.
 	QueueAhead, Trainers, MaxTrainees int64
+	// Headroom is the households the role may still take in the region under its
+	// ceiling: the limit of the region's class less the households of the role,
+	// counted at the start of the region's entry step, and at least 0 (settlements
+	// module, spec-settlements.md 6.4.2). It is meaningful only when NoLimit is
+	// false. The world sets NoLimit for a role with no ceiling, and for every role
+	// while the module is off.
+	Headroom int64
+	// NoLimit is true when no ceiling bounds the role in the region.
+	NoLimit bool
 }
 
 // RegionAgent is one agent in a region as a spawner sees it. The name is not
@@ -220,7 +229,7 @@ type Decisions struct {
 	List []Decision
 
 	regionCap, roleCap, cooldown, hysteresis, exitCap int64
-	noViableRole, stranded                            int64
+	noViableRole, stranded, roleCeiling               int64
 	noViableByRole                                    []int64
 }
 
@@ -229,7 +238,7 @@ type Decisions struct {
 func (d *Decisions) reset() {
 	d.List = d.List[:0]
 	d.regionCap, d.roleCap, d.cooldown, d.hysteresis, d.exitCap = 0, 0, 0, 0, 0
-	d.noViableRole, d.stranded = 0, 0
+	d.noViableRole, d.stranded, d.roleCeiling = 0, 0, 0
 	clear(d.noViableByRole)
 }
 
@@ -288,6 +297,7 @@ type decideScratch struct {
 	ahead      []int64
 	used       []int64
 	roleCap    []int64
+	room       []int64
 	regionUsed int64
 }
 
@@ -345,6 +355,7 @@ func (c *decider) prepare() {
 	s.lfl = regrow(s.lfl, nr)
 	s.used = regrow(s.used, nr)
 	s.roleCap = regrow(s.roleCap, nr)
+	s.room = regrow(s.room, nr)
 	c.d.noViableByRole = regrow(c.d.noViableByRole, nr)
 	s.regionUsed = 0
 	s.rank = s.rank[:0]
@@ -356,6 +367,7 @@ func (c *decider) prepare() {
 		sg.e, sg.v, sg.has, sg.viable = roleSignals(r, v.TicksPerYear, v.EntryRatio)
 		c.households = satAdd(c.households, r.Households)
 		s.roleCap[i] = satAllowance(r.Households, v.EntryShare)
+		s.room[i] = roomOf(r)
 		if c.open(i) && sg.has {
 			s.rank = append(s.rank, i)
 		}
@@ -541,9 +553,31 @@ func (c *decider) applyOK(a *RegionAgent, d int, eo int64) bool {
 func (c *decider) admit() {
 	s := c.s
 	var n occupation.Counts
-	s.adm, s.dc, n = occupation.Admit(s.adm, s.dc, s.cands, occupation.Limits{RegionCap: c.regionCap, RoleCap: s.roleCap}, &s.regionUsed, s.used)
+	s.adm, s.dc, n = occupation.Admit(s.adm, s.dc, s.cands, occupation.Limits{RegionCap: c.regionCap, RoleCap: s.roleCap, Room: s.room}, &s.regionUsed, s.used)
 	c.d.regionCap = satAdd(c.d.regionCap, n.RegionCap)
 	c.d.roleCap = satAdd(c.d.roleCap, n.RoleCap)
+	c.d.roleCeiling = satAdd(c.d.roleCeiling, n.Ceiling)
+}
+
+// roomOf is the room the ceiling of role r leaves, or -1 for no ceiling, the form
+// occupation.Limits.Room takes (spec-spawner.md 6.3.1).
+func roomOf(r *RoleView) int64 {
+	if r.NoLimit {
+		return -1
+	}
+	return max(r.Headroom, 0)
+}
+
+// fitRoom returns the households of n entering role index r that its ceiling
+// admits, lowers the room by them and counts the rest in RoleCeiling. A role with
+// no ceiling admits all of n.
+func (c *decider) fitRoom(r int, n int64) int64 {
+	take, cut := occupation.Fit(n, c.s.room[r])
+	if c.s.room[r] >= 0 {
+		c.s.room[r] -= take
+	}
+	c.d.roleCeiling = satAdd(c.d.roleCeiling, cut)
+	return take
 }
 
 // eligible reports whether agent i is a candidate this tick and the index of its
@@ -710,7 +744,7 @@ func (c *decider) size(r int) {
 	switch {
 	case !ok || n <= 0:
 	case c.open(r) && s.sig[r].viable:
-		s.lfl[r] = n
+		s.lfl[r] = c.fitRoom(r, n)
 	case len(s.dests) == 0:
 		c.d.noViableRole = satAdd(c.d.noViableRole, n)
 		c.d.noViableByRole[r] = satAdd(c.d.noViableByRole[r], n)

@@ -184,7 +184,7 @@ func (w *World) fillRoles(g RegionID) {
 		sum := w.reads.summarise(x.sets[r], paramsOf(&w.cfg, id, &w.roles), w.roles.row(id).upkeepIn(g), x.prices, unskilled, hasUnskilled)
 		x.sums[r] = sum
 		x.view.Roles[r] = RoleView{
-			Role: id, Closed: cfg.Closed, Households: households(x.sets[r]), Agents: int64(len(x.sets[r].rings)),
+			Role: id, Closed: cfg.Closed, NoLimit: true, Households: households(x.sets[r]), Agents: int64(len(x.sets[r].rings)),
 			Wage: Money(sum.Wage), HasWage: sum.HasWage, Upkeep: x.upkeep[r],
 			ExpectedWorkTicks: cfg.ExpectedWorkTicks, StartMoney: cfg.StartMoney, ToolPrice: w.toolPrice(id),
 			TrainingTicks: cfg.TrainingTicks, CapitalReturn: w.cfg.Regions[g].CapitalReturn,
@@ -193,6 +193,9 @@ func (w *World) fillRoles(g RegionID) {
 	}
 	if w.skills != nil {
 		w.fillRoleSkills(g)
+	}
+	if w.set != nil {
+		w.fillRoleGates(g)
 	}
 }
 
@@ -699,7 +702,7 @@ func (w *World) spawnEntrant(g RegionID, d Decision) error {
 	w.state.hadAgent[cell] = true
 	w.agentJoined(&w.agents[id], g)
 	if w.obs.supplied {
-		w.obs.deliver(AgentSpawned{Tick: w.Tick(), Agent: id, Region: g, Role: d.Role, Weight: 1, StartMoney: given})
+		w.obs.deliver(AgentSpawned{Tick: w.Tick(), Agent: id, Region: g, Role: d.Role, Weight: 1, StartMoney: given, StoresLocked: w.storesLocked()})
 	}
 	return nil
 }

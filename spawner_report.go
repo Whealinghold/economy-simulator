@@ -12,7 +12,7 @@ type tallyRow struct {
 	changed, entered, removed, unfunded, refused int64
 	noViableRole, regionCap, roleCap             int64
 	cooldown, hysteresis, exitCap                int64
-	stranded                                     int64
+	stranded, roleCeiling                        int64
 }
 
 // entryTally adds, per region, the counts of the executor to those of the plan
@@ -47,6 +47,7 @@ func (t *entryTally) addPlan(r RegionID, d *Decisions) {
 		w.hysteresis = satAdd(w.hysteresis, d.hysteresis)
 		w.exitCap = satAdd(w.exitCap, d.exitCap)
 		w.stranded = satAdd(w.stranded, d.stranded)
+		w.roleCeiling = satAdd(w.roleCeiling, d.roleCeiling)
 	}
 }
 
@@ -71,7 +72,7 @@ func (t *entryTally) limited(tick int64, r RegionID) (EntryLimited, bool) {
 	}
 	return EntryLimited{
 		Tick: tick, Region: r, Changed: w.changed, Entered: w.entered, Removed: w.removed,
-		Unfunded: w.unfunded, NoViableRole: w.noViableRole, RegionCap: w.regionCap, RoleCap: w.roleCap,
+		Unfunded: w.unfunded, NoViableRole: w.noViableRole, RegionCap: w.regionCap, RoleCap: w.roleCap, RoleCeiling: w.roleCeiling,
 		Cooldown: w.cooldown, Hysteresis: w.hysteresis, ExitCap: w.exitCap, Refused: w.refused, Stranded: w.stranded,
 	}, true
 }
