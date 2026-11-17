@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"errors"
+	"math"
 	"reflect"
 	"testing"
 
@@ -258,6 +259,75 @@ func TestCheckpoint_PledgeAboveRoomAccepted(t *testing.T) {
 	yb, _ := y.MarshalBinary()
 	if !bytes.Equal(xb, yb) {
 		t.Error("the restored world's checkpoint after the completion differs from the original's")
+	}
+}
+
+// TestCheckpoint_RestoreRejects_PledgeOverflow verifies that a checkpoint whose jobs
+// pledge a load that does not fit int64 is ErrCheckpointCorrupt from rebuildStorage, and
+// that pledgedByJobs reports it as an error: syncJob and repledge raise an invariant on
+// such a sum, and a checkpoint is input.
+//
+// Arithmetic: with big the larger dimension of the output's size, the first case pends
+// MaxInt64 units, whose load is MaxInt64*big and overflows when big is above 1; the second
+// gives two jobs of one principal MaxInt64/big units each, which fit alone, and 2*(MaxInt64/big)*big
+// is above MaxInt64.
+//
+// Requirement: FR-STO-039, FR-STO-017
+//
+// Guard: without the check a crafted checkpoint panics the restore instead of returning
+// an error (the fix of the commit that added it).
+func TestCheckpoint_RestoreRejects_PledgeOverflow(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		units func(per int64) []int64 // pending units of the jobs of shipHome and shipHome2
+	}{
+		{"one job above int64", func(int64) []int64 { return []int64{math.MaxInt64, 0} }},
+		{"two jobs of one principal sum above int64", func(per int64) []int64 { return []int64{per, per} }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			w := stoCkptWorld(t, 60, 40, stoMiller{max: 1}, nil)
+			out := w.sto.recipes.row(0).outputs[0]
+			sz := w.sto.sizes[out.commodity]
+			big := max(sz.Mass, sz.Bulk)
+			if big < 1 {
+				t.Fatalf("size of the first output = %+v, want a positive dimension", sz)
+			}
+			units := tt.units(math.MaxInt64 / big)
+			for i, id := range []AgentID{shipHome, shipHome2} {
+				if units[i] == 0 {
+					continue
+				}
+				a := &w.agents[id]
+				pending := make([]int64, len(w.sto.recipes.row(0).outputs))
+				pending[0] = units[i]
+				a.job = job{recipe: 0, remaining: 1, executions: 1, principal: shipHome, pending: pending}
+			}
+			if _, err := w.sto.pledgedByJobs(w); err == nil {
+				t.Fatal("pledgedByJobs() error = nil, want the overflow")
+			}
+			if err := w.rebuildStorage(); !errors.Is(err, ErrCheckpointCorrupt) {
+				t.Errorf("rebuildStorage() = %v, want ErrCheckpointCorrupt", err)
+			}
+		})
+	}
+}
+
+// TestCheckpoint_LoadStoresEmptyAgentTable verifies that the stores block of a world
+// with no agent table is read as empty without growing the module's tables.
+//
+// Guard: loadStores grows the tables to the last agent ID; with no agents that ID is -1,
+// which as an AgentID would grow the tables without end.
+func TestCheckpoint_LoadStoresEmptyAgentTable(t *testing.T) {
+	t.Parallel()
+	w := stoCkptWorld(t, 60, 40, stoMiller{max: 1}, nil)
+	w.agents, w.firstHousehold = nil, 0
+	before := len(w.sto.stores)
+	w.loadStores(codec.NewReader(nil))
+	if got := len(w.sto.stores); got != before {
+		t.Errorf("loadStores on an empty agent table: len(stores) = %d, want %d", got, before)
 	}
 }
 
