@@ -477,8 +477,8 @@ func (s *subsistence) noteStart(w *World, a *agent, cell int, recipe RecipeID, k
 
 // blocksOwnUse reports whether a start refused for the reason blocks an own-use
 // household (FR-SUB-023, case b). The reasons that later modules add are appended
-// here and to blockReasons (D418). no_title and rent_funds are not in blockReasons
-// either, for the reason below: a household refused for tenure counts in the slot of
+// here and to blockReasons (D418). no_title and rent_funds block own use, but they are not
+// in blockReasons, for the reason below: a household refused for tenure counts in the slot of
 // any other reason (spec-land.md 7.1.2, FR-LND-046). no_room is not in blockReasons yet: a longer
 // blockedBy changes the hashed shape of the state and so golden/all, which no module
 // PR moves (plan 3-sto Q3), so a household refused for room counts in the slot of any
