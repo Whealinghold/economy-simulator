@@ -425,6 +425,10 @@ func moneyOn(w *World) bool { return w.money != nil }
 // demand module's WantShortfall and the information module's RumoursServed.
 func wantsOrInformationOn(w *World) bool { return w.demand != nil || w.info != nil }
 
+// storageOn is the guard of the P3.6a row of the storage module: an off world records
+// no line, so the off position hashes do not move.
+func storageOn(w *World) bool { return w.sto != nil }
+
 // informationOn is the guard of the row of the information module (P5.2).
 func informationOn(w *World) bool { return w.info != nil }
 
@@ -508,6 +512,7 @@ var replayRows = []replayRow{
 	{id: "P3.4", run: (*World).p34Estates},
 	{id: "P3.5", run: (*World).p35Orders, on: externalOn},
 	{id: "P3.6", run: noErr((*World).p36Aggregates), on: wantsOrInformationOn},
+	{id: "P3.6a", run: noErr((*World).p36aRoomLimited), on: storageOn},
 	{id: "P4.1", run: (*World).p41Clear},
 	{id: "P4.1b", run: (*World).p41bPayroll, on: employmentOn},
 	{id: "P4.2", run: (*World).p42Sweep, on: externalOn},

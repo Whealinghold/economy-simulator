@@ -500,6 +500,7 @@ func logScenarios() []scenario {
 	for _, c := range warnCases() {
 		list = append(list, c.scenario)
 	}
+	list = append(list, storageLogScenario())
 	return append(list, scenario{name: "warm one", ticks: 3, cfg: func(t *testing.T) economysim.Config {
 		return loadPack(t, "base.toml", "one.toml", "warm-one.toml")
 	}})

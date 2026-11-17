@@ -1440,6 +1440,8 @@
 //   - Owns a store: an agent owns a store if its stores of any class are at least one;
 //     it then cannot make a self-carried trip or a relocation.
 //   - StoreChanged: the event of one store added to an agent or removed from it.
+//   - RoomCut: the units of a bid that the default strategy took off for room, in
+//     TradePlan.Cuts, for the world to count and log.
 //   - RoomLimited: the event of a region and role's tick in which a room cut or refused
 //     a start, a bid or a shipment, or the default strategy discarded.
 //   - Jurisdiction: a named node of one tree over the regions, with an optional parent

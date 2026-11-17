@@ -307,6 +307,13 @@ const (
 	// an internal transfer of money, agent to agent in the payroll form of the
 	// employment module (spec-employment.md 24.1.6), no faucet and no sink.
 	ReasonWagePay Reason = "wage_pay"
+	// ReasonRent is the money a tenant pays a lessor for the units it drew from a let
+	// unit, and ReasonTitleSale the price of a title in a TransferTitles call
+	// (spec-land.md 5.8): internal transfers of money, agent to agent or estate, no
+	// faucet and no sink. Both are reserved words for a money flow ID while the
+	// tenure module is on.
+	ReasonRent      Reason = "rent"
+	ReasonTitleSale Reason = "title_sale"
 )
 
 // The declared ledger reasons of the external module, six rows declared while
@@ -541,6 +548,9 @@ const (
 	// CauseFacility is the cause of a StoreChanged that a store facility makes
 	// (spec-storage.md 3.6.3); the infrastructure module sets it.
 	CauseFacility Cause = "facility"
+	// CauseRemoval is the cause of a TitleTransferred that moves the titles of a
+	// removed agent to the pool of each endowment's region (spec-land.md 6.4.1).
+	CauseRemoval Cause = "removal"
 )
 
 // Kind is the kind of a boundary flow, a member of a closed set: a faucet
@@ -1080,6 +1090,34 @@ type StoreChanged struct {
 	Room, Load Capacity
 }
 
+// RoomLimited is emitted at P3.6a once per region and role, in ascending region then
+// role, after WantShortfall, in a tick in which a room cut or refused something
+// (spec-storage.md 14.1): a start, a bid, a shipment, or the default strategy's
+// discard. It is never emitted when StartsCut, StartsRefused, BidsCut, BidsRejected,
+// ShipmentsRefused and Discarded are all 0, and LimitedHouseholds and FullHouseholds
+// ride along without triggering it. It is an aggregate bounded by regions times
+// roles, with no map. It is emitted only when the storage module is on.
+type RoomLimited struct {
+	Tick int64
+	// Region and Role identify the cell.
+	Region RegionID
+	Role   RoleID
+	// LimitedHouseholds is the households of limited agents given a view for Trade,
+	// and FullHouseholds those whose free room was 0 in a dimension when it was built.
+	LimitedHouseholds, FullHouseholds int64
+	// StartsCut is the executions not started for room though the inputs allowed
+	// them, and StartsRefused the requests refused whole with the reason no_room.
+	StartsCut, StartsRefused int64
+	// BidsCut is the intents the default strategy sized down or dropped for room and
+	// BidsRejected the orders rejected with the reason no_room.
+	BidsCut, BidsRejected int64
+	// ShipmentsRefused is the shipments of shippers of the cell refused with the
+	// reason consignee_full.
+	ShipmentsRefused int64
+	// Discarded is the units discarded to make room for tier 1 (spec-storage.md 6.3.2).
+	Discarded int64
+}
+
 // EntryLimited is emitted once per region per tick in which a limit or refusal
 // of the spawner acted; it is never emitted when every count is zero. The
 // refusal by a role ceiling of the settlement module is appended with that
@@ -1478,6 +1516,7 @@ func (WearApplied) isEvent()        {}
 func (WorldRestored) isEvent()      {}
 func (AgentRelocated) isEvent()     {}
 func (StoreChanged) isEvent()       {}
+func (RoomLimited) isEvent()        {}
 func (EdgeStatusChanged) isEvent()  {}
 func (ReliefPaid) isEvent()         {}
 func (MoneyFlowLimited) isEvent()   {}
@@ -2232,3 +2271,48 @@ type SettlementHeld struct {
 }
 
 func (SettlementHeld) isEvent() {}
+
+// TitleTransferred is emitted once per title that moves: at a removal, before
+// AgentBankrupted, for each title the removed agent held (cause removal, spec-land.md
+// 6.4.1), and at a TransferTitles call, for each entry (cause consumer, 6.3.3). It is
+// emitted only when the tenure module is on. A removal moves no money, so its Price is 0.
+type TitleTransferred struct {
+	Tick int64
+	// Region and Resource are the endowment the title is of.
+	Region   RegionID
+	Resource ResourceID
+	// From and To are the agents that lose and gain the share; NoAgent is the commons.
+	// The estate pseudo-agent of Region is the pool.
+	From, To AgentID
+	// ShareBP is the share that moved, in basis points.
+	ShareBP int64
+	// Price is the money To paid From with the reason title_sale; 0 is a gift.
+	Price Money
+	// Cause is removal or consumer.
+	Cause Cause
+	// FromAfter and ToAfter are the shares of From and To after the move, in basis
+	// points; the commons share after it is 10 000 less the titles.
+	FromAfter, ToAfter int64
+	// FromRegion and ToRegion are the regions of the accounts that pay and are paid the
+	// price: the region of an agent's account, or Region for the pool and for NoAgent.
+	FromRegion, ToRegion RegionID
+	// FromPool and ToPool say the account is the pool of that region: the pool itself,
+	// or NoAgent, whose price the pool pays or receives (spec-land.md 6.3.2).
+	FromPool, ToPool bool
+}
+
+func (TitleTransferred) isEvent() {}
+
+// RentScaled is emitted once per endowment whose rent scale a SetRentScales call
+// changes, in (Region, Resource) order, after the whole call has been applied
+// (spec-land.md 9.1). It is emitted only when the tenure module is on.
+type RentScaled struct {
+	Tick int64
+	// Region and Resource are the endowment.
+	Region   RegionID
+	Resource ResourceID
+	// From and To are the scale before and after, in basis points.
+	From, To int64
+}
+
+func (RentScaled) isEvent() {}

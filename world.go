@@ -126,6 +126,8 @@ type World struct {
 	tec *technology
 	// set is the state of the settlements module, nil when it is off (settlements.go).
 	set *settlements
+	// tenure is the state of the tenure module, nil when it is off (tenure.go).
+	tenure *tenure
 	// integ is what INT keeps (integration.go).
 	integ integrationState
 	// firstHousehold is the agent ID of the first household: the number of

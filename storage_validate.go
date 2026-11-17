@@ -279,17 +279,13 @@ func (v *validator) unbuiltTarget(tp []string, f MoneyFlow, fp []string) {
 // storesTarget checks a flow whose target is the kind stores (spec-money-supply.md
 // 4.3.4, 12.1): the storage module must be on, the target has no role, the class is
 // configured, the region is defined, and the shape is a rate grant or a fixed levy
-// (no Level, no RateBP). The runtime of the kind is not built yet, so a flow that
-// passes every other rule is still ErrModuleDependency, with the bound "built":
-// the plan of the module removes that last rule with the flow's step (plan 3-sto
-// Phase 6), because resolveTarget has no role to give such a flow.
+// (no Level, no RateBP).
 func (v *validator) storesTarget(tp []string, f MoneyFlow, fp []string) {
 	t := f.Target
 	if v.c.Modules.Storage == nil {
 		v.rep.add(ErrModuleDependency, path(tp, "kind"), t.Kind, "")
 		return
 	}
-	n := len(v.rep.errs)
 	if t.Role != "" {
 		v.rep.add(ErrFlowShape, path(tp, "role"), t.Role, "")
 	}
@@ -304,9 +300,6 @@ func (v *validator) storesTarget(tp []string, f MoneyFlow, fp []string) {
 	}
 	if t.Region != "" && !v.region[t.Region] {
 		v.rep.add(ErrUnknownRegion, path(tp, "region"), t.Region, "")
-	}
-	if len(v.rep.errs) == n {
-		v.rep.add(ErrModuleDependency, path(tp, "kind"), t.Kind, "built")
 	}
 }
 

@@ -29,6 +29,7 @@ type viewScratch struct {
 	outputs     []RecipeOutput
 	tools       []RecipeTool
 	endowments  []EndowmentView
+	stores      []StoreCount
 
 	// The copy of the agent's pending directive (D97).
 	dirJob      JobRequest
@@ -63,7 +64,7 @@ func newViewScratch(cfg *Config, rt *roleTable, rc *recipeTable) *viewScratch {
 		}
 		in, out, tl = max(in, ni), max(out, no), max(tl, nt)
 	}
-	return &viewScratch{
+	sc := &viewScratch{
 		trade:       tradeScratch{rows: make([]tradeRow, 0, com)},
 		commodities: make([]CommodityView, 0, com),
 		recipes:     make([]RecipeView, 0, rec),
@@ -75,12 +76,16 @@ func newViewScratch(cfg *Config, rt *roleTable, rc *recipeTable) *viewScratch {
 		costP:       make([]int64, 0, len(cfg.Commodities)),
 		plan:        TradePlan{Intents: make([]Intent, 0, com)},
 	}
+	if n := storeClassCount(cfg); n > 0 {
+		sc.stores = make([]StoreCount, 0, n)
+	}
+	return sc
 }
 
 // tradePlan returns the empty, reused plan Trade appends to.
 func (sc *viewScratch) tradePlan() *TradePlan {
 	sc.plan.Intents, sc.plan.Discards, sc.plan.WantFunded = sc.plan.Intents[:0], sc.plan.Discards[:0], sc.plan.WantFunded[:0]
-	sc.plan.Shipments = sc.plan.Shipments[:0]
+	sc.plan.Shipments, sc.plan.Cuts, sc.plan.roomDiscarded = sc.plan.Shipments[:0], sc.plan.Cuts[:0], 0
 	sc.plan.Offers, sc.plan.Takes, sc.plan.Notes = sc.plan.Offers[:0], sc.plan.Takes[:0], PlanNotes{}
 	sc.plan.Borrow, sc.plan.Lend = sc.plan.Borrow[:0], sc.plan.Lend[:0]
 	return &sc.plan

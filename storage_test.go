@@ -216,8 +216,6 @@ func storageRoomCases(
 			economysim.FlowTarget{Kind: "stores", Role: "grower"}, true),
 		flow("on a target that is not stores", economysim.ErrFlowShape, []string{"target", "store"}, "bin", "",
 			economysim.FlowTarget{Kind: economysim.TargetHouseholds, Role: "grower", Store: "bin"}, true),
-		flow("not built while every other rule holds", economysim.ErrModuleDependency, []string{"target", "kind"}, "stores", "built",
-			economysim.FlowTarget{Kind: "stores", Store: "bin"}, true),
 	}
 }
 
