@@ -913,7 +913,7 @@ func (w *World) auditModules() error {
 	if err := w.auditTreasuries(); err != nil {
 		return auditFailure(w.Tick(), err)
 	}
-	if err := w.auditCredit(); err != nil {
+	if err := w.auditLaterModules(); err != nil {
 		return auditFailure(w.Tick(), err)
 	}
 	if w.money == nil {
@@ -933,6 +933,15 @@ func (w *World) auditModules() error {
 		}
 	}
 	return nil
+}
+
+// auditLaterModules is the audit of the modules built after the money flows, in module
+// order: the credit claims and the tenure titles.
+func (w *World) auditLaterModules() error {
+	if err := w.auditCredit(); err != nil {
+		return err
+	}
+	return w.auditTenure()
 }
 
 // dropAgent drops the carries of a removed agent (spec-money-supply.md 14).
