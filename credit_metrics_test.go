@@ -49,14 +49,9 @@ func (f *creditFold) feed(e economysim.Event) {
 	}
 }
 
-// seed sets the level instrument from the claim rows of a snapshot: the sum of
-// PrincipalOwed of the loans, what the adapter does at WorldRestored.
-func (f *creditFold) seed(s economysim.Snapshot) {
-	f.outstanding = loanOutstanding(s)
-}
-
 // loanOutstanding is the principal owed over the claims of origin loan of a snapshot.
-func loanOutstanding(s economysim.Snapshot) (sum int64) {
+func loanOutstanding(s economysim.Snapshot) int64 {
+	var sum int64
 	for _, c := range s.Claims {
 		if c.Origin == economysim.OriginLoan {
 			sum += int64(c.PrincipalOwed)
@@ -193,7 +188,7 @@ func TestCredit_MetricsSeededAtARestore(t *testing.T) {
 		t.Fatalf("first event of the restored world = %T, want WorldRestored", rec.events[0])
 	}
 	fold := newCreditFold()
-	fold.seed(first.Snapshot)
+	fold.outstanding = loanOutstanding(first.Snapshot)
 	if fold.outstanding == 0 {
 		t.Fatal("the restored snapshot holds no loan principal, want open loans at tick 100 so the seed is not 0")
 	}

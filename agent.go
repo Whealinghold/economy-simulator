@@ -635,6 +635,21 @@ func (w *World) loadAgent(rs *restoreCtx, r *codec.Reader, names []string, prev 
 	return rec.id
 }
 
+// loadDirectiveJob reads the optional job request of a directive record.
+func (w *World) loadDirectiveJob(r *codec.Reader) *JobRequest {
+	if !r.B() {
+		return nil
+	}
+	j := &JobRequest{NoJob: r.B()}
+	if j.NoJob { // the other fields are ignored and written as 0, even in a world with no recipe
+		r.Bounded("recipe", 0)
+		r.Bounded("executions", 0)
+	} else {
+		j.Recipe, j.Executions = RecipeID(r.Index(uint64(len(w.cfg.Recipes)))), r.Bounded("executions", math.MaxInt64)
+	}
+	return j
+}
+
 // loadDirective reads saveDirective's bytes: whether there is a directive, its
 // optional job request, intents, discards, holds and Sticky. Every amount is
 // checked against its bound (R13), which also refuses the number a negative one
@@ -643,17 +658,9 @@ func (w *World) loadDirective(r *codec.Reader) *Directive {
 	if !r.B() {
 		return nil
 	}
-	nc, nr := uint64(len(w.cfg.Commodities)), uint64(len(w.cfg.Recipes))
+	nc := uint64(len(w.cfg.Commodities))
 	d := &Directive{}
-	if r.B() {
-		d.Job = &JobRequest{NoJob: r.B()}
-		if d.Job.NoJob { // the other fields are ignored and written as 0, even in a world with no recipe
-			r.Bounded("recipe", 0)
-			r.Bounded("executions", 0)
-		} else {
-			d.Job.Recipe, d.Job.Executions = RecipeID(r.Index(nr)), r.Bounded("executions", math.MaxInt64)
-		}
-	}
+	d.Job = w.loadDirectiveJob(r)
 	for range r.Count(8) {
 		if r.Err() != nil {
 			return nil

@@ -1,6 +1,8 @@
 package economysim_test
 
 import (
+	"bytes"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -101,4 +103,54 @@ func hasCreditEvent(events []economysim.Event, name string) bool {
 		}
 	}
 	return false
+}
+
+// TestCheckpoint_CreditRoundTripOpenClaims verifies that a checkpoint taken while claims
+// are open restores to a world with the same claim rows and totals in its snapshot and
+// the same bytes in its own checkpoint.
+//
+// Setup: pack one with creditLiveDoc, seed 1, 100 ticks (loans open, the main due tick
+// 123 ahead).
+//
+// Requirement: FR-CRD-087
+func TestCheckpoint_CreditRoundTripOpenClaims(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	cfg := loadPackBytes(t, []byte(creditLiveDoc), packOne...)
+	w := newPackWorld(t, cfg, 1, economysim.WithAudit())
+	for i := range 100 {
+		if err := w.Step(); err != nil {
+			t.Fatalf("Step() at tick %d error = %v, want nil", i, err)
+		}
+	}
+	want, err := w.Snapshot()
+	if err != nil || len(want.Claims) == 0 {
+		t.Fatalf("Snapshot() = %d claims, %v, want open claims and nil", len(want.Claims), err)
+	}
+	cp := mustCheckpoint(t, w)
+	r, err := economysim.RestoreWorld(cfg, cp, economysim.WithAudit())
+	if err != nil {
+		t.Fatalf("RestoreWorld error = %v, want nil", err)
+	}
+	wantSameClaims(t, r, want)
+	a, _ := cp.MarshalBinary()
+	b, _ := mustCheckpoint(t, r).MarshalBinary()
+	if !bytes.Equal(a, b) {
+		t.Errorf("checkpoint of the restored world has %d bytes and differs from the original's %d", len(b), len(a))
+	}
+}
+
+// wantSameClaims fails the test unless the snapshot of w holds the claim rows and the
+// totals of want.
+func wantSameClaims(t *testing.T, w *economysim.World, want economysim.Snapshot) {
+	t.Helper()
+	got, err := w.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot() of the restored world error = %v, want nil", err)
+	}
+	if !reflect.DeepEqual(got.Claims, want.Claims) || got.Credit != want.Credit {
+		t.Errorf("restored claims (%d rows) and totals %+v differ from the original's (%d rows, %+v)", len(got.Claims), got.Credit, len(want.Claims), want.Credit)
+	}
 }
