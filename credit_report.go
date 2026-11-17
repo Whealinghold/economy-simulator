@@ -325,11 +325,16 @@ func (w *World) reportLoanEnded(t int64, c *ledger.Claim, e endRec) {
 	})
 }
 
-// originOf is the origin constant of a ledger claim's origin.
+// originOf is the origin constant of a ledger claim's origin; the ledger has two, and
+// a third is a programmer error, not a loan.
 func originOf(o int) Origin {
-	if o == ledger.OriginPayout {
+	switch o {
+	case ledger.OriginLoan:
+		return OriginLoan
+	case ledger.OriginPayout:
 		return OriginPayout
 	}
+	invariant("a claim with an origin that is neither a loan nor a payout")
 	return OriginLoan
 }
 

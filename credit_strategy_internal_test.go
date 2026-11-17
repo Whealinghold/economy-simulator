@@ -4,6 +4,8 @@ import (
 	"math"
 	"math/rand/v2"
 	"testing"
+
+	"github.com/Whealinghold/economy-sim/internal/ledger"
 )
 
 // creditBorrowView is the view of a borrower of example A of spec-credit.md 20.1 as
@@ -323,5 +325,39 @@ func TestDefaultCredit_WrappingFigures(t *testing.T) {
 	}}
 	if o, ok := DefaultLend(v, MaxMoney); ok {
 		t.Errorf("DefaultLend(wrapping lendable) = %+v, true, want none", o)
+	}
+}
+
+// TestDirectCredit_ShrunkPlan verifies that a fallback that cut the plan's requests
+// and offers below the index it was called at does not make the directive's entry
+// reslice past what is left, and that the entry it adds is the only one after it.
+//
+// Requirement: FR-CRD-055
+func TestDirectCredit_ShrunkPlan(t *testing.T) {
+	t.Parallel()
+	dr, do := CreditRequest{Principal: 900, Term: 9, MaxRateBP: 90}, CreditOffer{Principal: 900, MaxTerm: 9, RateBP: 90}
+	p := TradePlan{Borrow: []CreditRequest{{Principal: 1}, {Principal: 2}}, Lend: []CreditOffer{{Principal: 3}}}
+	nb, nl := len(p.Borrow), len(p.Lend)
+	p.Borrow, p.Lend = p.Borrow[:0], p.Lend[:0]
+	directCredit(&p, &Directive{Borrow: &dr, Lend: &do}, nb, nl)
+	if len(p.Borrow) != 1 || p.Borrow[0] != dr || len(p.Lend) != 1 || p.Lend[0] != do {
+		t.Errorf("plan after directCredit = %+v and %+v, want only the directive's %+v and %+v", p.Borrow, p.Lend, dr, do)
+	}
+}
+
+// TestOriginOf_Unknown verifies that a ledger origin that is neither a loan nor a
+// payout is a violated invariant, not a loan.
+//
+// Requirement: FR-CRD-078
+func TestOriginOf_Unknown(t *testing.T) {
+	t.Parallel()
+	if got := originOf(ledger.OriginPayout); got != OriginPayout {
+		t.Errorf("originOf(payout) = %v, want OriginPayout", got)
+	}
+	if got := originOf(ledger.OriginLoan); got != OriginLoan {
+		t.Errorf("originOf(loan) = %v, want OriginLoan", got)
+	}
+	if msg := invariantMessage(func() { originOf(7) }); msg == "" {
+		t.Error("originOf(7) did not panic, want a violated invariant")
 	}
 }
