@@ -406,3 +406,20 @@ Deviations and choices the plan left open:
 - `TestCredit_InertOverARun` keeps the empty-module identity; the case with blocks is replaced by `TestCredit_PackRoundRuns`, which holds that the round runs with the audit on. On the pack one with the placeholder block of `creditPackDoc` no request is made (the grower asks for less than `min_principal`): the golden pack and the placeholders are Phase 10.
 
 Left open: the `ErrBalanceOverflow` branch of formation (the borrower's balance at `MaxMoney`) has no test, since no world can fund it; the fold of `TestCredit_MoneyRebuild` covers a region-local loan, a payment to an estate and a waterfall.
+
+## PR 4 result (Phases 8 and 9, recorded when PR 4 was built)
+
+Rule tags read: architecture=5c0416f502ba5a59f7b2ae08, observability=9ebd6516273680595f477c95, testing=66af7645b01fef4e2796c367. No rule file, spec or note was edited, so no notes tag applies; the spec text this PR leaves owed is listed below.
+
+Built: the event `CreditRateScaled`, the slot `SetRateScales` (hook 8) with `SlotState.RateScales`, the call `ForgiveClaims` with `ClaimFilter`, the directive fields `Borrow` and `Lend` (rows 1 and 7 of INT 4.3.2, hooks 7), the replacement in `Directed.Trade`, the group `CreditState` of `AgentState` (hook 9), the snapshot rows `Snapshot.Claims` and `Snapshot.Credit`, and the observer lists for the sixth event (`all_events.txt`, `ignoredEvents`, `allEvents`). Every credit event is now declared and `notBuiltEvents` holds none of them.
+
+Deviations and choices the plan left open:
+
+- The directive's `Borrow` and `Lend` are saved in the agent record, after the directive, only when `Modules.Credit` is on (`saveDirectiveCredit`, `loadDirectiveCredit`), so that a sticky request survives a fork; the plan and the spec (CRD 17.4, CHK 4.2 tag 3) did not list them. Nothing is written with the module off, so the bytes of format 1 do not move. Owed spec edits, left for a change that reads `doc/notes.md` in full: `spec-checkpoint.md` 4.2 tag 3 and `spec-credit.md` 17.1.
+- `AgentState` carries `HasCredit` and `Credit CreditState` (a value group, with `NextDue` -1 for none) rather than a pointer.
+- A boundary read of the credit figures values the upkeep prices into a local slice (`boundaryUpkeep`) and never writes `w.oc.valued`, which P1.6 reads as the last tick's valuation: a call to `Agent` changes no later result (`TestCredit_AgentState`).
+- The row 1 check of a directive reads `Config.Modules.Credit`, not `w.credit`, so the restore of a mailbox (which runs the same rules) uses the configuration.
+- The metrics derivation test folds the events of a run of pack one with `creditLiveDoc` (the credit tables with a minimum principal of 1) and compares each instrument with the snapshot after every step, including the claims newly overdue (the rows with `Overdue` equal to the tick plus the claims removed in their due tick) and the seed of `economysim.credit.outstanding` at a restore.
+- The fork test uses pack one with `creditLiveDoc`, seed 1: the first loans form at tick 58 and 59, the first are due from 66, the main wave of 202 claims at 123. `credit.toml` and the chosen golden pack are Phase 10.
+
+Left open: the instruments of the otelobserver adapter are not built (Q3); the nine metrics are only proved derivable. `agent.go` (655 non-comment lines) and `event.go` (987) were already past 500 before this PR; the PR adds a few lines to each (two fields and one call, one event) and moves none.
