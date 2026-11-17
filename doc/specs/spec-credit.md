@@ -1580,6 +1580,13 @@ and lives in the ledger's list.
 A claim is saved once, in the ledger's section; the module's section lists only its
 own scales and runs (N-128).
 
+The module's section is tag 26. The agent record (`spec-checkpoint.md` 4.2 tag 3) also
+saves the `Borrow` and the `Lend` of a directive that carries them, after the directive,
+only when `Modules.Credit` is on: a flag, then the principal, the term (`MaxTerm` for a
+lend) and the rate of each. A request kept in a directive is sticky until it is replaced,
+so a fork that dropped it would differ from the run it forks. A restore checks each amount
+against its upper bound and the rest with the rules of the call that sets it (5.2).
+
 ### 17.2 Why it is the whole state
 
 The settlement and the round read only the list, the balances, the tick, the
@@ -1600,7 +1607,7 @@ words of the stream (none) as an uninterrupted one (FR-CRD-087).
 
 ### 17.4 Not saved
 
-A request or an offer (one tick, scratch), the plan notes, the view's group, the
+A request or an offer of a plan (one tick, scratch; the ones kept in a directive are saved, 17.1), the plan notes, the view's group, the
 effective rate of a round, the allocation of a pass. A call between ticks that
 forgave claims left no record but the list and the totals.
 
