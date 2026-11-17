@@ -309,7 +309,7 @@ func (t *tenure) capRent(q *startReq, pricedOut bool) {
 	q.rentCap = k
 }
 
-// reserved of the start that began: it reserves the rent of its k executions against
+// started is what a start that began adds: it reserves the rent of its k executions against
 // its principal's later starts, counts the units drawn in each tier and the let units
 // cut for rent, and records the let units for pass 2.
 func (t *tenure) started(a *agent, q *startReq, first, n int, k int64) {
@@ -385,7 +385,8 @@ func (t *tenure) refused(reason Reason) {
 // rent, in the order of the triples.
 func (t *tenure) settle() {
 	rt := &t.rt
-	slices.SortFunc(rt.starts, func(a, b rentStart) int { return cmp.Or(cmp.Compare(a.cell, b.cell), cmp.Compare(a.tenant, b.tenant)) })
+	// Stable: two draws of one start on one endowment share (cell, tenant) and keep their append order (architecture.md 7.6).
+	slices.SortStableFunc(rt.starts, func(a, b rentStart) int { return cmp.Or(cmp.Compare(a.cell, b.cell), cmp.Compare(a.tenant, b.tenant)) })
 	for lo, hi := 0, 0; lo < len(rt.starts); lo = hi {
 		hi = lo + 1
 		for hi < len(rt.starts) && rt.starts[hi].cell == rt.starts[lo].cell {
