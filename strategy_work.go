@@ -142,6 +142,7 @@ func (v *AgentView) recipeNet(r *RecipeView) (int64, bool) {
 		}
 		n.Cost(w)
 	}
+	n.Cost(r.Rent) // the rent of the draws at the posted rent, 0 with the module off (spec-land.md 4.6.2)
 	return n.Value()
 }
 

@@ -149,6 +149,9 @@ func (w *World) p12Anchors() {
 		t.wages[g], _ = w.reads.regionWage(t.rings[g], w.seedWage[g], w.cfg.World.AnchorHold)
 	}
 	w.setRunnable()
+	if w.tenure != nil {
+		w.prod.rents = w.tenure.rentsInForce()
+	}
 	w.prod.anchors(t.prices, t.wages, w.runnable, &w.yields, &w.shocks, t.moment.Season)
 }
 

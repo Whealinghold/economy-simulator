@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
@@ -64,6 +65,8 @@ func refusalColumn(reason Reason) int {
 		return refusedNoEndowment
 	case ReasonNoRoom:
 		return refusedNoRoom
+	case ReasonNoTitle, ReasonRentFunds:
+		return -1 // counted by the tenure module in RentPaid, not here (spec-land.md 13.1)
 	default:
 		panic("economysim: invariant violated: refusal of a start under the reason " + string(reason) + ", which the first slice does not count")
 	}
@@ -73,6 +76,9 @@ func refusalColumn(reason Reason) int {
 // count, or a pair outside the tables, is a programmer error.
 func (t *refusalTally) add(region RegionID, recipe RecipeID, reason Reason, weight int64) {
 	col := refusalColumn(reason)
+	if col < 0 {
+		return
+	}
 	i := (int(region)*t.recipes+int(recipe))*refusedColumns + col
 	if region < 0 || recipe < 0 || int(recipe) >= t.recipes || i >= len(t.counts) || weight < 1 {
 		panic("economysim: invariant violated: refusal outside the tables or not a positive count")
@@ -143,7 +149,31 @@ func (s *productionScratch) anchors(prices, wages []int64, runnable [][]RecipeID
 	nc := len(s.cfg.Commodities)
 	for g := range s.cfg.Regions {
 		s.markRunnable(g, runnable, yt, sh, season)
+		s.rentTerms(g)
 		production.Anchors(s.costs[g*nc:(g+1)*nc], s.anchor, rt.byOutput, prices[g*nc:(g+1)*nc], wages[g])
+	}
+}
+
+// rentTerms sets the rent term of every recipe of region g from the rents in force of
+// the tenure module (spec-land.md 5.7.1): the sum over the recipe's draws of the draw
+// times the rent of its endowment, 0 with no rents. A sum that does not fit is the
+// largest value, which makes the unit cost unknown.
+func (s *productionScratch) rentTerms(g int) {
+	for i := range s.anchor {
+		s.anchor[i].Rent = 0
+	}
+	if s.rents == nil {
+		return
+	}
+	for i := range s.anchor {
+		for _, d := range s.res.drawsOf[i] {
+			rent, ok := checked.Mul(d.quantity, s.rents[g*s.res.resources+int(d.resource)])
+			if sum, added := checked.Add(s.anchor[i].Rent, rent); ok && added {
+				s.anchor[i].Rent = sum
+			} else {
+				s.anchor[i].Rent = math.MaxInt64
+			}
+		}
 	}
 }
 

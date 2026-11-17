@@ -59,6 +59,9 @@ func (w *World) p23Snapshot() {
 		r.snapStock[cell] = r.stock[cell]
 		r.snapAbundance[cell] = r.abundanceOf(cell, r.stock[cell])
 	}
+	if w.tenure != nil {
+		w.tenure.entitlements()
+	}
 }
 
 // recordDraws is the record of P2.5 for an admitted request: one request on the
@@ -66,14 +69,14 @@ func (w *World) p23Snapshot() {
 // start ignoring draws, in the order P2.5 walks the rotation (spec-resources.md
 // 5.2 step 2, D386). It returns the index of the first record and their count,
 // which the start at P2.7 reads; a recipe with no draw records none.
-func (w *World) recordDraws(a *agent, region RegionID, recipe RecipeID, k0 int64) (first, n int) {
+func (w *World) recordDraws(a *agent, principal AgentID, region RegionID, recipe RecipeID, k0 int64) (first, n int) {
 	r := w.res
 	if r == nil {
 		return 0, 0
 	}
 	first = len(r.reqs)
 	for _, d := range r.drawsOf[recipe] {
-		r.reqs = append(r.reqs, resRequest{agent: a.id, cell: r.cellOf(region, d.resource), executions: k0, draw: d.quantity})
+		r.reqs = append(r.reqs, resRequest{agent: a.id, principal: principal, recipe: recipe, cell: r.cellOf(region, d.resource), executions: k0, draw: d.quantity})
 	}
 	return first, len(r.reqs) - first
 }
@@ -106,7 +109,9 @@ func (w *World) p26Ration() {
 	})
 	for lo, hi := 0, 0; lo < len(r.order); lo = hi {
 		hi = r.runEnd(lo)
-		r.rationRun(lo, hi, w.Tick())
+		if w.tenure == nil || !w.tenure.ration(r.order[lo:hi]) {
+			r.rationRun(lo, hi, w.Tick())
+		}
 		w.logRationed(r.reqs[r.order[lo]].cell)
 	}
 }
@@ -157,7 +162,16 @@ func (r *resourcesState) rationRun(lo, hi int, tick int64) {
 	if !endowment.Ration(r.snapStock[cell], r.ration, r.grants) {
 		invariant("the ration of an endowment refused its requests after validation")
 	}
-	for _, i := range r.order[lo:hi] {
+	r.tallyRun(r.order[lo:hi])
+}
+
+// tallyRun records the grant of each request of a run from r.grants, which hold the
+// executions granted, and counts the units asked and granted and the requests granted
+// nothing and less than they asked. The ration of a titled endowment (the tenure
+// module) fills r.grants with the sum of its tiers and calls it as well.
+func (r *resourcesState) tallyRun(run []int) {
+	cell := r.reqs[run[0]].cell
+	for _, i := range run {
 		q := &r.reqs[i]
 		q.grant = r.grants[q.agent]
 		r.requested[cell] += q.executions * q.draw
@@ -184,6 +198,9 @@ func (w *World) capDraws(q *startReq, first, n int) {
 	q.capped, q.drawCap = true, q.weight
 	for _, d := range r.reqs[first : first+n] {
 		q.drawCap = min(q.drawCap, d.grant, r.stock[d.cell]/d.draw)
+	}
+	if w.tenure != nil {
+		w.tenure.capRequest(q, first, n)
 	}
 }
 
@@ -280,16 +297,21 @@ func (r *resourcesState) regen(cell, season int) {
 // reportEndowment advances the run of an endowment and reports its tick: the Warn at
 // the first tick with units short and every tenth consecutive one, and the event if
 // any of the units drawn, regenerated, short or lost is non-zero (spec-resources.md
-// 14.1, 14.2). Without tenure data the Warn's condition is Short above 0.
+// 14.1, 14.2). Without tenure data the Warn's condition is Short above 0; with it, Short less the
+// units of unused entitlement held or idle (spec-land.md 13.1.4).
 func (w *World) reportEndowment(cell int) {
 	r := w.res
 	short := r.requested[cell] - r.granted[cell]
-	if short > 0 {
+	warn := short // the condition of the Warn: Short, less the units a tenure left idle or held
+	if w.tenure != nil {
+		warn = w.tenure.shortAdjusted(cell, short)
+	}
+	if warn > 0 {
 		r.exhaustedRun[cell]++
 	} else {
 		r.exhaustedRun[cell] = 0
 	}
-	if run := r.exhaustedRun[cell]; short > 0 && (run == 1 || run%10 == 0) {
+	if run := r.exhaustedRun[cell]; warn > 0 && (run == 1 || run%10 == 0) {
 		ctx := context.Background()
 		if w.log.Enabled(ctx, slog.LevelWarn) {
 			w.log.LogAttrs(ctx, slog.LevelWarn, "endowment exhausted", slog.Int64(logkeys.Tick, w.Tick()),
