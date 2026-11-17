@@ -305,6 +305,8 @@ var invariantTable = []invariantCase{
 	{"all", allLayers, 2, 0, "", nil},
 	// Plan 2-26 D703: the merchants pack with the real strategy (the cold pack finds no trip that pays).
 	{"two+merchants", packMerchants("two"), 4, 0, "", nil},
+	// Plan 3-tec Phase 8: pack three with the four-mechanism technology overlay.
+	{"three+technology", technologyThree, 2, 0, "", nil},
 }
 
 // runInvariants runs one (pack, seed) case and fails with the seed, tick and
