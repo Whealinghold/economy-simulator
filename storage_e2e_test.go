@@ -176,10 +176,10 @@ var storageForkCells = []struct {
 // TestFork_Storage verifies that a world of the storage pack restored from its
 // checkpoint continues exactly as the world that never stopped: same events,
 // snapshot, audit and checkpoint bytes for 30 ticks, and the restore of a restore
-// too. The module has no checkpoint section yet (the stores are Phase 8) and a run of
-// the pack owns no store, so what a restore must rebuild is the derived state: the
-// room of each limited account from its weight, the load from the lots, and the pledge
-// from the jobs in progress; the audit of the restored world names any drift.
+// too. The growers own the barn of their role row, so the stores are in the agent record; what
+// a restore must rebuild is the derived state: the room of each limited account from its
+// weight and stores, the load from the lots, and the pledge from the jobs in progress; the
+// audit of the restored world names any drift.
 //
 // Requirement: FR-STO-043, FR-STO-020, FR-STO-039, FR-CHK-050
 //
@@ -191,7 +191,6 @@ func TestFork_Storage(t *testing.T) {
 	if testing.Short() {
 		t.Skip("end-to-end test, skipped with -short")
 	}
-	t.Skip("plan 3-sto Phase 8 (PR 5), the checkpoint of the stores: until then RestoreWorld of a storage world returns ErrCheckpointCorrupt (TestRestoreWorld_StorageWorldIsRefusedNotPanicked)")
 	cfg := loadValidPack(t, packOneStorage...)
 	for _, cell := range storageForkCells {
 		t.Run(cell.name, func(t *testing.T) {
