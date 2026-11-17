@@ -739,7 +739,7 @@ the module is on and closed with the rest of the registry:
 | Reason | Of | Kind | Between | Owner |
 |--------|----|------|---------|-------|
 | `rent` | money | internal | agent to agent or estate | this spec, 5.3 |
-| `title_sale` | money | internal | agent to agent or estate | this spec, 6.3 (the price of a title in a `TransferTitles` call) |
+| `title_sale` | money | internal | agent to agent, or estate on release (the pool pays) | this spec, 6.3 (the price of a title in a `TransferTitles` call) |
 
 5.8.2. A name that collides with a built-in reason, a flow ID or another module's reason
 is `ErrReasonCollision` (`spec-money-supply.md` 4.5.2): `rent` and `title_sale` are
@@ -823,7 +823,8 @@ ends with a share of 0 has no title.
 `title_sale`, made at the call (no reservation is open between ticks), in the same
 atomic step as the move of the share. Where one side is `NoAgent` the price is paid to or by the pool of the
 endowment's region: the pool is the payee of an enclosure and the payer of a release. A price moves existing money between accounts and creates none
-(FR-LND-025).
+(FR-LND-025). When the payer and the payee are the same account (a release by the pool, which
+is then both), the ledger movement is a no-op and the event records the agreed price.
 
 6.3.3. **Atomic, one entry per key, an event per change.** The rules of `spec-integration.md`
 3.3 apply: the call validates every entry in the canonical key order on a working copy and
@@ -839,7 +840,7 @@ region, resource and agents are known and live (`ErrUnknownRegion`, `ErrUnknownR
 estate of another region, a counterparty of the outside) and `ErrOutsideNode` for an outside
 node's region); the share and price are in bound (`ErrOutOfBounds`); `From` holds the share
 (`ErrNoTitle`); `To`'s share after would not exceed `MaxHolderShareBP` unless `To` is the pool
-(`ErrTitleCap`); `To` holds the price (the ledger's `ErrInsufficientFunds`) and the payee's
+(`ErrTitleCap`); `To` holds the price (the ledger's `ErrInsufficientFunds`, which the root does not export) and the payee's
 balance would not pass `MaxMoney` (`ErrBalanceOverflow`, mapped to `ErrOverflow`, AGT 13).
 The sum of shares is not above 10 000 after any entry: enclosure takes from the commons, so
 it is checked against `s_0` (`ErrNoTitle`).
@@ -1101,7 +1102,7 @@ slot: it has no default to clear and `Slots()` does not list it.
 
 | Query | Returns | Class |
 |-------|---------|-------|
-| `Titles(a AgentID) ([]TitleState, error)` | the titles of an agent, or of an estate pseudo-agent (the pool of its own region) in ascending (region, resource); `ErrModuleOff`, `ErrUnknownAgent` (a counterparty, or an ID that was never an agent), `ErrNotAHolder` | 2 |
+| `Titles(a AgentID) ([]TitleState, error)` | the titles of an agent, or of an estate pseudo-agent (the pool of its own region) in ascending (region, resource); `ErrModuleOff`, `ErrUnknownAgent` (an ID that was never an agent), `ErrAgentRemoved`, `ErrNotAHolder` (an estate of an outside node, a counterparty or a treasury, as in 6.3.4) | 2 |
 | `Holders(region RegionID, resource ResourceID) (HoldingsState, error)` | the commons share, `Closed`, the posted rent, the scale and the holdings in ascending holder ID; `ErrModuleOff`, `ErrUnknownRegion`, `ErrUnknownResource`, `ErrOutsideNode` | 2 |
 | `Rent(region RegionID, resource ResourceID) (int64, error)` | the rent in force (5.2.2) | 1 |
 

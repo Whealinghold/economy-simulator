@@ -283,3 +283,23 @@ func TestSetRentScales_Refusals(t *testing.T) {
 		t.Errorf("Rent with a scale of 0 = %d, want 0", r)
 	}
 }
+
+// TestTransferTitles_PriceBetweenOneAccount_EventKeepsPriceMovesNoMoney pins spec-land.md
+// 6.3.2: a release by the pool is paid by the pool to the pool, the same account, so
+// the ledger moves nothing and the event records the agreed price.
+func TestTransferTitles_PriceBetweenOneAccount_EventKeepsPriceMovesNoMoney(t *testing.T) {
+	t.Parallel()
+	obs := &evLog{}
+	w := tenureWorld(t, nil, WithObserver(obs))
+	total, pool := tnTotalMoney(t, w), tnMoney(t, w, 0)
+	if err := w.TransferTitles([]TitleTransfer{tr(0, 0, NoAgent, 40, 25)}); err != nil {
+		t.Fatalf("TransferTitles error = %v, want nil", err)
+	}
+	if tnMoney(t, w, 0) != pool || tnTotalMoney(t, w) != total {
+		t.Errorf("pool %d, total %d, want %d and %d unchanged", tnMoney(t, w, 0), tnTotalMoney(t, w), pool, total)
+	}
+	got := of[TitleTransferred](obs)
+	if len(got) != 1 || got[0].Price != 25 || got[0].From != 0 || got[0].To != NoAgent {
+		t.Errorf("events = %+v, want one entry with Price 25", got)
+	}
+}

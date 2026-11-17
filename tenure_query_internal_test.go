@@ -173,3 +173,15 @@ func TestEvents_RebuildMoneyFromTitleTransferred(t *testing.T) {
 		t.Errorf("money by region after = %v and pool %v, rebuilt from the events %v and %v", h1, p1, wantH, wantP)
 	}
 }
+
+// TestQueries_TitlesOfACounterpartyIsNotAHolder pins spec-land.md 9.3 to 6.3.4: an ID
+// between the estates and the first household (a counterparty or a treasury) is an
+// agent that cannot hold, ErrNotAHolder as TransferTitles reports it, not an unknown one.
+func TestQueries_TitlesOfACounterpartyIsNotAHolder(t *testing.T) {
+	t.Parallel()
+	w := tenureWorld(t, nil)
+	w.firstHousehold++ // one account of the outside between the estates and the households
+	if err := w.tenure.queriedHolder(AgentID(w.tenure.regions)); !errors.Is(err, ErrNotAHolder) {
+		t.Errorf("queriedHolder(counterparty) = %v, want ErrNotAHolder", err)
+	}
+}
