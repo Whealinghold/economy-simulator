@@ -12,8 +12,8 @@ import (
 )
 
 // storagePosLines is the number of positions that ran per tick with the module on:
-// the 22 of the off set. The module has no position of its own until P3.6a is built.
-const storagePosLines = 22
+// the 22 of the off set plus P3.6a, the position of the module (RoomLimited).
+const storagePosLines = 23
 
 // TestGolden_StorageAlone verifies the module-alone golden of the storage
 // module: pack one + overlay/storage.toml, seed 1, 400 ticks, run as a Step

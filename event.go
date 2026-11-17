@@ -1090,6 +1090,34 @@ type StoreChanged struct {
 	Room, Load Capacity
 }
 
+// RoomLimited is emitted at P3.6a once per region and role, in ascending region then
+// role, after WantShortfall, in a tick in which a room cut or refused something
+// (spec-storage.md 14.1): a start, a bid, a shipment, or the default strategy's
+// discard. It is never emitted when StartsCut, StartsRefused, BidsCut, BidsRejected,
+// ShipmentsRefused and Discarded are all 0, and LimitedHouseholds and FullHouseholds
+// ride along without triggering it. It is an aggregate bounded by regions times
+// roles, with no map. It is emitted only when the storage module is on.
+type RoomLimited struct {
+	Tick int64
+	// Region and Role identify the cell.
+	Region RegionID
+	Role   RoleID
+	// LimitedHouseholds is the households of limited agents given a view for Trade,
+	// and FullHouseholds those whose free room was 0 in a dimension when it was built.
+	LimitedHouseholds, FullHouseholds int64
+	// StartsCut is the executions not started for room though the inputs allowed
+	// them, and StartsRefused the requests refused whole with the reason no_room.
+	StartsCut, StartsRefused int64
+	// BidsCut is the intents the default strategy sized down or dropped for room and
+	// BidsRejected the orders rejected with the reason no_room.
+	BidsCut, BidsRejected int64
+	// ShipmentsRefused is the shipments of shippers of the cell refused with the
+	// reason consignee_full.
+	ShipmentsRefused int64
+	// Discarded is the units discarded to make room for tier 1 (spec-storage.md 6.3.2).
+	Discarded int64
+}
+
 // EntryLimited is emitted once per region per tick in which a limit or refusal
 // of the spawner acted; it is never emitted when every count is zero. The
 // refusal by a role ceiling of the settlement module is appended with that
@@ -1488,6 +1516,7 @@ func (WearApplied) isEvent()        {}
 func (WorldRestored) isEvent()      {}
 func (AgentRelocated) isEvent()     {}
 func (StoreChanged) isEvent()       {}
+func (RoomLimited) isEvent()        {}
 func (EdgeStatusChanged) isEvent()  {}
 func (ReliefPaid) isEvent()         {}
 func (MoneyFlowLimited) isEvent()   {}

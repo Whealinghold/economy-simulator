@@ -120,6 +120,7 @@ func (c *cardChecker) jurisdictions(ev string, tick int64, rows []economysim.Jur
 
 // check applies the closed-set checks of OBS 6.2.1 to one event.
 func (c *cardChecker) check(e economysim.Event) {
+	c.checkStorage(e)
 	switch e := e.(type) {
 	case economysim.WorldCreated:
 		c.jurisdictions("WorldCreated", e.Tick, e.Jurisdictions)
@@ -459,5 +460,53 @@ func TestCardChecker_FlagsOutOfRangeAndOutsideSet(t *testing.T) {
 				t.Errorf("check(%+v) flagged = %t, want %t", tt.ev, got, tt.want)
 			}
 		})
+	}
+}
+
+// TestCardinality_StorageAttributesTakeConfiguredValues runs pack one with the
+// storage overlay for 400 ticks and checks that the
+// region and role of RoomLimited and StoreChanged are IDs of the configuration, the
+// store class of StoreChanged is a class of the configuration and its kind and cause
+// are constants of event.go: the metric attributes economysim.region, role and
+// store_class stay bounded by the configuration (observability-and-logging.md 5.4.1).
+// The room limit and the dimension are closed sets of the adapter.
+//
+// Requirement: FR-OBS-005, FR-OBS-006, FR-STO-035, FR-STO-036
+//
+// Guard: a class index out of range or a free-text cause in a storage event would be
+// an unbounded attribute value.
+func TestCardinality_StorageAttributesTakeConfiguredValues(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end: 400 ticks of pack one; skipped under -short")
+	}
+	res := runPack(t, loadValidPack(t, packOneStorage...), runSpec{Seed: 1, Ticks: 400, Observe: true})
+	c := &cardChecker{t: t, seed: 1, names: res.Final.Names, consts: eventConstants(t), seen: map[string]int{}}
+	limited := 0
+	for _, e := range res.Events {
+		c.check(e)
+		if _, ok := e.(economysim.RoomLimited); ok {
+			limited++
+		}
+	}
+	if limited == 0 || c.seen["Region"] == 0 {
+		t.Errorf("%d RoomLimited events and %d region values checked, want some: the run exercised nothing", limited, c.seen["Region"])
+	}
+}
+
+// checkStorage applies the closed-set checks to the events of the storage module: the
+// region and role of RoomLimited and StoreChanged, the class of StoreChanged (a class of
+// the configuration) and its kind and cause.
+func (c *cardChecker) checkStorage(e economysim.Event) {
+	switch e := e.(type) {
+	case economysim.RoomLimited:
+		c.region("RoomLimited", e.Tick, e.Region)
+		c.role("RoomLimited", e.Tick, e.Role)
+	case economysim.StoreChanged:
+		c.region("StoreChanged", e.Tick, e.Region)
+		c.role("StoreChanged", e.Tick, e.Role)
+		c.id("StoreChanged", e.Tick, "Class", int(e.Class), len(c.names.StoreClasses))
+		c.member("StoreChanged", e.Tick, "Kind", string(e.Kind))
+		c.member("StoreChanged", e.Tick, "Cause", string(e.Cause))
 	}
 }

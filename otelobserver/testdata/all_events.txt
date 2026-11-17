@@ -37,6 +37,7 @@ RecipeRefused
 ReliefPaid
 RentScaled
 RoleChanged
+RoomLimited
 RumoursServed
 RunEnded
 RunStarted

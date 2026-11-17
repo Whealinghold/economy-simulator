@@ -1,6 +1,8 @@
 package economysim
 
 import (
+	"slices"
+
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/room"
@@ -188,14 +190,20 @@ func (s *storage) linesLoad(lines []Line) (load room.Pair, ok bool) {
 
 // roomCount is the counters of one (region, role) for RoomLimited (spec-storage.md
 // 14.1): plain integer adds made always, because the start sizing needs them with no
-// observer, cleared at the end of every step (P8.6). The counts of the default
-// strategy's bids and discards and of the households given a view join with Phase 6.
+// observer, cleared at the end of every step (P8.6).
 type roomCount struct {
 	// startsCut is the executions not started for room though the inputs allowed
 	// them, startsRefused the requests refused whole (no_room), bidsRejected the
 	// orders rejected no_room and shipmentsRefused the shipments refused
 	// consignee_full.
 	startsCut, startsRefused, bidsRejected, shipmentsRefused int64
+	// bidsCut is the intents the default strategy sized down or dropped for room and
+	// discarded the units it discarded to make room for tier 1 (6.3).
+	bidsCut, discarded int64
+	// limitedHouseholds is the households of limited agents given a view for Trade
+	// and fullHouseholds those whose free room was 0 in a dimension then; they ride
+	// along and trigger nothing.
+	limitedHouseholds, fullHouseholds int64
 }
 
 // clearTick clears the counters at the end of a step (P8.6): none survives it.
@@ -478,4 +486,62 @@ func (s *storage) cargoFit(l *ledger.Ledger, account int, c CommodityID, have in
 		have = min(have, left.Bulk/sz.Bulk)
 	}
 	return have
+}
+
+// storesTarget says whether the target is a class of store owners and which store
+// class it names (-1 for every class, 0 when the target is not stores), for newFlowState. The class is validated, so
+// it is in the configuration (spec-money-supply.md 4.3.4, FR-STO-026).
+func storesTarget(c *Config, t FlowTarget) (stores bool, class int) {
+	if t.Kind != targetStores {
+		return false, 0 // zero off the kind: the hashed state of a flow that is not a stores flow does not move
+	}
+	class = -1
+	if t.Store != "" {
+		if c.Modules.Storage == nil {
+			invariant("a stores flow's module is off after validation: " + t.Store)
+		}
+		if class = slices.IndexFunc(c.Modules.Storage.Classes, func(k StoreClass) bool { return k.ID == t.Store }); class < 0 {
+			invariant("a stores flow's store class does not resolve after validation: " + t.Store) // -1 would mean every class
+		}
+	}
+	return true, class
+}
+
+// scanOwners lists, per region, the live agents in ascending AgentID for the flows
+// of a stores target: a stores class is every open agent account that owns a store
+// of the class in the region, in ascending account ID, whatever its role. Membership
+// is read at the position of the flow, so a store added between ticks counts from the
+// next P1.7 (spec-money-supply.md 4.3.4). Nothing is built when no flow has one.
+func (w *World) scanOwners(m *moneyFlows) {
+	if m.owners == nil {
+		return
+	}
+	for g := range m.owners {
+		m.owners[g] = m.owners[g][:0]
+	}
+	for id := m.regions; id < len(w.agents); id++ {
+		if a := &w.agents[id]; a.weight >= 1 {
+			g := int(w.regionOf(a))
+			m.owners[g] = append(m.owners[g], AgentID(id))
+		}
+	}
+}
+
+// visitStores applies flow i of a stores target to the owners in region g, in
+// ascending account ID: each owner of n matching stores is due n times the amount
+// (a store is not a household), with its carry kept per account. An agent with no
+// matching store is not visited.
+func (w *World) visitStores(m *moneyFlows, i, g int) {
+	f := &m.flows[i]
+	for _, id := range m.owners[g] {
+		a := &w.agents[id]
+		n := w.sto.owned(a.id)
+		if f.class >= 0 {
+			n = w.sto.count(a.id, f.class)
+		}
+		if n < 1 {
+			continue
+		}
+		w.visitFlow(m, i, g, recipient{account: a.account, weight: int64(n), carry: &f.carry[a.id], agent: a})
+	}
 }

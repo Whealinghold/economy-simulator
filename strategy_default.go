@@ -7,6 +7,7 @@ import (
 	"github.com/Whealinghold/economy-sim/internal/beliefs"
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/household"
+	"github.com/Whealinghold/economy-sim/internal/room"
 )
 
 // DefaultStrategy is the strategy of a household: it works when its welfare
@@ -26,6 +27,7 @@ var _ Strategy = DefaultStrategy{}
 type tradeScratch struct {
 	rows []tradeRow
 	want wantScratch
+	room roomScratch
 }
 
 // reset returns n zeroed rows, growing the backing array only when it is short.
@@ -61,6 +63,11 @@ type tradeRow struct {
 	unitCost        int64
 	commodity       CommodityID
 	t4, q4          int64 // the want tier and the units bought in it (spec-demand.md 4.6)
+	// size, surplus, cut and discard are read with a limited agent only: the size of
+	// a unit, the units above Keep', the units the room took off the bid and the
+	// surplus units discarded to make room (spec-storage.md 6.2, 6.3).
+	size                  room.Pair
+	surplus, cut, discard int64
 }
 
 // tradeCtx is what the passes of Trade share. trip is the planned trip of a
@@ -73,6 +80,8 @@ type tradeCtx struct {
 	rstar int
 	ws    *wantScratch
 	trip  []TripInput
+	// room is the room of a limited agent's Trade: nil for an agent with none.
+	room tradeRoom
 }
 
 // TripInput is one input of a trip that a strategy hands to
@@ -171,9 +180,11 @@ func (DefaultStrategy) TradeWith(v *AgentView, rng *rand.Rand, p *TradePlan, tri
 	if trip == nil {
 		t.rstar = t.plannedRecipe()
 	}
+	t.scaleToRoom(&sc.trade.room)
 	for i := range v.Commodities {
 		t.consider(i, rng)
 	}
+	t.discardForRoom(&sc.trade.room)
 	t.allocate(cost, savings)
 	t.emit(p)
 }
@@ -392,7 +403,9 @@ func (t *tradeCtx) consider(i int, rng *rand.Rand) {
 	if !ok {
 		return
 	}
+	tg = t.roomTargets(tg, want)
 	gap, surplus, t1, t2, t3, t4 := household.Tiers(tg.Keep, c.Stock, tg.Reserve, job, want)
+	t.roomRow(r, c, surplus)
 	kind, ask := t.candidate(c, gap, surplus, max(c.Expiring, 0)-tg.Reserve)
 	if kind == noOrder {
 		return
@@ -446,12 +459,12 @@ func (t *tradeCtx) allocate(cost, savings int64) {
 	avail := max(t.v.Money, 0)
 	for i := range t.rows {
 		if r := &t.rows[i]; r.kind == bidOrder {
-			avail = r.combineTiers(avail, r.t1)
+			avail = t.buy(r, avail, r.t1)
 		}
 	}
 	for i := range t.rows {
 		if r := &t.rows[i]; r.kind == bidOrder {
-			avail = r.combineTiers(avail, r.t2)
+			avail = t.buy(r, avail, r.t2)
 		}
 	}
 	if spendCap, ok := household.SpendCap(household.Excess(avail, savings), cost, t.par); ok {
@@ -475,10 +488,11 @@ func (t *tradeCtx) buffer(avail, spendCap int64) (int64, int64) {
 		if !ok {
 			continue
 		}
-		q := min(want, min(avail, spendCap)/r.limit)
+		q := t.roomBound(r, min(want, min(avail, spendCap)/r.limit))
 		if q < 1 {
 			continue
 		}
+		t.roomTake(r, q)
 		r.qty, r.bought = r.qty+q, true
 		avail -= q * r.limit
 		spendCap -= q * r.limit
@@ -496,7 +510,7 @@ func (t *tradeCtx) emit(p *TradePlan) {
 		qty := r.qty
 		side := Bid
 		if r.kind == askOrder {
-			qty, side = r.ask, Ask
+			qty, side = r.ask-r.discard, Ask
 		}
 		if r.kind == noOrder || qty < 1 || qty > MaxQuantity || r.limit < 1 {
 			continue
@@ -510,4 +524,5 @@ func (t *tradeCtx) emit(p *TradePlan) {
 	if t.ws != nil {
 		p.WantFunded = append(p.WantFunded, t.ws.funded...)
 	}
+	t.roomPlan(p)
 }
