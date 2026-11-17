@@ -86,6 +86,24 @@ func TestDefaultBorrow_NoRequest(t *testing.T) {
 	}
 }
 
+// TestDefaultBorrow_TermClamped verifies that a horizon past MaxCreditTerm (a slack
+// near the bound added to a long job) gives a term of MaxCreditTerm, never above: the
+// module refuses a request whose term is out of bounds, so a default plan must not make
+// one. The principal is still sized by the whole horizon.
+//
+// Requirement: FR-CRD-051
+func TestDefaultBorrow_TermClamped(t *testing.T) {
+	t.Parallel()
+	v := creditBorrowView(0)
+	v.Credit.Borrow.SlackTicks = MaxCreditTerm
+	v.Credit.CreditRoom = MaxMoney
+	v.HasJob, v.Remaining = true, 100
+	got, ok := DefaultBorrow(v, 0, 0)
+	if !ok || got.Term != MaxCreditTerm {
+		t.Errorf("DefaultBorrow(job 100, slack %d) = %+v, %v, want a request with Term %d", MaxCreditTerm, got, ok, MaxCreditTerm)
+	}
+}
+
 // TestDefaultLend_Rule verifies the rule of spec-credit.md 10.3 on lenders A and B of
 // example A and on its branches: the bids of the plan and the kept upkeep come off,
 // the share is floored, and an offer below the minimum principal is not made.

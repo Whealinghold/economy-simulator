@@ -949,8 +949,13 @@ H    = J + 1 + Late + SlackTicks    the ticks of the horizon, and the term
 need = UpkeepCost * H + Tier2 - Money
 ask  = min(need, CreditRoom)
 if ask < MinPrincipal: no request
-request = { Principal: ask, Term: H, MaxRateBP: Borrow.MaxRateBP }
+request = { Principal: ask, Term: min(H, MaxCreditTerm), MaxRateBP: Borrow.MaxRateBP }
 ```
+
+The term is clamped to `MaxCreditTerm` (`bounds.go`): when `H` is above it (a `SlackTicks` near
+the bound added to a long job), the request still asks for the principal of the whole
+horizon but falls due at the bound, so the default rule never makes a request that
+admission (5.2, `invalid_term`) refuses.
 
 `Tier2` is the **cost of the inputs and tools of the next job at the limits of the
 plan, whatever money allows**: the sum over its commodities of the units
