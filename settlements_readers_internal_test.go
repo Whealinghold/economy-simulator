@@ -152,14 +152,21 @@ func TestPopulation_BirthsCeilingCounted(t *testing.T) {
 		}
 		setCarries(w, nil, map[RoleID]int64{0: carry})
 		v := popView(w, 0)
-		c := w.pop.cnt[0]
-		switch {
-		case gated:
-			if v.Roles[0].PopBirths != 0 || w.pop.birthCarry[0] != carry {
-				t.Errorf("gated: PopBirths %d carry %d, want 0 and the carry %d unmoved", v.Roles[0].PopBirths, w.pop.birthCarry[0], carry)
-			}
-		case v.Roles[0].PopBirths != 1 || c.birthsDue != 2 || c.birthsCeiling != 1 || c.birthsCapped != 0:
-			t.Errorf("ceiling: PopBirths %d due %d ceiling %d capped %d, want 1, 2, 1, 0", v.Roles[0].PopBirths, c.birthsDue, c.birthsCeiling, c.birthsCapped)
+		checkBirthsCeiling(t, w, v, gated, carry)
+	}
+}
+
+// checkBirthsCeiling asserts the births of TestPopulation_BirthsCeilingCounted: none
+// and an unmoved carry in the gated variant, one kept and one dropped otherwise.
+func checkBirthsCeiling(t *testing.T, w *World, v *RegionView, gated bool, carry int64) {
+	t.Helper()
+	c := w.pop.cnt[0]
+	switch {
+	case gated:
+		if v.Roles[0].PopBirths != 0 || w.pop.birthCarry[0] != carry {
+			t.Errorf("gated: PopBirths %d carry %d, want 0 and the carry %d unmoved", v.Roles[0].PopBirths, w.pop.birthCarry[0], carry)
 		}
+	case v.Roles[0].PopBirths != 1 || c.birthsDue != 2 || c.birthsCeiling != 1 || c.birthsCapped != 0:
+		t.Errorf("ceiling: PopBirths %d due %d ceiling %d capped %d, want 1, 2, 1, 0", v.Roles[0].PopBirths, c.birthsDue, c.birthsCeiling, c.birthsCapped)
 	}
 }

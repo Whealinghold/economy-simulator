@@ -603,6 +603,19 @@ func (s *storage) admitsStock(n NewAgent, stock []itemRow) error {
 			return nil // a room above int64 holds any load
 		}
 	}
+	load, ok := s.stockLoad(stock)
+	if !ok {
+		return ErrNoRoom
+	}
+	if load.Mass > r.Mass || load.Bulk > r.Bulk {
+		return ErrNoRoom
+	}
+	return nil
+}
+
+// stockLoad is the mass and bulk of the goods of a new agent; false when a product or
+// the sum overflows, which no room holds.
+func (s *storage) stockLoad(stock []itemRow) (room.Pair, bool) {
 	var load room.Pair
 	for _, it := range stock {
 		sz := s.sizes[it.commodity]
@@ -611,13 +624,10 @@ func (s *storage) admitsStock(n NewAgent, stock []itemRow) error {
 		var ok bool
 		load, ok = addPair(load, room.Pair{Mass: m, Bulk: b})
 		if !okm || !okb || !ok {
-			return ErrNoRoom
+			return load, false
 		}
 	}
-	if load.Mass > r.Mass || load.Bulk > r.Bulk {
-		return ErrNoRoom
-	}
-	return nil
+	return load, true
 }
 
 // storeClassCount is the number of store classes of the configuration, 0 with the
