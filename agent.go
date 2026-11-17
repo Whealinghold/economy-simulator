@@ -91,6 +91,11 @@ type Directive struct {
 	// the fallback's intent: the directive's own intent for a held commodity
 	// stays.
 	Hold []CommodityID
+	// Borrow and Lend replace the fallback's request and offer of the credit round
+	// (spec-credit.md 10.5); they need the module on and a role with a block of that
+	// kind.
+	Borrow *CreditRequest
+	Lend   *CreditOffer
 	// Sticky keeps the directive after the tick it applies to.
 	Sticky bool
 }
@@ -364,6 +369,9 @@ func (w *World) saveAgent(cw *codec.Writer, a *agent, names []string) {
 		cw.U(unsigned(arrives))
 	}
 	saveDirective(cw, a.directive)
+	if w.cfg.Modules.Credit != nil && a.directive != nil {
+		saveDirectiveCredit(cw, a.directive)
+	}
 }
 
 // saveDirective writes the directive of an agent: whether there is one and, when
@@ -670,6 +678,9 @@ func (w *World) loadDirective(r *codec.Reader) *Directive {
 		d.Hold = append(d.Hold, CommodityID(r.Index(nc)))
 	}
 	d.Sticky = r.B()
+	if w.cfg.Modules.Credit != nil {
+		loadDirectiveCredit(r, d)
+	}
 	return d
 }
 
@@ -745,6 +756,11 @@ type AgentState struct {
 	// room of the account and its stores; the zero value while the module is off
 	// and for an agent whose role has no base room.
 	Room RoomState
+
+	// HasCredit says Credit is set: the credit module is on and the agent's role has
+	// a block. Credit is what the agent owes and is owed (spec-credit.md 10.1).
+	HasCredit bool
+	Credit    CreditState
 }
 
 // HoldingState is a commodity an agent holds: its units and the units of them that
@@ -810,6 +826,7 @@ func (w *World) Agent(id AgentID) (AgentState, error) {
 		st.Rumours, st.RumoursTick = slices.Clone(rv.rumours), rv.tick
 	}
 	w.fillModuleGroups(&st, a)
+	w.fillCreditState(&st, a)
 	return st, nil
 }
 

@@ -430,3 +430,53 @@ func (w *World) logCapReached() {
 		w.log.LogAttrs(ctx, slog.LevelWarn, "claim cap reached", slog.Int64(logkeys.Claims, int64(w.ledger.OpenClaims())))
 	}
 }
+
+// ClaimRow is an open claim in the snapshot (spec-credit.md 16.4): a loan or a payout
+// claim, with what was fixed at formation and what is still owed.
+type ClaimRow struct {
+	// Claim is the claim and Origin what formed it.
+	Claim  ClaimID
+	Origin Origin
+	// Creditor is the creditor's agent ID, or the estate's agent ID, which is its
+	// RegionID, and Debtor the debtor's.
+	Creditor, Debtor AgentID
+	// Region is the debtor's region.
+	Region RegionID
+	// Principal and Interest are fixed at formation; PrincipalOwed and InterestOwed
+	// are what remains.
+	Principal, Interest, PrincipalOwed, InterestOwed Money
+	// RateBP is the yearly rate at formation in basis points, Formed the tick of
+	// formation, Due the tick the whole falls due and Overdue the tick it first went
+	// unpaid, or -1 while it has not.
+	RateBP, Formed, Due, Overdue int64
+}
+
+// CreditTotals are the seven cumulative totals of the claim list since the world was
+// built (spec-credit.md 3.3.2): money lent, awarded as a payout claim, repaid, the
+// interest paid and fixed, and the principal and interest lost. They are never reset.
+type CreditTotals struct {
+	Lent, Awarded, Repaid, InterestPaid, InterestFixed, LostPrincipal, LostInterest Money
+}
+
+// snapshotClaims fills the claim rows and the totals of the snapshot, a deep copy in
+// ascending claim ID bounded by MaxClaims; with the module off it leaves both empty.
+func (w *World) snapshotClaims(s *Snapshot) {
+	if w.credit == nil {
+		return
+	}
+	for _, c := range w.ledger.AppendClaims(nil) {
+		s.Claims = append(s.Claims, ClaimRow{
+			Claim: ClaimID(c.ID), Origin: originOf(c.Origin),
+			Creditor: AgentID(w.accountView(c.Creditor).Owner), Debtor: AgentID(w.accountView(c.Debtor).Owner),
+			Region:    RegionID(w.accountView(c.Debtor).Region),
+			Principal: Money(c.Principal), Interest: Money(c.Interest),
+			PrincipalOwed: Money(c.PrincipalOwed), InterestOwed: Money(c.InterestOwed),
+			RateBP: c.RateBP, Formed: c.Formed, Due: c.Due, Overdue: c.Overdue,
+		})
+	}
+	t := w.ledger.ClaimTotals()
+	s.Credit = CreditTotals{
+		Lent: Money(t.Lent), Awarded: Money(t.Awarded), Repaid: Money(t.Repaid), InterestPaid: Money(t.InterestPaid),
+		InterestFixed: Money(t.InterestFixed), LostPrincipal: Money(t.LostPrincipal), LostInterest: Money(t.LostInterest),
+	}
+}
