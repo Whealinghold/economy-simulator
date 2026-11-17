@@ -2104,6 +2104,82 @@ type CreditSettled struct {
 
 func (CreditSettled) isEvent() {}
 
+// The reasons a request or an offer of the credit round is refused whole at admission
+// (spec-credit.md 5.2), constants of Reason in the order of the table. A refusal is
+// counted in CreditRound and logged at Debug and is not an error of Step.
+// ReasonInsufficientFunds is the reason of an offer above the lender's available
+// money; ReasonCreditOff is a Debug line only, never counted.
+const (
+	// ReasonCreditOff is a request or an offer submitted while Modules.Credit is absent.
+	ReasonCreditOff Reason = "credit_off"
+	// ReasonNotBorrower is a request of an agent whose role has no Borrow block.
+	ReasonNotBorrower Reason = "not_borrower"
+	// ReasonNotLender is an offer of an agent whose role has no Lend block.
+	ReasonNotLender Reason = "not_lender"
+	// ReasonInvalidPrincipal is a principal below MinPrincipal or above MaxMoney.
+	ReasonInvalidPrincipal Reason = "invalid_principal"
+	// ReasonInvalidTerm is a term below 1 or above MaxCreditTerm.
+	ReasonInvalidTerm Reason = "invalid_term"
+	// ReasonInvalidRate is a rate below 0 or above MaxCreditRateBP.
+	ReasonInvalidRate Reason = "invalid_rate"
+	// ReasonDuplicate is a second request, or a second offer, of an agent in a tick.
+	ReasonDuplicate Reason = "duplicate"
+	// ReasonInArrears is a request of an agent with an overdue claim as debtor.
+	ReasonInArrears Reason = "in_arrears"
+	// ReasonExposure is a request whose principal passes the agent's exposure room.
+	ReasonExposure Reason = "exposure"
+)
+
+// LoanFormed is emitted at P3.3b for each loan the round forms, in formation order,
+// after MerchantsPlanned and before the estates' OrderPlaced (spec-credit.md 16.1).
+// Region is the debtor's, which is the lane and the creditor's too.
+type LoanFormed struct {
+	Tick int64
+	// Claim is the claim formed, Creditor the lender and Debtor the borrower.
+	Claim    ClaimID
+	Creditor AgentID
+	Debtor   AgentID
+	// Region is the lane of the loan.
+	Region RegionID
+	// Principal is the money lent and Interest the interest fixed.
+	Principal, Interest Money
+	// RateBP is the effective yearly rate, Term the ticks to the due tick and Due the
+	// tick the whole falls due.
+	RateBP, Term, Due int64
+}
+
+func (LoanFormed) isEvent() {}
+
+// CreditRound is emitted once per region at P3.3b, in ascending RegionID after the
+// last LoanFormed, in each region for which a request or an offer was submitted and
+// not when all its counts are 0 (spec-credit.md 16.1). Requests and Offers are the
+// admitted ones; RequestsRefused and OffersRefused those refused at admission for a
+// reason of 5.2 other than credit_off; InArrears and Exposure are the parts of
+// RequestsRefused refused with that reason, subsets and not additions; Formed, Principal
+// and Interest the loans formed, the money lent and the interest fixed; Unfilled the
+// principal the admitted requests asked for and did not get; TooMany and Overflow the
+// fills dropped at formation, which are not refusals.
+type CreditRound struct {
+	Tick   int64
+	Region RegionID
+	// Requests and Offers are the admitted requests and offers.
+	Requests, Offers int64
+	// RequestsRefused and OffersRefused are the refusals at admission.
+	RequestsRefused, OffersRefused int64
+	// InArrears and Exposure count the refusals of those two reasons.
+	InArrears, Exposure int64
+	// Formed is the loans formed, Principal the money lent and Interest the interest
+	// fixed.
+	Formed              int64
+	Principal, Interest Money
+	// Unfilled is the principal asked by the admitted requests and not filled.
+	Unfilled Money
+	// TooMany and Overflow are the fills dropped at formation.
+	TooMany, Overflow int64
+}
+
+func (CreditRound) isEvent() {}
+
 // TechnologyAdvanced is emitted at P8.3c for each technology cell in which anything
 // accrued in the step: executions counted, a trend, a discovery, a catch-up or a
 // cut of the cap, in ascending (Region, Field) order after the events of P8.3b and

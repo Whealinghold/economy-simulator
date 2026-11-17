@@ -45,17 +45,11 @@ var stageTwoScenarios = []struct {
 // its entry.
 var scenariosNotBuilt = map[int]string{
 	35:  "plan 7 (MON-S3, the pool grant); not built when plan 2-24 was written",
+	75:  "plan 24: WLD-S3, the cold leg of S18 and the Duration 10 leg, which waits for a pack with such a recipe",
 	107: "plan 3-lnd PR 4 (LND-S1, the tiers on a refilling endowment)",
 	108: "plan 3-lnd PR 5 (LND-S2, the rent step)",
 	109: "plan 3-lnd PR 5 (LND-S3, the closed case)",
 	110: "plan 3-lnd PR 5 (LND-S4, the erosion by removals)",
-	149: "plan 3-tec PR C (TEC-S2, learning with POP and RES)",
-	150: "plan 3-tec PR C (TEC-S3, diffusion on three)",
-	151: "plan 3-tec PR C (TEC-S4, the logistic stock)",
-	152: "plan 3-tec PR C (TEC-S5, the staple with inelastic demand)",
-	153: "plan 3-tec PR C (TEC-S6, the checkpoint and the reseed: needs tag 33)",
-	154: "plan 3-tec PR C (TEC-S7, the call)",
-	75:  "plan 24: WLD-S3, the cold leg of S18 and the Duration 10 leg, which waits for a pack with such a recipe",
 }
 
 var scenarioTestRe = regexp.MustCompile(`(?m)^func TestScenarioS(\d+)_`)

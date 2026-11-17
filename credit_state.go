@@ -220,7 +220,13 @@ func (w *World) creditRoom(a *agent, debt int64) int64 {
 	if t == nil || t.Borrow == nil {
 		return 0
 	}
-	room, ok := crd.Room(t.Borrow.MaxDebtTicks, w.creditUpkeep(a), debt, MaxMoney)
+	return w.creditRoomAt(t.Borrow, w.creditUpkeep(a), debt)
+}
+
+// creditRoomAt is the exposure room of a borrow block at an upkeep cost and a debt
+// (spec-credit.md 5.3.3), for a caller that has the upkeep cost already.
+func (w *World) creditRoomAt(b *BorrowTerms, upkeep, debt int64) int64 {
+	room, ok := crd.Room(b.MaxDebtTicks, upkeep, debt, MaxMoney)
 	if !ok {
 		invariant("a negative figure in the exposure room of an agent")
 	}

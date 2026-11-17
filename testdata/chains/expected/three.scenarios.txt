@@ -1,6 +1,23 @@
 # Recorded outcomes of the Stage 1 scenarios (plan 1-12 D181), written with -update.
 # Read by the reviewer of STY 8.4; no test compares it.
 
+## S150 three+trade+technology contact, 365 ticks seeds 1-10
+measure TechnologyAdvanced events: 1=145 2=148 3=144 4=146 5=162 6=145 7=146 8=148 9=144 10=146 | median=146 n=10
+measure experience of the first cell at end: 1=93 2=116 3=108 4=107 5=118 6=109 7=102 8=102 9=104 10=98 | median=106 n=10
+measure gain added by catch-up bp: 1=25 2=25 3=25 4=25 5=25 6=25 7=25 8=25 9=25 10=25 | median=25 n=10
+measure gain added by catch-up with every edge closed bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain added by discoveries bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain added by learning bp: 1=3298 2=3366 3=3313 4=3339 5=3405 6=3383 7=3346 8=3315 9=3301 10=3256 | median=3327 n=10
+measure gain added by the trend bp: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure gain of the first cell at end bp: 1=1007 2=1115 3=1078 4=1073 5=1125 6=1082 7=1050 8=1050 9=1059 10=1031 | median=1066 n=10
+measure households at end: 1=364 2=429 3=353 4=311 5=381 6=408 7=341 8=402 9=420 10=399 | median=390 n=10
+check a closed edge carries none: 10/10 pass
+check contact carries knowledge: 10/10 pass
+check region 0 advance within the largest: 10/10 pass
+check region 1 advance within the largest: 10/10 pass
+check region 2 advance within the largest: 10/10 pass
+check the gains of each cell chain, never fall and stay within the cap: 20/20 pass
+
 ## S48 a closure and a reopening in a chain (INF-S3)
 measure s48.no_path_ticks_of_far_south: 1=20 2=20 3=20 4=20 5=20 6=20 7=20 8=20 9=20 10=20 | median=20 n=10
 measure s48.rumours_seen: 1=786577 2=792782 3=790306 4=786789 5=788285 6=788919 7=786675 8=789057 9=789514 10=789961 | median=788988 n=10

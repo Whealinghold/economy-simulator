@@ -3,8 +3,10 @@
 # three.toml, warm-three.toml, overlay/trade-three.toml, this file. The edges of
 # trade-three.toml are 100 apart (north-south, south-far_south), so a reach of 250 puts every ordered
 # pair of regions in contact (the weights are 6 000 at 100 and 2 000 at 200). Pack three is needed
-# because one has one region and cannot diffuse. It is the test double that carries the module-alone
-# golden, not a design: every number is a placeholder (N-015, N-027).
+# because one has one region and cannot diffuse. The discovery rate is the bound MaxDiscoveryBP (ten a
+# year): the three growers practise in about 120 cell-ticks of 400, so any lower rate records no
+# discovery in the golden. It is the test double that carries the module-alone golden, not a design:
+# every number is a placeholder (N-015, N-027).
 
 [modules.technology.field.farming]
 recipes = [ "grow_staple" ]
@@ -13,7 +15,7 @@ cap_bp = 3000
 base = 1000
 doubling_bp = 300
 trend_bp = 100
-discovery_bp = 5000
+discovery_bp = 100000
 step_bp = 100
 catch_up_bp = 2000
 reach = 250
