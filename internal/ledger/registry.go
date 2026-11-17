@@ -115,6 +115,13 @@ const (
 	// 24.1.6), in the later hire form escrow to agent. It is a declared row and
 	// opens no boundary account; it is no faucet and no sink.
 	WagePay
+	// Rent is the money a tenant pays a lessor for the units it drew from a let
+	// unit (spec-land.md 5.3, 5.8): agent to agent or estate. TitleSale is the
+	// price of a title in a TransferTitles call (spec-land.md 6.3): agent to agent
+	// or estate. Both are declared rows, open no boundary account and are no faucet
+	// and no sink.
+	Rent
+	TitleSale
 	// NumReasons is the number of reasons the ledger knows.
 	NumReasons
 )
@@ -235,6 +242,12 @@ var table = [NumReasons][2]row{
 	// wage_pay runs from an agent to an agent in the payroll form (spec-ledger.md
 	// 7.2, spec-employment.md 24.1.6); the hire form adds the escrow to agent pairing.
 	WagePay: {thingMoney: {true, Internal, setAgent, setAgent, false, true, 23}},
+	// rent runs from an agent to an agent or an estate, the pool never paying
+	// (spec-land.md 5.3.3); title_sale also runs from an estate to an agent, the pool
+	// paying the price of a release (spec-land.md 6.3.2). The row of spec-ledger.md 7.2
+	// names only the first pairing, so the registry test adds the second.
+	Rent:      {thingMoney: {true, Internal, setAgent, setAE, false, true, 28}},
+	TitleSale: {thingMoney: {true, Internal, setAE, setAE, false, true, 29}},
 }
 
 // isDeclared reports whether reason r is a declared reason: one whose row a

@@ -32,6 +32,9 @@ var stageTwoScenarios = []struct {
 	// Stage 3: S112 (POL-S1) in the first pull request of plan 3-pol, S113 (POL-S2) with the
 	// treasury in the second.
 	{112, 113, "plan 3-pol (POL-S1, POL-S2)"},
+	// S111 (LND-S5) in the third pull request of plan 3-lnd (the calls), S107 in the fourth and
+	// S108 to S110 in the fifth.
+	{107, 111, "plan 3-lnd (LND-S1 to LND-S5)"},
 	// S148 (TEC-S1) in the second pull request of plan 3-tec; S149 to S154 in the third.
 	{148, 154, "plan 3-tec (TEC-S1 to TEC-S7)"},
 }
@@ -42,6 +45,10 @@ var stageTwoScenarios = []struct {
 // its entry.
 var scenariosNotBuilt = map[int]string{
 	35:  "plan 7 (MON-S3, the pool grant); not built when plan 2-24 was written",
+	107: "plan 3-lnd PR 4 (LND-S1, the tiers on a refilling endowment)",
+	108: "plan 3-lnd PR 5 (LND-S2, the rent step)",
+	109: "plan 3-lnd PR 5 (LND-S3, the closed case)",
+	110: "plan 3-lnd PR 5 (LND-S4, the erosion by removals)",
 	149: "plan 3-tec PR C (TEC-S2, learning with POP and RES)",
 	150: "plan 3-tec PR C (TEC-S3, diffusion on three)",
 	151: "plan 3-tec PR C (TEC-S4, the logistic stock)",
