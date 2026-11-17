@@ -245,13 +245,15 @@ func (d Directed) Trade(v *AgentView, rng *rand.Rand, p *TradePlan) {
 
 // directCredit replaces the request and the offer the fallback appended to the plan
 // (from the indexes nb and nl) by those of the directive, when it has any
-// (spec-credit.md 10.5).
+// (spec-credit.md 10.5). A fallback is caller code: one that cut the plan below the
+// index it was called at leaves the directive's entry after what it kept, never
+// before what the plan held, and never exposes an entry it dropped.
 func directCredit(p *TradePlan, dir *Directive, nb, nl int) {
 	if dir.Borrow != nil {
-		p.Borrow = append(p.Borrow[:nb], *dir.Borrow)
+		p.Borrow = append(p.Borrow[:min(nb, len(p.Borrow))], *dir.Borrow)
 	}
 	if dir.Lend != nil {
-		p.Lend = append(p.Lend[:nl], *dir.Lend)
+		p.Lend = append(p.Lend[:min(nl, len(p.Lend))], *dir.Lend)
 	}
 }
 
