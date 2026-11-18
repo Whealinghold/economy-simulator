@@ -69,7 +69,7 @@ func (c *creditCohort) step(t *testing.T, seed uint64, tick int, tally *creditTa
 		owed[p.Debtor] += p.PrincipalOwed + p.InterestOwed
 	}
 	for _, f := range tally.weightFalls[c.seen:] {
-		if before, ok := owed[f.Agent]; ok {
+		if before, ok := owed[f.Agent]; ok && f.From > 0 && f.To > 0 { // a weight of 0 is a removal, not a fall
 			c.falls++
 			if c.first == "" {
 				c.first = fmt.Sprintf("first at tick %d: agent %d weight %d to %d, owed %d before the fall: %d per household before it and %d after it, the claims whole (9.3)",

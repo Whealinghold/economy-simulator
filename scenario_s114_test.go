@@ -111,8 +111,14 @@ func TestScenarioS114_OffIsNeutral(t *testing.T) {
 					t.Fatalf("seed %d: event %d is %s with the module idle, %s without, want equal", seed, i, y, x)
 				}
 			}
+			if len(a.Samples) != len(b.Samples) {
+				t.Fatalf("seed %d: %d sampled snapshots with the module idle, %d without, want equal", seed, len(b.Samples), len(a.Samples))
+			}
 			for tick, sa := range a.Samples {
-				sb := b.Samples[tick]
+				sb, ok := b.Samples[tick]
+				if !ok {
+					t.Fatalf("seed %d: no snapshot after tick %d with the module idle, want one", seed, tick)
+				}
 				sb.Modules, sb.ConfigHash = sa.Modules, sa.ConfigHash
 				if !reflect.DeepEqual(sa, sb) {
 					t.Errorf("seed %d: the snapshot after tick %d differs with the module idle", seed, tick)

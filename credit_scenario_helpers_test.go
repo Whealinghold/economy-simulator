@@ -1,6 +1,7 @@
 package economysim_test
 
 import (
+	"cmp"
 	"fmt"
 	"slices"
 	"testing"
@@ -93,7 +94,7 @@ func checkClaimIdentities(t testing.TB, where string, s economysim.Snapshot) {
 	if got := owedI + tot.InterestPaid + tot.LostInterest; got != tot.InterestFixed {
 		t.Fatalf("%s: interest owed + paid + lost = %d, want the interest fixed %d", where, got, tot.InterestFixed)
 	}
-	if !slices.IsSortedFunc(s.Claims, func(a, b economysim.ClaimRow) int { return int(a.Claim) - int(b.Claim) }) {
+	if !slices.IsSortedFunc(s.Claims, func(a, b economysim.ClaimRow) int { return cmp.Compare(a.Claim, b.Claim) }) {
 		t.Fatalf("%s: claim rows are not in ascending claim ID", where)
 	}
 }
