@@ -272,8 +272,11 @@ func (v *validator) facilityBuildShape(base []string, rc *Recipe, classes map[st
 			}
 		}
 	}
-	if b := rc.Builds; b != nil && b.Toward != "" && classes[b.Class] != kindRoute {
-		v.rep.add(ErrFacilityShape, path(base, "builds", "toward"), b.Toward, "")
+	// An unknown class is phase 3's, as for a row.
+	if b := rc.Builds; b != nil && b.Toward != "" {
+		if kind, known := classes[b.Class]; known && kind != kindRoute {
+			v.rep.add(ErrFacilityShape, path(base, "builds", "toward"), b.Toward, "")
+		}
 	}
 }
 

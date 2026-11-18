@@ -69,6 +69,11 @@ func TestValidateInfrastructure_Order(t *testing.T) {
 				}
 			}
 		}, economysim.ErrDuplicateID, economysim.ErrFacilityCount},
+		// Fix: a builds clause on a class that is not defined, with a toward set, got
+		// ErrFacilityShape from phase 2 and never reached the unknown class of phase 3.
+		{"an unknown class on a clause with a toward is a reference", func(c *economysim.Config) {
+			recipeOf(c, "build_mill").Builds = &economysim.FacilityBuild{Class: "nowhere", Toward: "south"}
+		}, economysim.ErrUnknownFacilityClass, economysim.ErrFacilityShape},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
