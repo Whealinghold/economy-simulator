@@ -232,6 +232,15 @@ func (c *cardChecker) check(e economysim.Event) {
 	case economysim.RentScaled:
 		c.region("RentScaled", e.Tick, e.Region)
 		c.id("RentScaled", e.Tick, "Resource", int(e.Resource), len(c.names.Resources))
+	case economysim.RentPaid:
+		c.region("RentPaid", e.Tick, e.Region)
+		c.id("RentPaid", e.Tick, "Resource", int(e.Resource), len(c.names.Resources))
+		for _, rm := range e.From {
+			c.region("RentPaid", e.Tick, rm.Region)
+		}
+		for _, rm := range e.To {
+			c.region("RentPaid", e.Tick, rm.Region)
+		}
 	}
 }
 
