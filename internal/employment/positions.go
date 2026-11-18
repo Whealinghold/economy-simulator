@@ -40,9 +40,6 @@ func Positions(p Plan) (int64, bool) {
 	if p.MaxHires < 0 || p.Hired < 0 || p.KOwn < 0 || p.UpkeepCost < 0 || p.Duration < 1 {
 		return 0, false
 	}
-	if p.Bid < 1 {
-		return 0, true
-	}
 	n := max(p.MaxHires-p.Hired, 0)
 	for _, in := range p.Inputs {
 		if in.Stock < 0 || in.Keep < 0 || in.Qty < 1 {
@@ -55,6 +52,9 @@ func Positions(p Plan) (int64, bool) {
 			return 0, false
 		}
 		n = min(n, max(items-p.KOwn, 0))
+	}
+	if p.Bid < 1 {
+		return 0, true
 	}
 	perPosition, ok := checked.Mul(p.Bid, p.Duration)
 	if !ok {
