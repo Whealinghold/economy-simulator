@@ -349,3 +349,21 @@ Each is delegated to the supervisor; the RECOMMENDATION is taken as accepted and
 8. **Packs of the module-alone golden.** RECOMMENDATION: two sets, `two` + trade + transport + `risk.toml` (routes, one common row) and `one` + `storage.toml` + `risk-store.toml` (stores), each guarded by a probe that fails an empty golden, moving to pack `five` if pack `two` records no strike. Accepted.
 9. **The `Losses` preset's home.** RECOMMENDATION: built here (PR C, Phase 7) as the roadmap row says, in new files of `indicator/`, with the EMP presets 22 to 24 in their own files when that plan lands. Accepted.
 10. **Number of pull requests: four.** RECOMMENDATION: four (A: edits, pure rules, configuration; B: the route side; C: the store side and the preset; D: overlays, goldens, scenarios), so the catalogue appends land early, the route side is reviewed as one idea, and the goldens are recorded after everything they exercise exists. Accepted.
+
+## PR B result (Phases 4 and 5, recorded when PR B was built)
+
+Rule tags read: architecture=5cf54e23c96c91235fafd115, observability=9ebd6516273680595f477c95, testing=66af7645b01fef4e2796c367. No rule file, spec or note was edited, so no notes tag applies.
+
+Built: the ledger reason `loss`; the four keyed sites; the module state and P3.1a; step 4a at dispatch (`ShipmentDispatched.LossBP`); the expected-loss table (`RouteLoss`, `RouteRow.LossBP`, the lanes' loss, the rebuild at an edge-status call); step 0 at arrival with the guard split out of `moveTraveller` (`arrivalHeld`); `ArrivedLine.Lost` and `ShipmentArrived.AccountLost`; the contract and merchant hooks; `SetRouteRiskScales`, `RouteRiskScaled` and `SlotState.RouteRiskScales`; tag 28, the loss share of tag 17 and the audit. The refactor-first splits of PR A were reused.
+
+Deviations and choices the plan left open:
+
+- **The reason code is 36, not 44.** `loss` is row 36 of the pinned table (`pinnedNames` of `internal/ledger/checkpoint_test.go`), `TestReasonCode_Pinned` requires `pinnedNames[code]` to be the name, and a code from `pinnedRows` (42) up is the code of a configured money flow. Code 44 would collide with money flow 2. `pinnedRows` is unchanged and no existing fixture moves. `spec-ledger.md` 7.2 is corrected. N-226's update line (`doc/notes.md`) still says 44 and is the supervisor's to fix.
+- The module adds the name `risk` to `Snapshot.Modules` and the `loss` boundary rows (balance 0 with no strike) to `Snapshot.Boundary`; the neutrality tests of PR A drop both before comparing.
+- The restore keeps and checks the store scales of tag 28 (the list is written from `risk.storeScales`, filled by PR C's call), so the section needs no change in PR C.
+- A cargo with a total loss is not a diversion (`Diverted` false, spec 5.5.1); the change applies only when units were lost, so no existing line differs.
+- `routeLossBP` takes the graph, which `TransportLanes` already holds; the table of expected losses is read through nil-safe methods of `*risk`, so the hooks in TRN's files hold no branch.
+
+Tests by layer: unit (`internal/ledger` registry and pinned codes, `internal/risk` unchanged); root integration (`risk_dispatch_internal_test.go`, `risk_arrival_internal_test.go`, `risk_scale_internal_test.go`, `risk_checkpoint_internal_test.go`, `risk_ledger_test.go`, the neutrality tests of PR A); `strategy/` (`TestMerchant_NetOfRouteLoss`); fuzz (`FuzzDecodeRiskSection`, 8 s clean). Not run, by the stage: gate R, gate F, gomu, `check.sh`, `full.sh`, the multi-seed families. `golden/off`, `golden/all`, the pinned hash and `testdata/checkpoints` are untouched.
+
+Left open for PR C and D: the store side (P8.1a, `SetStoreRiskScales`, `StoreLoss`, `StoreRiskScaled`), the `Losses` preset, `TestInvariants_Risk_*` over seeds and S126 to S131, which need the multi-seed gate; `TestStep_AllocationsStayAtTheBaseline` was not rerun.
