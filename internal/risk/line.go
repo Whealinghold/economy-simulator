@@ -17,8 +17,14 @@ func Line(held, lossBP int64) (int64, bool) {
 // the account leaves nothing out. ok is false when a held count is negative or
 // lossBP is outside 0 to 10 000, and the result is then nil.
 func Account(dst, held []int64, skip int, lossBP int64) ([]int64, bool) {
+	if lossBP < 0 || lossBP > BP {
+		return nil, false
+	}
 	dst = dst[:0]
 	for i, h := range held {
+		if h < 0 { // the skipped count too: a negative count is a broken account
+			return nil, false
+		}
 		var lost int64
 		if i != skip {
 			var ok bool

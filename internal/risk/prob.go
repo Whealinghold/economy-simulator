@@ -28,7 +28,8 @@ func Prob(strikeBP, scaleBP int64) (p int64, ok bool) {
 
 // Struck reports whether a draw in [0, 10 000) strikes a row of effective
 // probability p: the draw is below p (spec-risk.md 3.4.2). A p of 10 000
-// always strikes and a p of 0 never does.
+// always strikes and a p of 0 never does. A draw below 0 is outside the range the
+// world gives and spares, so a broken reduction cannot strike every row.
 func Struck(draw, p int64) bool {
-	return draw < p
+	return draw >= 0 && draw < p
 }

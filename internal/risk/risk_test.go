@@ -227,6 +227,54 @@ func TestAccount_ExceptVehicle(t *testing.T) {
 	}
 }
 
+// TestAccount_RejectsWhatItDocuments verifies that Account reports ok false for a
+// share outside 0 to 10 000 and for a negative count whatever the account holds
+// or skips: an empty account, one whose only commodity is skipped, and a negative
+// count at the skipped index.
+//
+// Requirement: FR-RSK-013
+//
+// Guard: the doc comment promises ok false for these, but the loop checked the
+// share and the count only through Line, which a skipped or absent entry never
+// reaches, so an invalid share on such an account passed as a valid empty loss.
+func TestAccount_RejectsWhatItDocuments(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		held   []int64
+		skip   int
+		lossBP int64
+	}{
+		{"share above 10 000, empty account", nil, -1, 10_001},
+		{"share below 0, empty account", nil, -1, -1},
+		{"share above 10 000, only the vehicle", []int64{2}, 0, 10_001},
+		{"negative count at the skipped index", []int64{5, -1}, 1, 100},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got, ok := risk.Account(nil, tt.held, tt.skip, tt.lossBP); ok || got != nil {
+				t.Errorf("Account(%v, skip %d, %d) = %v, %v, want nil, false", tt.held, tt.skip, tt.lossBP, got, ok)
+			}
+		})
+	}
+}
+
+// TestStruck_DrawOutsideTheRangeSpares verifies that a draw below 0, which the
+// world never gives, does not strike a row, not even a certain one.
+//
+// Guard: Struck returns no ok, so a negative draw, the symptom of a broken
+// reduction of the world's word, would strike every row of positive probability
+// and lose cargo silently.
+func TestStruck_DrawOutsideTheRangeSpares(t *testing.T) {
+	t.Parallel()
+	for _, draw := range []int64{-1, math.MinInt64} {
+		if got := risk.Struck(draw, risk.BP); got {
+			t.Errorf("Struck(%d, %d) = true, want false", draw, risk.BP)
+		}
+	}
+}
+
 // TestPhi_Example18_2 verifies the stored fractions of spec-risk.md 18.2: the
 // bin has x_mass = floor(450 * 200 / 500) = 180, phi_mass = floor(180 * 10 000
 // / 550) = 3 272, x_bulk = floor(320 * 100 / 400) = 80, phi_bulk = 2 000, so
