@@ -32,8 +32,8 @@ func PairOK(buyLimit, sellLimit int64) bool { return buyLimit < sellLimit }
 // remains (spec-fiscal.md 9.3.1): wish = floor((qty*scale + carry) / 10^4),
 // carry = (qty*scale + carry) mod 10^4. A scale of 5 000 and a quantity of 1
 // wants one unit every second tick. A wish above int64 saturates at MaxInt64, as a
-// due of internal/moneyflow does; a validated quantity is far below it. ok is false for a negative argument, or a carry
-// of 10^4 or more.
+// due of internal/moneyflow does; a validated quantity is far below it. ok is false
+// for a negative argument, or a carry of 10^4 or more.
 func Wish(qty, scale, carry int64) (wish, newCarry int64, ok bool) {
 	if carry >= Basis {
 		return 0, 0, false
