@@ -425,3 +425,11 @@ func (k *fiscalCheck) seatRegion(authority string) (RegionID, bool) {
 	}
 	return k.pol.Seat(j)
 }
+
+// treasuryKeyKind rejects a target that names a jurisdiction and is not a treasury:
+// the field is read by the treasury kind only (spec-fiscal.md 3.2).
+func (v *validator) treasuryKeyKind(tp []string, t FlowTarget) {
+	if t.Jurisdiction != "" && t.Kind != TargetTreasury {
+		v.rep.add(ErrFlowShape, path(tp, "jurisdiction"), t.Jurisdiction, "")
+	}
+}

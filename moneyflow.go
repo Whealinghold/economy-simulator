@@ -180,6 +180,7 @@ func (v *validator) flowTarget(base []string, f MoneyFlow) {
 	t := f.Target
 	tp := path(base, "target")
 	v.storeKeyKind(tp, t)
+	v.treasuryKeyKind(tp, t)
 	switch t.Kind {
 	case TargetHouseholds:
 		switch {

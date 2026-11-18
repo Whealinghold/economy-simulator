@@ -14,6 +14,7 @@ type fiscalWarner struct {
 	c      *Config
 	lk     lookup
 	m      *Fiscal
+	flows  []fiscalFlow      // m.flows(), built once
 	parent map[string]string // jurisdiction to parent; a lookup only
 	member map[string]string // region to its direct jurisdiction; a lookup only
 	out    []Warning
@@ -26,7 +27,7 @@ func fiscalWarnings(c *Config, lk lookup) []Warning {
 	if m == nil {
 		return nil
 	}
-	w := &fiscalWarner{c: c, lk: lk, m: m, parent: map[string]string{}, member: map[string]string{}}
+	w := &fiscalWarner{c: c, lk: lk, m: m, flows: m.flows(), parent: map[string]string{}, member: map[string]string{}}
 	if p := c.Modules.Polity; p != nil {
 		for _, j := range p.Jurisdictions {
 			w.parent[j.ID] = j.Parent
@@ -35,7 +36,7 @@ func fiscalWarnings(c *Config, lk lookup) []Warning {
 			w.member[r.Region] = r.Jurisdiction
 		}
 	}
-	if len(m.flows()) == 0 {
+	if len(w.flows) == 0 {
 		return []Warning{{Path: fiscalBase, Rule: "no_fiscal_flows"}}
 	}
 	w.treasuryWarnings()
@@ -110,7 +111,7 @@ func (w *fiscalWarner) groups(authority string, t FlowTarget) []Group {
 // the first flow that makes it so.
 func (w *fiscalWarner) treasuryWarnings() {
 	var seen []string
-	for _, f := range w.m.flows() {
+	for _, f := range w.flows {
 		if slices.Contains(seen, f.authority) {
 			continue
 		}
@@ -124,7 +125,7 @@ func (w *fiscalWarner) treasuryWarnings() {
 // it counts as no source and no outlet.
 func (w *fiscalWarner) funding(a string) {
 	var inflow, outflow []fiscalFlow
-	for _, f := range w.m.flows() {
+	for _, f := range w.flows {
 		if f.authority != a {
 			continue
 		}
