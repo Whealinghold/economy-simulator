@@ -22,6 +22,8 @@ type orgWarner struct {
 	m      *Institutions
 	scope  *orgScoper
 	groups map[[2]string]int64 // households by (region, role); a lookup only
+	seeds  map[string]seedMemo // the seed table of a region, read once; a lookup only
+	floors map[[2]string]int64 // the highest cost floor by (region, commodity), read once; a lookup only
 }
 
 // institutionsWarnings returns the warnings of spec-institutions.md 10.2: it reports
@@ -31,7 +33,8 @@ func institutionsWarnings(c *Config, lk lookup) []Warning {
 	if m == nil {
 		return nil
 	}
-	w := &orgWarner{c: c, lk: lk, m: m, scope: orgScoperOf(c, outsideNodeSet(c)), groups: make(map[[2]string]int64, len(c.Groups))}
+	w := &orgWarner{c: c, lk: lk, m: m, scope: orgScoperOf(c, outsideNodeSet(c)), groups: make(map[[2]string]int64, len(c.Groups)),
+		seeds: map[string]seedMemo{}, floors: map[[2]string]int64{}}
 	for _, g := range c.Groups {
 		key := [2]string{g.Region, g.Role}
 		w.groups[key] = satAdd(w.groups[key], g.Households)
@@ -284,8 +287,26 @@ type seedTable struct {
 	wage   int64
 }
 
-// seedsOf reads the seed table of a region from the warm start; ok is false without one.
+// seedMemo is the seed table of a region and whether the warm start gave one.
+type seedMemo struct {
+	t  seedTable
+	ok bool
+}
+
+// seedsOf reads the seed table of a region from the warm start, once per region (a
+// control keyed by a jurisdiction asks for each region it covers); ok is false without
+// a warm start.
 func (w *orgWarner) seedsOf(region string) (t seedTable, ok bool) {
+	if m, done := w.seeds[region]; done {
+		return m.t, m.ok
+	}
+	t, ok = w.readSeeds(region)
+	w.seeds[region] = seedMemo{t, ok}
+	return t, ok
+}
+
+// readSeeds builds the seed table of a region from the warm start.
+func (w *orgWarner) readSeeds(region string) (t seedTable, ok bool) {
 	ws := w.c.WarmStart
 	if ws == nil {
 		return t, false
@@ -311,27 +332,40 @@ func (w *orgWarner) seedsOf(region string) (t seedTable, ok bool) {
 // below CostFloor of the full unit cost, at the warm start's prices and wage, of a
 // recipe of a role with a group in the region that makes the commodity (spec-production.md 9.4, spec-viability.md 8.2.3).
 func (w *orgWarner) capBelowSeedCost(region, commodity string, capPrice int64) bool {
-	seeds, ok := w.seedsOf(region)
-	if !ok {
-		return false
+	return capPrice < w.seedFloor(region, commodity)
+}
+
+// seedFloor is the highest CostFloor of the unit cost, at the seed prices, of a recipe of
+// a role with a group in the region that makes the commodity: a cap below it is below
+// the floor of some recipe. It is 0 without a warm start or such a recipe, and it is
+// worked out once per (region, commodity), so a jurisdiction-wide control costs one pass
+// over the roles and recipes however many regions and controls name the commodity.
+func (w *orgWarner) seedFloor(region, commodity string) int64 {
+	key := [2]string{region, commodity}
+	if f, done := w.floors[key]; done {
+		return f
 	}
-	for i := range w.c.Roles {
-		ro := &w.c.Roles[i]
-		if w.groups[[2]string{region, ro.ID}] <= 0 {
-			continue
-		}
-		for _, id := range ro.Recipes {
-			rc := w.lk.recipe[id]
-			if rc == nil {
+	var most int64
+	if seeds, ok := w.seedsOf(region); ok {
+		for i := range w.c.Roles {
+			ro := &w.c.Roles[i]
+			if w.groups[[2]string{region, ro.ID}] <= 0 {
 				continue
 			}
-			unit := w.seedUnitCost(rc, commodity, seeds)
-			if floor, ok := checked.MulDiv(unit, w.c.World.CostFloor, wholeBP); unit > 0 && ok && capPrice < floor {
-				return true
+			for _, id := range ro.Recipes {
+				rc := w.lk.recipe[id]
+				if rc == nil {
+					continue
+				}
+				unit := w.seedUnitCost(rc, commodity, seeds)
+				if floor, ok := checked.MulDiv(unit, w.c.World.CostFloor, wholeBP); unit > 0 && ok {
+					most = max(most, floor)
+				}
 			}
 		}
 	}
-	return false
+	w.floors[key] = most
+	return most
 }
 
 // seedUnitCost is the full unit cost of the commodity from the recipe at the seed
