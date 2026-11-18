@@ -1,0 +1,29 @@
+# The credit module alone on pack one (plan 3-crd D10, spec-credit.md 24, spec-reference-chain.md 4.5): a
+# borrower role on the role with the 60-tick job and a lender role in the one region. Every figure is a labelled
+# placeholder (plan 3-crd Q10, N-018, N-027): none is a value fixed from a source, and the shield and the write-off
+# are the settings the model of spec-credit.md 19.2 explored, not a recommendation.
+#
+# The grower's job is `grow_staple`, 60 ticks (base.toml): the household that starts it asks for the gap of its job
+# (its upkeep and inputs over the 60 ticks, less its money) and repays at the due tick from the lump the job yields.
+# The cook is the lender: it offers half of the money its own bids leave, above three ticks of upkeep. The warm start
+# of the pack carries no claims (spec-credit.md 11.4, N-165): the first loans form at the first job starts after it.
+# `min_principal` is 1 so that the growers' small gaps are not refused below the minimum: with the pack's 5 000 no
+# request is made at all on pack one.
+# Layer it after the pack: base.toml, one.toml, warm-one.toml, this file.
+
+[modules.credit]
+min_principal = 1
+shield_ticks = 2
+write_off_ticks = 7
+max_claims = 1000
+
+[role.grower.credit.borrow]
+max_rate_bp = 1500
+max_debt_ticks = 90
+slack_ticks = 4
+
+[role.cook.credit.lend]
+rate_bp = 600
+max_term_ticks = 90
+keep_ticks = 3
+share_bp = 5000
