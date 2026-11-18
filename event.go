@@ -2363,6 +2363,67 @@ type RentScaled struct {
 
 func (RentScaled) isEvent() {}
 
+// RegionMoney is an amount of money of the households of one region: a row of the From
+// and To lists of RentPaid. A list holds one row per region with a non-zero amount, in
+// ascending RegionID.
+type RegionMoney struct {
+	Region RegionID
+	Money  Money
+}
+
+// RentPaid is emitted once per endowment that has a title, at P8.3a after
+// EndowmentChanged, in (RegionID, ResourceID) order, in a tick in which any of OwnUnits,
+// CommonsUnits, LetUnits, Idle, Held, Unserved, PricedOut, NoTitle, RentFunds, CutUnits,
+// Paid or Forfeited is non-zero or the posted rent changed, and never otherwise
+// (spec-land.md 13.1.1). It is emitted only when the tenure module is on. Every damper of
+// the module is counted here (N-045): the closure (Held), the clip for cash (PricedOut),
+// the cut for rent (CutUnits) and the band of the step (RentAfter).
+type RentPaid struct {
+	Tick int64
+	// Region and Resource are the endowment.
+	Region   RegionID
+	Resource ResourceID
+	// Rent is the rent in force that tick, money per unit let: the posted rent times the
+	// scale (spec-land.md 5.2.2).
+	Rent Money
+	// Entitled is the units of the stock entitled to holders, the stock less the commons.
+	Entitled int64
+	// OwnUnits, CommonsUnits and LetUnits are the units drawn in each tier; LetUnits is V
+	// of spec-land.md 4.4.1.
+	OwnUnits, CommonsUnits, LetUnits int64
+	// Offered is the let supply L, and Idle is L less LetUnits.
+	Offered, Idle int64
+	// Held is the unused entitlement a closed endowment did not let.
+	Held int64
+	// Unserved is X of spec-land.md 5.5.1: the units wanted at the rent in force and not
+	// served in the let tier.
+	Unserved int64
+	// PricedOut is the units clipped for cash (spec-land.md 4.3 step 3).
+	PricedOut int64
+	// Tenants is the requests that took let units and Lessors the holders paid.
+	Tenants, Lessors int64
+	// Paid is the money moved as rent and Forfeited the money not charged because a payee
+	// could not receive it (spec-land.md 5.3.3).
+	Paid, Forfeited Money
+	// NoTitle and RentFunds are the requests refused for each reason.
+	NoTitle, RentFunds int64
+	// CutUnits is C of spec-land.md 5.5.1: the let units granted and not taken for rent.
+	CutUnits int64
+	// Exempt is the let units drawn rent-free (OwnUseExempt).
+	Exempt int64
+	// RentAfter is the posted rent after the step, before the scale.
+	RentAfter Money
+	// ToPool is the money received by the pool of Region. From is the money paid, by the
+	// region of the payer's account, and To the money received by lessor households, by
+	// the region of the payee's account: with them an observer with no agent table
+	// rebuilds the money of the sectors (spec-land.md 13.1.1a, FR-OBS-041).
+	ToPool Money
+	From   []RegionMoney
+	To     []RegionMoney
+}
+
+func (RentPaid) isEvent() {}
+
 // FacilityKind is the kind of a FacilityChanged, a member of a closed set
 // (spec-infrastructure.md 14.1).
 type FacilityKind string

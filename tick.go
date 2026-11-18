@@ -76,6 +76,7 @@ var positionList = [...]position{
 	{"P8.1", "LED", line},
 	{"P8.2", "LED", line},
 	{"P8.3", "RES", line},
+	{"P8.3a", "LND", line},
 	{"P8.3c", "TEC", line},
 	{"P8.4", "LED", line},
 	{"P8.5", "OBS", bracket}, // TickEnded, in endStep
@@ -92,7 +93,7 @@ var notBuiltPositions = [...]string{
 	"P2.5a", "P2.8b",
 	"P3.1a", "P3.3c", "P3.4a", "P3.6b", "P3.6c",
 	"P4.1a",
-	"P8.1a", "P8.1b", "P8.3a", "P8.3b",
+	"P8.1a", "P8.1b", "P8.3b",
 }
 
 // positions is the straight line of a step: one call for each position of
@@ -270,15 +271,16 @@ func (w *World) positionsTail() error {
 	if w.migration != nil {
 		w.p72Migration()
 	}
-	return w.positionsClose()
+	return w.positionsReview()
 }
 
-// positionsClose is the part of the straight line from the settlement review
+// positionsReview is the part of the straight line from the settlement review
 // (P7.2a) to the institutions of P7.2b, split from positionsTail to stay within the
 // Lizard complexity limit when the institutions module joined it (N-243, plan 3-org
 // Phase 4). The position test reads it as part of the straight line, after
-// positionsTail and before positionsEnd, in source order.
-func (w *World) positionsClose() error {
+// positionsTail and before positionsEnd, in source order. It is named for the review of
+// P7.2a and P7.2b and is not the positionsClose of P8.3a to the audit.
+func (w *World) positionsReview() error {
 	if w.set != nil {
 		w.p72aSettlement()
 	}
@@ -291,13 +293,23 @@ func (w *World) positionsClose() error {
 // positionsEnd is the end of the straight line, from the ageing of phase 8 to the
 // audit, split from positionsTail to stay within the Lizard complexity limit before
 // the risk module's P8.1a joins it (N-243). The position test reads it as part of
-// the straight line, after positionsClose and in source order.
+// the straight line, after positionsReview and in source order.
 func (w *World) positionsEnd() error {
 	if err := w.p81Age(); err != nil {
 		return err
 	}
 	w.p82Flows()
 	w.p83Regen()
+	return w.positionsClose()
+}
+
+// positionsClose is the end of the straight line, from P8.3a to the audit, split from
+// positionsTail to stay within the Lizard complexity limit (N-243, plan 3-lnd). The
+// position test reads it as part of the straight line, after positionsTail.
+func (w *World) positionsClose() error {
+	if w.tenure != nil {
+		w.p83aRent()
+	}
 	if w.tec != nil {
 		w.p83cTechnology()
 	}

@@ -448,7 +448,7 @@ Hooks used: H-1, H-2 (the two positions), H-15 to H-18; none of H-3 to H-14 (the
 Deviations and choices the plan left open:
 
 - The round does the lapse pass of every body first and then the admission of each (body, region) (question 1 of the log). Spec 4.1.1 says "for each body: lapse, then admit"; the two give the same result unless a household lapses from a body and is eligible for one with a lower `BodyID`, which the spec's 4.2.1 says is a candidate in the same round. The order of the bodies would then change a result, against FR-ORG-019.
-- `positionsTail` was at the Lizard CCN limit, so `positionsClose` (P7.2a to the audit) is split from it by a pure move, and the test of the straight line knows the sixth part.
+- `positionsTail` was at the Lizard CCN limit, so `positionsReview` (P7.2a and P7.2b; the `positionsClose` of P8.3a to the audit is LND's) is split from it by a pure move, and the test of the straight line knows the sixth part.
 - `snapshot.go` was at 498 non-comment lines, so `Region` and `regionEndowments` moved to `regions_status.go` by a pure move.
 - The resolved rights and legal ranges, the levels in force and the suspensions are built and rebuilt (`resolve`) and tag 31 saves and loads them, but nothing sets a level or a suspension until PR D and nothing reads a right or a range until PR C; their tests plant the state. `MembershipChanged.Held` is 0 until PR D.
 - `TestReaders_StaticCheck` allows `institutions_round.go` to read the flag with `regionHas` (the reader of SET's hook H6, spec 3.5.2); `TestPolity_NoRegionFieldRead` lists the other ORG files among those that may name a jurisdiction.

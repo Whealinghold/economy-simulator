@@ -42,6 +42,7 @@ RecipeAbandoned
 RecipeExecuted
 RecipeRefused
 ReliefPaid
+RentPaid
 RentScaled
 RightRefused
 RightSuspensionSet

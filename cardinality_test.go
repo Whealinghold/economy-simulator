@@ -4,7 +4,9 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -242,6 +244,15 @@ func (c *cardChecker) check(e economysim.Event) {
 	case economysim.RentScaled:
 		c.region("RentScaled", e.Tick, e.Region)
 		c.id("RentScaled", e.Tick, "Resource", int(e.Resource), len(c.names.Resources))
+	case economysim.RentPaid:
+		c.region("RentPaid", e.Tick, e.Region)
+		c.id("RentPaid", e.Tick, "Resource", int(e.Resource), len(c.names.Resources))
+		for _, rm := range e.From {
+			c.region("RentPaid", e.Tick, rm.Region)
+		}
+		for _, rm := range e.To {
+			c.region("RentPaid", e.Tick, rm.Region)
+		}
 	}
 }
 
@@ -295,7 +306,7 @@ func TestCardinality_EventAttributesTakeClosedValues(t *testing.T) {
 
 // TestPacks_FiveAndAllEventAttributesTakeClosedValues is the check of
 // TestCardinality_EventAttributesTakeClosedValues on the warm five (every module off) and
-// on the all-on pack, seed 1, 400 ticks: the configuration of five that N-295 left to
+// on the warm five with the tenure overlays and on the all-on pack, seed 1, 400 ticks: the configuration of five that N-295 left to
 // Stage 2 (plan 2-24 Phase 2). The all-on row is the one that emits the events of the
 // modules (transport, outside node, migration, merchants, demand). It skips under -race with
 // the other 5 000-household runs, and its name starts with a prefix of gateFPrefixes.
@@ -310,7 +321,7 @@ func TestPacks_FiveAndAllEventAttributesTakeClosedValues(t *testing.T) {
 		pack   string
 		layers []string
 		opts   []economysim.Option
-	}{{"five", packFiveWarm, nil}, {"all", allLayers, allOptions()}} {
+	}{{"five", packFiveWarm, nil}, {"five+tenure", packFiveTenure, nil}, {"all", allLayers, allOptions()}} {
 		cfg := loadValidPack(t, row.layers...)
 		t.Run(row.pack, func(t *testing.T) {
 			t.Parallel()
@@ -521,5 +532,28 @@ func (c *cardChecker) checkStorage(e economysim.Event) {
 		c.id("StoreChanged", e.Tick, "Class", int(e.Class), len(c.names.StoreClasses))
 		c.member("StoreChanged", e.Tick, "Kind", string(e.Kind))
 		c.member("StoreChanged", e.Tick, "Cause", string(e.Cause))
+	}
+}
+
+// TestCardinality_TierAttribute verifies FR-LND-031: the attribute economysim.tier of the
+// rent metrics has three values in observability-and-logging.md 5.4.1, own, commons and
+// let, and RentPaid carries one unit count for each (OwnUnits, CommonsUnits, LetUnits), so
+// the instrument economysim.rent.units is bounded by the configuration and by that set.
+//
+// Requirement: FR-LND-031
+//
+// Guard: a fourth tier added to the event without the closed set of the rule file, or a set
+// that no field feeds, would make the attribute unbounded or empty.
+func TestCardinality_TierAttribute(t *testing.T) {
+	t.Parallel()
+	rules := readFile(t, "doc/rules/observability-and-logging.md")
+	if !strings.Contains(rules, "`economysim.tier` (`own`, `commons`, `let`)") {
+		t.Errorf("observability-and-logging.md 5.4.1 does not list economysim.tier as own, commons and let")
+	}
+	typ := reflect.TypeFor[economysim.RentPaid]()
+	for _, f := range []string{"OwnUnits", "CommonsUnits", "LetUnits"} {
+		if _, ok := typ.FieldByName(f); !ok {
+			t.Errorf("RentPaid has no field %s, want one unit count for each value of the attribute tier", f)
+		}
 	}
 }
