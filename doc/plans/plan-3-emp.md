@@ -356,4 +356,6 @@ Left for PR 3 (found here, not built here):
 - P4.1b must not run in the hire form (D1): `newEmployment` still marks an employer role a payer and `collect` still walks the agents. Guard it by the form flag.
 - The derived overflow check of `spec-production.md` 10.3 (`yieldMax` in `validate.go`) must take `HireYieldBP` of the hire-list recipes into the largest yield factor (14.1, last paragraph).
 
+Observability review (PR 2): no event, metric or run-time log is due (configuration only). The nine warnings go through the existing `logWarnings` (`Warn`, constant message, `rule` and `path` keys, IDs not indices, once per entity at construction). The five instruments stay deferred by Q5 to an `otelobserver/` PR and are listed with their use in N-432.
+
 Tests: field cases for every new row of the parameter-owner table, the one-form rule, the hire list, the weight rule, one case per warning plus a silent configuration, the pinned hire encoding and the field ids of the hash, the canonical default of `MaxOpen`, the loader (a hire document, the reject table), `FuzzValidateEmployment`, `FuzzLoadEmployment` with new seeds, and the pack test of the overlay. A break pass (the hire-list rule, the share bound, a hash id, a warning test) failed the tests it should.
