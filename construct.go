@@ -487,6 +487,12 @@ func (w *World) summary() []slog.Attr {
 	if x := w.external; x != nil {
 		attrs = append(attrs, slog.Int(logkeys.Nodes, len(w.cfg.Modules.External.Nodes)), slog.Int(logkeys.Counterparties, len(x.cps)))
 	}
+	return w.summaryLater(attrs)
+}
+
+// summaryLater appends the attributes of the later modules to the attributes of
+// summary (a continuation for the Lizard limit).
+func (w *World) summaryLater(attrs []slog.Attr) []slog.Attr {
 	if w.polity != nil {
 		total, governed := polityTotals(&w.cfg)
 		attrs = append(attrs, slog.Int(logkeys.Jurisdictions, total), slog.Int(logkeys.Governed, governed))
