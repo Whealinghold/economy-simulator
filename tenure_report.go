@@ -380,6 +380,9 @@ func (e *RentPaid) quiet() bool {
 // a non-zero amount, in ascending RegionID.
 func (t *tenure) moneyRows(e *RentPaid, cell, flow int) int {
 	fs := t.rt.flows
+	for flow < len(fs) && fs[flow].cell < cell { // transfers of an endowment that lost its titles since P2.7
+		flow++
+	}
 	for ; flow < len(fs) && fs[flow].cell == cell; flow++ {
 		f := fs[flow]
 		e.From = addRegionMoney(e.From, f.from, f.amount)
