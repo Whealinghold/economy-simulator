@@ -499,7 +499,7 @@ block and **close the vacancy**. The others (4 to 8 and 10 to 12) depend on the 
 the vacancy's **fit** (the largest block it can still take) to `m - 1`, so a later offer of `m`
 or more skips it without a new count and a smaller one may still be formed; a vacancy whose fit
 reaches 0 is closed, and its remaining positions are counted once as unfilled with the reason
-of the last failure. The wage below 1 of 5.4.1 belongs to the pair and skips the vacancy for
+of the last failure. A vacancy whose fit is still above 0 after a failed block check stays open, and a round that ends with it unfilled counts its positions as `no_labour`. The wage below 1 of 5.4.1 belongs to the pair and skips the vacancy for
 this offer only.
 
 1. **`too_many_hires`**: the hires open in the lane's region are `MaxOpen` (13). The lane is
