@@ -859,8 +859,11 @@ ascending `FacilityID`:
   improvement go on working: their effect does not ask who owns them. A site is
   **idle**: the estate has no strategy and runs no recipe, and the facility decays;
 - a **store** facility is ruined with cause `owner_removed`: the store is part of the
-  account, which is closed (its goods go to the estate at step 4 like any goods; storage's `StoreChanged` comes
-  first, `spec-world.md` 6.11 item 8).
+  account, which is closed (its goods go to the estate at step 4 like any goods). Storage's step of a removal
+  ends the stores with the account and emits no event (`spec-storage.md` 3.5.1, `dropStorage`), so the
+  removal emits one `FacilityChanged` (`ruined`, cause `owner_removed`, `GoodsListed` 0) and **no
+  `StoreChanged`**. This differs from the ruin at P8.3b (6.3.2), where the account stays open and storage's
+  `StoreChanged` comes first (settled in favour of the merged storage code, plan 3-cap Phase 1).
 
 The events come **before** `AgentBankrupted` and `EstateOpened` (every event of a removal
 precedes `AgentBankrupted`, `spec-world.md` 6.11 item 8, ruling C28), in ascending
@@ -1478,9 +1481,11 @@ the owner holds (`spec-storage.md` 15.1; `RemoveStore` keeps it so, 5.4.3), and 
 account of an installed facility is in the facility's `Region` (5.4.3); a store
 facility's owner is not an estate.
 
-15.4. **Format version.** The checkpoint gains a section with the module on, so the
-format version changes with the first release that has the module
-(`spec-checkpoint.md` 9.3), and a fixture of it joins `testdata/checkpoints/`.
+15.4. **Format version.** The checkpoint gains a section (tag 27) with the module on and none with it
+off, so a world with the module off writes the bytes it wrote before (N-318). Nothing has been released,
+so the section is written into format 1 and the format version is not bumped before the first release
+that has a later-stage module (`spec-checkpoint.md` 9.3); the fixtures of `testdata/checkpoints/` do not
+move for this module, and its own restore test builds its world from its overlay.
 
 15.5. **Not state:** the effect tables, the per-tick counters, the events, the
 warnings, and the recipes' `Needs`, `Builds` and `Repairs` (configuration, hashed). The
@@ -1866,7 +1871,7 @@ placeholders (N-015, N-027).
 | FR-CAP-027 | A store facility MUST NOT be transferable; it MUST be ruined (cause `role_changed`) when its owner's role has no base room and (cause `owner_removed`) when its owner is removed. |
 | FR-CAP-028 | P8.3b MUST run, in this order and in ascending ID, the decay, the ruin, the install, the rebuild of the effect tables with the ground clamp, and the report, after P8.3 and before the audit. |
 | FR-CAP-029 | The effect tables MUST be derived from the facility records and the configuration alone, rebuilt in full at P8.3b and at each call that changed a facility, and not saved. |
-| FR-CAP-030 | On the removal of an owner a site, route or ground facility MUST pass to the estate of its region with `FacilityChanged` (kind `transferred`, cause `owner_removed`) at step 2g of the removal, before `AgentBankrupted` and `EstateOpened`, in ascending ID. |
+| FR-CAP-030 | On the removal of an owner a site, route or ground facility MUST pass to the estate of its region with `FacilityChanged` (kind `transferred`, cause `owner_removed`) at step 2g of the removal, before `AgentBankrupted` and `EstateOpened`, in ascending ID; a store facility MUST be ruined at the same step with `FacilityChanged` (kind `ruined`, cause `owner_removed`) and no `StoreChanged` (7.1.1). |
 | FR-CAP-031 | A facility MUST NOT scale with its owner's weight, MUST stay in place when its owner relocates or changes role, and the module MUST register no `region_bound` refusal for a site, route or ground facility. |
 | FR-CAP-032 | The class's `Needs` flag MUST be tested only at the start of a build and at `AddFacilities`, MUST NOT remove or disable a facility, and MUST NOT gate an initial row (warning `facility_gate_closed`). |
 | FR-CAP-033 | The `Work` view MUST carry the agent's own facilities in its region in ascending ID, at most `MaxFacilitiesPerAgent`, and the per-recipe `MaxExecutions` MUST be the `k0` of 4.2.2. |

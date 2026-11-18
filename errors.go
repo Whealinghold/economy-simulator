@@ -638,6 +638,34 @@ var (
 	ErrNotAHolder = errors.New("agent cannot hold a title")
 )
 
+// The sentinels of the infrastructure module (spec-infrastructure.md 13.1,
+// FR-CAP-003, FR-CAP-004), matched with errors.Is (N-075). The module reuses
+// ErrOutOfBounds, ErrDuplicateID, ErrUnknownMode, ErrUnknownResource,
+// ErrUnknownStoreClass, ErrUnknownRegion, ErrUnknownRole, ErrSameRegion,
+// ErrOutsideNode, ErrUnknownEdge, ErrModuleDependency, ErrEligibleHasTool,
+// ErrRecipeNoOutput and ErrOverflow.
+var (
+	// ErrFacilityShape is a facility class with a field its kind does not use or
+	// without one it requires, a clause that does not fit its class, both Builds and
+	// Repairs on a recipe, a Needs class that is not a site or is listed twice, an
+	// output of a Builds or Repairs recipe that is not a discard, or a store row with no
+	// role (spec-infrastructure.md 3.1.2, 4.1.2).
+	ErrFacilityShape = errors.New("facility configuration has the wrong shape")
+	// ErrFacilityNoCost is a recipe with Builds or Repairs and no input: capital is
+	// never free (spec-infrastructure.md 4.1.2 B2).
+	ErrFacilityNoCost = errors.New("build or repair recipe has no input")
+	// ErrFacilityHolder is an initial row whose role has no agent in the region, or a
+	// store row whose role has no base room (spec-infrastructure.md 3.4.2).
+	ErrFacilityHolder = errors.New("initial facilities have no holder")
+	// ErrFacilityCount is initial rows that add up to more than MaxFacilities, or a
+	// round robin that would give an agent more than MaxFacilitiesPerAgent
+	// (spec-infrastructure.md 3.2.3).
+	ErrFacilityCount = errors.New("too many facilities")
+	// ErrUnknownFacilityClass is a recipe clause or an initial row that names a
+	// facility class that is not configured.
+	ErrUnknownFacilityClass = errors.New("unknown facility class")
+)
+
 // The sentinels of the institutions module (spec-institutions.md 10.1, 7.1.1). They
 // are root sentinels matched with errors.Is; the module reuses ErrInvalidID,
 // ErrDuplicateID, ErrTooMany, ErrModuleDependency, ErrUnknownRole, ErrUnknownRegion,

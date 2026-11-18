@@ -145,6 +145,8 @@ economy-sim/
   polity_validate.go                                                  (POL)
   employment_validate.go  employment_round.go  employment_hire.go
   employment_report.go  employment_strategy.go                        (EMP)
+  infrastructure_validate.go  infrastructure_step.go  infrastructure_calls.go
+  infrastructure_build.go  infrastructure_report.go  infrastructure_state.go     (CAP)
   institutions_validate.go  institutions_warn.go  institutions_round.go
   institutions_rights.go  institutions_legal.go  institutions_report.go  (ORG)
 
@@ -1094,4 +1096,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 1a9a861462a7c00dc57831a1
+RULE-TAG: fd214edee29bc0e10c18a4c7

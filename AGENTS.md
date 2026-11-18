@@ -150,6 +150,8 @@ economy-sim/
 │   polity_validate.go (POL)
 │   employment_validate.go employment_round.go employment_hire.go
 │   employment_report.go employment_strategy.go (EMP)
+│   infrastructure_validate.go infrastructure_step.go infrastructure_calls.go
+│   infrastructure_build.go infrastructure_report.go infrastructure_state.go (CAP)
 │   institutions_validate.go institutions_warn.go institutions_round.go
 │   institutions_rights.go institutions_legal.go institutions_report.go (ORG)
 │                           # CONTINUATION files: a concept past the Lizard limits

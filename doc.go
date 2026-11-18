@@ -1646,6 +1646,53 @@
 //     in place of the trainee factor.
 //   - open_hire: the refusal of a relocation of an agent that is the principal of an
 //     open hire (ErrRegionBound).
+//   - Infrastructure: the optional module of fixed capital; its presence in Config.Modules
+//     (Infrastructure is its configuration) switches it on (spec-infrastructure.md).
+//   - Facility: a record of fixed capital with an owner, a region, a class and a condition;
+//     it is not a good and it has no ledger account (FacilityID is its ID, issued in order
+//     of creation and never reused; FacilityState, FacilityView and FacilityRow are its
+//     forms at a query, in a strategy's view and in the snapshot).
+//   - Facility class: data, keyed by ID: a kind and the fields the kind uses (FacilityClass
+//     is its configuration row, FacilityClassID its typed ID, an index in ascending ID
+//     order).
+//   - Kind (of a facility class): one of four constants, site, route, ground or store; the
+//     words are kinds and not entities of the world, and they are not the words of the
+//     other specs with the same spelling (a route is not a region edge, a site is not the
+//     site factor of a yield profile). FacilityKind is the closed set of the transitions of
+//     a facility, not this.
+//   - Site: a facility that a recipe needs (Recipe.Needs) and that serves a number of
+//     executions a tick.
+//   - Route (facility): a facility that speeds the transit factor of an edge.
+//   - Ground improvement: a facility that raises the effective capacity of an endowment.
+//   - Store facility: a facility that installs a store of a store class in its owner's
+//     account.
+//   - Condition: the wear units a facility has left, from 1 to the durability of its class
+//     (0 is ruin and the record is removed). The durability of a class is not the
+//     durability of a commodity.
+//   - Decay: the units of condition a facility loses each tick, used or not.
+//   - Use wear: the units a site loses for each execution it serves, at the start of the
+//     job.
+//   - Effect fraction: the share of its effect a facility gives, its condition over its
+//     durability, rounded down for a gain and up for a capacity.
+//   - Gain (of facilities): the capped sum of the effect fractions of the route or ground facilities that
+//     apply to a pair or an endowment, in basis points.
+//   - Ruin: the end of a facility, at condition 0; the ID is not reused.
+//   - Repair: a job whose completion restores condition to the principal's facilities,
+//     most worn first (FacilityRepair is its clause).
+//   - Build: a job whose completion creates facilities for its principal (FacilityBuild is
+//     its clause; InitialFacility is the row that creates them at construction, NewFacility
+//     the entry of a call).
+//   - Commissioning: the entry of a new facility into the effect tables, at the next
+//     facility step P8.3b, so a facility built in a tick acts from the next.
+//   - Effect table: the per-class and per-region capacities, gains and counts derived from
+//     the facility records; rebuilt at P8.3b and at a call, never saved.
+//   - Install, pending (of a store facility): a store facility is installed when the store
+//     is added to its owner's account; it is pending while the owner is away, has no room
+//     or has moved.
+//   - FacilityAdjustment, FacilityTransfer: the entries of the calls that set a condition
+//     and move a facility to another owner.
+//   - FacilityChanged, FacilityLimited: the events of a facility transition and of the
+//     facility step's aggregate of a region and class.
 //   - Body: a named set of households selected by role and region, with a limit on how many
 //     (its places), a limit on its members' trainees and an optional need. It has no account,
 //     agent ID or state of its own. Institutions is the module's configuration, Body its row,
