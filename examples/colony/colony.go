@@ -16,7 +16,7 @@ import (
 // packFS holds the pack: byte copies of testdata/chains/second/ in the root module,
 // guarded there by TestExamples_PackCopiesAgree (D687).
 //
-//go:embed pack/second.toml pack/warm-second.toml
+//go:embed pack/second.toml pack/warm-second.toml pack/credit.toml
 var packFS embed.FS
 
 // packLayers are the layers of the pack, in merge order.
@@ -41,6 +41,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	ticks := fl.Int64("ticks", 400, "ticks to run")
 	every := fl.Int64("every", 100, "ticks between two lines")
 	audit := fl.Bool("audit", false, "audit the books after every step")
+	borrow := fl.Bool("borrow", false, "run the borrowing player of borrow.go instead of the report")
 	if err := fl.Parse(args); err != nil {
 		return 2
 	}
@@ -51,6 +52,13 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	if *ticks < 0 || *every < 1 {
 		fmt.Fprintf(stderr, "colony: -ticks %d and -every %d must be at least 0 and 1\n", *ticks, *every)
 		return 2
+	}
+	if *borrow {
+		if err := Borrower(stdout, *seed, *ticks); err != nil {
+			fmt.Fprintf(stderr, "colony: %v\n", err)
+			return 1
+		}
+		return 0
 	}
 	if err := report(stdout, *seed, *ticks, *every, *audit); err != nil {
 		fmt.Fprintf(stderr, "colony: %v\n", err)
