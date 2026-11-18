@@ -244,6 +244,8 @@ func hasOutlet(c *Config, r *Role) bool {
 // reference prices (spec-employment.md 14.2). The prices are those of the dearest
 // region where the role has a group, so a warning means no region of the role
 // would do better; a role with no group (a role for external agents) draws none.
+// A value that does not fit int64 is unknown, not low: it draws no
+// hire_never_profitable for its recipe and no wage warning for the role.
 func employerPriceWarnings(c *Config, lk lookup, r *Role, workers []*Role) []Warning {
 	regions := groupRegions(c, r.ID)
 	if len(regions) == 0 {
@@ -252,16 +254,25 @@ func employerPriceWarnings(c *Config, lk lookup, r *Role, workers []*Role) []War
 	var out []Warning
 	eb := []string{"roles", r.ID, "employer"}
 	best, longest := int64(0), int64(1)
+	unknown := false
 	for _, id := range r.Employer.Recipes {
 		rc := lk.recipe[id]
 		if rc == nil || rc.Duration < 1 {
 			continue
 		}
-		net := bestNetPerTick(lk, regions, rc, r.Employer.HireYieldBP)
-		if net < 1 {
+		net, complete := bestNetPerTick(lk, regions, rc, r.Employer.HireYieldBP)
+		switch {
+		case net >= 1:
+		case complete:
 			out = append(out, Warning{Path: append(slices.Clone(eb), "recipes", id), Rule: "hire_never_profitable"})
+		default:
+			unknown = true // a region's value did not fit int64: no claim about this recipe
 		}
+		unknown = unknown || !complete
 		best, longest = max(best, net), max(longest, rc.Duration)
+	}
+	if unknown {
+		return out // best is only a lower bound, so the wage warnings would be guesses
 	}
 	return append(out, wageWarnings(c, lk, r, workers, regions, best, longest)...)
 }
@@ -298,18 +309,21 @@ func groupRegions(c *Config, role string) []string {
 // bestNetPerTick is the most, over the regions, that one tick of a hired execution
 // of the recipe is worth at the reference prices: the non-discard outputs at the
 // hired yield less the inputs, over the Duration, rounded down (the Bid of
-// spec-employment.md 4.3.3 at a yield table entry of 1). 0 where a product does
-// not fit.
-func bestNetPerTick(lk lookup, regions []string, rc *Recipe, yieldBP int64) int64 {
-	best := int64(0)
+// spec-employment.md 4.3.3 at a yield table entry of 1). complete is false when a
+// product did not fit int64 in some region: the value is then a lower bound, and a
+// caller must not read a low value as "never profitable".
+func bestNetPerTick(lk lookup, regions []string, rc *Recipe, yieldBP int64) (best int64, complete bool) {
+	complete = true
 	for _, g := range regions {
 		out, ok := outputValue(lk, g, rc, yieldBP)
 		in, ok2 := itemsValue(lk, g, rc.Inputs)
-		if ok && ok2 {
-			best = max(best, (out-in)/rc.Duration)
+		if !ok || !ok2 {
+			complete = false
+			continue
 		}
+		best = max(best, (out-in)/rc.Duration)
 	}
-	return best
+	return best, complete
 }
 
 // outputValue is the value of the non-discard outputs of one execution at the
