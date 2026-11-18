@@ -2120,6 +2120,7 @@ func warnings(c *Config) []Warning {
 	out = append(out, infrastructureWarnings(c, lk)...)
 	out = append(out, institutionsWarnings(c, lk)...)
 	out = append(out, fiscalWarnings(c, lk)...)
+	out = append(out, employmentWarnings(c, lk)...)
 	sortWarnings(out)
 	return out
 }

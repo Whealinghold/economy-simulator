@@ -290,6 +290,24 @@ func DefaultOutsideGate(region string) OutsideGate {
 // spec-employment.md 24.3.2: 5 000 basis points of the receipts (N-015, N-027).
 func DefaultEmployer() Employer { return Employer{PayrollBP: 5_000} }
 
+// DefaultMaxOpen is the placeholder of Employment.MaxOpen: at most 1 000 hires
+// open at once in a region (spec-employment.md 13; N-015, N-027). canonical writes
+// it for a hire form that leaves MaxOpen at 0.
+const DefaultMaxOpen = 1_000
+
+// DefaultEmployment returns the employment module in its hire form with the
+// placeholder tunable of spec-employment.md 13: at most 1 000 hires open at once
+// in a region. The payroll form is the zero Employment.
+func DefaultEmployment() Employment { return Employment{Hire: true, MaxOpen: DefaultMaxOpen} }
+
+// DefaultHireEmployer returns the employer block of the hire form with the
+// placeholders of spec-employment.md 13 (N-015, N-027): an establishment of 4, the
+// midpoint worker share (5 000) and a hired yield of 10 000. Recipes, the hire
+// list, has no default, so the block does not validate until the caller sets it.
+func DefaultHireEmployer() Employer {
+	return Employer{MaxHires: 4, WorkerShareBP: 5_000, HireYieldBP: 10_000}
+}
+
 // The polity module (spec-polity.md 8) has no tunable with a default: a tree and
 // a membership are structure, and the default of the section as a whole is "no
 // jurisdictions", which is the world without the module. Its bounds are in

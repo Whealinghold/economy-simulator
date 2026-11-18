@@ -350,8 +350,8 @@ func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	}
 	e.flag(23, r.Hireable)
 	if r.Employer != nil {
-		e.id(24) // written even when PayrollBP is zero: a non-nil block is an employer role
-		e.num(1, r.Employer.PayrollBP)
+		e.id(24) // written even when every field is zero: a non-nil block is an employer role
+		pairsEmployer(e, *r.Employer)
 		e.end()
 	}
 	if r.Credit != nil {
@@ -522,6 +522,7 @@ func pairsLaterModules(e *encoder, m Modules) {
 	}
 	if m.Employment != nil {
 		e.id(13)
+		pairsEmployment(e, *m.Employment)
 		e.end()
 	}
 	if m.Tenure != nil {
@@ -530,6 +531,28 @@ func pairsLaterModules(e *encoder, m Modules) {
 		e.end()
 	}
 	pairsLastModules(e, m)
+}
+
+// pairsEmployment writes the pairs of the employment module: Hire 1 only when
+// true and MaxOpen 2 only with Hire (spec-employment.md 24.5.1), so the payroll
+// form, which has neither, hashes as it did before the hire form.
+func pairsEmployment(e *encoder, m Employment) {
+	e.flag(1, m.Hire)
+	if m.Hire {
+		e.num(2, m.MaxOpen)
+	}
+}
+
+// pairsEmployer writes the pairs of an employer block: PayrollBP 1 only when
+// non-zero (every valid payroll block has it at least 1, so no payroll hash
+// moves), then the hire form's Recipes 2 (a set, sorted by canonical), MaxHires 3,
+// WorkerShareBP 4 and HireYieldBP 5.
+func pairsEmployer(e *encoder, b Employer) {
+	e.num(1, b.PayrollBP)
+	e.texts(2, b.Recipes)
+	e.num(3, b.MaxHires)
+	e.num(4, b.WorkerShareBP)
+	e.num(5, b.HireYieldBP)
 }
 
 // pairsLastModules writes the pairs of the modules of ids 15, 16, 17, 19, 20, 21, 24 and 25 of

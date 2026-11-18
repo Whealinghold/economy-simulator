@@ -873,28 +873,73 @@ func (m *Risk) canonical() *Risk {
 	return &out
 }
 
-// Employment is the employment module in its payroll form (spec-employment.md
-// 24.3.1). It has no field: its presence is the switch. MaxOpen of the hire form
-// is appended with that form.
-type Employment struct{}
-
-// Employer is the employer block of a role, a pointer of Role: nil means the
-// role does not pay wages (spec-employment.md 24.3.2). Start from
-// DefaultEmployer. It needs Modules.Employment.
-type Employer struct {
-	// PayrollBP is the share of the payer's receipts of the tick that is paid as
-	// wages, in basis points, 1 to 10 000 (spec-employment.md 24.1.3). The
-	// default is a placeholder (N-015, N-027). Its hash id is 1.
-	PayrollBP int64
+// Employment is the employment module (spec-employment.md 3.1, 13, 24.3.1). Its
+// presence is the switch. With Hire false it is the payroll form (24), the zero
+// value, which has no other field. With Hire true it is the hire form (3 to 17).
+// The two forms never run together (24.3.2). Start from DefaultEmployment.
+type Employment struct {
+	// Hire selects the hire form. Its hash id is 1, written only when true.
+	Hire bool
+	// MaxOpen is the most hires open at once in a region (spec-employment.md 5.5
+	// check 1), 1 to MaxHireRecords; read only with Hire. A zero value takes
+	// DefaultMaxOpen in canonical form. Its hash id is 2, written only with Hire.
+	MaxOpen int64
 }
 
-// canonical returns a copy of the block, nil for nil, so that the canonical
-// configuration shares no pointer with the caller's.
+// Employer is the employer block of a role, a pointer of Role: nil means the
+// role neither hires nor pays wages (spec-employment.md 3.2, 24.3.2). In the
+// payroll form (Employment.Hire false) only PayrollBP is read and the four hire
+// fields must be empty or 0; in the hire form PayrollBP must be 0 and the four
+// hire fields are read (one form per world, ErrEmploymentShape). Start from
+// DefaultEmployer (payroll) or DefaultHireEmployer (hire). It needs
+// Modules.Employment.
+type Employer struct {
+	// PayrollBP is the share of the payer's receipts of the tick that is paid as
+	// wages, in basis points, 1 to 10 000 in the payroll form (spec-employment.md
+	// 24.1.3) and 0 in the hire form. The default is a placeholder (N-015,
+	// N-027). Its hash id is 1, written only when non-zero.
+	PayrollBP int64
+	// Recipes is the hire list: the recipes a hired household may run for the
+	// role, a subset of Role.Recipes, at least one and none twice
+	// (spec-employment.md 3.2). It is a set: canonical sorts it. Hire form only.
+	// Its hash id is 2.
+	Recipes []string
+	// MaxHires is the establishment: the most hired executions in progress at
+	// once, 1 to MaxEstablishment. Hire form only. Its hash id is 3.
+	MaxHires int64
+	// WorkerShareBP is the share of the margin between the worker's reservation
+	// and the employer's bid that the worker receives, in basis points, 1 to
+	// 10 000 (spec-employment.md 5.4). Hire form only. Its hash id is 4.
+	WorkerShareBP int64
+	// HireYieldBP is the factor on the yield of a hired execution, in basis
+	// points, 1 to MaxYieldBP (spec-employment.md 6.1). Hire form only. Its hash
+	// id is 5.
+	HireYieldBP int64
+}
+
+// canonical returns a copy of the block with the hire list sorted, nil for nil,
+// so that the canonical configuration shares no pointer or slice with the
+// caller's.
 func (e *Employer) canonical() *Employer {
 	if e == nil {
 		return nil
 	}
 	out := *e
+	out.Recipes = sortedBy(e.Recipes, cmp.Compare[string])
+	return &out
+}
+
+// canonical returns a copy of the module, nil for nil. In the hire form a MaxOpen
+// of 0 takes the default (N-345: a field the module owns may default to a value
+// that is not zero); the payroll form has no field to default.
+func (m *Employment) canonical() *Employment {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	if out.Hire && out.MaxOpen == 0 {
+		out.MaxOpen = DefaultMaxOpen
+	}
 	return &out
 }
 
@@ -1992,6 +2037,7 @@ func (c Config) canonical() Config {
 	out.Modules.Infrastructure = c.Modules.Infrastructure.canonical()
 	out.Modules.Institutions = c.Modules.Institutions.canonical()
 	out.Modules.Fiscal = c.Modules.Fiscal.canonical(c.Calendar.Seasons)
+	out.Modules.Employment = c.Modules.Employment.canonical()
 	return out
 }
 

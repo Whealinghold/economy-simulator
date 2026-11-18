@@ -44,10 +44,6 @@ var notBuilt = []string{
 	// Fields that a module appends to the core types Recipe, Region and Role.
 	"Role.Cover",
 	"Role.Saver",
-	// The fields of the hire form of the employment module, which the payroll form
-	// does not have (spec-employment.md 24.3).
-	"Employment.Hire", "Employment.MaxOpen", "Employer.Recipes", "Employer.MaxHires",
-	"Employer.WorkerShareBP", "Employer.HireYieldBP",
 	// Scopes (Go type names) of the modules that are not built.
 	"CoverTerms",
 	"Insurance", "Insure",

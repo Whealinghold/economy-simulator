@@ -50,14 +50,14 @@ PR description.
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386 |
-| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-433 |
-| CHK | N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435 |
+| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433 |
+| CHK | N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-390, N-427 |
+| CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-424, N-425 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361 |
@@ -68,16 +68,16 @@ PR description.
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
-| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-391, N-435, N-436 |
+| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436 |
 | LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-385, N-386, N-427, N-437 |
+| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-437 |
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
-| PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358 |
+| PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385 |
@@ -2250,6 +2250,7 @@ PR description.
 - **Raised:** 2026-11-12, plan 2-28 Phase 1 (`spec-employment.md` 24); narrowed 2026-11-12, plan 2-28 Phase 3.
 - **Note:** The payroll form owed the position, the catalogue rows (`PayrollPaid`, `economysim.payroll.paid`), the reason `wage_pay` and the pooled-wage hook; Phase 3 built them (`p41bPayroll`, `internal/ledger.WagePay` with the row agent to agent, rank and code 23). What stays owed: the hire form appends `MaxOpen` to `Employment` and the hire block to `Employer` with the next free ids, adds the pairing escrow to agent to the `wage_pay` row of `internal/ledger` (the spec row already names both), and does not reuse `PayrollBP` for `WorkerShareBP`.
 - **Update (2026-11-18, plan 3-emp Phase 1):** applied in the spec, not yet in code: `spec-employment.md` 13, 24.3 and `spec-config.md` 8.2.2 take the next free ids (`Employment.Hire` 1, `MaxOpen` 2; `Employer.Recipes` 2, `MaxHires` 3, `WorkerShareBP` 4, `HireYieldBP` 5) and `PayrollBP` is written only when non-zero (N-371). The `wage_pay` row takes the second pairing in PR 3. Left open until PR 3.
+- **Update (2026-11-18, plan 3-emp PR 2):** the ids are in code (`hash.go`, `pairsEmployment`, `pairsEmployer`) and pinned by `TestHash_EmploymentHireEncodingPinned`; `PayrollBP` is written only when non-zero. The `wage_pay` pairing is still PR 3 (codes: N-429).
 
 ### N-356 The payroll-aware solver: what it assumes and where it stops
 
@@ -2491,6 +2492,31 @@ PR description.
 - **Areas:** EMP, WLD, OBS
 - **Raised:** 2026-11-18, plan 3-emp Phase 1 (D10).
 - **Note:** The first draft of 6.5.2 listed the worker's `HireEnded` before `TraineeshipEnded` and `ContractSettled`. `observability-and-logging.md` 4.3 and `removeAgent` put step 2c after the tenure call (`TitleTransferred`) and before `dropClaims`, so the order is: the job's `RecipeAbandoned`, `TraineeshipEnded`, `ContractSettled`, `TitleTransferred`, `HireEnded` (the worker's side, then the employer's in ascending hire ID), `LoanEnded`, `LoanPassed`, `CoverEnded`, `FacilityChanged`, `AgentBankrupted`, `EstateOpened`. 6.5.2 is corrected in the same change (Phase 1). A module that adds a step to a removal appends it to this order and does not insert it.
+
+### N-428 `Employment.MaxOpen` with `Hire` false is `ErrEmploymentShape`
+
+- **Areas:** EMP, CFG
+- **Raised:** 2026-11-18, plan 3-emp PR 2 (`employment_validate.go`).
+- **Note:** `MaxOpen` is written to the hash only with `Hire`, so a payroll world with `MaxOpen` set would hash like one without it. The validator refuses it (`ErrEmploymentShape` at `modules.employment.max_open`, bound 0), as it refuses the four hire fields of a block in the payroll form. `spec-employment.md` 14.1 names the mixed form only for the block; the clause is owed to the next change of that spec. The loader reads the form of a block from its keys (any of `recipes`, `max_hires`, `worker_share_bp`, `hire_yield_bp` means the hire form), so the order of the tables does not matter.
+
+### N-429 The ledger codes of `wage_escrow` and `wage_refund` are 22 and 24
+
+- **Areas:** EMP, LED, CHK
+- **Raised:** 2026-11-18, plan 3-emp PR 2 (`internal/ledger/checkpoint.go`, `TestReasonCode_Pinned`).
+- **Note:** Plan 3-emp D5 guessed codes 42 and 43. The pinned table of `spec-ledger.md` 7.2 has 42 rows (`pinnedRows`) and already names `wage_escrow` at row 22 and `wage_refund` at row 24; a code of 42 or more is the code of a configured money flow. PR 3 pins `ReasonWageEscrow` to 22 and `ReasonWageRefund` to 24 and adds the constants to `reasonCodes` and `reasonNames`.
+
+### N-430 What the hire form owes the payroll hooks and the overflow check
+
+- **Areas:** EMP, PRO, CODE
+- **Raised:** 2026-11-18, plan 3-emp PR 2 (config only, nothing runs yet).
+- **Note:** (a) P4.1b must not run in the hire form (D1): `newEmployment` still marks an employer role a payer and `collect` still walks the agents; guard it by the form flag in PR 3. (b) The derived overflow check of `spec-production.md` 10.3 (`yieldMax` in `validate.go`) must take `HireYieldBP` of the hire-list recipes into the largest yield factor (`spec-employment.md` 14.1, last paragraph); PR 2 does not, because no hired output exists yet. Whoever builds the hired job adds it with a failing-case test.
+
+### N-431 The warnings of the hire form that read prices
+
+- **Areas:** EMP, CFG
+- **Raised:** 2026-11-18, plan 3-emp PR 2 (`employment_validate.go`).
+- **Note:** `hire_never_profitable`, `wage_below_upkeep` and `payroll_exceeds_money` value the hire list "at the reference prices" and the spec gives no region. They use the dearest region where the employer role has a group, a yield-table entry of 1 and the non-discard outputs at `HireYieldBP`; `wage_below_upkeep` compares with one tick of upkeep of any Hireable role; a role with no group draws none of the three. A sharper rule (per region, with the yield tables) is a spec change.
+
 ### N-373 The keyed draws of the risk module
 
 - **Areas:** RSK, WLD
@@ -2515,6 +2541,12 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-rsk D14, `spec-indicators.md` 9.1 row 25, FR-IND-059.
 - **Note:** `indicator/tally_observe.go` is near 500 lines of Go, so the `Observe` cases for the lost units, the strikes and `StoreLoss` go in `indicator/tally_loss.go`, with one dispatch line in the old file. The EMP presets 22 to 24 take their own files when their plan lands.
 
+### N-432 The metrics of the hire form wait for the adapter PR
+
+- **Areas:** EMP, OBS
+- **Raised:** 2026-11-18, plan 3-emp PR 2 observability review (Q5 of the plan: defer).
+- **Note:** PR 2 is configuration only: no event, no snapshot field, no run-time log. Its nine warnings of `spec-employment.md` 14.2 go through `logWarnings` (`Warn`, the constant message "configuration warning", the keys `rule` and `path` with IDs and no indices, once per entity of the configuration at construction), so nothing is added in the core. The rows of 5.3 that exist and that the adapter PR of `otelobserver/` records, once `HireFormed`, `HireEnded` (PR 3) and `LabourRound` (PR 5) are built: `economysim.vacancy.unfilled` by employer role and reason (the first look when no hire forms, and the run-time view of what `hire_never_profitable` and `wage_below_upkeep` warn of), `economysim.labour.unmatched` (workers offered and not hired), `economysim.hire.formed` and `economysim.hire.wage` (rate of hires and the wage paid), `economysim.hire.escrow` (wages held, the part of `economysim.money.supply` under `contract`). The adapter's cardinality test takes the eleven labour reasons into `economysim.reason`. A gauge of open hires from `Hires[]` of the snapshot has no row in 5.3; the adapter PR decides whether it earns one.
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2525,4 +2557,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: db64bf618e45d4a1d49f4eba
+NOTES-TAG: 32155b3b10878a70639f08fe
