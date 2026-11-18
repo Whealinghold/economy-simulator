@@ -88,7 +88,14 @@ func (s shipper) provisioned(v *economysim.AgentView, to economysim.RegionID) bo
 // the roles on the shipper, and the option that registers it.
 func shipperPack(t testing.TB) (economysim.Config, []economysim.Option) {
 	t.Helper()
-	cfg := loadValidPack(t, packTwoTransport...)
+	return shipperPackOn(t, packTwoTransport)
+}
+
+// shipperPackOn is shipperPack over the layers of another pack that has the transport
+// overlay of pack two (the storage pack of S94 adds its overlay after it).
+func shipperPackOn(t testing.TB, layers []string) (economysim.Config, []economysim.Option) {
+	t.Helper()
+	cfg := loadValidPack(t, layers...)
 	rec := &recorder{}
 	if _, err := economysim.NewWorld(cfg, economysim.WithObserver(rec)); err != nil {
 		t.Fatalf("NewWorld() error = %v, want nil", err)
