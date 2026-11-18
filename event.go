@@ -314,6 +314,10 @@ const (
 	// tenure module is on.
 	ReasonRent      Reason = "rent"
 	ReasonTitleSale Reason = "title_sale"
+	// ReasonLoss is the goods a strike of the risk module takes: a sink from a
+	// Transit or an agent account to the boundary (spec-risk.md 7.1), reserved as a
+	// money flow ID while the risk module is on.
+	ReasonLoss Reason = "loss"
 )
 
 // The declared ledger reasons of the external module, six rows declared while
