@@ -412,6 +412,14 @@ const (
 	// ReasonNoEndowment is a start for which the ration granted no execution of
 	// a draw, or the live stock does not cover one (resources module).
 	ReasonNoEndowment Reason = "no_endowment"
+	// ReasonNoTitle is a start of a draw on an endowment whose tenure opens no unit of
+	// the stock to the principal by rule: the stock could serve an execution but a
+	// closed tenure reserves every unit for others (tenure module, spec-land.md 4.5.1).
+	ReasonNoTitle Reason = "no_title"
+	// ReasonRentFunds is a start that the principal's balance made 0: the request was
+	// priced out of the let tier or its let executions were cut for rent (tenure
+	// module, spec-land.md 4.5.1, 5.4).
+	ReasonRentFunds Reason = "rent_funds"
 )
 
 // The reasons of the "work declined" Debug line that no start refusal covers

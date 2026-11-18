@@ -46,7 +46,6 @@ var stageTwoScenarios = []struct {
 var scenariosNotBuilt = map[int]string{
 	35:  "plan 7 (MON-S3, the pool grant); not built when plan 2-24 was written",
 	75:  "plan 24: WLD-S3, the cold leg of S18 and the Duration 10 leg, which waits for a pack with such a recipe",
-	107: "plan 3-lnd PR 4 (LND-S1, the tiers on a refilling endowment)",
 	108: "plan 3-lnd PR 5 (LND-S2, the rent step)",
 	109: "plan 3-lnd PR 5 (LND-S3, the closed case)",
 	110: "plan 3-lnd PR 5 (LND-S4, the erosion by removals)",

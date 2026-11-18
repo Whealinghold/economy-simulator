@@ -114,7 +114,12 @@ type resDraw struct {
 // 5.2 step 2), granted at P2.6 and read by the start at P2.7. cell is the dense
 // index of the endowment.
 type resRequest struct {
-	agent      AgentID
+	agent AgentID
+	// principal is the account whose inputs the job uses, the agent itself unless a
+	// trainer's traineeship or a hire runs it (spec-land.md 4.3, 4.7.2); recipe is the
+	// recipe of the request. The tenure module reads both.
+	principal  AgentID
+	recipe     RecipeID
 	cell       int
 	executions int64
 	draw       int64

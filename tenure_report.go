@@ -229,3 +229,66 @@ func (t *tenure) readSparse(w *World, r *codec.Reader, k int, set func(cell int,
 		}
 	}
 }
+
+// rentsInForce is the rent in force of every endowment, dense by region and resource,
+// for the cost anchor of P1.2 (spec-land.md 5.7.1). The slice is the module's scratch.
+func (t *tenure) rentsInForce() []int64 {
+	if t.rt.rents == nil {
+		t.rt.rents = make([]int64, len(t.holds))
+	}
+	for cell := range t.rt.rents {
+		t.rt.rents[cell] = t.rentInForce(cell)
+	}
+	return t.rt.rents
+}
+
+// shortAdjusted is the units short that the Warn "endowment exhausted" reads with
+// tenure data: Short less the units of unused entitlement that a closure held and that
+// were let and not drawn, which are in the stock (spec-land.md 13.1.4). An endowment
+// with no title is as RES says.
+func (t *tenure) shortAdjusted(cell int, short int64) int64 {
+	if !t.titled(cell) || cell >= len(t.rt.counts) {
+		return short
+	}
+	c := &t.rt.counts[cell]
+	return short - min(short, c.held+c.idleUnits())
+}
+
+// fillTenure sets what the view carries of tenure (spec-land.md 4.6): per endowment the
+// rent in force, the agent's own share and entitlement and whether it is closed, and
+// per recipe the rent of one execution and the bound the title puts on MaxExecutions,
+// with the reason no_title when a closed tenure leaves no unit open to the agent
+// though the stock holds one. It carries no other holder's share.
+func (t *tenure) fillTenure(v *AgentView, a *agent) {
+	for i := range v.Endowments {
+		e := &v.Endowments[i]
+		cell := int(v.Region)*t.resources + int(e.Resource)
+		e.Posted, e.Closed = t.rentInForce(cell), t.closed[cell]
+		e.ShareBP, e.Entitled = t.shareOf(cell, a.id), t.entitled(cell, a.id)
+	}
+	for i := range v.Recipes {
+		t.fillRecipe(&v.Recipes[i], v.Region, a)
+	}
+}
+
+// fillRecipe sets the rent and the title bound of one recipe of a view.
+func (t *tenure) fillRecipe(r *RecipeView, region RegionID, a *agent) {
+	res := t.world.res
+	for _, d := range res.drawsOf[r.Recipe] {
+		cell := int(region)*t.resources + int(d.resource)
+		rent, ok := checked.Mul(d.quantity, t.rentInForce(cell))
+		sum, added := checked.Add(r.Rent, rent)
+		if r.Rent = sum; !ok || !added {
+			r.Rent = math.MaxInt64
+		}
+		if !t.titled(cell) || len(t.rt.ents) == 0 || r.MaxExecutions == 0 {
+			continue
+		}
+		if b := t.open(cell, a.id) / d.quantity; b < r.MaxExecutions {
+			r.MaxExecutions = b
+			if b == 0 && res.snapStock[cell]/d.quantity > 0 {
+				r.Reason = ReasonNoTitle
+			}
+		}
+	}
+}

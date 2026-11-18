@@ -301,7 +301,7 @@ func (w *World) admitJob(a *agent, region RegionID, req JobRequest) {
 		return
 	}
 	ask := jobAsk{recipe: req.Recipe, maximum: req.Executions, set: true}
-	ask.first, ask.draws = w.recordDraws(a, region, req.Recipe, k0)
+	ask.first, ask.draws = w.recordDraws(a, q.principal, region, req.Recipe, k0)
 	w.pr.asks[a.id] = ask
 }
 
@@ -390,6 +390,9 @@ func (w *World) p27Start() error {
 			return err
 		}
 	}
+	if w.tenure != nil {
+		w.tenure.settle()
+	}
 	return nil
 }
 
@@ -415,14 +418,18 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 	}
 	if res.k == 0 {
 		// Reached only when the cap of a draw is 0: the ration granted nothing, or the
-		// live stock is below one execution (reason no_endowment).
+		// live stock is below one execution (reason no_endowment), or the tenure module
+		// closed it or priced it out (no_title, rent_funds).
+		if w.tenure != nil {
+			w.tenure.refused(res.reason)
+		}
 		w.refuse(a, region, ask.recipe, res.reason)
 		if w.sub != nil {
 			w.sub.blockedStart(w, a, int(region)*len(w.cfg.Roles)+int(a.role), ask.recipe, res.reason)
 		}
 		return nil
 	}
-	w.noteStarted(a, region, ask, res)
+	w.noteStarted(a, region, ask, &q, res)
 	if done, _ := a.job.advance(); done {
 		w.finishJob(a, region)
 	}
@@ -432,9 +439,12 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 // noteStarted is what the world records of a start that began: the draws on the
 // endowments, the own-use count, the wear of the tools, the working ticks and the
 // pledge of the storage module.
-func (w *World) noteStarted(a *agent, region RegionID, ask *jobAsk, res startResult) {
+func (w *World) noteStarted(a *agent, region RegionID, ask *jobAsk, q *startReq, res startResult) {
 	if w.res != nil {
 		w.takeDraws(ask.first, ask.draws, res.k)
+	}
+	if w.tenure != nil {
+		w.tenure.started(a, q, ask.first, ask.draws, res.k)
 	}
 	if w.sub != nil {
 		w.sub.noteStart(w, a, int(region)*len(w.cfg.Roles)+int(a.role), ask.recipe, res.k)

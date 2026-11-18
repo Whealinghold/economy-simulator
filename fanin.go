@@ -37,6 +37,9 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if w.sto != nil {
 		w.fillRoomView(v, a, kind)
 	}
+	if w.tenure != nil {
+		w.tenure.fillTenure(v, a)
+	}
 	return nil
 }
 
