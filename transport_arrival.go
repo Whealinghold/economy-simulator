@@ -166,7 +166,8 @@ func (w *World) reseedAtArrival(a *agent, to RegionID) {
 // deliver moves the cargo of the Transit account, line by line in commodity order,
 // to the consignee when it can hold it, else to the estate of the destination
 // (spec-transport.md 5.7 item 2, 5.8). What the account no longer holds spoiled on
-// the way or, with the risk module, was lost to a strike at step 0. It records the lines and returns the receiver and whether any went to
+// the way or, with the risk module, was lost to a strike at step 0. It records the
+// lines and returns the receiver and whether any went to
 // the estate.
 func (w *World) deliver(s *shipment) (receiver AgentID, diverted bool) {
 	t := w.transport

@@ -110,7 +110,8 @@ func (w *World) buildRoutes() {
 			}
 			for m := range modes {
 				ticks, haul, ok := w.travel(RegionID(g), RegionID(to), ModeID(m))
-				v.routes[g] = append(v.routes[g], RouteRow{To: RegionID(to), Mode: ModeID(m), Has: ok && !w.isOutsideNode(RegionID(to)), Ticks: ticks, HaulPerUnit: haul, LossBP: w.risk.viewLoss(RegionID(g), RegionID(to), ModeID(m), ok && !w.isOutsideNode(RegionID(to)))})
+				has := ok && !w.isOutsideNode(RegionID(to))
+				v.routes[g] = append(v.routes[g], RouteRow{To: RegionID(to), Mode: ModeID(m), Has: has, Ticks: ticks, HaulPerUnit: haul, LossBP: w.risk.viewLoss(RegionID(g), RegionID(to), ModeID(m), has)})
 			}
 		}
 	}
@@ -236,8 +237,9 @@ func (w *World) Away(agent AgentID) bool {
 }
 
 // RouteLoss returns the expected loss in basis points of a route: 0 with ok true
-// for a route while the risk module is off, and ok false when there is no route
-// (the formula is the risk module's, which replaces the body).
+// for a route while the risk module is off, and ok false when there is no route;
+// with the module on it is the expected loss of the route at the scales in force
+// (spec-risk.md 8.3).
 func (w *World) RouteLoss(from, to RegionID, mode ModeID) (bp int64, ok bool) {
 	_, _, ok = w.travel(from, to, mode)
 	return w.risk.viewLoss(from, to, mode, ok), ok
