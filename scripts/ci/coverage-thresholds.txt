@@ -35,6 +35,7 @@ internal/polity 90
 internal/population 90
 internal/production 90
 internal/reduce 90
+internal/risk 90
 internal/room 90
 internal/rumour 90
 internal/settlement 90
