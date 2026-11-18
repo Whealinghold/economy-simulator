@@ -64,6 +64,18 @@ func (w *World) warnWaiting(g, b int, waiting int64) {
 	}
 }
 
+// orgSummary appends the counts of the institutions module to the attributes of the
+// construction line (observability-and-logging.md 3.3.2: bodies, rights, controls), and
+// nothing with the module off. It is a hook of the construction summary of construct.go.
+func (w *World) orgSummary(attrs []slog.Attr) []slog.Attr {
+	m := w.cfg.Modules.Institutions
+	if m == nil {
+		return attrs
+	}
+	return append(attrs, slog.Int(logkeys.Bodies, len(m.Bodies)), slog.Int(logkeys.Rights, len(m.Rights)),
+		slog.Int(logkeys.Controls, len(m.Controls)+len(m.RateLimits)))
+}
+
 // snapshotBodies fills Snapshot.Bodies, one row for each (region, body) of the scope in
 // ascending (RegionID, BodyID) order, from the households as they are now: the
 // members as isMember tests them and the households of the body's roles. A snapshot is

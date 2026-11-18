@@ -119,6 +119,8 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 		w.tenure.dropAgent(a) // step 2b: the titles go to the pool of each endowment's region, before the money moves
 	}
 	w.dropClaims(a) // steps 2d and 2e, nil-safe: a debtor's creditors are paid from its whole balance, a creditor's claims pass to the estate
+	// Step 2g, nil-safe: its facilities pass to the estate of their region, a store facility is ruined, before the money moves.
+	w.dropFacilities(a)
 	money, lots, err := w.estates.receive(w.ledger, a.account, region)
 	// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 	// refusal of the world's own accounts, which a valid configuration cannot cause

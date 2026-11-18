@@ -409,19 +409,10 @@ func (w *World) RemoveStore(a AgentID, class StoreClassID) error {
 // the store, the new room and the event. The away test is in the operation, so a
 // facility completed for an agent that is away meets it too.
 func (w *World) addStore(a *agent, class StoreClassID, cause Cause) error {
-	s := w.sto
-	switch {
-	case class < 0 || int(class) >= len(s.classes):
-		return ErrUnknownStoreClass
-	case s.gate != nil && !s.gate(w.regionOf(a), int(class)):
-		return ErrStoreLocked
-	case !s.limited(a):
-		return ErrNotLimited
-	case w.away(a):
-		return ErrAgentAway
-	case s.owned(a.id) >= MaxStoresPerAgent:
-		return ErrOutOfBounds
+	if err := w.storeRefusal(a, class, 0); err != nil {
+		return err
 	}
+	s := w.sto
 	s.give(a.id, int(class))
 	if err := s.apply(w.ledger, a); err != nil {
 		s.broke(a.id, "a store lowered the room of an account: "+err.Error())

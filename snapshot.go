@@ -106,6 +106,10 @@ type Snapshot struct {
 	// in ascending (Region, Field) order (spec-technology.md 11.4). Empty with the
 	// technology module off.
 	Tech []TechRow
+	// Facilities has one row for each (region, class) with a facility, in ascending
+	// (Region, Class) order (spec-infrastructure.md 14.5). Empty with the
+	// infrastructure module off.
+	Facilities []FacilityRow
 	// Bodies has one row for each (region, body) of the scope, in ascending (Region,
 	// Body) order (spec-institutions.md 11.5.1). Empty with the institutions module off.
 	Bodies []BodyRow
@@ -459,6 +463,7 @@ func (w *World) Snapshot() (Snapshot, error) {
 	w.snapshotContracts(&s)
 	w.snapshotTechnology(&s)
 	w.snapshotClaims(&s)
+	w.snapshotFacilities(&s)
 	if err := w.snapshotTreasuries(&s); err != nil {
 		return Snapshot{}, fmt.Errorf("snapshot at tick %d: %w", w.Tick(), err)
 	}

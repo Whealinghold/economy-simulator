@@ -95,6 +95,7 @@ var declaredEvents = []economysim.Event{
 	economysim.SettlementHeld{},
 	economysim.TitleTransferred{},
 	economysim.RentScaled{},
+	economysim.FacilityChanged{},
 	economysim.MembershipChanged{},
 	economysim.RightRefused{},
 	economysim.PriceControlled{},
@@ -107,7 +108,7 @@ var declaredEvents = []economysim.Event{
 var moduleGates = []string{
 	"demand", "resources", "subsistence", "population", "transport", "information", "migration",
 	"merchant block", "merchants", "external", "employment", "storage", "credit", "technology",
-	"settlements", "tenure", "institutions",
+	"settlements", "tenure", "infrastructure", "institutions",
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -119,7 +120,7 @@ var notBuiltEvents = []string{
 	"RouteRiskScaled", "StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound",
 	"RentPaid",
-	"FacilityChanged", "FacilityLimited", "FiscalFlowApplied",
+	"FacilityLimited", "FiscalFlowApplied",
 	"TreasuryOrdered", "SavingPlanned", "PolicyDecided",
 	"CoverFormed", "CoverEnded", "CoverRound", "CoverSettled",
 }
@@ -404,7 +405,7 @@ func TestEvents_Shape(t *testing.T) {
 	byEventField := map[string]reflect.Type{
 		"RoleChanged.From": role, "RoleChanged.To": role,
 		"WeightChanged.From": reflect.TypeFor[int64](), "WeightChanged.To": reflect.TypeFor[int64](),
-		"EndowmentAdjusted.Kind": reflect.TypeFor[economysim.AdjustKind](),
+		"EndowmentAdjusted.Kind": reflect.TypeFor[economysim.AdjustKind](), "FacilityChanged.Kind": reflect.TypeFor[economysim.FacilityKind](),
 	}
 	for _, e := range declaredEvents {
 		typ := reflect.TypeOf(e)

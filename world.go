@@ -128,6 +128,9 @@ type World struct {
 	set *settlements
 	// tenure is the state of the tenure module, nil when it is off (tenure.go).
 	tenure *tenure
+	// infra is the state of the infrastructure module, nil when it is off
+	// (infrastructure.go).
+	infra *infrastructure
 	// org is the state of the institutions module, nil when it is off (institutions.go).
 	org *institutions
 	// integ is what INT keeps (integration.go).
