@@ -61,9 +61,10 @@ func (r Rule) StartCarry(id int64) int64 {
 //	       collected = min(due, base)
 //
 // The remainder is the new carry. ok is false for a negative argument, a period
-// below 1, or a product that leaves int64.
+// below 1, a carry outside [0, Period*10^4) (Fixed) or [0, Period*10^8) (Rate),
+// an unknown shape, or a product that leaves int64.
 func (r Rule) Due(w, bal, carry int64) (res Result, ok bool) {
-	if w < 0 || bal < 0 {
+	if w < 0 || bal < 0 || !r.carryInRange(carry) {
 		return Result{}, false
 	}
 	held, hok := checked.Mul(w, r.Exempt)
@@ -81,6 +82,21 @@ func (r Rule) Due(w, bal, carry int64) (res Result, ok bool) {
 		return Result{}, false
 	}
 	return Result{Due: due, Collected: min(due, avail), Carry: next}, true
+}
+
+// carryInRange reports whether the shape is known and the carry is in
+// [0, Period*10^4) (Fixed) or [0, Period*10^8) (Rate).
+func (r Rule) carryInRange(carry int64) bool {
+	den := int64(10_000)
+	switch r.Shape {
+	case Fixed:
+	case Rate:
+		den *= 10_000
+	default:
+		return false
+	}
+	lim, ok := checked.Mul(r.Period, den)
+	return ok && carry >= 0 && carry < lim
 }
 
 // Headroom returns how much a treasury holding bal can still take before it

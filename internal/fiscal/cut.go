@@ -62,6 +62,9 @@ func (s *Scratch) Cut(dst []int64, avail int64, rs []Recipient) (applied []int64
 		given += q // at most avail
 		s.rem = append(s.rem, remainder{frac: uint64(rem), key: r.Key, id: r.ID, idx: i})
 	}
+	if given == avail {
+		return applied, true // nothing left to place: skip the sort
+	}
 	slices.SortFunc(s.rem, func(a, b remainder) int {
 		return cmp.Or(cmp.Compare(b.frac, a.frac), cmp.Compare(a.key, b.key),
 			cmp.Compare(a.id, b.id), cmp.Compare(a.idx, b.idx))

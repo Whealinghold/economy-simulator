@@ -42,10 +42,21 @@ func TestToll_Example(t *testing.T) {
 // Requirement: FR-FIS-034, NFR-FIS-003
 func TestToll_Domain(t *testing.T) {
 	t.Parallel()
-	for _, c := range [][3]int64{{-1, 1, 1}, {1, -1, 1}, {1, 1, -1}, {math.MaxInt64, 2, 1}, {math.MaxInt64 / 2, 10_000, math.MaxInt64}} {
+	for _, c := range [][3]int64{{-1, 1, 1}, {1, -1, 1}, {1, 1, -1}, {math.MaxInt64, math.MaxInt64, 1}, {math.MaxInt64 / 2, 10_000, math.MaxInt64}} {
 		if got, ok := fiscal.Toll(c[0], c[1], c[2]); ok {
 			t.Errorf("Toll(%d, %d, %d) = %d, true; want ok false", c[0], c[1], c[2], got)
 		}
+	}
+}
+
+// TestToll_WideProduct verifies that amount times scale may pass int64 while the
+// toll fits: the product is held wide.
+//
+// Requirement: FR-FIS-034, NFR-FIS-003
+func TestToll_WideProduct(t *testing.T) {
+	t.Parallel()
+	if got, ok := fiscal.Toll(math.MaxInt64, 2, 1); !ok || got != 1_844_674_407_370_955 {
+		t.Errorf("Toll(MaxInt64, 2, 1) = %d, %v; want 1844674407370955, true", got, ok)
 	}
 }
 

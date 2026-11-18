@@ -10,11 +10,19 @@ func Toll(amount, scale, n int64) (due int64, ok bool) {
 	if amount < 0 || scale < 0 || n < 0 {
 		return 0, false
 	}
-	a, aok := checked.Mul(amount, scale)
-	if !aok {
+	// amount*scale may leave int64 while the toll fits, so split it: with
+	// amount*scale = q*Basis + r, the toll is q*n + floor(r*n/Basis), exactly.
+	q, r, qok := checked.MulDivRem(amount, scale, Basis)
+	if !qok {
 		return 0, false
 	}
-	return checked.MulDiv(a, max(1, n), Basis)
+	k := max(1, n)
+	whole, wok := checked.Mul(q, k)
+	frac, fok := checked.MulDiv(r, k, Basis) // r < Basis, so frac < k
+	if !wok || !fok {
+		return 0, false
+	}
+	return checked.Add(whole, frac)
 }
 
 // Total returns the sum of the amounts of a shipment's crossings, in the order

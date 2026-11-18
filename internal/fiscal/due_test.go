@@ -149,3 +149,36 @@ func TestHeadroom(t *testing.T) {
 		}
 	}
 }
+
+// TestDue_CarryAndShapeRange verifies that a carry outside [0, Period*10^4)
+// (Fixed) or [0, Period*10^8) (Rate) and an unknown shape are reported, as
+// DutyDue does for its carry.
+//
+// Guard: a corrupt restored carry would otherwise yield an extra due with no
+// error.
+func TestDue_CarryAndShapeRange(t *testing.T) {
+	t.Parallel()
+	fixed := fiscal.Rule{Amount: 1, Scale: 1, Period: 2}
+	rate := fiscal.Rule{Shape: fiscal.Rate, RateBP: 1, Scale: 1, Period: 2}
+	tests := []struct {
+		name  string
+		rule  fiscal.Rule
+		carry int64
+		want  bool
+	}{
+		{"fixed carry at the limit", fixed, 2 * 10_000, false},
+		{"fixed carry below the limit", fixed, 2*10_000 - 1, true},
+		{"fixed negative carry", fixed, -1, false},
+		{"rate carry at the limit", rate, 2 * 100_000_000, false},
+		{"rate carry below the limit", rate, 2*100_000_000 - 1, true},
+		{"unknown shape", fiscal.Rule{Shape: 2, Amount: 1, Scale: 1, Period: 2}, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got, ok := tt.rule.Due(1, 1, tt.carry); ok != tt.want {
+				t.Errorf("Due(1, 1, %d) = %+v, %v; want ok %v", tt.carry, got, ok, tt.want)
+			}
+		})
+	}
+}
