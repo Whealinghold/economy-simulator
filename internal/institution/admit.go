@@ -96,7 +96,7 @@ func Admit(dst []int32, cands []Candidate, free int64, limited, barred bool) ([]
 	slices.SortFunc(cands, byOrder)
 	if barred {
 		for _, c := range cands {
-			out.Barred += c.Weight
+			out.Barred += max(c.Weight, 0) // a cohort of no household is no candidate
 		}
 		out.Waiting = out.Barred
 		return dst, out

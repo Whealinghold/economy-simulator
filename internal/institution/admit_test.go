@@ -336,4 +336,9 @@ func TestAdmit_NonPositiveWeightIsNoCandidate(t *testing.T) {
 	if want := (institution.Outcome{Admitted: 2, Skipped: 1, Waiting: 1}); out != want || !slices.Equal(got, []int32{3}) {
 		t.Errorf("Admit = %v, %+v, want [3], %+v", got, out, want)
 	}
+	// A barred place counts the same candidates: 2 + 1 = 3, not 2 + 1 - 3 + 0 = 0.
+	_, out = institution.Admit(nil, cands, 2, true, true)
+	if want := (institution.Outcome{Barred: 3, Waiting: 3}); out != want {
+		t.Errorf("Admit(barred) = %+v, want %+v (weights -3, 0, 2, 1 count 2 + 1)", out, want)
+	}
 }
