@@ -423,3 +423,43 @@ Every question is delegated to the supervisor. The recommendation is taken as ac
 8. **Metrics.** Recommended: defer the four instruments and the two slot-event instruments to a later change to `otelobserver/`, as SKL, STO and SET did; the events and the snapshot carry the data and `TestEvents_MetricsDerivable` shows it.
 9. **The credit seam.** Recommended: the seam takes the limit and returns the replaced one (D8), so ORG counts the lowering in its own scratch and the count survives the reset of the round. The alternative (read CRD's count before `rd.reset()` through a second seam) keeps the count in CRD and adds a second assignment.
 10. **Where the least of two limits lives.** Recommended: ORG's `orgHeadroom` wraps SET's `roleHeadroom` (D9), so `settlements.go` is untouched and a pack with ORG and no SET still has a body limit. The alternative (a term inside SET's function) makes SET read ORG.
+
+## PR A result (Phases 1 to 3, merged on `phase-3` as `e4459da`)
+
+Rule tags read: architecture=5c0416f502ba5a59f7b2ae08 (replaced twice by a fresh tag, last 9fae4fd3b85f604b10bec2d6), observability=9ebd6516273680595f477c95, testing=66af7645b01fef4e2796c367. Notes tag read: f85c4b2d7217a479ec7c16dc; the new tag is ed16ceefa88eadd3081d9735. The notes read in full were the ORG and ALL ones and those the plan names, not the whole file.
+
+Built: the owed edits E1 to E13 (the continuation files, the glossary, the notes N-397 to N-399), `internal/institution` (`Resolve`, `Overlap`, `Range`, `Clamp`, `Tally`, `Lapse`, `Admit`, `Headroom`, `Least`), the configuration surface (the five types, hash id 21, the bounds, the seven sentinels, the validator and the eleven warnings, the loader, the nine log keys) and their tests.
+
+Deviations and choices the plan left open:
+
+- A sixth continuation file, `institutions_warn.go`, because the rules and the warnings together passed 500 non-comment lines; it is in `architecture.md` 2.6 and `AGENTS.md`.
+- A produce right with no `Who` is canonicalised to `principal` and any other right with `principal` to none, so the two spellings of a default hash alike (FR-ORG-051).
+- The body's trainee bound is `MaxBodyTrainees` in `bounds.go`; a body lists an entry once (`ErrDuplicateID`).
+- `internal/institution` has 98.8% coverage; `gomu` was not run (Docker, per new file: still owed before PR E).
+
+## PR B result (Phases 4 and 5)
+
+Rule tags read: architecture=9fae4fd3b85f604b10bec2d6, observability=9ebd6516273680595f477c95, testing=66af7645b01fef4e2796c367. No rule file, spec or note was edited, so no notes tag applies; the note and spec edits PR B owes are listed under "Left for the supervisor".
+
+Built: the state and construction (`institutions.go`: the eligibility and scope tables, the membership in two slices of the module, `isMember`, the names), the round at P1.9a (`institutions_round.go`), the resolved rights (`institutions_rights.go`) and legal ranges (`institutions_legal.go`), the events, the Warn, the snapshot rows and tag 31 with the membership tail of tag 3 (`institutions_report.go`), the five event types, `Snapshot.Bodies`, `LegalLevels` and `Suspended`, `Names.Bodies`, `Rights` and `Controls`, the two positions and the section 31 row. No hash id, tag, note or event slot beyond the plan's was taken. `golden/off/`, `golden/all/`, the pinned hash and `testdata/checkpoints/` are unchanged.
+
+Hooks used: H-1, H-2 (the two positions), H-15 to H-18; none of H-3 to H-14 (the readers are PR C and PR D).
+
+Deviations and choices the plan left open:
+
+- The round does the lapse pass of every body first and then the admission of each (body, region) (question 1 of the log). Spec 4.1.1 says "for each body: lapse, then admit"; the two give the same result unless a household lapses from a body and is eligible for one with a lower `BodyID`, which the spec's 4.2.1 says is a candidate in the same round. The order of the bodies would then change a result, against FR-ORG-019.
+- `positionsTail` was at the Lizard CCN limit, so `positionsClose` (P7.2a to the audit) is split from it by a pure move, and the test of the straight line knows the sixth part.
+- `snapshot.go` was at 498 non-comment lines, so `Region` and `regionEndowments` moved to `regions_status.go` by a pure move.
+- The resolved rights and legal ranges, the levels in force and the suspensions are built and rebuilt (`resolve`) and tag 31 saves and loads them, but nothing sets a level or a suspension until PR D and nothing reads a right or a range until PR C; their tests plant the state. `MembershipChanged.Held` is 0 until PR D.
+- `TestReaders_StaticCheck` allows `institutions_round.go` to read the flag with `regionHas` (the reader of SET's hook H6, spec 3.5.2); `TestPolity_NoRegionFieldRead` lists the other ORG files among those that may name a jurisdiction.
+- `Names.Bodies`, `Rights` and `Controls` are nil when none is declared, so the module present and empty leaves no trace in the names.
+- The end-to-end test of PR A now compares the run without the module's own outputs (its names, rows, list of modules and hash), because the module now has outputs.
+- `HashWorld` of a restored world differs from that of the uninterrupted one in the small world of `institutions_checkpoint_internal_test.go`, with the module on and with it off; the fork tests compare events, snapshots, checkpoint bytes and logs, which agree. It is not the module's, and the test compares snapshots.
+
+Tests by layer: unit (`internal/institution`, unchanged); world (internal: the tables, the round, the need, stale fields, lapse, the resolved rights and ranges, the levels, the work count, the allocation test, the draw guard, the checkpoint of the tail and its corrupt cases, no region-bound obligation, the order of the events); integration (the events and their order, the snapshot rows, the names, the construction line, the Warn, tag 31 and its corrupt cases, `FuzzDecodeInstitutions`, the fork at N, non-interference, the empty module against the off world, determinism over the driving cases, the derivable metrics). Run: `gofmt`, `go vet`, `staticcheck`, `go test -short -race` on the root and `internal/institution`, and the named golden, hash and allocation tests; not run: gate R, gate F, `check.sh`, `full.sh` and `gomu`.
+
+Left for the supervisor (nothing in `doc/notes.md` or a spec was edited, because that needs the whole file read and a fresh tag):
+
+- N-244: the ORG leg is applied (the membership is a slice of the module, saved in tag 3's tail); the note is a standing rule for other modules too, so it stays open with an update line.
+- Spec 4.1.1 of `spec-institutions.md`: say that every lapse runs before any admission.
+- A note for PR D: `Held` and the slot setters fill what PR B built; the tests that plant state (`orgTablesToy`, the levels test) are to be replaced by the call's tests there.
