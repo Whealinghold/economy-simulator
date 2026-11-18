@@ -97,7 +97,7 @@ func employmentHireFieldCases() []fieldCase {
 			func(c *economysim.Config) { cook(c).Recipes = []string{"prepare", "prepare"} }),
 		field("Employer.Recipes", "a recipe that is not on the role's list", economysim.ErrEmploymentShape, eb("recipes"), "dig_mineral", "role recipes",
 			func(c *economysim.Config) { cook(c).Recipes = []string{"prepare", "dig_mineral"} }),
-		field("Employer.Recipes", "a role with no recipes", economysim.ErrEmploymentShape, []string{"roles", "visitor", "employer", "recipes"}, "1", "1",
+		field("Employer.Recipes", "a role with no recipes", economysim.ErrEmploymentShape, []string{"roles", "visitor", "employer", "recipes"}, "1", "role recipes",
 			func(c *economysim.Config) {
 				e := economysim.DefaultHireEmployer()
 				e.Recipes = []string{"prepare"}

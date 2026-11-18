@@ -110,8 +110,12 @@ func (v *validator) hireEmployer(eb []string, r *Role) {
 // 3.2, 14.1).
 func (v *validator) hireList(p []string, r *Role) {
 	b := r.Employer
-	if len(b.Recipes) == 0 || len(r.Recipes) == 0 {
-		v.rep.add(ErrEmploymentShape, p, itoa(len(b.Recipes)), "1")
+	if len(r.Recipes) == 0 { // a hire list needs a recipe of the role to name
+		v.rep.add(ErrEmploymentShape, p, itoa(len(b.Recipes)), "role recipes")
+		return
+	}
+	if len(b.Recipes) == 0 {
+		v.rep.add(ErrEmploymentShape, p, "0", "1")
 		return
 	}
 	seen := make(map[string]bool, len(b.Recipes))
@@ -261,12 +265,8 @@ func employerPriceWarnings(c *Config, lk lookup, r *Role, workers []*Role) []War
 			continue
 		}
 		net, complete := bestNetPerTick(lk, regions, rc, r.Employer.HireYieldBP)
-		switch {
-		case net >= 1:
-		case complete:
+		if net < 1 && complete { // an incomplete value is a lower bound: no claim about this recipe
 			out = append(out, Warning{Path: append(slices.Clone(eb), "recipes", id), Rule: "hire_never_profitable"})
-		default:
-			unknown = true // a region's value did not fit int64: no claim about this recipe
 		}
 		unknown = unknown || !complete
 		best, longest = max(best, net), max(longest, rc.Duration)
