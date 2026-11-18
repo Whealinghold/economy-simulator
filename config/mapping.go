@@ -329,7 +329,7 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 	l.lastModules(m, cfg)
 }
 
-// lastModules reads the tables of technology, credit and tenure, in that order (a
+// lastModules reads the tables of technology, credit, tenure and institutions, in that order (a
 // continuation of laterModules for the Lizard limit).
 func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 	if ts := m.sub("technology"); ts != nil {
@@ -344,6 +344,121 @@ func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Tenure = l.tenure(ts)
 		ts.finish()
 	}
+	if is := m.sub("infrastructure"); is != nil {
+		cfg.Modules.Infrastructure = l.infrastructure(is)
+		is.finish()
+	}
+	if is := m.sub("institutions"); is != nil {
+		cfg.Modules.Institutions = l.institutions(is)
+		is.finish()
+	}
+}
+
+// infrastructure reads [modules.infrastructure] (spec-config.md 6.2,
+// spec-infrastructure.md 12.1): a class as [class.<id>] and an initial row as an
+// element of the array [[initial]]. A key-less table switches the module on with
+// nothing in it. Every key of a class is optional here except its kind and its
+// durability, which have no zero value; Validate says which fields a kind needs.
+func (l *loader) infrastructure(t *tbl) *economysim.Infrastructure {
+	var m economysim.Infrastructure
+	t.entities("class", func(id string, e *tbl) {
+		c := economysim.FacilityClass{ID: id}
+		e.need("kind", e.text("kind", &c.Kind))
+		e.need("durability", integer(e, "durability", &c.Durability))
+		readInts(e, []intField{
+			{"decay", &c.Decay}, {"wear_per_use", &c.WearPerUse}, {"capacity", &c.Capacity},
+			{"boost_bp", &c.BoostBP},
+		})
+		e.strings("modes", &c.Modes)
+		e.text("resource", &c.Resource)
+		e.text("store", &c.Store)
+		e.text("needs", &c.Needs)
+		e.text("label", &c.Label)
+		m.Classes = append(m.Classes, c)
+	})
+	t.rows("initial", func(e *tbl) {
+		var r economysim.InitialFacility
+		e.need("region", e.text("region", &r.Region))
+		e.need("class", e.text("class", &r.Class))
+		e.text("toward", &r.Toward)
+		e.text("role", &r.Role)
+		e.need("count", integer(e, "count", &r.Count))
+		m.Initial = append(m.Initial, r)
+	})
+	return &m
+}
+
+// facilityClauses reads the keys needs, [builds] and [repairs] of a recipe
+// (spec-infrastructure.md 4.1.1) and reports whether the recipe has a build or a
+// repair, which has no required output (4.1.2 B3). Validate says the module must be
+// on and that at most one clause is set.
+func facilityClauses(t *tbl, r *economysim.Recipe) bool {
+	t.strings("needs", &r.Needs)
+	if b := t.sub("builds"); b != nil {
+		r.Builds = &economysim.FacilityBuild{}
+		b.need("class", b.text("class", &r.Builds.Class))
+		b.text("toward", &r.Builds.Toward)
+		b.finish()
+	}
+	if p := t.sub("repairs"); p != nil {
+		r.Repairs = &economysim.FacilityRepair{}
+		p.need("class", p.text("class", &r.Repairs.Class))
+		p.need("units", integer(p, "units", &r.Repairs.Units))
+		p.finish()
+	}
+	return r.Builds != nil || r.Repairs != nil
+}
+
+// institutions reads [modules.institutions] (spec-config.md 6.2, spec-institutions.md
+// 9): the key own_use_bound, a body as [body.<id>] (keys roles, regions, jurisdictions,
+// places, max_trainees, needs, label), a right as [right.<id>] (body, activity,
+// subject, region, jurisdiction, who, label), a control as [control.<id>] (commodity,
+// region, jurisdiction, cap_bp, floor_bp, label) and a rate limit as [rate_limit.<id>]
+// (region, jurisdiction, cap_bp, label). A key-less table switches the module on with
+// nothing declared. The rows come out in ID order because every level is read in the
+// order of the keys.
+func (l *loader) institutions(t *tbl) *economysim.Institutions {
+	m := economysim.DefaultInstitutions()
+	t.flag("own_use_bound", &m.OwnUseBound)
+	t.entities("body", func(id string, e *tbl) {
+		b := economysim.Body{ID: id}
+		e.strings("roles", &b.Roles)
+		e.strings("regions", &b.Regions)
+		e.strings("jurisdictions", &b.Jurisdictions)
+		readInts(e, []intField{{"places", &b.Places}, {"max_trainees", &b.MaxTrainees}})
+		e.text("needs", &b.Needs)
+		e.text("label", &b.Label)
+		m.Bodies = append(m.Bodies, b)
+	})
+	t.entities("right", func(id string, e *tbl) {
+		r := economysim.Right{ID: id}
+		e.text("body", &r.Body)
+		e.need("activity", e.text("activity", &r.Activity))
+		e.need("subject", e.text("subject", &r.Subject))
+		e.text("region", &r.Region)
+		e.text("jurisdiction", &r.Jurisdiction)
+		e.text("who", &r.Who)
+		e.text("label", &r.Label)
+		m.Rights = append(m.Rights, r)
+	})
+	t.entities("control", func(id string, e *tbl) {
+		c := economysim.Control{ID: id}
+		e.need("commodity", e.text("commodity", &c.Commodity))
+		e.text("region", &c.Region)
+		e.text("jurisdiction", &c.Jurisdiction)
+		readInts(e, []intField{{"cap_bp", &c.CapBP}, {"floor_bp", &c.FloorBP}})
+		e.text("label", &c.Label)
+		m.Controls = append(m.Controls, c)
+	})
+	t.entities("rate_limit", func(id string, e *tbl) {
+		r := economysim.RateLimit{ID: id}
+		e.text("region", &r.Region)
+		e.text("jurisdiction", &r.Jurisdiction)
+		e.need("cap_bp", integer(e, "cap_bp", &r.CapBP))
+		e.text("label", &r.Label)
+		m.RateLimits = append(m.RateLimits, r)
+	})
+	return &m
 }
 
 // tenure reads [modules.tenure] (spec-config.md 6.2, spec-land.md 3.3.2): the four
@@ -635,9 +750,10 @@ func (l *loader) recipe(id string, t *tbl) economysim.Recipe {
 	}) {
 		r.Draws = draws
 	}
+	clause := facilityClauses(t, &r)
 	var outs []economysim.Output
 	var shared []bool // for each output, whether its cost share was written
-	t.need("outputs", t.rows("outputs", func(e *tbl) {
+	hasOutputs := t.rows("outputs", func(e *tbl) {
 		var o economysim.Output
 		e.need("commodity", e.text("commodity", &o.Commodity))
 		e.need("quantity", integer(e, "quantity", &o.Quantity))
@@ -645,7 +761,8 @@ func (l *loader) recipe(id string, t *tbl) economysim.Recipe {
 		e.flag("discard", &o.Discard)
 		outs = append(outs, o)
 		shared = append(shared, written)
-	}))
+	})
+	t.need("outputs", hasOutputs || clause) // a build or a repair needs none (B3)
 	kept := 0
 	for _, o := range outs {
 		if !o.Discard {

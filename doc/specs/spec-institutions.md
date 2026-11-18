@@ -1,6 +1,6 @@
 # Spec: Institutions: bodies, exclusive rights and legal prices
 
-Status: draft. Part of the economy specs: see [README.md](README.md) for the
+Status: draft; in development under `doc/plans/plan-3-org.md` (PR A: this spec's owed edits, `internal/institution` and the configuration surface; no behaviour yet). Part of the economy specs: see [README.md](README.md) for the
 index, the shared conventions and who owns each parameter. This is a design
 reference. It does not override the rules in `doc/rules/` (architecture.md wins
 on any conflict). Its requirements carry IDs of the form `FR-ORG-NNN` and
@@ -191,7 +191,7 @@ in those texts is owed (section 8, SET and WLD rows).
 3.4.2. **Headroom.** The **headroom** of a body in a region is
 `max(0, Places - H)`, `H` the households of the body's roles in the region, members or not,
 taken as SET 6.4.2 takes the households of a role: at the start of the region's entry step,
-each admission of the plan reducing it. With `Places` 0 there is no headroom figure (the
+each admission of the plan reducing it. The count `H` is the scan of the households of the role in the region that SET already makes for its own limit (`spec-settlements.md` 6.4.2), read once for each (tick, region) at the first read of the entry step and kept exact between reads by SET's move notice and the entry step's own admissions: ORG adds no counter and no hook to the agent-lifecycle fan-ins. With `Places` 0 there is no headroom figure (the
 view says `NoLimit`). The headroom is read by the spawner for an entrant and a switcher, by
 the population module for births, and by SKL for a completion (4.5). It is **not enforced on
 what is there**: a fall of the limit, a weight change, an arrival or an external agent can
@@ -1007,7 +1007,7 @@ recipes, commodities, bodies); shapes; overlap; bounds.
 
 | Sentinel | Rejects |
 |----------|---------|
-| `ErrInvalidID`, `ErrDuplicateID` | an ID that does not match `spec-config.md` 3.3, or twice; two rights with one (activity, subject, scope key); two controls with one (commodity, scope key); two rate limits with one scope key |
+| `ErrInvalidID`, `ErrDuplicateID` | an ID that does not match `spec-config.md` 3.3, or twice; an entry twice in a body list (`Roles`, `Regions`, `Jurisdictions`); two rights with one (activity, subject, scope key); two controls with one (commodity, scope key); two rate limits with one scope key |
 | `ErrTooMany` | more than `MaxBodies`, `MaxRights` or `MaxControls` |
 | `ErrModuleDependency` | a `Jurisdictions` entry or a right, control or rate limit keyed by a jurisdiction while `Modules.Polity` is absent; a `Needs` while `Modules.Settlements` is absent; a rate limit while `Modules.Credit` is absent |
 | `ErrUnknownRole`, `ErrUnknownRegion`, `ErrUnknownJurisdiction`, `ErrUnknownRecipe`, `ErrUnknownCommodity`, `ErrUnknownSettlementFlag` (SET's, 9.1 there) | a reference that names nothing, a `Needs` that no class carries included |
@@ -1167,13 +1167,13 @@ Every spec lists the state it contributes (ADR 0002). This spec's:
 **membership** of the household, the pair (`BodyID`, `RegionID`) of its admission (3.6,
 4.2.1), saved as `BodyID + 1` and `RegionID + 1` with 0 for none, two varints per agent
 (`spec-checkpoint.md` 4.2, tag 3, gains the field in the list of what the agent record
-carries). The field is written **only with the module** (`Modules.Institutions`), and then for every agent, 0 and 0 for an agent with no membership, so that the record's shape depends on the module and on nothing in the run's history (FR-CHK-041, `spec-checkpoint.md` 4.5, F3).
+carries). In code it is an entry of `agentTails` (`checkpoint_sections.go`, with `present`, `save` and `load` as method values; `checkpoint.go` is not touched). The field is written **only with the module** (`Modules.Institutions`), and then for every agent, 0 and 0 for an agent with no membership, so that the record's shape depends on the module and on nothing in the run's history (FR-CHK-041, `spec-checkpoint.md` 4.5, F3).
 
 12.2. **The slot state**, one new section of the frame, present with `Modules.Institutions`
 (with zero rows when nothing differs from the configuration, so that its shape does not depend
 on a run's history) and placed in the dependency order of `spec-checkpoint.md` 4.2.1, after the
 sections of the modules whose IDs it names (settlements, polity, skill, and credit when a rate
-limit is declared); its tag is 31 (`spec-checkpoint.md` 4.2). It holds the levels that differ from the configured ones, as (`ControlID`, `CapBP`,
+limit is declared); its tag is 31 (`spec-checkpoint.md` 4.2). In code it is one row of the section table of `checkpoint_sections.go` (`present`, `save`, `load` as method values) and the entry `{31, "Institutions", "Institutions"}` leaves `notBuiltSections`; `checkpoint_save.go` and `checkpoint_restore.go` are not touched. It holds the levels that differ from the configured ones, as (`ControlID`, `CapBP`,
 `FloorBP`) in ascending `ControlID`, and the suspended rights as `RightID` in ascending order;
 and, for the `Warn` of 11.2, the run of consecutive ticks with waiting households per
 (region, body) that has one (diagnostic: it affects no result, and is saved so that a resumed
@@ -1470,7 +1470,7 @@ introduced into a market whose beliefs are mid-swing meets the cobweb of L21.
 | ORG-S2 | the body overlay (13.5) over a long run | the observed premium is above the derived one (reported); held completions bounded by the trainers' places; no negative headroom admitted |
 | ORG-S3 | a start with households above the places; migration on | `Waiting` falls to 0 or is bounded by the ladder; no household removed for exceeding the places |
 | ORG-S4 | a prohibition of a staple's sale with `OwnUseBound` false and true, subsistence on | the famine regime is detected when it should and the exempt household feeds itself |
-| ORG-S5 | the inert overlay against the world without the module, seeds 1 to 10 | every event, snapshot field and golden line identical but the names table, the configuration hash, `Snapshot.Modules` and the construction summary (exact); a harness test of the class of S77 and S78, outside the band rule of FR-STY-098 |
+| ORG-S5 | the inert overlay (bodies declared with `Places` 0, no right, no control) against the world without the module, seeds 1 to 10 | every event, snapshot field and golden line identical but the module's own outputs: the names table, the configuration hash, `Snapshot.Modules`, the construction summary, the `MembershipChanged` events (the first round admits every eligible household of a declared body) and the `Snapshot.Bodies` rows (exact); a harness test of the class of S77 and S78 and of SET-S4, outside the band rule of FR-STY-098. FR-ORG-001's strict form (no output beyond the names table, the hash, `Snapshot.Modules` and the construction summary) is tested on the module present and **empty**, with no body (N-399) |
 
 ## 15. What was run
 
@@ -1516,7 +1516,7 @@ of 14 were not modelled and are untested.
 | N-017 (words and names) | **Applied.** Terms fixed: body, member, outsider, place (of a body), headroom (of a body), seniority, eligible, right, activity, subject, scope key, prohibition, in force, suspended, `Who`, principal, executor (as PRO), control, rate limit, legal range, cap, floor, clamp, legal price, membership round, held completion, need. Setting words appear only in the flagged examples |
 | N-027 (no default is stable) | **Applied.** No default macro constant; `OwnUseBound` false and `Places` 0 are structural; the models check rules |
 | N-045 (silent dampers need counters) | **Applied.** Every refusal, clamp, skip, bar, wait and hold is counted (11.1) |
-| N-090 (the rule for a module that keeps an account in a region) | **Applied, answered by no registration**, with the reason (3.6): a membership is a status. The rule stands for RSK and the others; add ORG to the list of modules that registered none |
+| N-090 (the rule for a module that keeps an account in a region) | **Applied, answered by no registration**, with the reason (3.6): a membership is a status. The rule stands for RSK and the others; ORG is added to the list of modules that registered none (the update line of N-090 in `doc/notes.md`, plan 3-org Phase 1) |
 | N-091 (the slots INT must expose) | **Applied: two** (7.1), with rows owed to INT 5.1 and WLD 8.2 |
 | N-103 (running writers in parallel) | **Followed, with one slip.** Only the spec, `models/org/` and `.supervisor/org.*` were created; every model ran in Docker with no bytecode; the host `python3` was invoked once, as `python3 --version` with its output discarded, by mistake in a shell line that edited the spec (nothing was read or written by it); and once more, in the revision after review, as `python3 -c pass` with its output discarded (it executed nothing and read or wrote nothing) |
 | N-104 (region-keyed tables use one mechanism) | **Applied.** Rights and controls are rows keyed by (activity or commodity, subject, scope key), one row per key, replace mode, canonical order, with the sentinels of `spec-regions.md` 5.3; a row is owed to its 5.1.3 list |
@@ -1686,10 +1686,18 @@ No figure here is a measurement.
 Nothing is written; this is the proposed layout for the first code, checked against
 architecture.md 2.6 and `AGENTS.md`.
 
-- `institutions.go` (root): `BodyID`, `NoBody`, `ControlID`, `RightID`, `Body`, `Right`,
-  `Control`, `RateLimit`, `LegalLevel`, `RightSuspension`, the activity and `Who` constants,
-  the sentinels, the construction of the resolved tables, the round at P1.9a, the checks at P2.5
-  and P3.2, and the three events. One file per concept (architecture.md 2.6).
+- `institutions.go` (root, the module file of architecture.md 2.10.1): the state, the
+  construction of the resolved tables, the membership test and the headroom reader. The types
+  `Institutions`, `Body`, `Right`, `Control` and `RateLimit` are in `config.go`, `BodyID`, `NoBody`,
+  `RightID` and `ControlID` in `value.go`, the sentinels in `errors.go`, the events and the
+  activity and `Who` constants in `event.go` (the catalogue files). The six continuation files
+  of a concept past the Lizard limits of N-243 and the 500-line limit are mapped to ORG in
+  architecture.md 2.6: `institutions_validate.go` (the rules of 10.1), `institutions_warn.go` (the warnings of 10.2),
+  `institutions_round.go` (the round at P1.9a and its counts), `institutions_rights.go` (the
+  reads at P2.5 and P3.2 and the `RightRefused` counts), `institutions_legal.go` (the ranges, the
+  clamp, the two slots and the rebuild) and `institutions_report.go` (the events of P7.2b, the
+  snapshot filler, the logs and the codec of tag 31 and of the agent tail of tag 3). A file is
+  created in the phase that needs it.
 - `internal/institution/` (standard library only, primitive slices, no root type,
   architecture.md 2.9): the resolution of a right or a control over a region and a chain (the
   innermost mode of `spec-polity.md` 6.1.2), the legal range from a reference price and basis
