@@ -353,7 +353,7 @@ with the slice (`vision.md` section 4).
 | `risk.go`, `internal/risk` (and the `Losses` preset of `indicator/`, FR-IND-059, with STO) | RSK | TRN, STO |
 | `infrastructure.go`, `internal/facility` | CAP | PRO, RES, TRN, STO, SET |
 | `insurance.go`, `internal/insure` | INS | CRD, RSK |
-| `fiscal.go`, `internal/fiscal` | FIS | POL, MON, CLR, TRN, EXT |
+| `fiscal.go`, `internal/fiscal` (plan 3-fis, status: plan written; PR 1 in development) | FIS | POL, MON, CLR, TRN, EXT, LED, WEL, CAL, CHK, OBS, INT, MER, STO, EST |
 | `institutions.go`, `internal/institution` | ORG | POL, SKL, SET |
 | `policy.go`, `internal/policy` (`Policy`, `WithPolicy`, `DirectPolicy`) | PLC | POL, FIS, INT |
 | `saving.go`, `internal/saving` | SAV | CAP, WEL |
