@@ -2026,13 +2026,13 @@ type Body struct {
 	// id is 1.
 	ID string
 	// Roles are the roles whose households may be members, canonical by ID: at least
-	// one, each defined, no (role, region) in two bodies. Its hash id is 2.
+	// one, each defined and listed once, no (role, region) in two bodies. Its hash id is 2.
 	Roles []string
-	// Regions are the regions of the scope, canonical by ID: each defined and not an
-	// outside node. With Jurisdictions the scope is the union. Its hash id is 3.
+	// Regions are the regions of the scope, canonical by ID: each defined, listed once
+	// and not an outside node. With Jurisdictions the scope is the union. Its hash id is 3.
 	Regions []string
 	// Jurisdictions are the jurisdictions whose regions join the scope, canonical by
-	// ID: each defined, and the module needs Modules.Polity. Its hash id is 4.
+	// ID: each defined and listed once, and the module needs Modules.Polity. Its hash id is 4.
 	Jurisdictions []string
 	// Places is the most households of the body's roles that each region of the scope
 	// may hold, 0 to MaxHouseholds; 0 is no limit. Its hash id is 5.
