@@ -208,3 +208,52 @@ func TestAudit_FailsWhenTheEscrowIsBelowTheWagesLeft(t *testing.T) {
 		t.Errorf("auditHires() with a drained escrow = %v, want ErrAuditFailed", err)
 	}
 }
+
+// TestAudit_FailsWhenTheJobDriftsFromTheHire verifies that the audit reads the wages
+// left from the record of the hire and not from the job: a worker's job with a tick
+// more than the hire has unpaid fails it, and so does a hire that was formed and
+// never started.
+//
+// Requirement: FR-EMP-041
+// Guard: a job that drifted from its hire would lower the bar the escrow is held to.
+func TestAudit_FailsWhenTheJobDriftsFromTheHire(t *testing.T) {
+	t.Parallel()
+	w := hireWorld(t, defaultHire(hireOpts{}), farmWants(1, 100, 40))
+	stepN(t, w, 1)
+	h := &w.employment.hires[0]
+	job := &w.agents[h.worker].job
+	job.remaining++
+	if err := w.auditHires(); !errors.Is(err, ErrAuditFailed) {
+		t.Errorf("auditHires() with a job one tick too long = %v, want ErrAuditFailed", err)
+	}
+	job.remaining--
+	h.started = false
+	if err := w.auditHires(); !errors.Is(err, ErrAuditFailed) {
+		t.Errorf("auditHires() with a hire that never started = %v, want ErrAuditFailed", err)
+	}
+}
+
+// TestHire_EndingAMissingHireIsAViolatedInvariant verifies that endHire panics with
+// an invariant message for a hire that is not in the list, instead of deleting the
+// record of another hire, and that a start of more executions than were hired panics
+// too.
+//
+// Requirement: FR-EMP-029
+// Guard: a failed search returns the insertion index, and slices.Delete at it removes a neighbour.
+func TestHire_EndingAMissingHireIsAViolatedInvariant(t *testing.T) {
+	t.Parallel()
+	w := hireWorld(t, defaultHire(hireOpts{}), farmWants(1, 100, 40))
+	stepN(t, w, 1)
+	ghost := w.employment.hires[0]
+	ghost.id += 7
+	if msg := invariantMessage(func() { w.endHire(&ghost, CauseCompleted) }); msg == "" {
+		t.Error("endHire() of a hire not in the list did not panic")
+	}
+	if got := len(w.employment.hires); got != 1 {
+		t.Errorf("hires after a refused end = %d, want 1", got)
+	}
+	a := &w.agents[w.employment.hires[0].worker]
+	if msg := invariantMessage(func() { w.hiredStart(a, w.employment.hires[0].k+1) }); msg == "" {
+		t.Error("hiredStart() of more executions than hired did not panic")
+	}
+}

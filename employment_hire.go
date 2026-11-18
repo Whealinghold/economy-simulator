@@ -187,7 +187,10 @@ func (w *World) hiredStart(a *agent, k int64) {
 	}
 	h.started = true
 	cut := h.k - k
-	if cut <= 0 {
+	if cut < 0 {
+		invariant("a hired job started more executions than it was hired for") // its wages would overdraw the escrow
+	}
+	if cut == 0 {
 		return
 	}
 	refund := h.wage * h.ticks * cut
@@ -236,6 +239,12 @@ func (w *World) refundHire(h *hireRec, to AgentID, amount int64) {
 // caller's.
 func (w *World) endHire(h *hireRec, cause Cause) {
 	e := w.employment
+	// The list is searched before anything moves: a miss would delete the record of
+	// another hire, and the escrow would already have been refunded and released.
+	i, ok := slices.BinarySearchFunc(e.hires, h.id, func(x hireRec, id HireID) int { return cmp.Compare(x.id, id) })
+	if !ok {
+		invariant("the hire to end is not in the list of hires")
+	}
 	v, err := w.ledger.Account(h.escrow)
 	if err != nil {
 		invariant("the Escrow account of a hire is unreadable: " + err.Error())
@@ -246,7 +255,6 @@ func (w *World) endHire(h *hireRec, cause Cause) {
 	e.workerOf[rec.worker] = 0
 	e.hired[rec.employer] -= rec.k
 	e.open[rec.region]--
-	i, _ := slices.BinarySearchFunc(e.hires, rec.id, func(x hireRec, id HireID) int { return cmp.Compare(x.id, id) })
 	e.hires = slices.Delete(e.hires, i, i+1)
 	w.reportHireEnded(&rec, Money(v.Balance), cause)
 }
@@ -340,15 +348,30 @@ func (w *World) escrowFault(h *hireRec) string {
 	if err != nil || v.Kind != ledger.KindEscrow || v.Closed || v.Region != int(h.region) {
 		return fmt.Sprintf("account %d is not an open Escrow account of region %d", h.escrow, h.region)
 	}
-	left, worker := h.ticks, &w.agents[h.worker]
-	if h.started {
-		left = worker.job.remaining
-		if !worker.hasJob() || worker.job.principal != h.employer || worker.job.recipe != h.recipe {
-			return "the job of its worker is not the job of the hire"
-		}
+	// The wages unpaid are read from the record, not from the job, so a job that
+	// drifted from its hire cannot lower the bar the escrow is held to.
+	left := h.ticks - h.worked
+	if msg := w.jobFault(h, left); msg != "" {
+		return msg
 	}
 	if want := h.wage * h.k * left; v.Balance < want {
 		return fmt.Sprintf("account %d holds %d, want at least %d", h.escrow, v.Balance, want)
+	}
+	return ""
+}
+
+// jobFault returns what is wrong with the job the hire h pays for, given the ticks
+// of wages left unpaid, or "".
+func (w *World) jobFault(h *hireRec, left int64) string {
+	if !h.started {
+		return "it was formed and its job never started" // a hire starts or ends in the tick of its formation (P2.7)
+	}
+	job := &w.agents[h.worker].job
+	switch {
+	case !w.agents[h.worker].hasJob() || job.principal != h.employer || job.recipe != h.recipe:
+		return "the job of its worker is not the job of the hire"
+	case job.remaining != left:
+		return fmt.Sprintf("its worker's job has %d ticks left, the hire has %d unpaid", job.remaining, left)
 	}
 	return ""
 }
