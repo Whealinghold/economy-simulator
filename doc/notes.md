@@ -62,7 +62,7 @@ PR description.
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361 |
 | EXT | N-108, N-112, N-113, N-214 |
-| FIS | N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436 |
+| FIS | N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437 |
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
@@ -73,7 +73,7 @@ PR description.
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372 |
+| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-437 |
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
@@ -2394,6 +2394,12 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-fis PR 2.
 - **Note:** `ledger.Allowed` and the package-level `rowOf` read the static table and answer false for every flow reason. Code that asks whether a reason fits two account kinds must go through the ledger's own `rowOf`; `Move` read the package one until this change and so refused the goods of an in-kind payout. A later per-flow reason of any thing (goods included) is safe only if a test moves it through `Transfer` and `Move`.
 
+### N-437 The five fiscal metrics and the `economysim.clamp` attribute wait for one adapter PR
+
+- **Areas:** OBS, FIS
+- **Raised:** 2026-11-18, plan 3-fis PR 2 observability review, plan Q3.
+- **Note:** `observability-and-logging.md` 5.3 and 5.3.1 already list `economysim.fiscal.collected`, `.paid`, `.in_kind`, `.unapplied` and `.order.cut` (attribute `economysim.clamp`: `cash`, `hold`, `stock`), fed by `FiscalFlowApplied` and `TreasuryOrdered`. Plan 3-fis Q3 defers them, as SKL Q7 and CRD Q3 did: PR 2 builds no event and no snapshot field, so nothing feeds them yet, and the core module records no metric (rule 5). The adapter PR after FIS PR 6 adds the five instruments, the cardinality test over the flow IDs, regions and authorities, the `economysim.clamp` series count for the reference chain (5.4.2), and takes `FiscalFlowApplied` and `TreasuryOrdered` out of `ignoredEvents`. The ten construction warnings of `fiscal_warnings.go` need no metric: they are fixed by the configuration and read through `Config.Warnings` (counterpart rule of 8.1).
+
 ## Read receipt
 
 ### N-358 A gain is not a recipe
@@ -2483,4 +2489,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: f8198ebce2e143b22a3e553a
+NOTES-TAG: 9ea3c7cf25b6c2124ceb2820
