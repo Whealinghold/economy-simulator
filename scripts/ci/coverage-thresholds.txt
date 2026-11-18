@@ -19,6 +19,7 @@ internal/curve 90
 internal/design 90
 internal/employment 90
 internal/endowment 90
+internal/facility 90
 internal/fiscal 90
 internal/graph 90
 internal/household 90
