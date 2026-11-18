@@ -3,6 +3,7 @@ package economysim_test
 import (
 	"fmt"
 	"reflect"
+	"slices"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -164,22 +165,24 @@ func TestDeterminism_Storage(t *testing.T) {
 // binds (tick 118 of seed 1, see the golden), so the restore meets pledges, a room
 // that has cut goods and a run that has refused bids.
 var storageForkCells = []struct {
-	name string
-	n    int
+	name  string
+	n     int
+	store bool // a store is added to a household just before the boundary
 }{
-	{"before any job", 1},
-	{"inside a job", 100},
-	{"after the room bound", 130},
-	{"across a season change", 150},
+	{"before any job", 1, false},
+	{"inside a job", 100, false},
+	{"after the room bound", 130, false},
+	{"after a store call", 120, true},
+	{"across a season change", 150, false},
 }
 
 // TestFork_Storage verifies that a world of the storage pack restored from its
 // checkpoint continues exactly as the world that never stopped: same events,
 // snapshot, audit and checkpoint bytes for 30 ticks, and the restore of a restore
-// too. The module has no checkpoint section yet (the stores are Phase 8) and a run of
-// the pack owns no store, so what a restore must rebuild is the derived state: the
-// room of each limited account from its weight, the load from the lots, and the pledge
-// from the jobs in progress; the audit of the restored world names any drift.
+// too. The growers own the barn of their role row, so the stores are in the agent record; what
+// a restore must rebuild is the derived state: the room of each limited account from its
+// weight and stores, the load from the lots, and the pledge from the jobs in progress; the
+// audit of the restored world names any drift.
 //
 // Requirement: FR-STO-043, FR-STO-020, FR-STO-039, FR-CHK-050
 //
@@ -191,7 +194,6 @@ func TestFork_Storage(t *testing.T) {
 	if testing.Short() {
 		t.Skip("end-to-end test, skipped with -short")
 	}
-	t.Skip("plan 3-sto Phase 8 (PR 5), the checkpoint of the stores: until then RestoreWorld of a storage world returns ErrCheckpointCorrupt (TestRestoreWorld_StorageWorldIsRefusedNotPanicked)")
 	cfg := loadValidPack(t, packOneStorage...)
 	for _, cell := range storageForkCells {
 		t.Run(cell.name, func(t *testing.T) {
@@ -199,6 +201,73 @@ func TestFork_Storage(t *testing.T) {
 			forkAtN(t, forkCase{
 				Name: "storage", Cfg: cfg, Seed: 1, N: cell.n, M: forkM,
 				Opts: func() []economysim.Option { return []economysim.Option{economysim.WithAudit()} },
+				Before: func(w *economysim.World) {
+					if cell.store {
+						addBarnToACook(t, cfg, w)
+					}
+				},
+			})
+		})
+	}
+}
+
+// addBarnToACook gives the first household of the role cook in region 0 one more barn, the
+// call of a consumer between two ticks (spec-storage.md 3.6.2).
+func addBarnToACook(t *testing.T, cfg economysim.Config, w *economysim.World) {
+	t.Helper()
+	cook := slices.IndexFunc(cfg.Roles, func(r economysim.Role) bool { return r.ID == "cook" })
+	ids, err := w.Agents(0)
+	if err != nil {
+		t.Fatalf("Agents(0) error = %v, want nil", err)
+	}
+	for _, id := range ids {
+		if st, err := w.Agent(id); err == nil && st.Role == economysim.RoleID(cook) && st.Weight >= 1 && !st.External {
+			if err := w.AddStore(id, 0); err != nil {
+				t.Fatalf("AddStore(%d) error = %v, want nil", id, err)
+			}
+			return
+		}
+	}
+	t.Fatalf("no household of the role cook in region 0")
+}
+
+// TestFork_StorageCargoInFlight verifies the fork-at-N of the storage pack on the variant two
+// with the transport module and the scripted shippers (FR-STO-043, FR-STO-014): at a tick with
+// cargo in flight to a consignee whose room is the pledge's, the original and two restores give
+// the same events, snapshot, audit and checkpoint bytes for 20 ticks. The inbound load and the
+// pledge are not saved: the restore derives them from the shipments of tag 17, and the cargo
+// that arrives after the boundary is credited from the pledge it rebuilt.
+//
+// Requirement: FR-STO-043, FR-STO-020, FR-STO-039, FR-CHK-050
+//
+// Guard: a restore that forgot the cargo in flight would credit it against a room that was
+// never pledged, and the audit of the restored world would name the pledge at the arrival.
+func TestFork_StorageCargoInFlight(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	base, opts := shipperPackOn(t, packTwoStorage)
+	cfg, _ := narrowConsignees(t, base, opts, 1, 4)
+	for _, n := range []int{0, 2, 3, 5} {
+		t.Run(fmt.Sprintf("N %d", n), func(t *testing.T) {
+			t.Parallel()
+			var inFlight int
+			forkAtN(t, forkCase{
+				Name: "storage two shippers", Cfg: cfg, Seed: 1, N: n, M: 20,
+				Opts: func() []economysim.Option { return append([]economysim.Option{economysim.WithAudit()}, opts...) },
+				Before: func(w *economysim.World) {
+					s, err := w.Snapshot()
+					if err != nil {
+						t.Fatalf("Snapshot() error = %v, want nil", err)
+					}
+					inFlight = len(s.Shipments)
+				},
+				Inspect: func(t *testing.T, _, _ []economysim.Event) {
+					if (n == 2 || n == 3) && inFlight == 0 {
+						t.Errorf("N %d: no shipment in flight at the boundary, want the cell to be inside a journey", n)
+					}
+				},
 			})
 		})
 	}

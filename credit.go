@@ -1,6 +1,11 @@
 package economysim
 
-import "github.com/Whealinghold/economy-sim/internal/ledger"
+import (
+	"fmt"
+
+	"github.com/Whealinghold/economy-sim/internal/codec"
+	"github.com/Whealinghold/economy-sim/internal/ledger"
+)
 
 // This file is the credit module (spec-credit.md; architecture.md 2.10.1): its
 // state, what it reads of its configuration and its validator. The continuation
@@ -176,4 +181,314 @@ func (v *validator) creditDependencies() bool {
 		}
 	}
 	return len(v.rep.errs) == n
+}
+
+// SetRateScales sets the scale of the posted rates of regions (the credit module,
+// spec-credit.md 13.1): the effective rate of an offer is its rate times the scale,
+// read at P3.3b from the next step and for new loans only, since a claim's rate is
+// fixed at formation. A scale of 0 makes credit interest-free (it is not a pause) and
+// 10 000 clears the key. It returns ErrInStep, ErrWorldFailed, ErrModuleOff, then for
+// the first entry that fails ErrUnknownRegion, ErrOutsideNode, ErrOutOfBounds or
+// ErrDuplicateID; a refused call changes nothing. It emits CreditRateScaled for each
+// changed region in ascending order, after the whole call is applied. FR-CRD-060.
+func (w *World) SetRateScales(scales []RegionScale) error {
+	if err := w.enter("SetRateScales", "credit", w.credit != nil); err != nil {
+		return err
+	}
+	keys, err := slotKeys(scales, func(i int, c RegionScale) (int64, error) {
+		if err := w.slotRegion(i, c.Region, "region", true); err != nil {
+			return 0, err
+		}
+		return int64(c.Region), slotBP(i, c.BP, 0, MaxShockBP, "MaxShockBP")
+	}, "region")
+	if err != nil {
+		return fmt.Errorf("SetRateScales: %w", err)
+	}
+	var events []CreditRateScaled
+	for _, i := range inKeyOrder(keys) {
+		c := scales[i]
+		if before := w.credit.scale[c.Region]; before != c.BP {
+			w.credit.scale[c.Region] = c.BP
+			events = append(events, CreditRateScaled{Tick: w.Tick(), Region: c.Region, BeforeBP: before, AfterBP: c.BP})
+		}
+	}
+	slotNote(w, "rate scales set", events)
+	return nil
+}
+
+// creditSlots adds the rate scales that are not 10 000 to the slot list, in ascending
+// region order; it is empty with the module off.
+func (w *World) creditSlots(s *SlotState) {
+	if w.credit == nil {
+		return
+	}
+	for g, bp := range w.credit.scale {
+		if bp != wholeBP {
+			s.RateScales = append(s.RateScales, RegionScale{Region: RegionID(g), BP: bp})
+		}
+	}
+}
+
+// ClaimFilter names the claims to forgive by the debtor's region and role at the call
+// (spec-credit.md 13.2). A claim matches when its debtor's region is Region, or
+// AllRegions is set, and its debtor's role is Role, or AllRoles is set; a field the
+// All flag overrides is ignored.
+type ClaimFilter struct {
+	// Region is the debtor's region, when AllRegions is false.
+	Region RegionID
+	// Role is the debtor's role, when AllRoles is false.
+	Role RoleID
+	// AllRegions and AllRoles match any region and any role.
+	AllRegions, AllRoles bool
+}
+
+// matches reports whether a debtor in region g with role r is named by the filter.
+func (f ClaimFilter) matches(g RegionID, r RoleID) bool {
+	return (f.AllRegions || f.Region == g) && (f.AllRoles || f.Role == r)
+}
+
+// same reports whether two filters name the same claims, so that a repeat is a
+// duplicate whatever a set All flag leaves in the field it overrides.
+func (f ClaimFilter) same(o ClaimFilter) bool {
+	return f.AllRegions == o.AllRegions && f.AllRoles == o.AllRoles &&
+		(f.AllRegions || f.Region == o.Region) && (f.AllRoles || f.Role == o.Role)
+}
+
+// ForgiveClaims ends every open claim of origin loan whose debtor matches any filter,
+// with no transfer, and returns how many it ended (the credit module, spec-credit.md
+// 13.2). A claim of origin payout is never ended by it. Each is written off at the
+// call in ascending claim ID with the cause forgiven: no money moves and the
+// creditors lose what was owed, so the lost totals of the ledger rise by it. It
+// returns ErrInStep, ErrWorldFailed, ErrModuleOff, then for the first filter that
+// fails ErrUnknownRegion, ErrOutsideNode, ErrUnknownRole or ErrDuplicateID, with 0
+// ended and nothing changed; a filter that matches nothing is legal. It emits one
+// LoanEnded per claim, at the call, with the Tick the next step runs, and draws
+// nothing. FR-CRD-061.
+func (w *World) ForgiveClaims(filters []ClaimFilter) (ended int64, err error) {
+	if err := w.enter("ForgiveClaims", "credit", w.credit != nil); err != nil {
+		return 0, err
+	}
+	if err := w.checkClaimFilters(filters); err != nil {
+		return 0, fmt.Errorf("ForgiveClaims: %w", err)
+	}
+	t := w.Tick()
+	for _, c := range w.ledger.AppendClaims(nil) {
+		if c.Origin != ledger.OriginLoan || !w.forgiven(&c, filters) {
+			continue
+		}
+		lp, li, werr := w.ledger.WriteOff(c.ID)
+		mustClaim(werr, "the forgiveness")
+		w.credit.idx.remove(c)
+		w.reportLoanEnded(t, &c, endRec{cause: CauseForgiven, lostP: lp, lostI: li})
+		ended++
+	}
+	return ended, nil
+}
+
+// checkClaimFilters is the checks of spec-integration.md 4.10.1, filter by filter in
+// the order given: the region (known, and not an outside node unless AllRegions),
+// the role (known unless AllRoles), and that no earlier filter names the same claims.
+func (w *World) checkClaimFilters(filters []ClaimFilter) error {
+	for i, f := range filters {
+		if err := w.filterRegion(i, f); err != nil {
+			return err
+		}
+		if !f.AllRoles && (f.Role < 0 || int(f.Role) >= len(w.cfg.Roles)) {
+			return argError(ErrUnknownRole, itoa(int(f.Role)), "", entry("filters", i), "role")
+		}
+		for _, earlier := range filters[:i] {
+			if earlier.same(f) {
+				return argError(ErrDuplicateID, fmt.Sprintf("%+v", f), "", entry("filters", i))
+			}
+		}
+	}
+	return nil
+}
+
+// filterRegion is the check of the region of filter i: known, and not an outside node,
+// unless AllRegions says the field is not read.
+func (w *World) filterRegion(i int, f ClaimFilter) error {
+	switch {
+	case f.AllRegions:
+		return nil
+	case f.Region < 0 || int(f.Region) >= len(w.cfg.Regions):
+		return argError(ErrUnknownRegion, itoa(int(f.Region)), "", entry("filters", i), "region")
+	case w.isOutsideNode(f.Region):
+		return argError(ErrOutsideNode, itoa(int(f.Region)), "", entry("filters", i), "region")
+	}
+	return nil
+}
+
+// forgiven reports whether the debtor of claim c, at the call, matches a filter.
+func (w *World) forgiven(c *ledger.Claim, filters []ClaimFilter) bool {
+	v := w.accountView(c.Debtor)
+	role := w.agents[v.Owner].role
+	for _, f := range filters {
+		if f.matches(RegionID(v.Region), role) {
+			return true
+		}
+	}
+	return false
+}
+
+// cloneCredit is a copy of the Borrow and Lend of a directive, so that the mailbox
+// shares no pointer with the caller (nil for a field not set).
+func (d *Directive) cloneCredit() (b *CreditRequest, l *CreditOffer) {
+	if d.Borrow != nil {
+		c := *d.Borrow
+		b = &c
+	}
+	if d.Lend != nil {
+		c := *d.Lend
+		l = &c
+	}
+	return b, l
+}
+
+// checkCreditModule is row 1 of spec-integration.md 4.3.2 for the credit fields: a
+// directive that sets Borrow or Lend needs the module on (ErrModuleOff).
+func (w *World) checkCreditModule(d *Directive) error {
+	if (d.Borrow != nil || d.Lend != nil) && w.cfg.Modules.Credit == nil {
+		return fmt.Errorf("module credit: %w", ErrModuleOff)
+	}
+	return nil
+}
+
+// checkCreditDirective is row 7 of spec-integration.md 4.3.2 (spec-credit.md 10.5):
+// the Borrow and the Lend of a directive are inside their bounds (ErrOutOfBounds),
+// and the agent's role has a block of the kind it asks for (ErrNotOnRole). Whether
+// the request is below MinPrincipal or over the room is the round's admission, a
+// counted refusal, so it is not checked here.
+func (w *World) checkCreditDirective(a *agent, d *Directive) error {
+	if r := d.Borrow; r != nil {
+		if err := directBounds("borrow", r.Principal, r.Term, r.MaxRateBP, "term", "max_rate_bp"); err != nil {
+			return err
+		}
+	}
+	if o := d.Lend; o != nil {
+		if err := directBounds("lend", o.Principal, o.MaxTerm, o.RateBP, "max_term", "rate_bp"); err != nil {
+			return err
+		}
+	}
+	return w.directedBlock(a, d)
+}
+
+// directedBlock reports ErrNotOnRole for a Borrow or a Lend of a directive that the
+// agent's role has no block for.
+func (w *World) directedBlock(a *agent, d *Directive) error {
+	t := w.cfg.Roles[a.role].Credit
+	switch {
+	case d.Borrow != nil && (t == nil || t.Borrow == nil):
+		return argError(ErrNotOnRole, itoa(int(a.role)), "", "d", "borrow")
+	case d.Lend != nil && (t == nil || t.Lend == nil):
+		return argError(ErrNotOnRole, itoa(int(a.role)), "", "d", "lend")
+	}
+	return nil
+}
+
+// directBounds checks the three figures of a request or an offer of a directive, the
+// principal, the term and the rate, against MaxMoney, MaxCreditTerm and
+// MaxCreditRateBP; field names the two fields after the principal in the path.
+func directBounds(field string, principal, term, rate int64, termName, rateName string) error {
+	for _, f := range [...]struct {
+		name, bound string
+		v, lo, hi   int64
+	}{
+		{"principal", "MaxMoney", principal, 1, MaxMoney},
+		{termName, "MaxCreditTerm", term, 1, MaxCreditTerm},
+		{rateName, "MaxCreditRateBP", rate, 0, MaxCreditRateBP},
+	} {
+		if f.v < f.lo || f.v > f.hi {
+			return argError(ErrOutOfBounds, itoa(int(f.v)), f.bound, "d", field, f.name)
+		}
+	}
+	return nil
+}
+
+// CreditState is the claims of one agent at the tick boundary, in its AgentState
+// (spec-credit.md 10.1 without the block, spec-integration.md 4.7): what it owes as a
+// debtor and is owed as a creditor, read from the claim list.
+type CreditState struct {
+	// Debt is the principal owed as debtor, Owed the principal and interest owed,
+	// Overdue the owed on the overdue claims and NextDue the earliest due tick of its
+	// claims as debtor (-1 when it has none).
+	Debt, Owed, Overdue, NextDue int64
+	// CreditRoom is the principal the agent may still ask for under its exposure cap,
+	// 0 for a lender.
+	CreditRoom int64
+	// Lent is the principal owed to the agent as creditor and Receivable the principal
+	// and interest owed to it.
+	Lent, Receivable int64
+}
+
+// fillCreditState sets the credit group of the state of agent a: set only with the
+// module on and a role with a block. It reads the indexes and values the upkeep at
+// the prices of the boundary into a local slice, never into the scratch the next
+// step reads (w.oc.valued is what P1.6 prices relief with), so a call to Agent
+// changes no later result.
+func (w *World) fillCreditState(st *AgentState, a *agent) {
+	t := w.cfg.Roles[a.role].Credit
+	if w.credit == nil || t == nil {
+		return
+	}
+	f := w.figuresOf(a.account)
+	st.HasCredit = true
+	st.Credit = CreditState{Debt: f.Debt, Owed: f.Owed, Overdue: f.Overdue, NextDue: f.NextDue, Lent: f.Lent, Receivable: f.Receivable}
+	if t.Borrow != nil {
+		st.Credit.CreditRoom = w.creditRoomAt(t.Borrow, w.boundaryUpkeep(a), f.Debt)
+	}
+}
+
+// boundaryUpkeep is the upkeep cost U of an agent at the prices of the boundary, as
+// creditUpkeep is at those of a tick, for a reader between steps: it values the
+// prices of its region into a copy and leaves the world's scratch alone.
+func (w *World) boundaryUpkeep(a *agent) int64 {
+	g, nc := w.regionOf(a), len(w.cfg.Commodities)
+	prices := make([]int64, nc)
+	for c := range prices {
+		i := int(g)*nc + c
+		if w.markets.windows[i].Len() > 0 {
+			prices[c] = int64(w.markets.reports[i].Price)
+		} else {
+			prices[c] = int64(w.refs[i])
+		}
+	}
+	return w.welfare.cost.tick(w.roles.row(a.role).upkeepIn(g), prices, a.weight)
+}
+
+// saveDirectiveCredit writes the Borrow and the Lend of a mailbox, after the fields
+// every directive has, in the record of an agent of a world with the module on
+// (spec-checkpoint.md 4.2 tag 3; no byte is written with the module off, so the
+// bytes of format 1 do not move): a flag for each, then the principal, the term and
+// the rate. A negative amount is written as the unsigned number it converts to, and
+// the restore refuses it.
+func saveDirectiveCredit(cw *codec.Writer, d *Directive) {
+	cw.B(d.Borrow != nil)
+	if r := d.Borrow; r != nil {
+		cw.U(uint64(r.Principal))
+		cw.U(uint64(r.Term))
+		cw.U(uint64(r.MaxRateBP))
+	}
+	cw.B(d.Lend != nil)
+	if o := d.Lend; o != nil {
+		cw.U(uint64(o.Principal))
+		cw.U(uint64(o.MaxTerm))
+		cw.U(uint64(o.RateBP))
+	}
+}
+
+// loadDirectiveCredit reads saveDirectiveCredit's bytes into d, each amount checked
+// against its upper bound (the lower bounds and the role's block are checked with
+// the rules of Direct after the record is read).
+func loadDirectiveCredit(r *codec.Reader, d *Directive) {
+	if r.B() {
+		d.Borrow = &CreditRequest{
+			Principal: r.Bounded("principal", MaxMoney), Term: r.Bounded("term", MaxCreditTerm), MaxRateBP: r.Bounded("rate", MaxCreditRateBP),
+		}
+	}
+	if r.B() {
+		d.Lend = &CreditOffer{
+			Principal: r.Bounded("principal", MaxMoney), MaxTerm: r.Bounded("term", MaxCreditTerm), RateBP: r.Bounded("rate", MaxCreditRateBP),
+		}
+	}
 }

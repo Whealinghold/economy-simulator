@@ -36,6 +36,8 @@ type viewScratch struct {
 	dirIntents  []Intent
 	dirDiscards []Discard
 	dirHold     []CommodityID
+	dirBorrow   CreditRequest
+	dirLend     CreditOffer
 
 	// costQ and costP hold the upkeep rows and their prices for the welfare cost.
 	costQ, costP []int64
@@ -343,6 +345,14 @@ func (sc *viewScratch) fillDirective(v *AgentView, a *agent) {
 	if d.Job != nil {
 		sc.dirJob = *d.Job
 		v.Directive.Job = &sc.dirJob
+	}
+	if d.Borrow != nil {
+		sc.dirBorrow = *d.Borrow
+		v.Directive.Borrow = &sc.dirBorrow
+	}
+	if d.Lend != nil {
+		sc.dirLend = *d.Lend
+		v.Directive.Lend = &sc.dirLend
 	}
 }
 

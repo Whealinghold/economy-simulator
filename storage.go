@@ -584,6 +584,50 @@ func (w *World) finishStorage() error {
 	return nil
 }
 
+// rebuildStorage is the restore's step for the module (spec-storage.md 15.2, 15.3):
+// the room of every limited account is set from its role, weight and stores, which
+// computes the load from the lots and refuses a load above the room (ErrCheckpointCorrupt);
+// then the cargo in flight, the jobs' pledges and the pledge of each account are derived
+// again from the jobs (tag 6) and the shipments (tag 17), with no test against the room,
+// since a cut of the room may leave the pledge above it.
+func (w *World) rebuildStorage() error {
+	s := w.sto
+	s.deferred = false
+	var bad error
+	w.eachLive(func(a *agent) {
+		if err := s.apply(w.ledger, a); err != nil && bad == nil {
+			bad = fmt.Errorf("agent %d: the load of its lots is above its room: %w", a.id, err)
+		}
+	})
+	if bad != nil {
+		return fmt.Errorf("%w: %w", ErrCheckpointCorrupt, bad)
+	}
+	if w.transport != nil {
+		cargo, err := s.cargoInFlight(w)
+		if err != nil {
+			return fmt.Errorf("%w: %w", ErrCheckpointCorrupt, err)
+		}
+		copy(s.inbound, cargo)
+	}
+	// syncJob and repledge raise an invariant when a pledge does not fit int64; a
+	// checkpoint is input, so the sums are checked here first and refused.
+	pledged, err := s.pledgedByJobs(w)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrCheckpointCorrupt, err)
+	}
+	for i := range pledged {
+		if i >= len(s.inbound) {
+			break
+		}
+		if _, ok := addPair(pledged[i], s.inbound[i]); !ok {
+			return fmt.Errorf("%w: the pledge of agent %d does not fit int64", ErrCheckpointCorrupt, i)
+		}
+	}
+	w.eachLive(w.syncJob)
+	w.eachLive(w.repledge)
+	return nil
+}
+
 // admitsStock is the room check of AddAgent (spec-storage.md 5.1.1, FR-STO-019): the
 // goods of the new agent must fit the room it would have, the base room of its role
 // and the stores of the role's row. It returns ErrNoRoom, and AddAgent creates

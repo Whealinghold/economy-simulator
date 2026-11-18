@@ -369,3 +369,54 @@ check no ledger reason beyond the module off: 2/2 pass
 measure households entered the mode: 1=1009 2=953 | median=981 n=2
 check households enter the mode: 2/2 pass
 check no ledger reason beyond the module off: 2/2 pass
+
+## S91 one+storage limited households and producers, 400 ticks seeds 1-10
+measure bids cut for room: 1=5 2=0 3=0 4=0 5=0 6=0 7=3 8=0 9=0 10=0 | median=0 n=10
+measure bids rejected for room: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households at end, module off: 1=192 2=180 3=299 4=196 5=146 6=181 7=153 8=165 9=184 10=146 | median=180 n=10
+measure households at end, module on: 1=200 2=195 3=191 4=196 5=212 6=206 7=204 8=219 9=202 10=196 | median=201 n=10
+measure starts cut for room: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure starts refused for room: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=2 10=0 | median=0 n=10
+measure units discarded for room: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check the load of every role is within its room after every tick: 10/10 pass
+
+## S92 one+storage a buffer store owner fills and releases, 200 ticks seeds 1-10
+measure most staple held: 1=1176 2=1184 3=1188 4=1174 5=1172 6=1168 7=1176 8=1166 9=1168 10=1180 | median=1175 n=10
+measure orders of the owner rejected for room: 1=97 2=96 3=96 4=97 5=97 6=97 7=97 8=96 9=97 10=97 | median=97 n=10
+measure room of the owner (mass): 1=1200 2=1200 3=1200 4=1200 5=1200 6=1200 7=1200 8=1200 9=1200 10=1200 | median=1200 n=10
+check the load of the owner is within its room at every tick: 10/10 pass
+
+## S92 one+storage goods spoil on their own clock, 20 ticks seeds 1-10
+check a commodity of the start stock spoiled away: 10/10 pass
+check the holdings with and without the module are equal every tick: 10/10 pass
+
+## S93 one+storage producer glut without the barn, 400 ticks seeds 1-10
+measure bids cut for room: 1=0 2=3 3=0 4=0 5=4 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure bids rejected for room: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure households at end, barn: 1=200 2=195 3=191 4=196 5=212 6=206 7=204 8=219 9=202 10=196 | median=201 n=10
+measure households at end, no barn: 1=198 2=171 3=341 4=199 5=207 6=213 7=204 8=217 9=195 10=191 | median=202 n=10
+measure starts cut for room: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure starts refused for room: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure units discarded for room: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check the load of every role is within its room after every tick: 10/10 pass
+
+## S95 one+storage levy on the barn, exempt above every balance, 200 ticks seeds 1-10
+measure households at end: 1=370 2=322 3=311 4=363 5=372 6=362 7=348 8=348 9=343 10=300 | median=348 n=10
+measure levy collected: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check the flow collects exactly when its exemption leaves a balance above it: 10/10 pass
+
+## S95 one+storage levy on the barn, no exemption, 200 ticks seeds 1-10
+measure households at end: 1=354 2=314 3=380 4=352 5=307 6=330 7=308 8=343 9=340 10=360 | median=342 n=10
+measure levy collected: 1=209318 2=204282 3=200320 4=204589 5=207507 6=213680 7=212644 8=213225 9=202923 10=205792 | median=206650 n=10
+check the flow collects exactly when its exemption leaves a balance above it: 10/10 pass
+
+## S96 one+storage cut of the room by reductions and role changes, 400 ticks seeds 1-10
+measure bids cut for room: 1=0 2=0 3=0 4=0 5=0 6=5 7=0 8=0 9=0 10=0 | median=0 n=10
+measure bids rejected for room: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure completions that disposed of part of their output: 1=474 2=467 3=588 4=594 5=505 6=538 7=443 8=480 9=452 10=463 | median=477 n=10
+measure goods lots moved to the estate by role changes: 1=560 2=536 3=550 4=570 5=545 6=611 7=493 8=555 9=530 10=546 | median=548 n=10
+measure role changes: 1=657 2=681 3=787 4=675 5=645 6=742 7=604 8=654 9=730 10=703 | median=678 n=10
+measure starts cut for room: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure starts refused for room: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure units discarded for room: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check the load of every role is within its room after every tick: 10/10 pass
