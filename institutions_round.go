@@ -52,6 +52,9 @@ func (w *World) p19aMembership() {
 // it in the same round whatever the order of the bodies (4.2.1, FR-ORG-019). The result
 // is a function of the state and not of the order of the agents.
 func (o *institutions) round(w *World) {
+	if o.nb == 0 {
+		return // the module present and empty has no body to lapse from or admit to
+	}
 	rd := &o.rd
 	o.grow(len(w.agents))
 	clear(rd.out)
