@@ -42,7 +42,7 @@ func fiscalWarnings(c *Config, lk lookup) []Warning {
 		}
 	}
 	if len(w.flows) == 0 {
-		return []Warning{{Path: fiscalBase, Rule: "no_fiscal_flows"}}
+		return []Warning{{Path: path(fiscalBase), Rule: "no_fiscal_flows"}}
 	}
 	w.treasuryWarnings()
 	w.taxWarnings()
@@ -235,8 +235,9 @@ func (w *fiscalWarner) noOutlet(p Payout) bool {
 	if w.c.Modules.Estates == nil {
 		return false
 	}
+	targeted := w.regions(p.Authority, p.Target.Region)
 	return slices.ContainsFunc(w.c.Regions, func(r Region) bool {
-		return r.PoolRelease == 0 && slices.Contains(w.regions(p.Authority, p.Target.Region), r.ID)
+		return r.PoolRelease == 0 && slices.Contains(targeted, r.ID)
 	})
 }
 

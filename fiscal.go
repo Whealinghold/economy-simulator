@@ -21,10 +21,10 @@ func fiscalReasons(c *Config) []ledger.FiscalFlow {
 	if m == nil {
 		return nil
 	}
-	out := make([]ledger.FiscalFlow, 0, len(m.Taxes)+len(m.Duties)+len(m.Tolls)+len(m.Payouts))
-	out = append(out, make([]ledger.FiscalFlow, len(m.Taxes)+len(m.Duties)+len(m.Tolls))...)
-	for _, p := range m.Payouts {
-		out = append(out, ledger.FiscalFlow{Goods: p.Commodity != ""})
+	money := len(m.Taxes) + len(m.Duties) + len(m.Tolls)
+	out := make([]ledger.FiscalFlow, money+len(m.Payouts))
+	for i, p := range m.Payouts {
+		out[money+i].Goods = p.Commodity != ""
 	}
 	return out
 }
