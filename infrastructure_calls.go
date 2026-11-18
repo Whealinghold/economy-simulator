@@ -415,8 +415,8 @@ func (n *infrastructure) move(m FacilityTransfer) {
 // module off it does nothing.
 func (w *World) dropFacilities(a *agent) {
 	n := w.infra
-	if n == nil {
-		return
+	if n == nil || len(n.byOwner[a.id]) == 0 {
+		return // nothing held: skip the full rebuild of the effect tables
 	}
 	for _, id := range slices.Clone(n.byOwner[a.id]) {
 		i := n.index(id)

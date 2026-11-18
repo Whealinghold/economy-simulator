@@ -1,7 +1,9 @@
 package economysim
 
 import (
+	"cmp"
 	"fmt"
+	"maps"
 	"math"
 	"slices"
 
@@ -153,7 +155,9 @@ func (w *World) auditInfrastructure() error {
 // auditCounts checks the lists by owner and the installed counts against the records.
 func (n *infrastructure) auditCounts(indexed int) error {
 	listed := 0
-	for owner, ids := range n.byOwner {
+	// Ascending keys, so the first violation named is the same on every run (7.5).
+	for _, owner := range slices.Sorted(maps.Keys(n.byOwner)) {
+		ids := n.byOwner[owner]
 		listed += len(ids)
 		if !n.estateOwner(owner) && len(ids) > MaxFacilitiesPerAgent {
 			return fmt.Errorf("infrastructure: owner %d holds %d facilities, above %d", owner, len(ids), MaxFacilitiesPerAgent)
@@ -162,7 +166,14 @@ func (n *infrastructure) auditCounts(indexed int) error {
 	if listed != indexed {
 		return fmt.Errorf("infrastructure: the lists by owner hold %d facilities, the records %d", listed, indexed)
 	}
-	for k, count := range n.installed {
+	keys := slices.SortedFunc(maps.Keys(n.installed), func(a, b ownerClass) int {
+		if a.owner != b.owner {
+			return cmp.Compare(a.owner, b.owner)
+		}
+		return cmp.Compare(a.class, b.class)
+	})
+	for _, k := range keys {
+		count := n.installed[k]
 		c := &n.cls[k.class]
 		if count < 1 || n.world.sto == nil || n.world.sto.count(k.owner, int(c.store)) < n.installedOf(&n.world.agents[k.owner], c.store) {
 			return fmt.Errorf("infrastructure: owner %d has %d installed facilities of class %d and too few stores", k.owner, count, k.class)
