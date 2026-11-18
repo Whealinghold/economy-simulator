@@ -257,3 +257,12 @@ func (w *World) payrollReport(g RegionID) {
 		w.obs.deliver(ev)
 	}
 }
+
+// committedK0 is the k0 a request keeps for the labour round to count as committed
+// (spec-employment.md 5.5, check 6): k0 in the hire form, 0 without it (the payroll form's state hash does not move).
+func (w *World) committedK0(k0 int64) int64 {
+	if !w.employment.isHire() {
+		return 0
+	}
+	return k0
+}

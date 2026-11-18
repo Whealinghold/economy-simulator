@@ -30,7 +30,8 @@ type jobAsk struct {
 	recipe  RecipeID
 	maximum int64
 	// k0 is the executions the request could start when it was admitted: the
-	// employment module counts it as committed to the principal's stock.
+	// employment module counts it as committed to the principal's stock. It is 0
+	// outside the hire form, so the state hash of a world without it does not move.
 	k0  int64
 	set bool
 	// first and draws locate the records of the request on the endowments its
@@ -303,7 +304,7 @@ func (w *World) admitJob(a *agent, region RegionID, req JobRequest) {
 		w.refuse(a, region, req.Recipe, reason)
 		return
 	}
-	ask := jobAsk{recipe: req.Recipe, maximum: req.Executions, k0: k0, set: true}
+	ask := jobAsk{recipe: req.Recipe, maximum: req.Executions, k0: w.committedK0(k0), set: true}
 	ask.first, ask.draws = w.recordDraws(a, q.principal, region, req.Recipe, k0)
 	w.pr.asks[a.id] = ask
 }

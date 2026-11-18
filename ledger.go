@@ -148,7 +148,10 @@ func moduleReasons(c *Config) [][]ledger.Reason {
 		m = append(m, []ledger.Reason{ledger.EscrowIn, ledger.EscrowOut, ledger.EscrowRefund})
 	}
 	if c.Modules.Employment != nil {
-		m = append(m, []ledger.Reason{ledger.WagePay, ledger.WageEscrow, ledger.WageRefund})
+		m = append(m, []ledger.Reason{ledger.WagePay})
+		if c.Modules.Employment.Hire { // the escrow rows are the hire form's only: the payroll form's ledger layout stays as it was
+			m = append(m, []ledger.Reason{ledger.WageEscrow, ledger.WageRefund})
+		}
 	}
 	if c.Modules.Credit != nil {
 		m = append(m, creditReasons())
