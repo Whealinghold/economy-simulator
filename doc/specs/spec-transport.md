@@ -559,6 +559,14 @@ The first phase comes before relief, so a consignee has its goods
 and a traveller its new region before anything else of the tick reads them, and
 before `Work` and `Trade`.
 
+5.7.2. **The guard comes before the loss** (N-374). When the traveller's move is refused by
+another obligation, the arrival is held and retried at the next tick, with the cargo in its
+Transit account and the traveller away. The order of an arrival is therefore: the guard of
+the move is evaluated first and, if it refuses, the arrival is held with nothing applied (so
+step 0 is not applied twice at the retry); when it passes, step 0 (the loss,
+`spec-risk.md` 5.1.3), then step 1 (the move), then the delivery. A trip account's loss
+stays attributed to the origin region.
+
 5.7.1. **The arrival reseed.** A self-carried traveller that arrives has its price beliefs reseeded by the rule of `spec-beliefs.md` 8.3, right after the `Relocate` and with no draw (`spec-merchants.md` 12.2): for every commodity of its tradable set the centre is the clamp of the destination's window mean (the market price if the window is empty) and the width is `BeliefWidthInit`. The same rule, by one shared helper, reseeds a migrant at the arrival of a migration journey (`spec-migration.md` 8.4); it is a world operation and not a strategy's.
 
 ### 5.8 Cargo that cannot be delivered

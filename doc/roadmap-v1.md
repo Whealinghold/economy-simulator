@@ -350,7 +350,7 @@ with the slice (`vision.md` section 4).
 | `tenure.go`, `internal/tenure` (plan 3-lnd, status: plan written; PR 1 in development) | LND | RES, EST, MON, PRO, AGT, WEL, DEM, SUB, LED, REG, INT, CHK |
 | `polity.go`, `internal/polity` | POL | REG, LED, EST |
 | `credit.go`, `internal/credit` | CRD | LED, MON, EST, WEL |
-| `risk.go`, `internal/risk` (and the `Losses` preset of `indicator/`, FR-IND-059, with STO) | RSK | TRN, STO |
+| `risk.go`, `internal/risk` (and the `Losses` preset of `indicator/`, FR-IND-059, built here; plan 3-rsk, status: plan written; PR A in development) | RSK | TRN, STO |
 | `infrastructure.go`, `internal/facility` | CAP | PRO, RES, TRN, STO, SET |
 | `insurance.go`, `internal/insure` | INS | CRD, RSK |
 | `fiscal.go`, `internal/fiscal` | FIS | POL, MON, CLR, TRN, EXT |

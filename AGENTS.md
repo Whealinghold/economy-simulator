@@ -148,6 +148,7 @@ economy-sim/
 │   credit_round.go credit_settle.go credit_strategy.go credit_report.go
 │   credit_state.go (CRD)
 │   polity_validate.go (POL)
+│   risk_validate.go (RSK)
 │                           # CONTINUATION files: a concept past the Lizard limits
 │                           #   of N-243 is split; each maps to the area code of
 │                           #   its concept, and its _test.go carries that area's
