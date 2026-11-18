@@ -423,8 +423,8 @@ func (w *World) tenureSlots(s *SlotState) {
 // Titles returns the titles an agent holds, or the estate pseudo-agent's titles in its
 // own region, in ascending (region, resource) (the tenure module, spec-land.md 9.3). It
 // returns ErrInStep, ErrWorldFailed, ErrModuleOff, ErrUnknownAgent for an ID never
-// issued or a counterparty or a treasury, ErrAgentRemoved for a removed agent and
-// ErrNotAHolder for the estate of an outside node. It draws nothing, emits nothing and
+// issued, ErrAgentRemoved for a removed agent and ErrNotAHolder for the estate of an
+// outside node, a counterparty or a treasury, as TransferTitles does (6.3.4). It draws nothing, emits nothing and
 // returns a copy.
 func (w *World) Titles(a AgentID) ([]TitleState, error) {
 	if err := w.enter("Titles", "tenure", w.tenure != nil); err != nil {
@@ -448,8 +448,10 @@ func (w *World) Titles(a AgentID) ([]TitleState, error) {
 func (t *tenure) queriedHolder(a AgentID) error {
 	w := t.world
 	switch {
-	case a < 0 || a >= w.state.nextAgent || (a >= AgentID(t.regions) && int(a) < w.firstHousehold):
+	case a < 0 || a >= w.state.nextAgent:
 		return ErrUnknownAgent
+	case a >= AgentID(t.regions) && int(a) < w.firstHousehold:
+		return ErrNotAHolder
 	case a < AgentID(t.regions) && w.isOutsideNode(RegionID(a)):
 		return ErrNotAHolder
 	case a >= AgentID(t.regions) && w.agents[a].weight < 1:

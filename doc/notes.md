@@ -69,7 +69,7 @@ PR description.
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323 |
-| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357 |
+| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
@@ -2300,6 +2300,12 @@ PR description.
 - **Raised:** 2026-11-14, `spec-technology.md` 8.7, 17.1.
 - **Note:** the viability check, the warm start and the steady state of tick 0 never read a technology gain (the gain is 0 at tick 0 and the checks pass `production.BP`); a sweep of a TEC parameter starts every point from the same table, and the growth scenarios (S149 to S152) are held to their own claims.
 
+### N-366 Tenure calls: the counterparty error, the price of one account, the ledger error
+
+- **Areas:** LND, LED, INT
+- **Raised:** 2026-11-17, plan 3-lnd PR 4, owner decisions delegated to the supervisor.
+- **Note:** `Titles` of a counterparty or a treasury is `ErrNotAHolder`, as in `spec-land.md` 6.3.4 (9.3 said `ErrUnknownAgent`). A `TransferTitles` price between one account (a release by the pool) moves nothing and the event keeps the agreed price (6.3.2). `ErrInsufficientFunds` stays unexported at the root; a consumer matches it through `errors.Is` on the call's error. The ledger row of `title_sale` reads "agent to agent, or estate on release (the pool pays)". An enclosure is paid to the pool (6.3.2); the row says what the supervisor chose and 6.3.2 owns the rule.
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2310,4 +2316,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 235375ef6f51c788ea44eeb8
+NOTES-TAG: f85c4b2d7217a479ec7c16dc

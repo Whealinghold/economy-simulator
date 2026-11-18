@@ -383,6 +383,10 @@ type RecipeView struct {
 	// and the cost anchor read the unmarked recipes only. False while the
 	// subsistence module is off.
 	OwnUse bool
+	// Rent is the rent of one execution at the rents in force, the sum over its draws
+	// of the draw times the rent of the endowment (spec-land.md 4.6.2); 0 while the
+	// tenure module is off.
+	Rent int64
 }
 
 // BeliefTunables is the group of the fifteen belief parameters that
@@ -560,6 +564,13 @@ type EndowmentView struct {
 	// AbundanceBP is the yield factor of the stock at the start of the tick, in
 	// basis points.
 	AbundanceBP int64
+	// Posted is the rent in force per unit let (the posted rent times the scale), 0
+	// when none; ShareBP the agent's own share of the endowment, 0 when it holds none;
+	// Entitled the units of its entitlement at the snapshot; Closed says the unused
+	// entitlement of a holder is not let. All are 0 while the tenure module is off. The
+	// view carries no other holder's share (spec-land.md 4.6.1).
+	Posted, ShareBP, Entitled int64
+	Closed                    bool
 }
 
 // WantView is one want of the agent's ladder at this tick, computed by the

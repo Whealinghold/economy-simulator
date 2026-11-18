@@ -801,7 +801,7 @@ func targetAboveDemand(target, upkeep, wref int64) bool {
 // ReserveTicks times its upkeep cost plus a year of its wants at the reference
 // (spec-demand.md 10.2).
 func classWithoutIncome(c *Config, ro *Role, upkeep, wref int64) bool {
-	if len(ro.Recipes) > 0 || len(ro.Trades) > 0 || hasIncomeSource(c, ro) {
+	if len(ro.Recipes) > 0 || len(ro.Trades) > 0 || hasIncomeSource(c, ro) || holdsTitle(c, ro.ID) {
 		return false
 	}
 	year, yok := checked.Mul(wref, c.Calendar.TicksPerYear())

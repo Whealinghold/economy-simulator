@@ -759,6 +759,8 @@ func TestConstants_Values(t *testing.T) {
 		owner[string(r.got)] = "doc/specs/spec-production.md"
 	}
 	owner[string(economysim.ReasonNoEndowment)] = "doc/specs/spec-resources.md"
+	owner[string(economysim.ReasonNoTitle)] = "doc/specs/spec-land.md"
+	owner[string(economysim.ReasonRentFunds)] = "doc/specs/spec-land.md"
 	for _, r := range agentReasons {
 		owner[string(r.got)] = "doc/specs/spec-agents.md"
 	}
@@ -863,7 +865,7 @@ func TestConstants_Values(t *testing.T) {
 	}
 	// A row marked no that a module has built is a constant of the root: the module's
 	// change names it here and the constant is checked below (no_endowment: RES 5.3).
-	builtByModule := []economysim.Reason{economysim.ReasonNoEndowment}
+	builtByModule := []economysim.Reason{economysim.ReasonNoEndowment, economysim.ReasonNoTitle, economysim.ReasonRentFunds}
 	for _, d := range deferredProduction {
 		_, declared := owner[d]
 		if built := slices.Contains(builtByModule, economysim.Reason(d)); declared != built {
