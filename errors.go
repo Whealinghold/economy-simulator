@@ -664,6 +664,27 @@ var (
 	// ErrUnknownFacilityClass is a recipe clause or an initial row that names a
 	// facility class that is not configured.
 	ErrUnknownFacilityClass = errors.New("unknown facility class")
+	// ErrFacilityCap is an AddFacilities or TransferFacilities call that would give an
+	// owner more than MaxFacilitiesPerAgent or the world more than MaxFacilities
+	// (spec-infrastructure.md 11.1).
+	ErrFacilityCap = errors.New("facility count over the bound")
+	// ErrFacilityLocked is an AddFacilities for a class whose Needs flag the region's
+	// settlement class does not carry (spec-infrastructure.md 8.2).
+	ErrFacilityLocked = errors.New("facility class is locked in the region")
+	// ErrFacilityTarget is an AddFacilities of a ground class on a region with no
+	// endowment of its resource with a capacity above 0.
+	ErrFacilityTarget = errors.New("facility has no target")
+	// ErrFacilityRegion is an AddFacilities of a store class whose owner's account is
+	// not in the region (spec-infrastructure.md 5.4.3).
+	ErrFacilityRegion = errors.New("owner of a store facility is not in its region")
+	// ErrFacilityOwner is an owner that is a pseudo-agent other than the estate of the
+	// facility's region, or an estate for a store facility.
+	ErrFacilityOwner = errors.New("invalid facility owner")
+	// ErrFacilityNotTransferable is a TransferFacilities of a store facility
+	// (spec-infrastructure.md 5.4.4).
+	ErrFacilityNotTransferable = errors.New("store facility is not transferable")
+	// ErrUnknownFacility is a call that names a facility that does not exist.
+	ErrUnknownFacility = errors.New("unknown facility")
 )
 
 // The sentinels of the institutions module (spec-institutions.md 10.1, 7.1.1). They
