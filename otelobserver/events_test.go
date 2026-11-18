@@ -73,6 +73,7 @@ var allEvents = []economysim.Event{
 	economysim.CreditSettled{},
 	economysim.LoanFormed{},
 	economysim.CreditRound{},
+	economysim.CreditRateScaled{},
 	economysim.TechnologyAdvanced{},
 	economysim.TechnologyAdjusted{},
 	economysim.SettlementClassChanged{},

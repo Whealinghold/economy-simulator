@@ -159,7 +159,7 @@ func DefaultBorrow(v *AgentView, tier2, duration int64) (CreditRequest, bool) {
 	if ask < cv.MinPrincipal {
 		return CreditRequest{}, false
 	}
-	return CreditRequest{Principal: ask, Term: h, MaxRateBP: cv.Borrow.MaxRateBP}, true
+	return CreditRequest{Principal: ask, Term: min(h, MaxCreditTerm), MaxRateBP: cv.Borrow.MaxRateBP}, true
 }
 
 // DefaultLend is the default lender of spec-credit.md 10.3: a share of what its cash
