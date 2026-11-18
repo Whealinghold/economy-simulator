@@ -514,7 +514,7 @@ parameter. The starting registry:
 | `loan_out` | money | internal | agent (the lender) to agent (the borrower) | `spec-credit.md` 3.3 |
 | `loan_repay`, `loan_interest` | money | internal | agent to agent, or agent to estate: the principal and the interest paid | `spec-credit.md` 3.3 |
 | `rent` | money | internal | agent to agent or estate: the rent of a drawn unit | `spec-land.md` 5.8 |
-| `title_sale` | money | internal | agent to agent or estate: the price of a title in a `TransferTitles` call | `spec-land.md` 5.8, 6.3 |
+| `title_sale` | money | internal | agent to agent, or estate on release (the pool pays): the price of a title in a `TransferTitles` call | `spec-land.md` 5.8, 6.3 |
 | `premium`, `payout` | money | internal | agent (the insured) to agent (the underwriter); agent (the underwriter) to agent (the insured) | `spec-insurance.md` 9.1 |
 | `transit_out`, `transit_in` | goods | internal | agent to transit; transit to agent, or transit to estate (a diverted cargo) | `spec-transport.md` 7.2 |
 | `haul_use` | goods | sink | agent to boundary: the redemption of haul units at dispatch | `spec-transport.md` 7.2 |

@@ -291,7 +291,7 @@ func (w *World) skillsWork(a *agent, region RegionID) bool {
 			continue
 		}
 		ask := jobAsk{recipe: rid, maximum: a.weight, set: true}
-		ask.first, ask.draws = w.recordDraws(a, region, rid, k0)
+		ask.first, ask.draws = w.recordDraws(a, q.principal, region, rid, k0)
 		w.pr.asks[a.id] = ask
 		return true
 	}

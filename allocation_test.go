@@ -1,6 +1,7 @@
 package economysim_test
 
 import (
+	"slices"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -35,6 +36,13 @@ const externalAgentStepAllocBaseline = 72
 // a reviewed change (rule 8.2).
 const storageStepAllocBaseline = 70
 
+// tenureStepAllocBaseline is the same measure for pack one with the resources module and the
+// tenure module on (overlay/resources.toml and overlay/tenure.toml): 72, two above the off world's 70 (the run the
+// two modules make, not split between them). Measured under -race at 50 ticks, seed 1; the tiers, the entitlements and the charge work in scratch
+// the module keeps, so the module adds what the run it makes adds. Raising it is a reviewed
+// change (rule 8.2).
+const tenureStepAllocBaseline = 72
+
 // TestStep_AllocationsStayAtTheBaseline checks that a full Step of pack one
 // allocates no more than the baseline. Not parallel: testing.AllocsPerRun
 // panics in a parallel test. Allocation counts differ under -race, so the test
@@ -59,7 +67,8 @@ func TestStep_AllocationsStayAtTheBaseline(t *testing.T) {
 		{"one+faucet-sunk", packOneFaucetSunk, moneyStepAllocBaseline, false},
 		{"one+external-agent", packOne, externalAgentStepAllocBaseline, true},
 		{"one+storage", packOneStorage, storageStepAllocBaseline, false}, // NFR-STO-002: the off world's figure, see the constant
-		{"one+external", packExternal(), stepAllocBaseline, false},       // NFR-EXT-001: no more than the off world (36 measured)
+		{"one+resources+tenure", append(slices.Clone(packOneResources), "overlay/tenure.toml"), tenureStepAllocBaseline, false},
+		{"one+external", packExternal(), stepAllocBaseline, false}, // NFR-EXT-001: no more than the off world (36 measured)
 	} {
 		cfg := loadValidPack(t, row.layers...)
 		w, err := economysim.NewWorld(cfg, economysim.WithSeed(1))

@@ -282,6 +282,9 @@ type productionScratch struct {
 	aWears []production.Wear
 	aOuts  []production.Out
 	costs  []int64 // region x commodity
+	// rents are the rents in force of the endowments, dense by region and resource, set
+	// at P1.2 by the tenure module and nil while it is off (spec-land.md 5.7.1).
+	rents []int64
 
 	// The results of the steps, valid until the next call of the same step.
 	wear     []wearFact
@@ -340,6 +343,8 @@ const (
 	limitNoTool
 	limitNoInput
 	limitNoEndowment
+	limitNoTitle
+	limitRentFunds
 )
 
 func limitReason(code int) Reason {
@@ -354,6 +359,10 @@ func limitReason(code int) Reason {
 		return ReasonNoInput
 	case limitNoEndowment:
 		return ReasonNoEndowment
+	case limitNoTitle:
+		return ReasonNoTitle
+	case limitRentFunds:
+		return ReasonRentFunds
 	}
 	return ""
 }
@@ -377,6 +386,12 @@ type startReq struct {
 	// admission or a view makes ignores the grant and leaves it false.
 	capped  bool
 	drawCap int64
+	// noTitle says the tenure module found a draw closed to the principal by rule, so
+	// the start is refused no_title, and rentCap is the most executions whose rent the
+	// principal can pay when hasRentCap (spec-land.md 4.5.1, 5.4.1). Both are set at
+	// the start only.
+	noTitle, hasRentCap bool
+	rentCap             int64
 	// exec is the executor, whose weight, role and residues the room bound reads
 	// (storage module); nil reads no room.
 	exec *agent
@@ -436,8 +451,23 @@ func (s *productionScratch) limitList(l *ledger.Ledger, q *startReq) error {
 	}
 	if q.capped {
 		s.limits = append(s.limits, production.Limit{Cap: q.drawCap, Reason: limitNoEndowment})
+		s.limits = appendTenureLimits(s.limits, q)
 	}
 	return nil
+}
+
+// appendTenureLimits appends the limits of the tenure module after the endowment's,
+// no_title and rent_funds in the master order of spec-production.md 4.2.1 (spec-land.md
+// 4.5.1): a request closed to its principal by rule is 0, and the rent cap is the most
+// executions whose rent the principal can pay.
+func appendTenureLimits(limits []production.Limit, q *startReq) []production.Limit {
+	if q.noTitle {
+		limits = append(limits, production.Limit{Cap: 0, Reason: limitNoTitle})
+	}
+	if q.hasRentCap {
+		limits = append(limits, production.Limit{Cap: q.rentCap, Reason: limitRentFunds})
+	}
+	return limits
 }
 
 // abundance is the abundance factor of a recipe in a region, in basis points: 10

@@ -93,6 +93,14 @@ var skipFields = []string{
 	// rebuilt at P2.3 and P2.6 from the stocks and the requests; a restored world
 	// has them empty until then (spec-resources.md 15).
 	"resourcesState.snapStock", "resourcesState.snapAbundance", "resourcesState.grants",
+	// resRequest.principal and recipe are the principal and the recipe of a request of
+	// the tick, read by the tenure module and derived from the job request the walk
+	// already hashes; they were appended after the off golden was recorded and must not
+	// move it (testing.md 7.1.1). tenure.world is the back pointer to the world and
+	// tenure.rt the module's scratch of a tick (the entitlements, the grants, the
+	// reservations and the starts of the tick), derived and never saved
+	// (tenure_ration.go); productionScratch.rents is the rents in force for the cost anchor of P1.2.
+	"resRequest.principal", "resRequest.recipe", "tenure.world", "tenure.rt", "productionScratch.rents",
 	// roleRow.jobs is the union of roleRow.recipes and roleRow.ownUse, both walked,
 	// and is the same slice as recipes while the subsistence module is off: a derived
 	// list that existed after the golden was recorded must not move the off files

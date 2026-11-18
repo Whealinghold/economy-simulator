@@ -91,8 +91,12 @@ type tenure struct {
 	noTitleRun, rentFundsRun []int64
 	// capBP is MaxHolderShareBP, the most one agent may hold; the pool is exempt.
 	capBP int64
-	// stepping says the posted rent is state: RentStepBP is above 0.
-	stepping bool
+	// stepping says the posted rent is state: RentStepBP is above 0, and ownUseExempt
+	// says a request for an own-use recipe pays no rent (OwnUseExempt).
+	stepping, ownUseExempt bool
+	// rt is the scratch of a tick (tenure_ration.go): the entitlements, the grants and
+	// the starts. It is derived and never saved.
+	rt rationScratch
 }
 
 // newTenure builds the state of the module from a canonical configuration that passed
@@ -104,7 +108,8 @@ func newTenure(c *Config) *tenure {
 		return nil
 	}
 	t := &tenure{regions: len(c.Regions), resources: len(c.Modules.Resources.Resources),
-		capBP: cmp.Or(m.MaxHolderShareBP, DefaultMaxHolderShareBP), stepping: m.RentStepBP > 0}
+		capBP: cmp.Or(m.MaxHolderShareBP, DefaultMaxHolderShareBP), stepping: m.RentStepBP > 0,
+		ownUseExempt: m.OwnUseExempt}
 	n := t.regions * t.resources
 	t.holds, t.base, t.hasTerm, t.closed = make([][]title, n), make([]int64, n), make([]bool, n), make([]bool, n)
 	t.posted, t.scale = make([]int64, n), make([]int64, n)
@@ -288,4 +293,17 @@ func (t *tenure) checkTitle(cell, i int, list []title) error {
 		return fmt.Errorf("holder %d has share %d, above the cap %d", x.holder, x.share, t.capBP)
 	}
 	return nil
+}
+
+// holdsTitle reports whether a holding names the role as a holder: such a role has an
+// income from rent, so the warning class_without_income is not raised for it
+// (spec-land.md 5.7.3, spec-demand.md 10.2). It is a function of the configuration, as
+// the demand index is built before the titles are.
+func holdsTitle(c *Config, role string) bool {
+	if c.Modules.Tenure == nil {
+		return false
+	}
+	return slices.ContainsFunc(c.Modules.Tenure.Holdings, func(h Holding) bool {
+		return h.Holder.Kind == HolderKindRole && h.Holder.Role == role
+	})
 }
