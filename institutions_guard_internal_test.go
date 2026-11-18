@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -119,5 +120,36 @@ func TestEvents_P72bAfterSettlement(t *testing.T) {
 	}
 	if !(changed >= 0 && changed < firstMember && firstMember < ended) {
 		t.Errorf("positions: SettlementClassChanged %d, first MembershipChanged %d, TickEnded %d, want them in that order", changed, firstMember, ended)
+	}
+}
+
+// TestSatAdd64_SaturatesAtInt64Max verifies the sum of two counts of households: exact below
+// the largest int64, and the largest int64 itself where the sum would wrap.
+//
+// Arithmetic: MaxInt64 + 1 and MaxInt64 + MaxInt64 overflow; MaxInt64 - 1 + 1 is the largest
+// value that does not.
+//
+// Requirement: FR-ORG-006
+//
+// Guard: a count that wrapped negative would read as "no member" and admit above the places.
+func TestSatAdd64_SaturatesAtInt64Max(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name string
+		a, b int64
+		want int64
+	}{
+		{"small counts add", 3, 4, 7},
+		{"zero is the identity", 0, 9, 9},
+		{"the largest exact sum", math.MaxInt64 - 1, 1, math.MaxInt64},
+		{"one past the largest saturates", math.MaxInt64, 1, math.MaxInt64},
+		{"two largest saturate", math.MaxInt64, math.MaxInt64, math.MaxInt64},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := satAdd64(tt.a, tt.b); got != tt.want {
+				t.Errorf("satAdd64(%d, %d) = %d, want %d", tt.a, tt.b, got, tt.want)
+			}
+		})
 	}
 }
