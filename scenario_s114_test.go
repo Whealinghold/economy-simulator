@@ -71,7 +71,7 @@ func checkScenarioS114(t *testing.T, seed uint64, on bool, tally *creditTally, s
 		return
 	}
 	checkClaimIdentities(t, "S114 seed "+strconv.FormatUint(seed, 10), snap)
-	if economysim.Money(tally.principal) != snap.Credit.Lent {
+	if tally.principal != snap.Credit.Lent {
 		t.Errorf("seed %d: LoanFormed principal sums to %d, Snapshot().Credit.Lent = %d, want equal", seed, tally.principal, snap.Credit.Lent)
 	}
 	if tally.formed == 0 {

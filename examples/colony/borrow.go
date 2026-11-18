@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"slices"
 
 	economysim "github.com/Whealinghold/economy-sim"
 	"github.com/Whealinghold/economy-sim/config"
 )
 
 // borrowLayers are the layers of the borrowing colony: the pack and the credit layer.
-var borrowLayers = append(append([]string{}, packLayers...), "pack/credit.toml")
+var borrowLayers = slices.Concat(packLayers, []string{"pack/credit.toml"})
 
 // borrowTerm and borrowAsk are what the player asks: a loan of borrowAsk money, to be repaid in
 // borrowTerm ticks. Both are placeholders of the example.

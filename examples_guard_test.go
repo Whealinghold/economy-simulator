@@ -151,6 +151,9 @@ func TestExamples_PackCopiesAgree(t *testing.T) {
 	if len(extra) != 3 {
 		t.Errorf("colony pack has %d files %v, want the 2 copies of testdata/chains/second/ and credit.toml", len(extra), extra)
 	}
+	if !slices.Contains(extra, filepath.Join("examples", "colony", "pack", "credit.toml")) {
+		t.Errorf("colony pack files %v lack credit.toml", extra)
+	}
 }
 
 // TestColony_SharesNoIdentifierWithTheRealm verifies that the commodity, recipe and
