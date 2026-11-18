@@ -609,6 +609,10 @@ type Names struct {
 	// SettlementClasses holds the string ID of each SettlementClassID, in ascending
 	// order of Enter; nil when the settlements module is off.
 	SettlementClasses []string
+	// Bodies, Rights and Controls hold the string ID of each BodyID, RightID and
+	// ControlID (the controls and the rate limits sorted together); nil when the
+	// institutions module is off.
+	Bodies, Rights, Controls []string
 }
 
 // Amount is a quantity of one commodity.
@@ -2343,3 +2347,92 @@ type RentScaled struct {
 }
 
 func (RentScaled) isEvent() {}
+
+// MembershipChanged is emitted once per region and body per tick at P7.2b, in (Region,
+// Body) ascending order, after SettlementClassChanged, when any household was admitted,
+// lapsed, skipped, barred, left waiting or held; never otherwise (spec-institutions.md
+// 11.1, 7.3.3). It is an aggregate, bounded by the regions and bodies of the
+// configuration, and is emitted only with the institutions module on. Every count is
+// households (the sum of weights), and is the result of the round of P1.9a.
+type MembershipChanged struct {
+	Tick int64
+	// Region and Body name the pair of the scope.
+	Region RegionID
+	Body   BodyID
+	// Members is the households that are members after the round, Places the body's
+	// places (0 for no limit) and Eligible the households of the body's roles in the
+	// region, members or not.
+	Members, Places, Eligible int64
+	// Admitted is the households admitted. LapsedRole and LapsedRegion are the households
+	// whose membership lapsed because the role left the body's list, or because the
+	// household left the scope or moved.
+	Admitted, LapsedRole, LapsedRegion int64
+	// Skipped is the households that did not fit when their turn came, Barred the
+	// eligible non-members of a region whose class lacks the body's need, and Waiting the
+	// eligible non-members left.
+	Skipped, Barred, Waiting int64
+	// Held is the completions of a traineeship held at P7.1(a) this tick for want of
+	// headroom (spec-institutions.md 4.5.2).
+	Held int64
+}
+
+func (MembershipChanged) isEvent() {}
+
+// RightRefused is emitted once per region and right per tick at P7.2b, in (Region,
+// Right) ascending order, when any count is non-zero (spec-institutions.md 11.1). It is
+// an aggregate and is emitted only with the institutions module on.
+type RightRefused struct {
+	Tick int64
+	// Region and Right name the pair.
+	Region RegionID
+	Right  RightID
+	// Produce is the starts refused, Sell and Buy the orders refused, and Train the
+	// places not open to a non-member trainer.
+	Produce, Sell, Buy, Train int64
+}
+
+func (RightRefused) isEvent() {}
+
+// PriceControlled is emitted once per region and control per tick at P7.2b, in
+// (Region, Control) ascending order, when any order was lowered to a cap or raised to
+// a floor (spec-institutions.md 11.1). It is an aggregate and is emitted only with the
+// institutions module on.
+type PriceControlled struct {
+	Tick int64
+	// Region and Control name the pair.
+	Region  RegionID
+	Control ControlID
+	// Commodity is the commodity of the control, NoCommodity for a rate limit.
+	Commodity CommodityID
+	// Bids is the orders or requests lowered to a cap, Asks the orders raised to a floor
+	// and Units the units of the clamped orders (0 for a rate limit).
+	Bids, Asks, Units int64
+}
+
+func (PriceControlled) isEvent() {}
+
+// LegalLevelSet is emitted once per control whose level a SetLegalLevels call changes,
+// in ascending Control order, after the whole call has been applied (spec-institutions.md
+// 7.1, 11.1). It is emitted only with the institutions module on.
+type LegalLevelSet struct {
+	Tick int64
+	// Control is the control or rate limit.
+	Control ControlID
+	// CapBefore and CapAfter, FloorBefore and FloorAfter are the levels before and
+	// after, in basis points (a rate limit has no floor).
+	CapBefore, CapAfter, FloorBefore, FloorAfter int64
+}
+
+func (LegalLevelSet) isEvent() {}
+
+// RightSuspensionSet is emitted once per right whose suspension a SetRightSuspensions
+// call changes, in ascending Right order, after the whole call has been applied
+// (spec-institutions.md 7.1, 11.1). It is emitted only with the institutions module on.
+type RightSuspensionSet struct {
+	Tick int64
+	// Right is the right and Suspended whether it is suspended after the call.
+	Right     RightID
+	Suspended bool
+}
+
+func (RightSuspensionSet) isEvent() {}

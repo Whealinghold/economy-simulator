@@ -52,6 +52,7 @@ var checkpointSections = [...]section{
 	{tag: 23, name: "Settlements", present: func(c *Config) bool { return c.Modules.Settlements != nil }, save: (*World).saveSettlements, load: (*World).loadSettlements},
 	{tag: 25, name: "Tenure", present: func(c *Config) bool { return c.Modules.Tenure != nil }, save: (*World).saveTenure, load: (*World).loadTenure},
 	{tag: 26, name: "Credit", present: func(c *Config) bool { return c.Modules.Credit != nil }, save: (*World).saveCredit, load: (*World).loadCredit},
+	{tag: 31, name: "Institutions", present: func(c *Config) bool { return c.Modules.Institutions != nil }, save: (*World).saveInstitutions, load: (*World).loadInstitutions},
 	{tag: 33, name: "Technology", present: func(c *Config) bool { return c.Modules.Technology != nil }, save: (*World).saveTechnology, load: (*World).loadTechnology},
 	{tag: 34, name: "Extensions", save: (*World).saveExtensions, load: (*World).loadExtensions},
 }
@@ -77,7 +78,7 @@ type notBuiltSection struct {
 var notBuiltSections = [...]notBuiltSection{
 	{24, "Employment", "Employment"},
 	{27, "Facilities", "Infrastructure"}, {28, "Risk", "Risk"}, {29, "Insurance", "Insurance"},
-	{30, "Fiscal", "Fiscal"}, {31, "Institutions", "Institutions"}, {32, "Policy", "Policy"},
+	{30, "Fiscal", "Fiscal"}, {32, "Policy", "Policy"},
 }
 
 // agentTail is a block that follows the agent list of tag 3 when its module is
@@ -91,8 +92,9 @@ type agentTail struct {
 }
 
 // agentTails holds the blocks of tag 3 after the agent list, in module order. It
-// has the stores of the storage module; the institutions module appends its block
-// after it.
+// has the stores of the storage module and the membership of the institutions module,
+// in that order.
 var agentTails = [...]agentTail{
 	{present: func(c *Config) bool { return c.Modules.Storage != nil }, save: (*World).saveStores, load: (*World).loadStores},
+	{present: func(c *Config) bool { return c.Modules.Institutions != nil }, save: (*World).saveMembers, load: (*World).loadMembers},
 }

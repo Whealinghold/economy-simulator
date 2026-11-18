@@ -39,6 +39,7 @@ var positionList = [...]position{
 	{"P1.7a", "CRD", line},
 	{"P1.8", "EXT", line},
 	{"P1.9", "AGT", line},
+	{"P1.9a", "ORG", line},
 	{"P2.1", "PRO", line},
 	{"P2.2", "SKL", line},
 	{"P2.3", "RES", line},
@@ -71,6 +72,7 @@ var positionList = [...]position{
 	{"P7.1", "SPN", line},
 	{"P7.2", "MIG", line},
 	{"P7.2a", "SET", line},
+	{"P7.2b", "ORG", line},
 	{"P8.1", "LED", line},
 	{"P8.2", "LED", line},
 	{"P8.3", "RES", line},
@@ -86,11 +88,10 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P0.3a",
-	"P1.3a", "P1.7b", "P1.9a",
+	"P1.3a", "P1.7b",
 	"P2.5a", "P2.8b",
 	"P3.1a", "P3.3c", "P3.4a", "P3.6b", "P3.6c",
 	"P4.1a",
-	"P7.2b",
 	"P8.1a", "P8.1b", "P8.3a", "P8.3b",
 }
 
@@ -143,6 +144,9 @@ func (w *World) positionsFlows() error {
 	}
 	if w.integ.visit {
 		w.p19Directives()
+	}
+	if w.org != nil {
+		w.p19aMembership()
 	}
 	return w.positionsProduce()
 }
@@ -267,6 +271,9 @@ func (w *World) positionsTail() error {
 func (w *World) positionsClose() error {
 	if w.set != nil {
 		w.p72aSettlement()
+	}
+	if w.org != nil {
+		w.p72bInstitutions()
 	}
 	if err := w.p81Age(); err != nil {
 		return err

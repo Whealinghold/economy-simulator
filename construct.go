@@ -169,6 +169,7 @@ func (w *World) allocate() {
 	}
 	w.external = newExternal(&w.cfg)
 	w.outside = outsideMarks(&w.cfg)
+	w.org = newInstitutions(&w.cfg, w.polity, w.set, w.outside)
 	w.tec = newTechnology(&w.cfg, w.outside, &w.geo, w.rnd.seed)
 	w.firstHousehold = regions + w.external.counterpartyCount() + w.polity.treasuryCount()
 	if w.external != nil {
@@ -356,6 +357,7 @@ func namesOf(c *Config) Names {
 	n.StoreClasses = storeClassNames(c)
 	n.TechFields = techNames(c)
 	n.SettlementClasses = settlementNames(c)
+	n.Bodies, n.Rights, n.Controls = orgNames(c)
 	return n
 }
 
@@ -377,6 +379,7 @@ func modulesOn(c *Config) []string {
 		{"technology", m.Technology != nil},
 		{"settlements", m.Settlements != nil},
 		{"tenure", m.Tenure != nil},
+		{"institutions", m.Institutions != nil},
 	}
 	on := []string{}
 	for _, t := range table {
@@ -481,6 +484,10 @@ func (w *World) summary() []slog.Attr {
 	}
 	if w.set != nil {
 		attrs = append(attrs, slog.Int(logkeys.SettlementClasses, w.set.n))
+	}
+	if m := w.cfg.Modules.Institutions; m != nil {
+		attrs = append(attrs, slog.Int(logkeys.Bodies, len(m.Bodies)), slog.Int(logkeys.Rights, len(m.Rights)),
+			slog.Int(logkeys.Controls, len(m.Controls)+len(m.RateLimits)))
 	}
 	return attrs
 }

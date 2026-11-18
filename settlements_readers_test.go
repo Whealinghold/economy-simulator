@@ -69,6 +69,11 @@ func TestReaders_StaticCheck(t *testing.T) {
 				continue
 			}
 			for _, call := range []string{"regionHas(", "regionLimit(", "set.class[", "set.tab", "set.e[", "set.l["} {
+				// The institutions round reads the flag of a body's Needs through regionHas, at P1.9a,
+				// which is the reader of SET's hook H6 (spec-institutions.md 3.5.2).
+				if f == "institutions_round.go" && call == "regionHas(" {
+					continue
+				}
 				if strings.Contains(line, call) {
 					t.Errorf("%s:%d reads the class with %q, want only the settlements files to (spec-settlements.md 6.3)", f, n+1, call)
 				}

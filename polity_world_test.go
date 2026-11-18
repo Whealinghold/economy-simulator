@@ -348,7 +348,8 @@ func TestPolity_NewPolity(t *testing.T) {
 // changing the hash of any region.
 func TestPolity_NoRegionFieldRead(t *testing.T) {
 	t.Parallel()
-	institutionsFiles := []string{"institutions_validate.go", "institutions_warn.go"}
+	institutionsFiles := []string{"institutions.go", "institutions_validate.go", "institutions_warn.go", "institutions_round.go",
+		"institutions_rights.go", "institutions_legal.go", "institutions_report.go"}
 	files, err := filepath.Glob("*.go")
 	if err != nil {
 		t.Fatal(err)
