@@ -148,6 +148,10 @@ func TestLayer_Factor(t *testing.T) {
 		{"negative slot", -1, 0, 0, false},
 		{"negative gain", 1, -1, 0, false},
 		{"beyond int64 is capped", math.MaxInt64, math.MaxInt64 - 10_000, maxFactor, true},
+		// Fix: Basis+gain wraps for a gain of MaxInt64 (10 000 + MaxInt64 < 0), which
+		// gave a negative factor with ok true; 1 * MaxInt64 / 10 000 + 1 fits and is
+		// capped at 100 000.
+		{"gain near MaxInt64 is capped, not wrapped", 1, math.MaxInt64, maxFactor, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

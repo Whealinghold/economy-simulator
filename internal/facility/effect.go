@@ -60,7 +60,13 @@ func Layer(slotBP, gainBP, maxFactorBP int64) (int64, bool) {
 	if slotBP == 0 {
 		return 0, true
 	}
-	f, ok := checked.MulDivFloor(slotBP, Basis+gainBP, Basis)
+	// floor(slot * (Basis + gain) / Basis) = slot + floor(slot * gain / Basis); the
+	// sum Basis+gainBP is not taken, since it wraps for a gain near MaxInt64.
+	q, ok := checked.MulDivFloor(slotBP, gainBP, Basis)
+	f := q
+	if ok {
+		f, ok = checked.Add(q, slotBP)
+	}
 	if !ok {
 		// The factor exceeds int64, so it exceeds any cap too.
 		return maxFactorBP, true
