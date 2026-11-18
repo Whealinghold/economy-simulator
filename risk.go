@@ -336,27 +336,33 @@ func expectedOf(edges []rsk.Edge) int64 {
 
 // configuredLoss is the expected loss of a lane of a mode from the configuration
 // alone (spec-risk.md 8.3): the rows at the scale of 10 000 over the path of the
-// configured graph g with every edge open. c is canonical. It reads no world.
-func configuredLoss(c *Config, g Graph, from, to RegionID, mode string) int64 {
+// configured graph g with every edge open. c is canonical. It reads no world. The
+// configuration may not have been validated (Config.TransportLanes), so a row with a
+// number outside 0 to 10 000 gives ok false and not an invariant panic.
+func configuredLoss(c *Config, g Graph, from, to RegionID, mode string) (loss int64, ok bool) {
 	m := c.Modules.Risk
 	if m == nil {
-		return 0
+		return 0, true
 	}
 	var edges []rsk.Edge
 	for a, hops := from, 0; a != to; hops++ {
-		b, ok := g.NextHop(a, to)
-		if !ok || hops > len(c.Regions) {
-			return 0
+		b, next := g.NextHop(a, to)
+		if !next || hops > len(c.Regions) {
+			return 0, true
 		}
 		i, found := slices.BinarySearchFunc(m.Routes, [3]string{c.Regions[a].ID, c.Regions[b].ID, mode}, func(row RouteRisk, k [3]string) int {
 			return cmp.Or(cmp.Compare(row.From, k[0]), cmp.Compare(row.To, k[1]), cmp.Compare(row.Mode, k[2]))
 		})
 		if found {
-			if p := effectiveP(m.Routes[i].StrikeBP, wholeBP); p > 0 {
+			p, pok := rsk.Prob(m.Routes[i].StrikeBP, wholeBP)
+			if !pok {
+				return 0, false
+			}
+			if p > 0 {
 				edges = append(edges, rsk.Edge{P: p, SeverityBP: m.Routes[i].SeverityBP})
 			}
 		}
 		a = b
 	}
-	return expectedOf(edges)
+	return rsk.Expected(edges)
 }
