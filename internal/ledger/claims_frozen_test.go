@@ -20,28 +20,24 @@ func TestClaim_FormationFieldsAreFrozen(t *testing.T) {
 	id := c.lend(t)
 	formed, _ := c.l.Claim(id)
 	steps := []struct {
-		name string
-		do   func() error
+		name    string
+		do      func() error
+		wantErr error
 	}{
-		{"interest part paid", func() error { return c.l.Settle(id, 6, 0) }},
-		{"overdue marked", func() error { return c.l.MarkOverdue(id, 11) }},
-		{"reassigned to an estate", func() error { return c.l.Reassign(id, c.e0) }},
-		{"payment above what is owed refused", func() error { return c.l.Settle(id, 0, 61) }},
-		{"principal part paid", func() error { return c.l.Settle(id, 0, 20) }},
+		{"interest part paid", func() error { return c.l.Settle(id, 6, 0) }, nil},
+		{"overdue marked", func() error { return c.l.MarkOverdue(id, 11) }, nil},
+		{"reassigned to an estate", func() error { return c.l.Reassign(id, c.e0) }, nil},
+		{"payment above what is owed refused", func() error { return c.l.Settle(id, 0, 61) }, ledger.ErrInvalidAmount},
+		{"principal part paid", func() error { return c.l.Settle(id, 0, 20) }, nil},
 	}
 	prev := formed
 	for _, st := range steps {
-		err := st.do()
-		if st.name == "payment above what is owed refused" {
-			if !errors.Is(err, ledger.ErrInvalidAmount) {
-				t.Fatalf("%s: err = %v, want ErrInvalidAmount", st.name, err)
-			}
-		} else if err != nil {
-			t.Fatalf("%s: %v", st.name, err)
+		if err := st.do(); !errors.Is(err, st.wantErr) && (st.wantErr != nil || err != nil) {
+			t.Fatalf("%s: err = %v, want %v", st.name, err, st.wantErr)
 		}
 		got, ok := c.l.Claim(id)
 		if !ok {
-			t.Fatalf("%s: the claim ended with 40 still owed", st.name)
+			t.Fatalf("%s: the claim ended before the last step, want it open", st.name)
 		}
 		if got.Principal != formed.Principal || got.Interest != formed.Interest || got.RateBP != formed.RateBP ||
 			got.Formed != formed.Formed || got.Due != formed.Due {
