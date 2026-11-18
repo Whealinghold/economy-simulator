@@ -69,54 +69,6 @@ func newEmployment(c *Config) *employment {
 	return e
 }
 
-// validateEmployment checks the module and the role fields of the payroll form
-// (spec-employment.md 24.4.1): the bound of PayrollBP, the module dependency of
-// Hireable and of the block, a role that is both, and the module on with no
-// payer role or no Hireable role (a no-op that would look like a result).
-func (v *validator) validateEmployment() {
-	c := &v.c
-	on := c.Modules.Employment != nil
-	var payers, workers int
-	for i := range c.Roles {
-		r := &c.Roles[i]
-		v.employmentRole([]string{"roles", r.ID}, r, on)
-		if r.Employer != nil {
-			payers++
-		}
-		if r.Hireable {
-			workers++
-		}
-	}
-	if !on {
-		return
-	}
-	base := []string{"modules", "employment"}
-	if payers == 0 {
-		v.rep.add(ErrEmploymentShape, path(base, "employer"), "0", "1")
-	}
-	if workers == 0 {
-		v.rep.add(ErrEmploymentShape, path(base, "hireable"), "0", "1")
-	}
-}
-
-// employmentRole checks the employment fields of one role; on says the module
-// is present.
-func (v *validator) employmentRole(rb []string, r *Role, on bool) {
-	if r.Employer != nil {
-		eb := path(rb, "employer")
-		if !on {
-			v.rep.add(ErrModuleDependency, eb, "employment", "")
-		}
-		v.inRange(path(eb, "payroll_bp"), r.Employer.PayrollBP, 1, payroll.WholeBP)
-	}
-	if r.Hireable && !on {
-		v.rep.add(ErrModuleDependency, path(rb, "hireable"), "employment", "")
-	}
-	if r.Hireable && r.Employer != nil {
-		v.rep.add(ErrEmploymentShape, path(rb, "hireable"), "true", "false")
-	}
-}
-
 // isPayer says the role has an employer block. The pooled regional wage that the
 // cost anchor reads excludes the agents of these roles (spec-employment.md
 // 24.2.3, 8.4). It is false when the module is off (e is nil).
