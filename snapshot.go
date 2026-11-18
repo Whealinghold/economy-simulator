@@ -98,6 +98,11 @@ type Snapshot struct {
 	// (spec-polity.md 10.5). Empty with the polity module off or with no jurisdiction
 	// governed.
 	Jurisdictions []JurisdictionRow
+	// Claims are the open claims of the credit module, by claim ID, and Credit the
+	// seven cumulative totals of the claim list (spec-credit.md 16.4); both are the
+	// zero value with the module off.
+	Claims []ClaimRow
+	Credit CreditTotals
 	// Tech has one row for each technology cell with experience or advance above 0,
 	// in ascending (Region, Field) order (spec-technology.md 11.4). Empty with the
 	// technology module off.
@@ -428,6 +433,7 @@ func (w *World) Snapshot() (Snapshot, error) {
 	w.snapshotMigration(&s)
 	w.snapshotContracts(&s)
 	w.snapshotTechnology(&s)
+	w.snapshotClaims(&s)
 	if err := w.snapshotTreasuries(&s); err != nil {
 		return Snapshot{}, fmt.Errorf("snapshot at tick %d: %w", w.Tick(), err)
 	}

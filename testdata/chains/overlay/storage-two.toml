@@ -1,0 +1,10 @@
+# The storage module on the variant two with the transport module (plan 3-sto D14, spec-reference-chain.md 4.4, S94):
+# every household has a base room of 400 mass and 400 bulk, which holds the start stock of every role (60 units at
+# most, a size of 1 each) and one tick's upkeep, so a cargo of the shippers has to find room at its consignee. The
+# base room is per household, so an agent of weight w has w times it. There is no store class. S94 narrows the room of
+# the consignee's role in the test, to room for one cargo.
+# Layer it after the pack: base.toml, two.toml, overlay/trade-two.toml, overlay/transport-two.toml, this file.
+
+[modules.storage.base]
+mass = 400
+bulk = 400

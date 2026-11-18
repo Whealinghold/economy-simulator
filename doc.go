@@ -1560,6 +1560,8 @@
 //   - ClaimFilter: the region and role filter of the call that forgives claims.
 //   - ClaimRow: the snapshot row of an open claim.
 //   - CreditTotals: the seven cumulative totals of the claim list in the snapshot.
+//   - CreditState: the claims of one agent in its state: what it owes and is owed, the group of
+//     the credit view without the block.
 //   - Loan: a claim formed by the credit round: the lender's principal moves to the borrower
 //     at formation and the interest is fixed then.
 //   - Lender, Borrower: a role with a Lend block and a role with a Borrow block; the agents of
@@ -1592,6 +1594,7 @@
 //     passes to an estate and of the settlement pass of a region.
 //   - LoanFormed, CreditRound: the events of a loan formed at P3.3b and of the round of a
 //     region (its admissions, refusals, loans and unfilled principal).
+//   - CreditRateScaled: the event of a call that sets the rate scale of a region.
 //   - Written off (claim): a claim ended with its owed lost, after the write-off ticks or at
 //     the removal of its debtor.
 //   - Forgiven (claim): a loan ended by the call that forgives claims; no money moves.
