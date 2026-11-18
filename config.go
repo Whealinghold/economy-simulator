@@ -157,6 +157,12 @@ type Modules struct {
 	// nothing). It needs Modules.Resources. Its hash id is 14, whatever its place in
 	// this struct.
 	Tenure *TenureConfig
+	// Risk is the risk module: the chance that a shipment on an edge loses a share of
+	// its cargo and that a store loses a share of the goods held above the base room,
+	// as data (spec-risk.md). Nil is off; non-nil is on, even when empty (an empty
+	// module has no row and does nothing). Route rows need Modules.Transport and store
+	// rows need Modules.Storage. Its hash id is 16, whatever its place in this struct.
+	Risk *Risk
 }
 
 // Credit is the configuration of the credit module (spec-credit.md 4.1, 14). Its
@@ -641,6 +647,74 @@ func (m *TenureConfig) canonical() *TenureConfig {
 	if out.MaxHolderShareBP == 0 {
 		out.MaxHolderShareBP = DefaultMaxHolderShareBP
 	}
+	return &out
+}
+
+// Risk is the configuration of the risk module (spec-risk.md 12.1). Its presence
+// switches the module on. It has no default: no row is no risk. After construction
+// the rows are in canonical order (spec-config.md 3.4). Every number is a
+// placeholder (N-015, N-027).
+type Risk struct {
+	// Routes are the route rows, one per (From, To, Mode), at most MaxRiskRows,
+	// canonical by those keys.
+	Routes []RouteRisk
+	// Stores are the store rows, one per (Region, Class), at most MaxRiskRows,
+	// canonical by those keys.
+	Stores []StoreRisk
+}
+
+// RouteRisk is the risk a shipment of one mode runs on one directed edge
+// (spec-risk.md 3.2.1). A direction and a mode are separate rows.
+type RouteRisk struct {
+	// From and To are the region IDs of a configured edge, neither an outside node.
+	From, To string
+	// Mode is a transport mode ID.
+	Mode string
+	// StrikeBP is the probability of a strike per shipment on the edge, in basis
+	// points, 1 to 10 000.
+	StrikeBP int64
+	// SeverityBP is the share of each commodity a strike takes, in basis points, 1 to
+	// 10 000.
+	SeverityBP int64
+	// Common says one draw a tick decides every shipment dispatched on the row
+	// (spec-risk.md 3.3), where false draws once per shipment.
+	Common bool
+}
+
+// StoreRisk is the risk the stores of one class in one region run each tick
+// (spec-risk.md 3.2.2).
+type StoreRisk struct {
+	// Region is a region ID that is not an outside node.
+	Region string
+	// Class is a store class ID.
+	Class string
+	// StrikeBP is the probability that a store of the class is struck in a tick, in
+	// basis points, 1 to 10 000.
+	StrikeBP int64
+	// SeverityBP is the share of the stored goods in the struck store that a strike
+	// takes, in basis points, 1 to 10 000.
+	SeverityBP int64
+	// Common says one draw a tick decides every store of the class in the region,
+	// where false draws once per store.
+	Common bool
+}
+
+// canonical returns a copy of the module with the route rows by (From, To, Mode)
+// and the store rows by (Region, Class), nil for nil (spec-config.md 3.4,
+// spec-risk.md 3.2.3). The regions, the modes and the store classes are in ID
+// order in a canonical configuration, so the order of an ID is the order of its
+// index, which is the order the spec names.
+func (m *Risk) canonical() *Risk {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Routes = sortedBy(m.Routes, func(a, b RouteRisk) int {
+		return cmp.Or(cmp.Compare(a.From, b.From), cmp.Compare(a.To, b.To), cmp.Compare(a.Mode, b.Mode))
+	})
+	out.Stores = sortedBy(m.Stores, func(a, b StoreRisk) int {
+		return cmp.Or(cmp.Compare(a.Region, b.Region), cmp.Compare(a.Class, b.Class))
+	})
 	return &out
 }
 
@@ -1743,6 +1817,7 @@ func (c Config) canonical() Config {
 	out.Modules.Credit = c.Modules.Credit.canonical()
 	out.Modules.Technology = c.Modules.Technology.canonical()
 	out.Modules.Tenure = c.Modules.Tenure.canonical()
+	out.Modules.Risk = c.Modules.Risk.canonical()
 	return out
 }
 

@@ -620,3 +620,10 @@ const (
 	// MaxTitleTransfers is the most entries of one call of TransferTitles.
 	MaxTitleTransfers = 1_024
 )
+
+// The bound of the risk module (spec-risk.md 12.2). It is a placeholder (N-015, N-027).
+const (
+	// MaxRiskRows is the most rows of each table of the module, the route rows and
+	// the store rows.
+	MaxRiskRows = 4_096
+)

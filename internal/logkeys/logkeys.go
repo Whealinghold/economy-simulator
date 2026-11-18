@@ -228,3 +228,7 @@ const (
 	Rent  = "rent"
 	Share = "share"
 )
+
+// Rows is a count of risk rows (route and store rows), in the construction summary
+// of the risk module (spec-risk.md 14.3).
+const Rows = "rows"
