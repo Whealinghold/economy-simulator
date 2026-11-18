@@ -227,8 +227,8 @@ func TestPositions_P83cListed(t *testing.T) {
 	t.Parallel()
 	at := slices.IndexFunc(positionList[:], func(p position) bool { return p.id == "P8.3c" })
 	if at < 1 || positionList[at].owner != "TEC" || positionList[at].where != line ||
-		positionList[at-1].id != "P8.3" || positionList[at+1].id != "P8.4" {
-		t.Errorf("P8.3c at %d of positionList, want a TEC line entry between P8.3 and P8.4", at)
+		!slices.Contains([]string{"P8.3", "P8.3a", "P8.3b"}, positionList[at-1].id) || positionList[at+1].id != "P8.4" {
+		t.Errorf("P8.3c at %d of positionList, want a TEC line entry after P8.3 and before P8.4", at)
 	}
 	if slices.Contains(notBuiltPositions[:], "P8.3c") {
 		t.Errorf("notBuiltPositions lists P8.3c, which has a call")

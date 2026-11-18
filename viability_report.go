@@ -261,6 +261,10 @@ type Report struct {
 	Headroom []HeadroomRow
 	Rent     []RentRow
 	Runway   []RunwayRow
+	// RentOffDual lists the endowments whose configured rent is off the dual Rent beyond
+	// the tolerance of the tenure module (spec-land.md 5.6.2, FR-LND-040); nil with the
+	// module off.
+	RentOffDual []RentOffDualRow
 	// PayrollInfeasible lists the regions whose programme kept its payroll-free
 	// duals under the employment module, with the reason (spec-viability.md 5.6);
 	// nil with the module off.
@@ -290,6 +294,7 @@ func (r *Report) normalise() {
 	r.Headroom = sortedUnique(r.Headroom, func(a, b HeadroomRow) int { return cmpPair(a.Region, a.Resource, b.Region, b.Resource) })
 	r.Rent = sortedUnique(r.Rent, func(a, b RentRow) int { return cmpPair(a.Region, a.Resource, b.Region, b.Resource) })
 	r.Runway = sortedUnique(r.Runway, func(a, b RunwayRow) int { return cmpPair(a.Region, a.Resource, b.Region, b.Resource) })
+	r.RentOffDual = sortedUnique(r.RentOffDual, func(a, b RentOffDualRow) int { return cmpPair(a.Region, a.Resource, b.Region, b.Resource) })
 	r.PayrollInfeasible = sortedUnique(r.PayrollInfeasible, func(a, b PayrollRecord) int { return cmpPair(a.Region, a.Reason, b.Region, b.Reason) })
 }
 
@@ -729,6 +734,7 @@ func (s *viaSolve) endowments(p *viaProgramme, scale steady.Frac) {
 			rent = MaxMoney
 		}
 		s.rep.Rent = append(s.rep.Rent, RentRow{Region: region, Resource: res.ID, Rent: rent})
+		s.rentOffDual(region, res.ID, rent)
 		if draw := p.out.ResDraw[j]; draw.Sign() > 0 {
 			s.headroom(region, res, e, p.out.ResPhi[j], draw)
 		}

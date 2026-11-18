@@ -4,7 +4,9 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -44,7 +46,7 @@ func eventConstants(t *testing.T) map[string]map[string]bool {
 			out[id.Name][u] = true
 		}
 	}
-	for _, typ := range []string{"Reason", "Cause", "Kind"} {
+	for _, typ := range []string{"Reason", "Cause", "Kind", "FacilityKind"} {
 		if len(out[typ]) == 0 {
 			t.Fatalf("event.go declares no %s constants; the parser walk is stale", typ)
 		}
@@ -87,6 +89,14 @@ func (c *cardChecker) member(ev string, tick int64, typ, v string) {
 	if !c.consts[typ][v] {
 		c.t.Errorf("seed %d tick %d %s %s = %q, not a constant of %s in event.go", c.seed, tick, ev, typ, v, typ)
 	}
+}
+
+// facility checks a FacilityChanged: its region, its class, its kind and its cause.
+func (c *cardChecker) facility(e economysim.FacilityChanged) {
+	c.region("FacilityChanged", e.Tick, e.Region)
+	c.id("FacilityChanged", e.Tick, "Class", int(e.Class), len(c.names.FacilityClasses))
+	c.member("FacilityChanged", e.Tick, "FacilityKind", string(e.Kind))
+	c.member("FacilityChanged", e.Tick, "Cause", string(e.Cause))
 }
 
 func (c *cardChecker) side(ev string, tick int64, s economysim.Side) {
@@ -229,9 +239,20 @@ func (c *cardChecker) check(e economysim.Event) {
 		c.region("TitleTransferred", e.Tick, e.Region)
 		c.id("TitleTransferred", e.Tick, "Resource", int(e.Resource), len(c.names.Resources))
 		c.member("TitleTransferred", e.Tick, "Cause", string(e.Cause))
+	case economysim.FacilityChanged:
+		c.facility(e)
 	case economysim.RentScaled:
 		c.region("RentScaled", e.Tick, e.Region)
 		c.id("RentScaled", e.Tick, "Resource", int(e.Resource), len(c.names.Resources))
+	case economysim.RentPaid:
+		c.region("RentPaid", e.Tick, e.Region)
+		c.id("RentPaid", e.Tick, "Resource", int(e.Resource), len(c.names.Resources))
+		for _, rm := range e.From {
+			c.region("RentPaid", e.Tick, rm.Region)
+		}
+		for _, rm := range e.To {
+			c.region("RentPaid", e.Tick, rm.Region)
+		}
 	}
 }
 
@@ -285,7 +306,7 @@ func TestCardinality_EventAttributesTakeClosedValues(t *testing.T) {
 
 // TestPacks_FiveAndAllEventAttributesTakeClosedValues is the check of
 // TestCardinality_EventAttributesTakeClosedValues on the warm five (every module off) and
-// on the all-on pack, seed 1, 400 ticks: the configuration of five that N-295 left to
+// on the warm five with the tenure overlays and on the all-on pack, seed 1, 400 ticks: the configuration of five that N-295 left to
 // Stage 2 (plan 2-24 Phase 2). The all-on row is the one that emits the events of the
 // modules (transport, outside node, migration, merchants, demand). It skips under -race with
 // the other 5 000-household runs, and its name starts with a prefix of gateFPrefixes.
@@ -300,7 +321,7 @@ func TestPacks_FiveAndAllEventAttributesTakeClosedValues(t *testing.T) {
 		pack   string
 		layers []string
 		opts   []economysim.Option
-	}{{"five", packFiveWarm, nil}, {"all", allLayers, allOptions()}} {
+	}{{"five", packFiveWarm, nil}, {"five+tenure", packFiveTenure, nil}, {"all", allLayers, allOptions()}} {
 		cfg := loadValidPack(t, row.layers...)
 		t.Run(row.pack, func(t *testing.T) {
 			t.Parallel()
@@ -423,8 +444,8 @@ func (e *errCount) Errorf(string, ...any) { e.n++ }
 // stopped comparing IDs to the names table.
 func TestCardChecker_FlagsOutOfRangeAndOutsideSet(t *testing.T) {
 	t.Parallel()
-	names := economysim.Names{Regions: []string{"r"}, Commodities: []string{"c"}, Roles: []string{"o"}, Recipes: []string{"a", "b"}, Jurisdictions: []string{"j"}, Resources: []string{"x"}}
-	consts := map[string]map[string]bool{"Reason": {"ok": true}, "Cause": {"removal": true, "consumer": true}, "Kind": {}}
+	names := economysim.Names{FacilityClasses: []string{"f"}, Regions: []string{"r"}, Commodities: []string{"c"}, Roles: []string{"o"}, Recipes: []string{"a", "b"}, Jurisdictions: []string{"j"}, Resources: []string{"x"}}
+	consts := map[string]map[string]bool{"Reason": {"ok": true}, "Cause": {"removal": true, "consumer": true, "recipe": true}, "Kind": {}, "FacilityKind": {"built": true}}
 	tests := []struct {
 		name string
 		ev   economysim.Event
@@ -447,6 +468,9 @@ func TestCardChecker_FlagsOutOfRangeAndOutsideSet(t *testing.T) {
 		{"outside cause outside set", economysim.OutsideEnded{Cause: economysim.CauseUnits}, true},
 		{"title cause in set", economysim.TitleTransferred{Cause: economysim.CauseRemoval}, false},
 		{"title cause outside set", economysim.TitleTransferred{Cause: "gift"}, true},
+		{"facility kind and cause in sets", economysim.FacilityChanged{Kind: economysim.FacilityBuilt, Cause: economysim.CauseRecipe}, false},
+		{"facility kind outside set", economysim.FacilityChanged{Kind: "gifted", Cause: economysim.CauseRecipe}, true},
+		{"facility cause outside set", economysim.FacilityChanged{Kind: economysim.FacilityBuilt, Cause: "gift"}, true},
 		{"title resource out of range", economysim.TitleTransferred{Resource: 1, Cause: economysim.CauseConsumer}, true},
 		{"rent scale resource out of range", economysim.RentScaled{Resource: 1}, true},
 	}
@@ -508,5 +532,28 @@ func (c *cardChecker) checkStorage(e economysim.Event) {
 		c.id("StoreChanged", e.Tick, "Class", int(e.Class), len(c.names.StoreClasses))
 		c.member("StoreChanged", e.Tick, "Kind", string(e.Kind))
 		c.member("StoreChanged", e.Tick, "Cause", string(e.Cause))
+	}
+}
+
+// TestCardinality_TierAttribute verifies FR-LND-031: the attribute economysim.tier of the
+// rent metrics has three values in observability-and-logging.md 5.4.1, own, commons and
+// let, and RentPaid carries one unit count for each (OwnUnits, CommonsUnits, LetUnits), so
+// the instrument economysim.rent.units is bounded by the configuration and by that set.
+//
+// Requirement: FR-LND-031
+//
+// Guard: a fourth tier added to the event without the closed set of the rule file, or a set
+// that no field feeds, would make the attribute unbounded or empty.
+func TestCardinality_TierAttribute(t *testing.T) {
+	t.Parallel()
+	rules := readFile(t, "doc/rules/observability-and-logging.md")
+	if !strings.Contains(rules, "`economysim.tier` (`own`, `commons`, `let`)") {
+		t.Errorf("observability-and-logging.md 5.4.1 does not list economysim.tier as own, commons and let")
+	}
+	typ := reflect.TypeFor[economysim.RentPaid]()
+	for _, f := range []string{"OwnUnits", "CommonsUnits", "LetUnits"} {
+		if _, ok := typ.FieldByName(f); !ok {
+			t.Errorf("RentPaid has no field %s, want one unit count for each value of the attribute tier", f)
+		}
 	}
 }

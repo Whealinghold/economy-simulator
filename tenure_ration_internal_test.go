@@ -26,7 +26,7 @@ func rationConfig(stock, poolBP int64, closed bool) Config {
 // toStart replays one tick of w up to and including the starts of P2.7 and stops there,
 // so the state of the production phase can be read before the trades. The world is not
 // stepped again.
-func toStart(t *testing.T, w *World) {
+func toStart(t testing.TB, w *World) {
 	t.Helper()
 	if err := w.beginStep(); err != nil {
 		t.Fatalf("beginStep() error = %v, want nil", err)
@@ -94,7 +94,7 @@ func TestRation_TiersServeOwnCommonsLet(t *testing.T) {
 	}
 	toStart(t, w)
 	c := w.tenure.rt.counts[0]
-	want := tenureCount{commonsUnits: 3, letUnits: 3, offered: 5, unserved: 24, tenants: 1, lessors: 1, paid: 6,
+	want := tenureCount{commonsUnits: 3, letUnits: 3, offered: 5, unserved: 24, tenants: 1, lessors: 1, paid: 6, due: 6,
 		rentInForce: 2, postedBefore: 2, entitle: 5}
 	if c != want {
 		t.Errorf("counts of the endowment = %+v, want %+v", c, want)
