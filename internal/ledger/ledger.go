@@ -340,7 +340,9 @@ func New(cfg Config) (*Ledger, error) {
 	}
 	if len(cfg.Flows)+len(cfg.Fiscal) > 0 {
 		l.flowClass = slices.Clone(cfg.Flows)
-		l.fiscalFrom = len(l.flowClass)
+		if len(cfg.Fiscal) > 0 {
+			l.fiscalFrom = len(l.flowClass)
+		}
 		for _, f := range cfg.Fiscal {
 			l.flowClass = append(l.flowClass, Internal)
 			l.fiscalGoods = append(l.fiscalGoods, f.Goods)
