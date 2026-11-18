@@ -55,9 +55,9 @@ PR description.
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241 |
 | CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384 |
-| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368 |
+| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-381 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-397, N-381 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361 |
@@ -74,11 +74,11 @@ PR description.
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
 | OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349 |
-| ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244 |
+| ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226, N-327 |
 | SAV | N-145, N-156, N-195, N-197, N-362, N-382 |
@@ -88,7 +88,7 @@ PR description.
 | SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357 |
-| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361 |
+| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399 |
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-358, N-359, N-360, N-361, N-384 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322 |
@@ -608,6 +608,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 8):** nothing further applied. the reason is an argument of `recipeAbandoned`, the value builder of the event, and not of `job.abandon`, so MIG's `region_changed` is appended to the reasons with MIG and changes no function of the row. Still open for MIG (the call at departure), SKL (`in_traineeship`) and INT.
 - **Update (2026-10-25, plan 2-3, REG):** the registry of obligations is built here (D270): a table `w.bounds` made at construction by the modules that are on, one `*RegionBoundError` per name, so the refusal path allocates nothing; Stage 2 registers none (`relocationRefusal` is an empty fixed-order sequence). Each module appends its name in its own plan: TRN `open_shipment`, MIG `on_journey`, MER `open_contract`. `has_store`, `open_hire` and `in_traineeship` belong to Stage 3. The textual form of an instance key in `skip` is `<obligation>:<number>`; a bare name matches every instance (`spec-regions.md` 6.1.6). Left open.
 - **Update (2026-11-13, plan 3-skl Phase 1):** applied for SKL: the `in_traineeship` obligation is registered with the surface (plan 3-skl Phase 3), only when some role has `TrainingTicks` above 0. Remove the SKL leg at the gate.
+- **Update (2026-11-18, plan 3-org Phase 1):** read: ORG registers no `region_bound` refusal (`spec-institutions.md` 3.6); a membership is a status that lapses on a move. ORG is added to the list of modules that registered none.
 
 ### N-092 Overlays and scenarios that the wave 2 specs hand to REF
 
@@ -913,6 +914,7 @@ PR description.
 - **Update (2026-10-23, plan 2-2 Phase 1):** applied in its lesson: the hosted fields are written once, in the agent record, always (plan 2-2 D247), and the row adds none. A standing rule; left open.
 - **Update (2026-11-11, plan 2-11):** POP keeps the death carry in the module's slice by `AgentID`; the checkpoint writes it in the agent record (plan 2-11 D423); R10 of CHK needs O1. Left open.
 - **Update (2026-11-12, plan 2-28 review):** read: the payroll form hosts no per-agent field and has no checkpoint section (`spec-employment.md` 24.1.7). Left open.
+- **Update (2026-11-18, plan 3-org Phase 1):** read: ORG's membership is the one hosted per-agent field of the module, saved once in tag 3's agent tail (`agentTails`), and tag 31 holds the slot state only. Left open as a standing rule.
 
 ### N-129 A stateful extension is one instance per world
 
@@ -1012,6 +1014,7 @@ PR description.
 - **Note:** RSK reads the stored load and the stores by class (8.3). CAP calls `addStore` and `removeStore` (3.6.3), and the away test of `ErrAgentAway` is in `addStore`, so the completion of a store facility meets it and keeps the facility until the arrival. SET gates a store class by `StoreClass.Needs` and `ErrStoreLocked` (3.2.3, 10.3). A buffer store over a treasury's goods (a pack's word for it is flagged in STO's header) is FIS's (`spec-fiscal.md` 9.6.1; N-186): STO may accept a treasury as a holder later (FIS open question 8), and the release is PLC's lever or FIS's standing order. A keeper and a lease are a contract over the same room (LND, ORG; 10.4).
 - **Update (2026-11-14, plan 3-lnd Phase 1):** read: LND builds no keeper and no lease over a room (`spec-land.md` 7.4); a title is a share of an endowment, not of a room. Left open for ORG.
 - **Update (2026-11-14, plan 3-set Phase 1):** read; left open. SET PR A turns the validator rule `needs_module_off` into the real rule (a flag some class carries, the module on); the runtime gate is `regionHas`, wired in SET PR C (H-11).
+- **Update (2026-11-18, plan 3-org Phase 1):** read: ORG reserves a right over a store and a keeper or a lease (`spec-institutions.md` 5.8, N-194) and offers none. Left open.
 
 ### N-142 A job start and a dispatch leave the upkeep room free
 
@@ -1091,6 +1094,7 @@ PR description.
 - **Areas:** CRD, ORG
 - **Raised:** 2026-10-13, `spec-employment.md` open question 3.
 - **Note:** A hire is one job. A service contract with a term and a bond would reuse its record.
+- **Update (2026-11-18, plan 3-org Phase 1):** read: not ORG's to settle (a body has no account, no dues and no service contract). Left open.
 
 ### N-153 Gates by settlement class: `Role.Needs` and `Role.Ceiling`
 
@@ -1107,6 +1111,7 @@ PR description.
 - **Areas:** STO, ORG, RSK, CAP, TRN
 - **Raised:** 2026-10-13, `spec-settlements.md` 6.5, 6.2 (R1 to R7).
 - **Note:** A later spec that wants a size reads the class by a flag or a limit named in its own configuration, at a position before P7.2a, with `ErrModuleDependency` when the module is off, its own refusal counter and its own register entry, and adds its row to 6.3. STO's `StoreClass.Needs` and ORG's places do. TRN may want `Mode.Needs` (a terminal). A market per commodity and a recipe condition are not offered, with reasons (6.6).
+- **Update (2026-11-18, plan 3-org Phase 1):** applied for ORG in the spec (a body's `Needs` and its places read the class and the count at P1.9a and at the entry step, both before P7.2a, with `Barred` and `Waiting` counters and the register entries of `spec-institutions.md` 14); kept open for TRN and until ORG's reader is built (plan 3-org PR B).
 
 ### N-156 A title or a facility bought for a price needs an observable return and a seller
 
@@ -1139,12 +1144,14 @@ PR description.
 - **Raised:** 2026-10-13, `spec-polity.md` 6.1, 6.2, 6.3.
 - **Note:** A table keyed by (jurisdiction, subject) has one row per key, absence is the default, canonical order, resolved once into a dense array by `RegionID`, and one of three modes (innermost, added, scaled with one rounding) over `Chain(region)`; a crossing is applied in the order `Exit` then `Enter`. A reader never reads a count of households or a money supply of a jurisdiction to change a rate of decision (`spec-world.md` 9.4.1); it adds its row to the table of hooks in 6.3.
 - **Update (2026-11-14, plan 3-lnd Phase 1):** read: tenure terms and holdings are keyed by region (`spec-land.md` 3.3.1), not by jurisdiction, so LND reads no table of this note's rule. Left open for FIS, ORG and PLC.
+- **Update (2026-11-18, plan 3-org Phase 1):** read: ORG reads the chain at construction only and resolves each table once, innermost, into a dense array by `RegionID` (`internal/institution.Resolve`); no crossing is offered. Left open for FIS and PLC.
 
 ### N-161 A transfer of a region between jurisdictions is reserved
 
 - **Areas:** INT, RSK, FIS, ORG
 - **Raised:** 2026-10-13, `spec-polity.md` 7.4 and question 1.
 - **Note:** Its shape is fixed (a plural setter, at the call, a sparse saved list, the event `RegionTransferred`, a seat cannot leave); every reader that caches by jurisdiction must say what a transfer does to its state before it is offered.
+- **Update (2026-11-18, plan 3-org Phase 1):** read: no transfer of a region is offered by ORG, so its tables cache nothing that a transfer would stale. Left open.
 
 ### N-162 A paired comparison with a module on, off or binding is not aligned
 
@@ -1229,12 +1236,14 @@ PR description.
 - **Raised:** 2026-10-13, `spec-infrastructure.md` 7.1, CAP-A6 (L171).
 - **Note:** A site passes to the estate and idles; a successor needs a call (`TransferFacilities`) or, later, a lease or a fee (CAP open question 2 sketches the contract form).
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Not this row's.
+- **Update (2026-11-18, plan 3-org Phase 1):** read: not ORG's (a right over a facility is reserved, N-194). Left open.
 
 ### N-173 Use of a facility by others is not in version 1
 
 - **Areas:** ORG, FIS, MER, CAP
 - **Raised:** 2026-10-13, `spec-infrastructure.md` 5.1.5 and open question 2.
 - **Note:** A fee, a lease, a charter and an open-use ration are later specs' and need a hook at P2.5 and a ration like RES 5.3. ORG's reserved charter over a facility is the same gap (N-194); the two notes are kept apart on purpose, the facility side here and the right side there.
+- **Update (2026-11-18, plan 3-org Phase 1):** read: not ORG's (the charter over a facility is reserved, N-194). Left open.
 
 ### N-174 Edge limit, traffic wear and toll
 
@@ -1362,6 +1371,7 @@ PR description.
 - **Note:** The headroom of a role is the least of its class limit's (`spec-settlements.md` 6.4.2) and its body's; the spawner's view and POP's births read it.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Not this row's.
 - **Update (2026-11-14, plan 3-set Phase 1):** read; left open. SET ships the class half of the headroom and the slot `roleHeadroom`; ORG supplies the body's half.
+- **Update (2026-11-18, plan 3-org Phase 1):** read: ORG supplies the body's half through `orgHeadroom` (the least of two, wrapping SET's `roleHeadroom`), plan 3-org D9, Phase 9; SET's file is not touched. Left open until Phase 9.
 
 ### N-193 A completion of a traineeship is held without headroom
 
@@ -1371,6 +1381,7 @@ PR description.
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Waits for SKL; no traineeship exists in the slice (D111).
 - **Update (2026-11-13, plan 3-skl Phase 1):** read; left open until SET supplies headroom. The held path is built with a no-limit hook and unit-tested (plan 3-skl SK9).
 - **Update (2026-11-14, plan 3-set Phase 1):** read; left open until SET PR C assigns `skills.headroom` (H-10) and adds the live count (H-14).
+- **Update (2026-11-18, plan 3-org Phase 1):** read: SKL has `completeReady` and the held path (`completionHeadroom` through the slot); ORG adds one notification, `noteHeld`, so that `MembershipChanged.Held` counts it (Phase 9, hook H-13). Left open until Phase 9.
 
 ### N-194 Reserved, not offered: a charter over carriage, a store or a facility; a wage control; a named holder; a call that admits or expels
 
@@ -1450,6 +1461,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-policy.md` 6.3, 6.3.2, 6.3.3.
 - **Note:** A later spec that adds a rate or a scale an authority would hold adds a row to PLC 6.3 (kind, key, reach rule, bound, default, read position) in the change that adds the slot to INT; a shock of the story is not a lever. `SetRateScales` (CRD), `SetRentScales` (LND) and `SetLegalLevels` (ORG) are integrated, and PLC keeps the three kinds reserved. When a kind goes live, its event (`CreditRateScaled`, `RentScaled`, `LegalLevelSet`) needs a `Cause` field like `MoneyFlowScaled`.
 - **Update (2026-11-14, plan 3-lnd Phase 1):** read: `SetRentScales` is built in PR 3 of plan 3-lnd; `RentScaled` has no `Cause` field (owner question Q8: left to PLC, an append when the `rent` kind goes live). Left open.
+- **Update (2026-11-18, plan 3-org Phase 1):** read: `SetLegalLevels` and `SetRightSuspensions` are integrated in plan 3-org PR D; PLC keeps the kind `legal` reserved and `LegalLevelSet` gets a `Cause` field when it goes live. Left open until PLC.
 
 ### N-206 The engine cannot call an indicator
 
@@ -1575,6 +1587,7 @@ PR description.
 - **Update (2026-10-21, anchor fix):** applied to a core field: `World.AnchorHold` defaults to 0 and is written to the hash only when not zero (field 46), so a configuration that never sets it hashes as before; `TestHashConfig_AnchorHoldOffLeavesNoTrace` keeps the old pin. The reference chain (`base.toml`) sets `anchor_hold = 5000`, which is a pack edit: the pins of pack `one` (`TestHashConfig_ReferencePinned`, `TestPacks_LoadValidateAndHash`, `expected/one.toml`) and `testdata/golden/off/` moved once, explained in the change under testing.md 7.2. Pack `second` is unchanged. Standing; left open.
 - **Update (2026-10-23, plan 2-2 Phase 1):** applied: the checkpoint row appends no configuration field and no field to an event or a snapshot row (`WorldRestored` is a new event); the pinned hash does not move, `events-one.txt` and `one.positions.txt` do not move, and `testdata/golden/off/one.txt` gains the one digest line of N-294 (plan 2-2 D257), which is not a module's append. A standing rule; left open.
 - **Update (2026-11-12, plan 2-28 review):** read: the payroll form leaves no trace while off (`PayrollBP`, `Hireable` and the module hashed only when on; `PayrollPaid` is a count-and-money event never emitted off; the all-off hash and `golden/off` are unchanged, FR-EMP-079). Left open.
+- **Update (2026-11-18, plan 3-org Phase 1):** read: ORG's appended fields leave no trace while it is off (`AgentState.Membership` is a `{Member bool; Body BodyID}` group whose zero value is no membership; every event field appended is a count). Left open as a standing rule.
 
 ### N-218 The Stage 0 field set and the hash rule that goes with it
 
@@ -1730,6 +1743,7 @@ PR description.
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: the checkpoint row writes the hosted fields in the agent record and adds none to the agent type. Left open as a standing rule.
 - **Update (2026-11-11, plan 2-11, plan 2-14 audit):** POP keeps the death carry in the module's slice (plan 2-11 D423). The frozen own-use flag of an agent on a journey now has a behavioural test, `TestJourney_SkippedByOwnUseFlagStep` (FR-SUB-010); plan 2-24 need not build it. Left open.
 - **Update (2026-11-13, plan 3-skl Phase 1):** read: the traineeship state is in the module's slices (`w.skills`), the agent type gets no field. Left open as a standing rule.
+- **Update (2026-11-18, plan 3-org Phase 1):** applied for ORG: the membership is a pair of slices of the module (`member`, `memberRegion`, indexed by agent slot) saved in the agent tail of tag 3; the agent type gets no field. Removed with the code (plan 3-org PR B).
 
 ### N-245 A tunable a module's default rule reads joins the view's Tunables group
 
@@ -1871,6 +1885,7 @@ PR description.
 - **Update (2026-11-11, plan 2-11):** POP fields `PopBirths`, `PopDeaths` and the effective `Renewal` 0 are appended in plan 2-11. Left open.
 - **Update (2026-11-13, plan 3-skl Phase 1):** applied for SKL (the refusals `in_traineeship`, `needs_weight_one`, `needs_traineeship`, `already_queued` and the cause `traineeship`, appended in module order, plan 3-skl); keep for SET.
 - **Update (2026-11-14, plan 3-set Phase 1):** read; left open for SET until PR C appends `RoleView.Headroom`, `NoLimit` and `EntryLimited.RoleCeiling`.
+- **Update (2026-11-18, plan 3-org Phase 1):** read: ORG adds a second source of the limit and no field (`Headroom`, `NoLimit`, `EntryLimited.RoleCeiling` and `PopulationChanged.BirthsCeiling` are SET's). Left open for SET.
 
 ### N-306 The census formula is pinned against `one`: the work share cancels
 
@@ -1944,6 +1959,7 @@ PR description.
 - **Raised:** 2026-10-23, plan 2-1 Phase 2.
 - **Note:** Under `-race` the scenario tests run `scenarioSeedCount()` seeds (`raceSeeds`, now 1), `TestInvariants_Packs` runs `invariantSeeds(tc.seeds)` and `TestDeterminism_SameBytes` runs `detCases(true)`; the full set runs without `-race`; `-update` is refused under `-race`; the gate is two runs, R (`go test -race -timeout 60m ./...`, reduced seeds) and F (the non-race atomic-coverage run, all seeds; `testing.md` 9.1). A row that adds a long scenario uses `scenarioSeedCount()`, a row of `invariantTable` calls `invariantSeeds`, and a test that skips under `raceEnabled` starts with a prefix of `gateFPrefixes`. **Settled (owner, 2026-10-23, D231):** with atomic coverage under `-race` gate R took 48 min (one seed) to 58 min (two) against the 30 min budget, because fixed-cost tests dominate; R was split from the coverage run: R is 160 s, F 15 min. The allocation test runs under `-race` alone (70 allocations per `Step` with or without coverage; the constant 113 is loose). Close this note when a row has used `scenarioSeedCount()` and `invariantSeeds`.
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: the fork matrix and the two-architecture test of plan 2-2 use `scenarioSeedCount()` and the `gateFPrefixes` names. Left open.
+- **Update (2026-11-18, plan 3-org Phase 1):** read: ORG's multi-seed tests skip under `raceEnabled` and carry `gateFPrefixes` prefixes (`TestScenarioORG*`, `TestDeterminism_Institutions*`, `TestGolden_Institutions*`, `TestCheckpoint_Institutions*`, `TestFork_Institutions`, `TestEmptyModule_*`). Left open as a standing rule.
 
 ### N-316 A module's checkpoint section is appended by a fixed protocol
 
@@ -2311,6 +2327,24 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-cap Phase 1, `tick.go`.
 - **Note:** `positionsTail` is at the Lizard limit (CCN 10). P8.3a (LND PR 5), P8.3b (CAP) and the later P8.1a and P8.1b hooks each add a guarded call to it, so the function is split once, as `positionsFlows` was, into the part from P5 to P7.2a and a new `positionsClose` for P8.1 to P8.4, in source order. Whoever lands second rebases onto the split and does not repeat it.
 
+### N-397 EMP's hire form must add the executor test of a right
+
+- **Areas:** EMP, ORG
+- **Raised:** 2026-11-18, `doc/plans/plan-3-org.md` D10, `spec-institutions.md` 5.3, FR-EMP-023.
+- **Note:** ORG reads a `produce` right at P2.5 for the principal of a `Work` request only. A hire is formed at P2.5a by EMP's hire form, which is not built (`Employer.Recipes` and `HireFormed` are in `notBuilt` and `notBuiltEvents`). The change that builds the hire form checks the executor by `Who` (`executor` or `both`) and a closed shop, by one guarded call into `institutions_rights.go`, and adds the refusal to its own counts. Until then a pack that declares `Who` as `executor` gets the principal test only; no warning is added because `spec-institutions.md` 10.2 lists none.
+
+### N-398 The credit seam takes the lowered limit back
+
+- **Areas:** CRD, ORG
+- **Raised:** 2026-11-18, `doc/plans/plan-3-org.md` D8, `spec-credit.md` 5.2.3.
+- **Note:** CRD's `rateCap` seam returned the cap only, and CRD counts `priceControlled` in round counts that `rd.reset()` clears before P7.2b, so ORG could not read the count. The seam is `rateCap func(g RegionID, limit int64) (replaced int64, lowered bool)` and ORG counts the lowering in its own scratch. Nothing set the seam before ORG, so no existing run changes. Phase 7 decides whether CRD's own `priceControlled` field stays as a plain count or is deleted; the CRD owner approves.
+
+### N-399 S141 and FR-ORG-001 disagreed on the inert overlay
+
+- **Areas:** ORG, REF, STY
+- **Raised:** 2026-11-18, `doc/plans/plan-3-org.md` E5, `spec-institutions.md` 14.3 and 17.
+- **Note:** ORG-S5 (S141) said the inert overlay (bodies declared, `Places` 0) equals the world without the module except four outputs, but with a declared body every region of its scope emits `MembershipChanged` (the first round admits every eligible household) and `Snapshot.Bodies` has rows. Settled in the spec: S141 excludes the module's own events and snapshot rows as SET-S4 does, and FR-ORG-001's strict form is tested on the module present and empty. The test of S141 (plan 3-org Phase 10) reads the corrected text.
+
 ## Read receipt
 
 ### N-358 A gain is not a recipe
@@ -2353,4 +2387,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: c587382e033333cc2fb8b30d
+NOTES-TAG: a59119395bc0f0a27fdea182

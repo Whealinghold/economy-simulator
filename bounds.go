@@ -654,3 +654,17 @@ const (
 	// MaxInitialRows is the most initial rows of the module.
 	MaxInitialRows = 1_024
 )
+
+// The bounds of the institutions module (spec-institutions.md 9). All are
+// placeholders (N-015, N-027).
+const (
+	// MaxBodies is the most bodies: bodies are authored by hand.
+	MaxBodies = 256
+	// MaxRights is the most rights.
+	MaxRights = 4_096
+	// MaxControls is the most controls and rate limits together, one namespace.
+	MaxControls = 4_096
+	// MaxBodyTrainees is the largest MaxTrainees of a body, the bound of a role's own
+	// (the skills module's, spec-institutions.md 9).
+	MaxBodyTrainees = 100
+)

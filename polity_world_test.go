@@ -348,6 +348,7 @@ func TestPolity_NewPolity(t *testing.T) {
 // changing the hash of any region.
 func TestPolity_NoRegionFieldRead(t *testing.T) {
 	t.Parallel()
+	institutionsFiles := []string{"institutions_validate.go", "institutions_warn.go"}
 	files, err := filepath.Glob("*.go")
 	if err != nil {
 		t.Fatal(err)
@@ -355,7 +356,10 @@ func TestPolity_NoRegionFieldRead(t *testing.T) {
 	allowed := map[string]bool{"polity.go": true, "polity_validate.go": true, "config.go": true, "construct.go": true, "event.go": true, "world.go": true, "snapshot.go": true, "validate.go": true,
 		"hash.go": true, "errors.go": true, "bounds.go": true, "defaults.go": true, "doc.go": true}
 	for _, f := range files {
-		if strings.HasSuffix(f, "_test.go") || allowed[f] {
+		// The institutions module reads the jurisdictions of a scope and the chain of a region (spec-institutions.md
+		// 3.1, 6.1.3; the readers of spec-polity.md 6.1, N-160): its files may name them, and the AST check below
+		// holds them to read no region tunable. A new institutions file is added to both lists.
+		if strings.HasSuffix(f, "_test.go") || allowed[f] || slices.Contains(institutionsFiles, f) {
 			continue
 		}
 		b, err := os.ReadFile(f)
@@ -368,7 +372,7 @@ func TestPolity_NoRegionFieldRead(t *testing.T) {
 	}
 	fset := token.NewFileSet()
 	region := map[string]bool{"ReferencePrice": true, "ExtraUpkeep": true, "ReferenceBasket": true, "Yields": true, "StartMoney": false}
-	for _, name := range []string{"polity.go", "polity_validate.go"} {
+	for _, name := range append([]string{"polity.go", "polity_validate.go"}, institutionsFiles...) {
 		file, err := parser.ParseFile(fset, name, nil, 0)
 		if err != nil {
 			t.Fatal(err)

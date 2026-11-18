@@ -145,6 +145,8 @@ economy-sim/
   polity_validate.go                                                  (POL)
   infrastructure_validate.go  infrastructure_step.go  infrastructure_calls.go
   infrastructure_build.go  infrastructure_report.go  infrastructure_state.go     (CAP)
+  institutions_validate.go  institutions_warn.go  institutions_round.go
+  institutions_rights.go  institutions_legal.go  institutions_report.go  (ORG)
 
   # Module files, one per optional module (2.10.1), named after the concept.
   demand.go  resources.go  subsistence.go  population.go  transport.go
@@ -474,7 +476,7 @@ A new domain term **MUST** be added to the glossary in `doc.go` before use.
 3.3. Domain quantities **MUST** use small named value types (`Money`, `Price`,
 `Quantity`, `CommodityID`, `RoleID`) so that mixing units is a compile error.
 Every other configured entity has a typed ID of its own kind in the same way
-(`RegionID`, `RecipeID`, `ModeID`, `ResourceID`, `AgentID`); a money flow or a fiscal flow, which
+(`RegionID`, `RecipeID`, `ModeID`, `ResourceID`, `AgentID`, `BodyID`, `RightID`, `ControlID`); a money flow or a fiscal flow, which
 has no typed ID, is named by its string ID (also its ledger reason).
 These types **MUST** be immutable and **MUST NOT** carry behaviour beyond
 arithmetic, comparison and formatting. **[project]**
@@ -1092,4 +1094,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 52b643b48f762b875777832a
+RULE-TAG: 72e2622e77b53bfc6f18211e

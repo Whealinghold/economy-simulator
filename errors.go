@@ -665,3 +665,31 @@ var (
 	// facility class that is not configured.
 	ErrUnknownFacilityClass = errors.New("unknown facility class")
 )
+
+// The sentinels of the institutions module (spec-institutions.md 10.1, 7.1.1). They
+// are root sentinels matched with errors.Is; the module reuses ErrInvalidID,
+// ErrDuplicateID, ErrTooMany, ErrModuleDependency, ErrUnknownRole, ErrUnknownRegion,
+// ErrUnknownJurisdiction, ErrUnknownRecipe, ErrUnknownCommodity,
+// ErrUnknownSettlementFlag, ErrOutsideNode, ErrOutOfBounds and ErrModuleOff.
+var (
+	// ErrUnknownBody is a right's Body that names no body.
+	ErrUnknownBody = errors.New("unknown body")
+	// ErrBodyShape is a body with no role, or with no region in its scope (no
+	// Regions and no covering Jurisdictions).
+	ErrBodyShape = errors.New("body has the wrong shape")
+	// ErrBodyOverlap is a (role, region) that is in the scope of two bodies.
+	ErrBodyOverlap = errors.New("role and region are in two bodies")
+	// ErrRightShape is a right of the wrong shape: an activity outside the four, a
+	// subject of the wrong kind for the activity, both or neither of Region and
+	// Jurisdiction, or a Who other than principal on an activity other than produce.
+	ErrRightShape = errors.New("right has the wrong shape")
+	// ErrControlShape is a control or rate limit of the wrong shape: both or neither
+	// of Region and Jurisdiction, a FloorBP above a CapBP when both are set.
+	ErrControlShape = errors.New("control has the wrong shape")
+	// ErrUnknownControl is a control or rate limit that is not configured, named by a
+	// call (spec-institutions.md 7.1.1).
+	ErrUnknownControl = errors.New("unknown control")
+	// ErrUnknownRight is a right that is not configured, named by a call
+	// (spec-institutions.md 7.1.1).
+	ErrUnknownRight = errors.New("unknown right")
+)

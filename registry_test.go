@@ -39,7 +39,7 @@ var notBuilt = []string{
 	// The pointers of Modules: a module's change adds its field and deletes its
 	// entry here.
 	"Modules.Fiscal",
-	"Modules.Institutions", "Modules.Insurance",
+	"Modules.Insurance",
 	"Modules.Policy",
 	"Modules.Risk", "Modules.Saving",
 	// Fields of FlowTarget that the targets of the stores and treasury kinds add.
@@ -52,13 +52,13 @@ var notBuilt = []string{
 	"Employment.MaxOpen", "Employer.Recipes", "Employer.MaxHires",
 	"Employer.WorkerShareBP", "Employer.HireYieldBP",
 	// Scopes (Go type names) of the modules that are not built.
-	"Body", "Control", "CoverTerms", "Duty",
+	"CoverTerms", "Duty",
 	"Fiscal",
-	"Institutions", "Insurance", "Insure",
+	"Insurance", "Insure",
 	"Lever",
 	"Payout", "Policy", "PolicyActor", "ProjectWorth", "Purchase",
-	"RateLimit", "Reaction",
-	"Release", "Right", "Risk", "RouteRisk",
+	"Reaction",
+	"Release", "Risk", "RouteRisk",
 	"Saver", "Saving", "ScheduleStep",
 	"StoreRisk", "Tax",
 	"Toll", "Underwrite",
@@ -76,7 +76,7 @@ var exemptFields = map[string]bool{
 	"Config.Groups": true, "Config.Modules": true,
 	// The demand module: its pointer is the switch (spec-config.md 6.2.1), and the
 	// two taste lists are containers whose fields are the rows (spec-demand.md 9).
-	"Modules.Demand": true, "Modules.External": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Modules.Migration": true, "Modules.Merchants": true, "Modules.Employment": true, "Modules.Polity": true, "Modules.Storage": true, "Modules.Settlements": true, "Modules.Credit": true, "Modules.Technology": true, "Modules.Tenure": true, "Modules.Infrastructure": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
+	"Modules.Demand": true, "Modules.External": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Modules.Migration": true, "Modules.Merchants": true, "Modules.Employment": true, "Modules.Polity": true, "Modules.Storage": true, "Modules.Settlements": true, "Modules.Credit": true, "Modules.Technology": true, "Modules.Tenure": true, "Modules.Institutions": true, "Modules.Infrastructure": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
 	"YieldProfile.HasAll": true,
 	// The Has flags of an Endowment row only spell in Go what the file says by writing the key.
 	"Endowment.HasCapacity": true, "Endowment.HasInitial": true, "Endowment.HasRegenScale": true,
@@ -335,6 +335,7 @@ var noFailingCase = map[string]string{
 	"Commodity.Raw":             "a bool: both values are valid",
 	"TenureConfig.OwnUseExempt": "a bool: both values are valid",
 	"TenureTerm.Closed":         "a bool: both values are valid",
+	"Institutions.OwnUseBound":  "a bool: both values are valid",
 }
 
 // builtRows returns the rows of the owner table that are built and are not
