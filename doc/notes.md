@@ -73,8 +73,8 @@ PR description.
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
-| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349 |
-| ORG | N-400, N-401, N-403, N-404, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399 |
+| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349 |
+| ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358 |
@@ -2351,6 +2351,12 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-org PR B.
 - **Note:** `TestReaders_StaticCheck` lets `institutions_round.go` read the flag with `regionHas` (SET's hook H6, `spec-institutions.md` 3.5.2), and `TestPolity_NoRegionFieldRead` lists the other ORG files among those that may name a jurisdiction (POL's rule). PR C and PR D add files that read the same things: each adds its file to the same two lists, and does not widen a list to a pattern.
 
+### N-405 ORG, OBS: what the `otelobserver` change for the institutions metrics builds
+
+- **Areas:** ORG, OBS
+- **Raised:** 2026-11-18, observability review of plan 3-org PR B (instruments deferred by plan question 8).
+- **Note:** the adapter change (`otelobserver/`, no core change) builds, in this order: (1) `economysim.body.waiting`, a gauge from `Bodies[].Eligible - Members` per body and region: the only metric that shows a body with a queue, the counterpart of the `Warn` "body has waiting households", which fires on the tenth tick of a run and at every tenth after, so a short queue leaves no trace in logs; (2) `economysim.body.members`, a gauge from `Bodies[].Members`, so a drop to 0 (all lapsed) is seen next to `body.waiting`; (3) `economysim.membership.lapsed` is NOT proposed: `MembershipChanged.LapsedRole`, `LapsedRegion`, `Skipped` and `Barred` are cumulative per tick and bounded, so add them as attributes of one counter only if a dashboard needs the cause, and not before; (4) `economysim.right.refusals` and `economysim.control.clamped` from `RightRefused` and `PriceControlled`, which PR C and PR D emit, so they are built after those events exist. Fold the rows once with `TestEvents_MetricsDerivable` as the check, and remove the five entries of `ignoredEvents` in the same change. Series: bodies times regions for the two gauges (bounded by the configuration).
+
 ## Read receipt
 
 ### N-358 A gain is not a recipe
@@ -2393,4 +2399,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 2f6f9d8f86f5c37ff91f2bf5
+NOTES-TAG: 3552ad2aefd418064c2a8314
