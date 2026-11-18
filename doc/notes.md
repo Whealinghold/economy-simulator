@@ -49,7 +49,7 @@ PR description.
 | AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
-| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384 |
+| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385 |
 | CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349 |
 | CHK | N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-368 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
@@ -73,14 +73,14 @@ PR description.
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
-| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349 |
+| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-385 |
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
-| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226, N-327 |
+| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226, N-327, N-385 |
 | SAV | N-145, N-156, N-195, N-197, N-362, N-382 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-140, N-192, N-268, N-348, N-365 |
@@ -2327,6 +2327,12 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-cap Phase 1, `tick.go`.
 - **Note:** `positionsTail` is at the Lizard limit (CCN 10). P8.3a (LND PR 5), P8.3b (CAP) and the later P8.1a and P8.1b hooks each add a guarded call to it, so the function is split once, as `positionsFlows` was, into the part from P5 to P7.2a and a new `positionsClose` for P8.1 to P8.4, in source order. Whoever lands second rebases onto the split and does not repeat it.
 
+### N-385 `FacilityChanged` kind `adjusted`: a loss of capital by RSK, and the metric
+
+- **Areas:** CAP, RSK, OBS
+- **Raised:** 2026-11-18, plan 3-cap PR 2, `spec-infrastructure.md` 11.2 and 14.1.
+- **Note:** an `AdjustFacilities` entry that changes a condition without ruining it emits `FacilityChanged` of kind `adjusted`, cause `consumer`, in either direction (owner decision, Q-A). RSK's loss of capital (open question 7 of CAP) goes through this call and so produces `adjusted` events, not `repaired`. `economysim.facility.count` ignores the kind, and a metric of the condition is read from the facility rows of the snapshot (`economysim.facility.condition`). Whoever builds the `otelobserver` row of `FacilityChanged` handles the seventh kind.
+
 ### N-397 EMP's hire form must add the executor test of a right
 
 - **Areas:** EMP, ORG
@@ -2387,4 +2393,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: a59119395bc0f0a27fdea182
+NOTES-TAG: 760f17b39495c2496d7896e9
