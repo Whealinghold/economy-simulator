@@ -943,12 +943,18 @@ func (w *World) auditFlows() error {
 }
 
 // auditLaterModules is the audit of the modules built after the money flows, in module
-// order: the credit claims and the tenure titles.
+// order: the credit claims, the tenure titles and the loss share of the risk module.
 func (w *World) auditLaterModules() error {
 	if err := w.auditCredit(); err != nil {
 		return err
 	}
-	return w.auditTenure()
+	if err := w.auditTenure(); err != nil {
+		return err
+	}
+	if w.risk != nil {
+		return w.risk.audit(w)
+	}
+	return nil
 }
 
 // dropAgent drops the carries of a removed agent (spec-money-supply.md 14).

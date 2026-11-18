@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/ledger"
@@ -68,6 +69,11 @@ type risk struct {
 	// scales are the route scales that differ from 10 000, ascending by key, the
 	// saved state of the route side.
 	scales []routeScaleRec
+	// stores are the keys of the store rows as (region, class) indices, and
+	// storeScales the store scales that differ from 10 000, ascending by key: the
+	// saved state of the store side, which a restore keeps and validates.
+	stores      []storeScaleRec
+	storeScales []storeScaleRec
 	// lost, accountLost, held and tripLost are the scratch of an arrival: the units
 	// lost of each line of the shipment, of the traveller's account as amounts, the
 	// account's holdings and the units lost of each of its commodities.
@@ -75,6 +81,14 @@ type risk struct {
 	accountLost []Amount
 	held        []int64
 	tripLost    []int64
+}
+
+// storeScaleRec is a store key and, in the saved list, its scale: the region and the
+// class by index.
+type storeScaleRec struct {
+	region RegionID
+	class  StoreClassID
+	bp     int64
 }
 
 // newRisk builds the module from the canonical configuration, or nil with the module
@@ -106,8 +120,27 @@ func newRisk(c *Config, g Graph) *risk {
 		rr.p = effectiveP(rr.strikeBP, rr.scale)
 		r.routes = append(r.routes, rr)
 	}
+	r.stores = storeKeys(c, region)
 	r.rebuild(g, len(c.Regions))
 	return r
+}
+
+// storeKeys resolves the store rows of the canonical configuration to (region, class)
+// indices, in the order of the rows; the scale of each is 0 in the key list and unused.
+func storeKeys(c *Config, region map[string]RegionID) []storeScaleRec {
+	m := c.Modules.Risk
+	if len(m.Stores) == 0 || c.Modules.Storage == nil {
+		return nil
+	}
+	class := make(map[string]StoreClassID, len(c.Modules.Storage.Classes)) // lookup only
+	for i := range c.Modules.Storage.Classes {
+		class[c.Modules.Storage.Classes[i].ID] = StoreClassID(i)
+	}
+	keys := make([]storeScaleRec, 0, len(m.Stores))
+	for i := range m.Stores {
+		keys = append(keys, storeScaleRec{region: region[m.Stores[i].Region], class: class[m.Stores[i].Class]})
+	}
+	return keys
 }
 
 // effectiveP is the effective probability of a row, P = min(10 000, rhe(StrikeBP *
@@ -274,6 +307,22 @@ func (r *risk) pathLoss(g Graph, k routeKey) int64 {
 		a = b
 	}
 	return expectedOf(r.edges)
+}
+
+// audit is the risk module's part of the audit (spec-risk.md 7.5.1): the loss share of
+// every shipment in flight is within 0 to 10 000. It cannot check that a share is the
+// one the rows and the words would give: the words are the stream's and the scales are
+// not state of the shipment. A world with no transport has no shipment.
+func (r *risk) audit(w *World) error {
+	if w.transport == nil {
+		return nil
+	}
+	for i := range w.transport.ships {
+		if s := &w.transport.ships[i]; s.loss < 0 || s.loss > wholeBP {
+			return fmt.Errorf("risk: shipment %d has loss share %d, want 0 to %d", s.id, s.loss, wholeBP)
+		}
+	}
+	return nil
 }
 
 // expectedOf is rsk.Expected for rows the module built within 0 to 10 000.
