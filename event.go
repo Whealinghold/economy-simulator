@@ -1571,18 +1571,23 @@ type ShipmentArrived struct {
 	Diverted bool
 	// Lines are what each commodity did.
 	Lines []ArrivedLine
+	// AccountLost is what a strike took of the traveller's own account of a
+	// self-carried trip, by commodity in commodity order, the mode's vehicle left out
+	// (spec-risk.md 5.4); empty for a hired shipment, a removed traveller or no strike.
+	AccountLost []Amount
 }
 
 // ArrivedLine is what became of one line of a shipment: the units shipped, the
 // units delivered to the consignee, diverted to the estate of the destination and
-// spoiled in transit. They add up to Shipped. Lost is appended with the risk
-// module.
+// spoiled in transit and lost to a strike of the risk module. They add up to
+// Shipped (spec-risk.md 5.2.2); Lost is 0 with the module off.
 type ArrivedLine struct {
 	Commodity CommodityID
 	Shipped   Quantity
 	Delivered Quantity
 	Diverted  Quantity
 	Spoiled   Quantity
+	Lost      Quantity
 }
 
 // TransitFactorChanged is emitted by a call that sets the transit factor of an

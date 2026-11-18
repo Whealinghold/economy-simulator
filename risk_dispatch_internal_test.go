@@ -535,3 +535,52 @@ func TestRisk_SetsNoEdgeStatus(t *testing.T) {
 		t.Errorf("%d region-bound obligations with the module, %d without, want equal", len(on.bounds.rows), len(off.bounds.rows))
 	}
 }
+
+// TestViews_CarryNoStrikeNoScaleNoCommonFlag verifies, by reflection over every type
+// reachable from AgentView, that no view shows a shipment's LossBP, a strike, a draw,
+// a row's Common flag or StrikeBP, or a scale (spec-risk.md 4.4.1, 8.5.1): the only
+// field of the module a view carries is RouteRow.LossBP, the expected loss.
+//
+// Guard: a strategy that could see a strike at dispatch would see it before the
+// consignee does (spec-risk.md 4.4.1), and a scale or a common flag would tell it a
+// hidden fact of the world.
+//
+// Requirement: FR-RSK-011
+func TestViews_CarryNoStrikeNoScaleNoCommonFlag(t *testing.T) {
+	t.Parallel()
+	seen := map[reflect.Type]bool{}
+	for _, v := range []any{AgentView{}, OutcomeView{}} {
+		walkViewFields(t, reflect.TypeOf(v), seen)
+	}
+	if !seen[reflect.TypeOf(RouteRow{})] {
+		t.Error("the walk did not reach RouteRow, want it to")
+	}
+}
+
+// hiddenViewFields are the names no view carries but RouteRow.LossBP.
+var hiddenViewFields = map[string]bool{"LossBP": true, "StrikeBP": true, "SeverityBP": true, "Common": true, "Struck": true, "Scale": true, "RiskScale": true}
+
+// isHiddenViewField reports whether a field of a view type is one no view carries.
+func isHiddenViewField(ty reflect.Type, name string) bool {
+	return hiddenViewFields[name] && (ty.Name() != "RouteRow" || name != "LossBP")
+}
+
+// walkViewFields reports each field of a hidden name in the struct types of the root
+// package reachable from ty, except RouteRow.LossBP, and records the types it saw.
+func walkViewFields(t *testing.T, ty reflect.Type, seen map[reflect.Type]bool) {
+	t.Helper()
+	for ty.Kind() == reflect.Slice || ty.Kind() == reflect.Pointer || ty.Kind() == reflect.Array {
+		ty = ty.Elem()
+	}
+	if ty.Kind() != reflect.Struct || seen[ty] || ty.PkgPath() != reflect.TypeOf(AgentView{}).PkgPath() {
+		return
+	}
+	seen[ty] = true
+	for i := range ty.NumField() {
+		f := ty.Field(i)
+		if isHiddenViewField(ty, f.Name) {
+			t.Errorf("%s.%s is in a view, want only RouteRow.LossBP", ty.Name(), f.Name)
+		}
+		walkViewFields(t, f.Type, seen)
+	}
+}

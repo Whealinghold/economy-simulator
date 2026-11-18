@@ -65,6 +65,13 @@ type risk struct {
 	expect []expectRow
 	edges  []rsk.Edge
 	modes  []ModeID
+	// lost, accountLost, held and tripLost are the scratch of an arrival: the units
+	// lost of each line of the shipment, of the traveller's account as amounts, the
+	// account's holdings and the units lost of each of its commodities.
+	lost        []int64
+	accountLost []Amount
+	held        []int64
+	tripLost    []int64
 }
 
 // newRisk builds the module from the canonical configuration, or nil with the module
