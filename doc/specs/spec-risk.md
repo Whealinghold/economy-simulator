@@ -180,19 +180,21 @@ quotient by 10 000, and is a rule constant of this module). `StrikeBP * Scale` i
 `10 000 * MaxShockBP` = 10^9, below `int64`. A row with `P = 0` (a scale of 0) is not
 drawn and strikes never (3.4.3).
 
-3.4.2. **A strike** is the event that one word of the world's source, reduced by the
-world's draw to `[0, 10 000)` (`spec-world.md` 7.2.1: the high word of `Uint64() *
-10 000`), is **below** `P`. The probability is `P / 10 000` up to the bias of the
+3.4.2. **A strike** is the event that one word of the row's own keyed stream (ADR 0008;
+the keys are in 11.2), reduced by the world's draw to `[0, 10 000)` (`spec-world.md`
+7.2.1: the high word of `Uint64() * 10 000`), is **below** `P`. The probability is `P / 10 000` up to the bias of the
 world's draw, at most `10 000 / 2^64` (7.2.1 there). A `P` of 10 000 strikes always and
-still consumes its word (a bound is a bound: the stream does not depend on a value that
+still consumes its word (a bound is a bound: the draw does not depend on a value that
 happens to be certain, `spec-world.md` 7.2.1, BEL 6).
 
 3.4.3. **A row with `P = 0` takes no word.** This is the one place where the count of
 draws depends on a value that a call between ticks can set, and `spec-world.md` 7.4.1
 allows it: the count is a function of the configuration, the state, the extensions and
-the calls made between ticks. The consequence is stated in 11.3: a module on with every
-scale at 0 equals the module off, and a paired comparison across scales above 0 stays
-aligned while a comparison with 0 does not.
+the calls made between ticks. Under keyed streams (ADR 0008) a word that is not taken
+moves no word of any other stream, so the count changes nothing but the row's own
+draws. The consequence is stated in 11.3: a module on with every
+scale at 0 equals the module off, and a paired comparison across a scale of 0 stays
+aligned (11.4).
 
 3.4.4. **The severity is not scaled.** A slot scales the probability of a strike and not
 what a strike takes (open question 2): a consumer that wants a worse storm sets a scale
@@ -225,8 +227,8 @@ by the application of `spec-transport.md` 5.5.1 after every refusal check has pa
 > 4.4.1: a read that allocates nothing, where `Path` returns a fresh slice, 4.3.3), and for
 > each consecutive pair `(a, b)` of it in path order, if a route row
 > `(a, b, mode)` exists with `P > 0` (3.4.1): if the row is `Common`, its outcome is the
-> outcome of P3.1a (4.2); otherwise take one word (**D14**) and the outcome is a strike
-> if it is below `P`. For each struck row, in path order,
+> outcome of P3.1a (4.2); otherwise take one word of the shipment's stream (**D14**, keyed
+> once for the shipment, 11.2) and the outcome is a strike if it is below `P`. For each struck row, in path order,
 >
 > ```
 > kept  <- rhe( kept * (10 000 - SeverityBP), 10 000 )        kept starts at 10 000
@@ -253,7 +255,8 @@ what a strike does is at arrival (5).
 ### 4.2 The common rows: P3.1a
 
 4.2.1. At **P3.1a**, a new position of phase 3 after P3.1 (`Inbound` and `Outbound` are
-fixed) and before P3.2 (the first plan), with the module on, take one word (**D13**) for
+fixed) and before P3.2 (the first plan), with the module on, take one word (**D13**, the first word of the
+stream of the row, keyed by the tick, the `From` region and the pair `To`, `Mode`, 11.2) for
 each route row that is `Common` with `P > 0`, in ascending (`From`, `To`, `Mode`) as
 `RegionID`, `RegionID` and the mode's index in the configuration's order. The outcome
 (a strike or not) of each is kept for the tick in a scratch vector, derived and never
@@ -301,11 +304,22 @@ loss of the route before it ships (8).
 arrival of `spec-transport.md` 5.7 gains a **step 0, the loss**, before its step 1 (the
 traveller's region change) and step 2 (the delivery):
 
-> **0. The loss.** If `LossBP > 0`: for a shipment with a Transit account, for each
+> **0. The loss.** (After the guard of 5.1.3, so that a held arrival applies nothing.) If
+> `LossBP > 0`: for a shipment with a Transit account, for each
 > commodity the account holds, in commodity order, `lost = rhe(held * LossBP, 10 000)`
 > units move from the Transit account to the boundary under `loss`, oldest lots first.
 > For a self-carried shipment whose traveller still exists, the same is then done over the
 > traveller's own account (5.4). The arrival then goes on with what is left.
+
+5.1.3. **The guard comes first, and a held arrival is struck once.** An arrival that the
+guard of `spec-transport.md` 5.7 refuses (another obligation of the traveller) is held and
+retried at the next tick, with the cargo in its Transit account and the traveller away. A
+loss applied before a refused move would be applied again at the retry, and the identity
+of 5.2.2 would not hold. The arrival is therefore ordered **guard, step 0, move,
+delivery**: the guard is evaluated first and a refusal holds the arrival with **nothing
+applied**; when it passes, step 0 runs (the Transit account, then the trip account), then
+the traveller's region change, then the delivery. A trip account's loss is still
+attributed to the origin (7.2.1), because the region change comes after it (N-374).
 
 5.1.2. **Why before the delivery.** The consignee receives what survived. The check of
 `spec-transport.md` 5.7 step 2 (whether the consignee can hold the quantity, else the
@@ -444,12 +458,13 @@ constant; a pack whose stores are limited by one dimension only has one non-zero
 totals are final (P8.2), with the module on:
 
 1. **The common rows.** For each store row with `Common` and `P > 0`, in ascending
-   (`RegionID`, `StoreClassID`): one word (**D15**). The outcome is kept for the
-   position in scratch.
+   (`RegionID`, `StoreClassID`): one word (**D15** (i), the first word of the stream of the
+   row, 11.2). The outcome is kept for the position in scratch.
 2. **The stores.** For each limited agent in ascending agent ID, for each class it owns
    with a store row of its region with `P > 0` and `Common` false, in ascending
    `StoreClassID`, for each store of the class (an agent owns at most `MaxStoresPerAgent`,
-   `spec-storage.md` 12.2), one word (**D15**) if the agent's stored load is above 0 in at
+   `spec-storage.md` 12.2), one word (**D15** (ii), the next word of the stream of the agent
+   and the class, 11.2) if the agent's stored load is above 0 in at
    least one dimension. A store whose owner has no stored load is not drawn and is not
    struck.
 
@@ -820,11 +835,20 @@ the new IDs** (the table's heading is "in the order of a run"; an ID is not an o
 D13 between D3 (P2.5) and D4 (P3.2(a)); D14 after D5, its words of P3.2(c) falling inside each
 agent's turn after that agent's D5 and its words of P3.3 after D6; D15 after D11. The IDs are final (`spec-world.md` 7.3: D13 to D15 are RSK's, D16 TEC's and D17 PLC's).
 
-| ID | When and where | Taken by | How many | In what order | Owner |
-|----|----------------|----------|----------|---------------|-------|
-| D13 | P3.1a | the world, per route row with `Common` and `P > 0` | 1 | ascending (`From`, `To`, `Mode`) | RSK 4.2 |
-| D14 | P3.2(c) and P3.3, at the record of a dispatched shipment | the world, per route row of the shipment's path with `Common` false and `P > 0` | 1 | path order; shipments in dispatch order (agents ascending, plan order; formation order) | RSK 4.1 |
-| D15 | P8.1a | the world: (i) per store row with `Common` and `P > 0`; (ii) per store of a limited agent with a unit row with `P > 0` and a stored load above 0 | 1 | (i) ascending (`RegionID`, `StoreClassID`); (ii) agents ascending, class ascending, store instance | RSK 6.2 |
+| ID | When and where | Taken by | How many | In what order | Stream | Owner |
+| --- | --- | --- | --- | --- | --- | --- |
+| D13 | P3.1a | the world, per route row with `Common` and `P > 0` | 1 | ascending (`From`, `To`, `Mode`) | `siteRiskCommon`, the tick, `id` = the `From` region, `sub` = `To * MaxModes + Mode` (indices): one stream per row | RSK 4.2 |
+| D14 | P3.2(c) and P3.3, at the record of a dispatched shipment | the world, per route row of the shipment's path with `Common` false and `P > 0` | 1 per row | path order; shipments in dispatch order (agents ascending, plan order; formation order) | `siteRiskDispatch`, the tick, `id` = the shipment: keyed once per dispatched shipment, then one word per unit row with `P > 0` in path order, as `siteInform` is keyed once per view | RSK 4.1 |
+| D15 (i) | P8.1a | the world, per store row with `Common` and `P > 0` | 1 | ascending (`RegionID`, `StoreClassID`) | `siteRiskStoreCommon`, the tick, `id` = the region, `sub` = the store class: one stream per row | RSK 6.2 |
+| D15 (ii) | P8.1a | the world, per store of a limited agent with a unit row with `P > 0` and a stored load above 0 | 1 per store | agents ascending, class ascending, store instance | `siteRiskStore`, the tick, `id` = the agent, `sub` = the store class: one stream per (agent, class), one word per store | RSK 6.2 |
+
+D15 has two sites because a region and an agent share the `id` slot and a common row must
+not share a stream with an agent (N-373). The constants are the first eight bytes of the
+SHA-256 of `economy-sim/site/` and the name, as `spec-world.md` 7.1.4 says: `siteRiskCommon`
+`0x7BECBB022BE68D1A`, `siteRiskDispatch` `0x7E59E8F556FE1651`, `siteRiskStoreCommon`
+`0x22650FB6363BD5BC` and `siteRiskStore` `0x85E20986FA93C736`
+(`models/rsk/loss.py` asserts them). A row with `P = 0` takes no word of its stream and a unit
+row with no exposure takes none, which moves no other draw.
 
 The terms of `spec-world.md` 7.3.1 gain, each at its position,
 
@@ -834,7 +858,8 @@ The terms of `spec-world.md` 7.3.1 gain, each at its position,
 + common store rows with P > 0 + stores drawn                    D15
 ```
 
-each a function of the configuration, the slots and the state at its position (11.3).
+each a function of the configuration, the slots and the state at its position (11.3), and
+each a count of words of **separate streams** (ADR 0008): no term moves a word of another.
 
 ### 11.3 The count of draws
 
@@ -861,13 +886,13 @@ configuration, as a walking line of the outside draws every tick (D2, `spec-worl
 
 ### 11.4 What it does to a paired comparison
 
-11.4.1. Two runs of one seed that differ in a scale above 0 take the same words in the
-same positions (the count does not depend on the value) and are aligned until the first
-shipment or store whose outcome differs changes what an agent later does
-(`spec-world.md` 7.6; `spec-experiments.md` 7). A comparison with the scale 0 is aligned
-only up to the first position where a row would have drawn. EXP reads the first as it
-reads any change of a parameter that moves no draw count (`spec-experiments.md` 7.3.1),
-and the second as a change of the number of draws. The module's knobs are structural
+11.4.1. Under keyed streams (ADR 0008, N-373) a draw depends on its key and on no other
+draw, so two runs of one seed that differ in a scale, **a scale of 0 included**, draw the
+same words wherever both draw, and a row whose scale is 0 simply takes none of its own. The
+runs are aligned until the first shipment or store whose outcome differs changes what an
+agent later does (`spec-experiments.md` 7). A comparison across a scale of 0 is therefore
+aligned in the draws of every other row, as a comparison across any scale above 0 is
+(`spec-world.md` 7.6 is no longer a hazard between runs). The module's knobs are structural
 (section 12.5) and its slots are not a sweep axis in the registry of CLB.
 
 ### 11.5 The order of the events
@@ -1056,11 +1081,11 @@ attributes (5.4). Section 19 gives the rows.
 
 | Name | Instrument | Unit | Attributes | Fed by |
 |------|-----------|------|------------|--------|
-| `economysim.risk.strikes` | Counter | `{strike}` | `economysim.hazard` | `ShipmentDispatched` (1 for each with `LossBP` above 0, by `route`), `StoreLoss` (`Stores`, by `store`) |
+| `economysim.risk.strikes` | Counter | `{strike}` | `economysim.risk_kind` | `ShipmentDispatched` (1 for each with `LossBP` above 0, by `route`), `StoreLoss` (`Stores`, by `store`) |
 | `economysim.transport.cargo.lost` | Counter | `{unit}` | `economysim.commodity` | `ShipmentArrived` (each line's `Lost` and each `AccountLost` amount) |
 | `economysim.store.lost` | Counter | `{unit}` | `economysim.commodity`, `economysim.store_class` | `StoreLoss` (`Lost`) |
 
-`economysim.hazard` is a new attribute with two constants (`route`, `store`), bounded by
+`economysim.risk_kind` (`observability-and-logging.md` 5.3, 5.4.1) is an attribute with two constants (`route`, `store`), bounded by
 the module (5.4.1 there); `economysim.store_class` is STO's. The units lost by commodity
 are also in `economysim.commodity.flow` (the reason `loss`, the kind `sink`); the two
 counters above tell the **source** apart, which the reason alone does not. Series for the
@@ -1079,7 +1104,8 @@ snapshot field.
 With the default observer and logger no event is built and no log call allocates (the flag
 of observability-and-logging.md 4.5). The per-dispatch work is a lookup of at most the
 path's rows in the dense array and at most that many words; the per-tick work is the
-common rows and the stores of the limited owners; neither allocates (NFR-RSK-001).
+common rows, the stores of the limited owners and one read of the store index of the
+storage module (it keeps no list of the owners, N-375); neither allocates (NFR-RSK-001).
 
 ## 15. State contributed to a checkpoint
 
@@ -1304,16 +1330,17 @@ Regions `north` (0), `mid` (1), `south` (2) with the edges `north` to `mid` and 
 | (`north`, `mid`, `wagon`) | 3 000 | 2 500 | false |
 | (`mid`, `south`, `wagon`) | 1 000 | 6 000 | true |
 
-Both scales are 10 000, so `P` is 3 000 and 1 000. In a tick whose next words are the
-first two of seed 42 (the real stream has taken others before; the example fixes the
-position, not the seed's run):
+Both scales are 10 000, so `P` is 3 000 and 1 000. Seed 42, `wagon` the mode of index 0,
+the shipment the one with ID 1, and the streams of ADR 0008 (`models/rsk/loss.py`
+computes them; the example fixes the keys, and the seed's run decides nothing else):
 
-1. **P3.1a (D13).** The common row (`mid`, `south`, `wagon`) takes the word
-   `61c88529c9612c1b`, which reduces to 3 819. 3 819 is not below 1 000: the lane is
-   spared this tick.
-2. **A shipment of `north` to `south`** by `wagon` is dispatched at tick 12 and arrives at
-   tick 15. At the record (step 4a, **D14**) its path is `north`, `mid`, `south`. The unit
-   row takes the word `2608d8a3075aa168`, which reduces to 1 485, below 3 000: struck. The
+1. **P3.1a (D13), tick 12.** The common row (`mid`, `south`, `wagon`) is keyed by
+   (`siteRiskCommon`, 12, `id` = `mid` 1, `sub` = `south` 2 `* 64 + 0` = 128); the first word of
+   its stream reduces to 2 566. 2 566 is not below 1 000: the lane is spared this tick.
+2. **A shipment of `north` to `south`** by `wagon`, shipment 1, is dispatched at tick 12 and
+   arrives at tick 15. At the record (step 4a, **D14**) its path is `north`, `mid`, `south`.
+   The unit row takes the first word of the stream (`siteRiskDispatch`, 12, `id` = 1), which
+   reduces to 1 817, below 3 000: struck. The
    common row's outcome is "spared". `kept = rhe(10 000 * 7 500, 10 000) = 7 500`,
    `LossBP = 2 500`. `ShipmentDispatched.LossBP` is 2 500.
 3. **Expected loss of the route** (8.1.1): `f1 = 10 000 - rhe(3 000 * 2 500, 10 000) =
@@ -1375,16 +1402,17 @@ Rows: R1 (`north`, `mid`, `wagon`) common; R2 (`mid`, `south`, `wagon`) unit; R3
 `south` and one by `foot` from `north` to `mid`. In `north`, agent 7 owns two `bin` and one
 `pit` with a stored load, and agent 9 owns one `pit` with a stored load of 0.
 
-| Position | Words | Why |
-|----------|------:|-----|
-| P3.1a (D13) | 1 | R1 only (a common row); R2, R3 are unit |
-| dispatches (D14) | 3 | each `wagon` shipment: R1's outcome is the tick's, R2 takes one; the `foot` shipment: R3 takes one |
-| P8.1a (D15, common) | 1 | S1 |
-| P8.1a (D15, stores) | 1 | agent 7's `pit` (S2); its two `bin` use S1's outcome; agent 9 has no stored load |
+| Position | Words | Streams | Why |
+| --- | ---: | --- | --- |
+| P3.1a (D13) | 1 | one: R1 | R1 only (a common row); R2, R3 are unit |
+| dispatches (D14) | 3 | one per shipment | each `wagon` shipment: R1's outcome is the tick's, R2 takes one word of its stream; the `foot` shipment: R3 takes one |
+| P8.1a (D15 (i), common) | 1 | one: S1 | S1 |
+| P8.1a (D15 (ii), stores) | 1 | one: agent 7 and `pit` | agent 7's `pit` (S2); its two `bin` use S1's outcome; agent 9 has no stored load |
 
-Total 6 words, a function of the configuration and the state (11.3). With S2's scale set
-to 0 the total is 5 and every later word of the run moves by one place (WLD-A5): a
-comparison across that call is a different stream from there (11.4).
+Total 6 words in six streams, a function of the configuration and the state (11.3). With
+S2's scale set to 0 the total is 5 and the stream of S2 is the only one that changes: under
+keyed streams (ADR 0008) no word of any other stream, of this module or of another, moves,
+so a comparison across that call is aligned everywhere else (11.4).
 
 ## 19. Notes settled, and what this spec needs from the other specs
 
@@ -1409,7 +1437,7 @@ comparison across that call is a different stream from there (11.4).
 | `spec-world.md` | 6.5, 6.10, 6.3 | row P3.1a; row P8.1a; P1.3 notes the loss step 0 of an arrival |
 | | 6.11 | the `StoreLoss` events first in phase 8 |
 | | 8.2 | two rows: the route risk scale (read at P3.1a and at the dispatch record) and the store risk scale (P8.1a) |
-| | 11.1 | the cost rows: P3.1a `O(common route rows with P > 0)`; the step 4a of a dispatch in the cost of P3.2 and P3.3, `O(rows on the path)`; P8.1a `O(common store rows + stores of the limited owners)` |
+| | 11.1 | the cost rows: P3.1a `O(common route rows with P > 0)`; the step 4a of a dispatch in the cost of P3.2 and P3.3, `O(rows on the path)`; P8.1a `O(common store rows + stores of the limited owners)`, plus one read of the store index per tick (N-375) |
 | | 7.3, 7.3.1 (placement) | the rows D13 to D15 go **at their position** under the new IDs: D13 between D3 and D4, D14 after D5 (inside each agent's turn at P3.2(c), and at P3.3 after D6), D15 after D11 (the heading is "in the order of a run", so an ID is not an order) |
 | `spec-transport.md` | 3.2.2, 5.2, 5.5.1, 5.7, 5.9.2 | field `LossBP`; step 4a; step 0; a sentence in 3.2.2 that the same units the load leaves out (the `Vehicle`) are not exposed to a strike (RSK 5.4.1); in 5.7 and 5.9.2 the traveller's own account is struck after the Transit account and a shipment with lines of a removed traveller is struck in its Transit account |
 |  | 7.2, 7.3.2, 5.6.3, 10.1 | the owners sentence of 7.2 reads RSK; `loss` is used with the module on; the identity includes `lost`; 10.1 points here |
@@ -1502,7 +1530,7 @@ register's "hazard" is a kind of entry. Setting words (`road`, `bandit`, `flood`
 | ID | Requirement |
 |----|-------------|
 | NFR-RSK-001 | With the default logger and observer, P3.1a, the dispatch step 4a, the arrival step 0 and P8.1a MUST allocate nothing per call, and a full step of the reference chain MUST allocate no more than the baseline of the module off (observability-and-logging.md 8.2). |
-| NFR-RSK-002 | The per-dispatch work MUST be at most the number of edges of the path in lookups and words, and the per-tick work of P8.1a at most the number of rows with `P > 0` plus the stores of the limited owners. |
+| NFR-RSK-002 | The per-dispatch work MUST be at most the number of edges of the path in lookups and words, and the per-tick work of P8.1a at most the number of rows with `P > 0` plus the stores of the limited owners, plus one read of the store index of the storage module per tick, while some store row has `P > 0` (that module keeps no list of the owners, N-375). |
 | NFR-RSK-003 | A run MUST be bit-identical for a given seed, configuration and sequence of calls across platforms: no floating point, no map order, no clock (architecture.md 7.4). |
 | NFR-RSK-004 | A test that runs over seeds MUST report the failing seed (testing.md 6.2). |
 
@@ -1531,9 +1559,9 @@ register's "hazard" is a kind of entry. Setting words (`road`, `bandit`, `flood`
    not a shipment. A risk on a journey would be a row keyed by edge and a `LossBP` fixed at
    departure, as a shipment's is.
 8. **Money** (7.4): a row that takes money needs the answer of open question 3.
-9. **Draw anyway at a probability of 0** (3.4.3): taking the word keeps a sweep across 0
-   aligned (11.4) and loses the exact neutrality of FR-RSK-005. The choice was neutrality;
-   EXP may prefer the other for a design that sweeps through 0.
+9. **Draw anyway at a probability of 0** (3.4.3): **moot under keyed streams** (ADR 0008).
+   A word that is not taken moves no other word, so a sweep across 0 is aligned without
+   it (11.4) and the exact neutrality of FR-RSK-005 is kept; the choice is closed.
 10. **Timing of a loss** (4, 5): the strike is fixed at dispatch and told at arrival. A loss
     along the way (a wreck on tick 2 of 5) would give a different `Inbound` to the
     consignee and a different moment for an insurer; it needs the path position of a

@@ -143,6 +143,7 @@ economy-sim/
   credit_round.go  credit_settle.go  credit_strategy.go  credit_report.go
   credit_state.go                                                     (CRD)
   polity_validate.go                                                  (POL)
+  risk_validate.go                                                    (RSK)
   infrastructure_validate.go  infrastructure_step.go  infrastructure_calls.go
   infrastructure_build.go  infrastructure_report.go  infrastructure_state.go     (CAP)
   institutions_validate.go  institutions_warn.go  institutions_round.go
@@ -1094,4 +1095,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 72e2622e77b53bfc6f18211e
+RULE-TAG: 5cf54e23c96c91235fafd115

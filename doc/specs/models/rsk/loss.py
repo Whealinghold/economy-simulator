@@ -5,6 +5,7 @@ shipper with a loss (stylised, floats only inside the model). Standard library o
 It is a model of the RULES of sections 3 to 6 and 8 with integers and placeholder
 numbers. It does not show that any default is stable (note N-027)."""
 
+import hashlib
 import math
 
 M64 = (1 << 64) - 1
@@ -15,6 +16,37 @@ def finalise(z):
     z = ((z ^ (z >> 30)) * 0xBF58476D1CE4E5B9) & M64
     z = ((z ^ (z >> 27)) * 0x94D049BB133111EB) & M64
     return z ^ (z >> 31)
+
+
+# The four keyed sites of the risk module (spec-world.md 7.1.4, ADR 0008, N-373): the first
+# eight bytes, big-endian, of SHA-256 of "economy-sim/site/" and the name.
+SITES = {
+    "siteRiskCommon": 0x7BECBB022BE68D1A,       # D13: tick, id = From region, sub = To * MaxModes + Mode
+    "siteRiskDispatch": 0x7E59E8F556FE1651,     # D14: tick, id = the shipment
+    "siteRiskStoreCommon": 0x22650FB6363BD5BC,  # D15 (i): tick, id = the region, sub = the store class
+    "siteRiskStore": 0x85E20986FA93C736,        # D15 (ii): tick, id = the agent, sub = the store class
+}
+MAX_MODES = 64
+
+
+def derive_site(name):
+    return int.from_bytes(hashlib.sha256(("economy-sim/site/" + name).encode()).digest()[:8], "big")
+
+
+for _n, _v in SITES.items():
+    if derive_site(_n) != _v:
+        raise SystemExit(f"self-check failed: {_n}")
+
+
+def chain(seed, site, tick, ident, sub=None):
+    """The fold of spec-world.md 7.1.2 over (site, tick, id[, sub]), as models/wld/seed.py."""
+    s = seed & M64
+    words = [site, tick & M64, ident & M64]
+    if sub is not None:
+        words.append(sub & M64)
+    for w in words:
+        s = finalise((s + w + GAMMA) & M64)
+    return s
 
 
 class PCG:
@@ -28,6 +60,14 @@ class PCG:
         s = (s + GAMMA) & M64
         lo = finalise(s)
         self.state = (hi << 64) | lo
+
+    @classmethod
+    def keyed(cls, seed, site, tick, ident, sub=None):
+        """The stream of a draw site: the PCG reseeded from the key (ADR 0008)."""
+        g = cls(0)
+        s = chain(seed, site, tick, ident, sub)
+        g.state = (finalise((s + GAMMA) & M64) << 64) | finalise((s + 2 * GAMMA) & M64)
+        return g
 
     def uint64(self):
         self.state = (self.state * self.MUL + self.INC) & ((1 << 128) - 1)
@@ -80,21 +120,24 @@ def store_phi(stored, cap_k, sumcap, load):
 
 
 def main():
-    print("== 1. The world's words and the strike test (spec-risk.md 3.4.2) ==")
+    print("== 1. The first word of a keyed stream and the strike test (spec-risk.md 3.4.2) ==")
+    print("stream (siteRiskDispatch, tick 12, shipment 1): the first word, reduced by the world's draw")
     for seed in (0, 1, 42):
-        g = PCG(seed)
-        w1, w2 = g.uint64(), g.uint64()
-        d1, d2 = (w1 * 10_000) >> 64, (w2 * 10_000) >> 64
-        print("seed %2d: words %016x %016x -> draw(10000) = %d, %d" % (seed, w1, w2, d1, d2))
+        g = PCG.keyed(seed, SITES["siteRiskDispatch"], 12, 1)
+        w1 = g.uint64()
+        d1 = (w1 * 10_000) >> 64
+        print("seed %2d: word %016x -> draw(10000) = %d" % (seed, w1, d1))
 
     print()
     print("== 2. Worked example A: a hired shipment over two rows (spec-risk.md 18.1) ==")
     # rows: (north, mid, wagon) unit, StrikeBP 3 000 Severity 2 500; (mid, south, wagon) common,
-    # StrikeBP 1 000 Severity 6 000. Seed 42: word 1 is the common row's (D13, P3.1a), word 2 the
-    # unit row's (D14, at the record of the shipment).
-    g = PCG(42)
-    d13 = g.draw(10_000)
-    d14 = g.draw(10_000)
+    # StrikeBP 1 000 Severity 6 000. Seed 42, regions north 0, mid 1, south 2, the mode wagon index 0,
+    # the shipment 1 dispatched at tick 12. Under ADR 0008 each draw is the first word of its own
+    # stream: D13 is keyed by (siteRiskCommon, tick 12, id = From region 1, sub = To * MaxModes +
+    # Mode = 2 * 64 + 0), D14 by (siteRiskDispatch, tick 12, id = the shipment 1, one word per unit row
+    # with P > 0 on the path, here one).
+    d13 = PCG.keyed(42, SITES["siteRiskCommon"], 12, 1, 2 * MAX_MODES + 0).draw(10_000)
+    d14 = PCG.keyed(42, SITES["siteRiskDispatch"], 12, 1).draw(10_000)
     p_common, p_unit = prob(1_000), prob(3_000)
     struck = []
     print("D13 (common row, P=%d): draw %d -> %s" % (p_common, d13, "struck" if d13 < p_common else "spared"))
