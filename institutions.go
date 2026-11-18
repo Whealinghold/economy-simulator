@@ -166,22 +166,25 @@ func satAdd64(a, b int64) int64 {
 }
 
 // orgNames returns the string ID of each body, right and control, by their typed IDs,
-// or nil with the module off (Names.Bodies, Rights, Controls, spec-institutions.md
-// 11.4.1). The controls and the rate limits are one list, sorted together by ID.
+// or nil with the module off or with none of the kind declared (Names.Bodies, Rights,
+// Controls, spec-institutions.md 11.4.1), so a module that is present and empty leaves
+// the names as they are without it. The controls and the rate limits are one list,
+// sorted together by ID.
 func orgNames(c *Config) (bodies, rights, controls []string) {
 	m := c.Modules.Institutions
 	if m == nil {
 		return nil, nil, nil
 	}
-	bodies = make([]string, len(m.Bodies))
 	for i := range m.Bodies {
-		bodies[i] = m.Bodies[i].ID
+		bodies = append(bodies, m.Bodies[i].ID)
 	}
-	rights = make([]string, len(m.Rights))
 	for i := range m.Rights {
-		rights[i] = m.Rights[i].ID
+		rights = append(rights, m.Rights[i].ID)
 	}
-	return bodies, rights, controlIDs(m)
+	if ids := controlIDs(m); len(ids) > 0 {
+		controls = ids
+	}
+	return bodies, rights, controls
 }
 
 // controlIDs returns the IDs of the controls and the rate limits sorted together
