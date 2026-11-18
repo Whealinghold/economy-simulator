@@ -23,11 +23,7 @@ func (v *validator) validateEmployment() {
 	on := m != nil
 	hire := on && m.Hire
 	base := []string{"modules", "employment"}
-	if hire {
-		v.inRange(path(base, "max_open"), m.MaxOpen, 1, MaxHireRecords)
-	} else if on && m.MaxOpen != 0 {
-		v.rep.add(ErrEmploymentShape, path(base, "max_open"), i64(m.MaxOpen), "0")
-	}
+	v.employmentMaxOpen(path(base, "max_open"), m)
 	var payers, workers int
 	for i := range c.Roles {
 		r := &c.Roles[i]
@@ -47,6 +43,18 @@ func (v *validator) validateEmployment() {
 	}
 	if workers == 0 {
 		v.rep.add(ErrEmploymentShape, path(base, "hireable"), "0", "1")
+	}
+}
+
+// employmentMaxOpen checks the module's MaxOpen: in range in the hire form, zero
+// in the payroll form (m is nil when the module is off, which has no field).
+func (v *validator) employmentMaxOpen(p []string, m *Employment) {
+	switch {
+	case m == nil:
+	case m.Hire:
+		v.inRange(p, m.MaxOpen, 1, MaxHireRecords)
+	case m.MaxOpen != 0:
+		v.rep.add(ErrEmploymentShape, p, i64(m.MaxOpen), "0")
 	}
 }
 
