@@ -74,22 +74,31 @@ func TestStep_RisesFallsHolds(t *testing.T) {
 	}
 }
 
-// TestRentPaid_OnlyWhenNonZero_Order_NoMap_AfterEndowmentChanged verifies FR-LND-028 and
-// FR-LND-044: RentPaid is emitted for an endowment with a title only in a tick in which a
-// count or the posted rent is non-zero or moved, in ascending (RegionID, ResourceID) order,
-// after the EndowmentChanged of the same position, and its type holds no map.
+// TestRentPaid_HoldsNoMapAndNoPointer verifies FR-LND-044 and observability-and-logging.md
+// 4.1: no field of RentPaid is a map or a pointer, so the golden rendering and every consumer
+// see the same order and no live state.
 //
-// Guard: an event with a map would give a random order to the golden rendering; an event
-// per quiet endowment would flood a run with rows of zeros.
+// Guard: an event with a map would give a random order to the golden rendering.
 //
-// Requirement: FR-LND-028, FR-LND-044
-func TestRentPaid_OnlyWhenNonZero_Order_NoMap_AfterEndowmentChanged(t *testing.T) {
+// Requirement: FR-LND-044
+func TestRentPaid_HoldsNoMapAndNoPointer(t *testing.T) {
 	t.Parallel()
 	for _, f := range reflect.VisibleFields(reflect.TypeFor[RentPaid]()) {
 		if f.Type.Kind() == reflect.Map || f.Type.Kind() == reflect.Pointer {
-			t.Errorf("RentPaid.%s has kind %v, want no map and no pointer (observability-and-logging.md 4.1)", f.Name, f.Type.Kind())
+			t.Errorf("RentPaid.%s has kind %v, want no map and no pointer", f.Name, f.Type.Kind())
 		}
 	}
+}
+
+// TestRentPaid_OnlyWhenNonZero_AscendingOrder verifies FR-LND-028: RentPaid is emitted for
+// an endowment with a title only in a tick in which a count or the posted rent is non-zero
+// or moved, and the events of two endowments come in ascending (RegionID, ResourceID) order.
+//
+// Guard: an event per quiet endowment would flood a run with rows of zeros.
+//
+// Requirement: FR-LND-028
+func TestRentPaid_OnlyWhenNonZero_AscendingOrder(t *testing.T) {
+	t.Parallel()
 	obs := &evLog{}
 	w := tenureWorld(t, nil, WithObserver(obs))
 	toSnapshot(t, w)
@@ -102,20 +111,23 @@ func TestRentPaid_OnlyWhenNonZero_Order_NoMap_AfterEndowmentChanged(t *testing.T
 	for i := range w.tenure.rt.counts {
 		w.tenure.rt.counts[i].noTitle = int64(i + 1)
 	}
-	n = len(obs.events)
 	w.p83aRent()
-	got := obs.events[n:]
-	if len(got) != 2 {
-		t.Fatalf("P8.3a emitted %d events with a refusal on each endowment, want 2", len(got))
+	got := of[RentPaid](obs)
+	if len(got) != 2 || got[0].Region != 0 || got[1].Region != 1 || got[0].NoTitle != 1 || got[1].NoTitle != 2 {
+		t.Errorf("RentPaid events = %+v, want region 0 then region 1 with 1 and 2 refused for no title", got)
 	}
-	a, aok := got[0].(RentPaid)
-	b, bok := got[1].(RentPaid)
-	if !aok || !bok || a.Region != 0 || b.Region != 1 || a.NoTitle != 1 || b.NoTitle != 2 {
-		t.Errorf("events = %+v and %+v, want RentPaid of region 0 then region 1 with 1 and 2 refused for no title", got[0], got[1])
-	}
-	w2 := newMill(t, rationConfig(10, 5_000, false), WithSeed(1), WithObserver(obs))
-	obs.events = nil
-	step(t, w2, 1)
+}
+
+// TestRentPaid_AfterEndowmentChanged verifies FR-LND-044 and the order of the events of
+// spec-land.md 6.11 item 9: in a step, RentPaid follows the EndowmentChanged of the
+// position before it.
+//
+// Requirement: FR-LND-044
+func TestRentPaid_AfterEndowmentChanged(t *testing.T) {
+	t.Parallel()
+	obs := &evLog{}
+	w := newMill(t, rationConfig(10, 5_000, false), WithSeed(1), WithObserver(obs))
+	step(t, w, 1)
 	ec, rp := -1, -1
 	for i, e := range obs.events {
 		switch e.(type) {
@@ -243,18 +255,17 @@ func refusalLines(c capture) (out []logRec) {
 	return out
 }
 
-// TestWarn_TenureRefusalFirstAndEveryTenth_RunSaved verifies FR-LND-030 and the counterpart
-// rule of spec-land.md 13.5: a Warn "tenure refusal" is written for an endowment and a reason
-// at the first tick with requests refused and then at every tenth of the run, never in a tick
-// with none, the run restarts after a quiet tick, the line carries the keys of 13.2, and the
-// run is the saved state the snapshot row reports.
+// TestWarn_TenureRefusalFirstAndEveryTenth verifies FR-LND-030 and the counterpart rule of
+// spec-land.md 13.5: a Warn "tenure refusal" is written for an endowment and a reason at the
+// first tick with requests refused and then at every tenth of the run, never in a tick with
+// none, the run restarts after a quiet tick, and the line carries the keys of 13.2.
 //
 // Arithmetic: the ticks 1 to 21 of a run have refusals; the lines are at the runs 1, 10 and
-// 20, three. After one quiet tick the run is 0 and the next refusal is run 1 again: a fourth
-// line.
+// 20, three. After one quiet tick the run is 0 and the next refusal is run 1 again, for each
+// of the two reasons: two lines more.
 //
 // Requirement: FR-LND-030
-func TestWarn_TenureRefusalFirstAndEveryTenth_RunSaved(t *testing.T) {
+func TestWarn_TenureRefusalFirstAndEveryTenth(t *testing.T) {
 	t.Parallel()
 	c := newCapture()
 	w := newMill(t, rationConfig(10, 5_000, false), WithSeed(1), WithLogger(slog.New(c)))
@@ -268,24 +279,38 @@ func TestWarn_TenureRefusalFirstAndEveryTenth_RunSaved(t *testing.T) {
 	if len(lines) != 3 {
 		t.Fatalf("%d lines after 21 ticks of refusals, want 3 (runs 1, 10 and 20)", len(lines))
 	}
-	l := lines[0]
-	if l.level != slog.LevelWarn || l.attrs["agents"] != 2 || l.attrs["rent"] != 2 || l.attrs["region"] != 0 || l.attrs["resource"] != 0 || l.strs["reason"] != "no_title" {
-		t.Errorf("line = %+v, want a Warn with agents 2, rent 2, region 0, resource 0 and reason no_title", l)
-	}
-	if got := w.tenure.noTitleRun[0]; got != 21 {
-		t.Errorf("run of ticks with refusals = %d, want 21", got)
-	}
-	var row EndowmentRow
-	w.tenure.fillRow(&row, 0)
-	if row.NoTitleRun != 21 || row.RentFundsRun != 0 {
-		t.Errorf("snapshot runs = %d and %d, want 21 and 0", row.NoTitleRun, row.RentFundsRun)
-	}
+	want := logRec{level: slog.LevelWarn, attrs: map[string]int64{"tick": lines[0].attrs["tick"], "region": 0, "resource": 0, "rent": 2, "agents": 2},
+		msg: "tenure refusal", strs: map[string]string{"reason": "no_title"}}
+	tnEq(t, "first line", lines[0], want)
 	cnt.noTitle = 0
 	w.p83aRent()
 	cnt.noTitle, cnt.rentFunds = 1, 1
 	w.p83aRent()
 	if got := len(refusalLines(c)); got != 5 {
 		t.Errorf("%d lines after the quiet tick and one refusal for each reason, want 5 (the run of each restarts at 1)", got)
+	}
+}
+
+// TestSnapshot_TenureRunsAreTheSavedRuns verifies FR-LND-032: the two runs of the snapshot
+// row of an endowment are the consecutive ticks with a refusal for each reason, the state
+// the checkpoint saves.
+//
+// Requirement: FR-LND-032
+func TestSnapshot_TenureRunsAreTheSavedRuns(t *testing.T) {
+	t.Parallel()
+	w := newMill(t, rationConfig(10, 5_000, false), WithSeed(1))
+	toStart(t, w)
+	cnt := &w.tenure.rt.counts[0]
+	for range 7 {
+		cnt.noTitle, cnt.rentFunds = 1, 0
+		w.p83aRent()
+	}
+	cnt.noTitle, cnt.rentFunds = 0, 1
+	w.p83aRent()
+	var row EndowmentRow
+	w.tenure.fillRow(&row, 0)
+	if row.NoTitleRun != 0 || row.RentFundsRun != 1 {
+		t.Errorf("runs = %d and %d, want 0 (a quiet tick ends the run) and 1", row.NoTitleRun, row.RentFundsRun)
 	}
 }
 
