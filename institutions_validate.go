@@ -31,10 +31,6 @@ func orgLimitPath(i int, key ...string) []string {
 	return path(orgBase, append([]string{"rate_limits[" + itoa(i) + "]"}, key...)...)
 }
 
-// orgTraineesMax is the largest MaxTrainees of a body, the bound of a role's own
-// (spec-institutions.md 9).
-const orgTraineesMax = 100
-
 // validateInstitutions checks the institutions module (spec-institutions.md 10.1,
 // FR-ORG-002 to 004, 047). It reports nothing when the module is off. The rules run
 // in phases and a phase that finds an error ends the run, so the first error is the
@@ -381,7 +377,7 @@ func (v *validator) orgBounds(m *Institutions) bool {
 	n := len(v.rep.errs)
 	for i, b := range m.Bodies {
 		v.inRange(orgBodyPath(i, "places"), b.Places, 0, MaxHouseholds)
-		v.inRange(orgBodyPath(i, "max_trainees"), b.MaxTrainees, 0, orgTraineesMax)
+		v.inRange(orgBodyPath(i, "max_trainees"), b.MaxTrainees, 0, MaxBodyTrainees)
 		v.label(orgBodyPath(i), "label", b.Label)
 	}
 	for i, r := range m.Rights {

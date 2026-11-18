@@ -630,4 +630,7 @@ const (
 	MaxRights = 4_096
 	// MaxControls is the most controls and rate limits together, one namespace.
 	MaxControls = 4_096
+	// MaxBodyTrainees is the largest MaxTrainees of a body, the bound of a role's own
+	// (the skills module's, spec-institutions.md 9).
+	MaxBodyTrainees = 100
 )
