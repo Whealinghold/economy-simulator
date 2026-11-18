@@ -170,6 +170,7 @@ func (w *World) allocate() {
 		if w.sto != nil {
 			w.sto.facilityCount = w.infra.installedOf // the seam of RemoveStore (spec-storage.md 3.6.2)
 		}
+		w.infra.wire(w)
 	}
 	w.registerBounds()
 	if w.cfg.Modules.Estates != nil {

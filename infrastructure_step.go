@@ -1,5 +1,7 @@
 package economysim
 
+import fcy "github.com/Whealinghold/economy-sim/internal/facility"
+
 // This file is the effect tables of the infrastructure module (spec-infrastructure.md
 // 6.4): the derived structure that every position of a tick reads, rebuilt in one pass
 // over the records, and the step of the facility position P8.3b (6.3), which decays,
@@ -145,4 +147,49 @@ func (n *infrastructure) clampGround() {
 		r.lost[cell] += before - c
 		w.deliverAdjusted(cell, EndowmentAdjusted{Kind: AdjustKindFacility, StockBefore: before, Lost: before - c})
 	}
+}
+
+// wire sets the layers a facility writes into other modules, each a function value or a
+// table of this module that the owner reads and never writes (spec-infrastructure.md 5.2,
+// 5.3): the route gain into transport's dispatch and Travel, the ground gain into the
+// effective capacity of an endowment. The store seam is set beside it, in construct.go.
+func (n *infrastructure) wire(w *World) {
+	if w.transport != nil && n.route != nil {
+		w.transport.layer = n.layer
+	}
+	if w.res != nil && n.ground != nil {
+		w.res.facilityBP = n.ground
+	}
+}
+
+// layer is the transit factor of the directed pair after the gain of its route
+// facilities (spec-infrastructure.md 5.2.2): 0 stays 0, a pair whose own direct edge is not
+// its shortest path has no gain (5.2.5), and otherwise F_eff = min(MaxTransitFactorBP,
+// floor(slot * (10 000 + B) / 10 000)) with B the capped sum of the table. Nothing is
+// allocated.
+func (n *infrastructure) layer(from, to RegionID, mode ModeID, slot int64) int64 {
+	if slot == 0 || int(mode) >= n.modes {
+		return slot
+	}
+	b := n.route[(int(from)*n.regions+int(to))*n.modes+int(mode)]
+	if b == 0 || !n.ownShortest(from, to) {
+		return slot
+	}
+	f, ok := fcy.Layer(slot, b, MaxTransitFactorBP)
+	if !ok {
+		invariant("the transit factor of a route facility does not fit after validation")
+	}
+	return f
+}
+
+// ownShortest reports whether the configuration has the open directed edge (from, to) and
+// its effective length is the shortest distance of the pair (5.2.5).
+func (n *infrastructure) ownShortest(from, to RegionID) bool {
+	geo := &n.world.geo
+	e, ok := geo.edge(from, to)
+	if !ok || e.Closed {
+		return false
+	}
+	d, ok := geo.distance(from, to)
+	return ok && e.Distance == d
 }
