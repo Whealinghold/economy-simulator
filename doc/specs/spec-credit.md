@@ -454,7 +454,11 @@ counted (`CreditRound.Exposure`, FR-STB-013).
 request's `MaxRateBP` above the cap in force for the borrower's region is **replaced** by the
 cap, never refused for it, and the replacement is counted in `PriceControlled`
 (`spec-institutions.md` 6.6.1; FR-CRD-028). The cap bounds what a borrower accepts, not what
-a lender posts (ORG 6.6.2).
+a lender posts (ORG 6.6.2). In code the seam of the cap is `rateCap func(g RegionID, limit
+int64) (replaced int64, lowered bool)`: it takes the request's limit and returns the limit to
+use and whether it was lowered, so the institutions module counts the lowering in its own
+scratch and reads it at P7.2b; the credit round's own counts are cleared with the round and
+cannot be read there (`spec-institutions.md` 6.6.1, plan 3-org D8, N-398).
 
 ### 5.3 The quantities the checks read
 

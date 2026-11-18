@@ -154,6 +154,19 @@ lift an ask above the product tested, but an ask reserves no money, and a cap on
 lowers a bid. Every replaced limit is counted in `PriceControlled`
 (`spec-institutions.md` 11.1).
 
+3.2.1.1. **The shape in code.** The pure admission of `internal/clearing` takes the legal
+range and the permission as three appended fields of `Facts`: `Cap` and `Floor` (0 is none) and
+`NotPermitted` (false is permitted). `AdmitClamp(f Facts)` holds the whole sequence of 3.2 and
+returns the code, the admitted limit price and whether a bid was lowered or an ask raised;
+`Admit(f Facts)` is its wrapper that returns the code only, so a caller that reads no range is
+unchanged. `NotPermitted` is the last constant of `Code`; its place in the order is after
+`not_tradable` and before `invalid_price`, in the function. The clamp is inside the admission
+and not before it, so a limit that is `invalid_price` is rejected and never rescued by a cap
+(`spec-institutions.md` 6.3.1). The per-market range is held by the book, set at construction
+and rewritten at a slot call, so the estate's ask and an outside counterparty's order are
+clamped with no change to `estates.go` or `external.go`. The fact `NotPermitted` is set only by
+the world's resolver of the facts of a household, so a pseudo-agent is exempt by construction.
+
 3.2.2. **What `holding_limit` and `receipt_limit` close at settlement.** A trade
 moves money into the seller and goods into the buyer, and the ledger refuses a
 balance above `MaxMoney` or a stock above `MaxQuantity`. Settlement must not
