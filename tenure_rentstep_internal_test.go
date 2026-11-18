@@ -364,3 +364,59 @@ func TestAudit_RentEqualsRentTimesChargedUnitsLessExemptAndForfeited(t *testing.
 		t.Errorf("auditTenure() error = %v, want nil with 4 paid and 2 forfeited of 6 due", err)
 	}
 }
+
+// TestNonInterference_Tenure verifies FR-LND-043: a run of a world that charges rent and
+// moves the posted rent, with an observer and a logger that reports every level, ends in the
+// snapshot a run with neither ends in, with the same titles, rent in force and stock.
+//
+// Requirement: FR-LND-043
+func TestNonInterference_Tenure(t *testing.T) {
+	t.Parallel()
+	run := func(opts ...Option) *World {
+		w := newMill(t, stepConfig(10, 5_000, false), append([]Option{WithSeed(1), WithAudit()}, opts...)...)
+		step(t, w, 30)
+		return w
+	}
+	plain := run()
+	seen := run(WithObserver(&evLog{}), WithLogger(slog.New(newCapture())))
+	a, errA := plain.Snapshot()
+	b, errB := seen.Snapshot()
+	if errA != nil || errB != nil {
+		t.Fatalf("Snapshot errors = %v and %v, want nil", errA, errB)
+	}
+	tnEq(t, "snapshot with an observer and a logger", b, a)
+	tnEq(t, "holders with an observer and a logger", tnHolders(t, seen, 0), tnHolders(t, plain, 0))
+	if got, want := seen.tenure.posted[0], plain.tenure.posted[0]; got != want || want == 2 {
+		t.Errorf("posted rent with an observer and a logger = %d, without = %d, want equal and moved from the configured 2", got, want)
+	}
+}
+
+// TestRentIsOffDual_Boundaries verifies the rule of 5.6.2 on its edges: a slack row is off
+// only above a rent of 0, a binding row is off when the gap is above half the dual (exactly
+// half is not), a rent of 0 on a binding row is off by 100%, and a product past int64 counts
+// as off and never panics.
+//
+// Requirement: FR-LND-040
+func TestRentIsOffDual_Boundaries(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name        string
+		rent, dual  int64
+		wantOffDual bool
+	}{
+		{"slack and free", 0, 0, false},
+		{"slack and charged", 1, 0, true},
+		{"exactly half above", 15, 10, false},
+		{"just over half above", 16, 10, true},
+		{"exactly half below", 5, 10, false},
+		{"just over half below", 4, 10, true},
+		{"free on a binding row", 0, 10, true},
+		{"the product overflows", 1 << 62, 1, true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := rentIsOffDual(tt.rent, tt.dual); got != tt.wantOffDual {
+				t.Errorf("rentIsOffDual(%d, %d) = %v, want %v", tt.rent, tt.dual, got, tt.wantOffDual)
+			}
+		})
+	}
+}
