@@ -95,6 +95,8 @@ var declaredEvents = []economysim.Event{
 	economysim.SettlementHeld{},
 	economysim.TitleTransferred{},
 	economysim.RentScaled{},
+	economysim.RentPaid{},
+	economysim.FacilityChanged{},
 	economysim.RouteRiskScaled{},
 }
 
@@ -106,8 +108,7 @@ var notBuiltEvents = []string{
 	"StoreLoss",
 	"StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound",
-	"RentPaid",
-	"FacilityChanged", "FacilityLimited", "FiscalFlowApplied",
+	"FacilityLimited", "FiscalFlowApplied",
 	"TreasuryOrdered", "MembershipChanged", "RightRefused", "PriceControlled",
 	"LegalLevelSet", "RightSuspensionSet", "SavingPlanned", "PolicyDecided",
 	"CoverFormed", "CoverEnded", "CoverRound", "CoverSettled",
@@ -391,7 +392,7 @@ func TestEvents_Shape(t *testing.T) {
 	byEventField := map[string]reflect.Type{
 		"RoleChanged.From": role, "RoleChanged.To": role,
 		"WeightChanged.From": reflect.TypeFor[int64](), "WeightChanged.To": reflect.TypeFor[int64](),
-		"EndowmentAdjusted.Kind": reflect.TypeFor[economysim.AdjustKind](),
+		"EndowmentAdjusted.Kind": reflect.TypeFor[economysim.AdjustKind](), "FacilityChanged.Kind": reflect.TypeFor[economysim.FacilityKind](),
 	}
 	for _, e := range declaredEvents {
 		typ := reflect.TypeOf(e)
@@ -462,7 +463,7 @@ func TestEvents_CatalogueStaged(t *testing.T) {
 			t.Errorf("declared event %s is not a row of 4.1", n)
 			continue
 		}
-		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && row.gate != "resources" && row.gate != "subsistence" && row.gate != "population" && row.gate != "transport" && row.gate != "information" && row.gate != "migration" && row.gate != "merchant block" && row.gate != "merchants" && row.gate != "external" && row.gate != "employment" && row.gate != "storage" && row.gate != "credit" && row.gate != "technology" && row.gate != "settlements" && row.gate != "tenure" && row.gate != "risk" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
+		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && row.gate != "resources" && row.gate != "subsistence" && row.gate != "population" && row.gate != "transport" && row.gate != "information" && row.gate != "migration" && row.gate != "merchant block" && row.gate != "merchants" && row.gate != "external" && row.gate != "employment" && row.gate != "storage" && row.gate != "credit" && row.gate != "technology" && row.gate != "settlements" && row.gate != "tenure" && row.gate != "infrastructure" && row.gate != "risk" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
 			t.Errorf("declared event %s has gate %q in 4.1, want core: a module's event is declared with its module", n, row.gate)
 		}
 		if !rules[n] {

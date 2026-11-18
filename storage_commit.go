@@ -545,3 +545,24 @@ func (w *World) visitStores(m *moneyFlows, i, g int) {
 		w.visitFlow(m, i, g, recipient{account: a.account, weight: int64(n), carry: &f.carry[a.id], agent: a})
 	}
 }
+
+// storeRefusal is the checks of addStore in the order of the table of 3.6.2, with no
+// effect: nil when a store of the class can be added to the agent. pending is the stores
+// that the caller has decided to add to the agent before this one and has not yet added,
+// so a call that adds several (AddFacilities) can check them all before it applies any.
+func (w *World) storeRefusal(a *agent, class StoreClassID, pending int) error {
+	s := w.sto
+	switch {
+	case class < 0 || int(class) >= len(s.classes):
+		return ErrUnknownStoreClass
+	case s.gate != nil && !s.gate(w.regionOf(a), int(class)):
+		return ErrStoreLocked
+	case !s.limited(a):
+		return ErrNotLimited
+	case w.away(a):
+		return ErrAgentAway
+	case s.owned(a.id)+pending >= MaxStoresPerAgent:
+		return ErrOutOfBounds
+	}
+	return nil
+}

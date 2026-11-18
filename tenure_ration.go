@@ -36,7 +36,7 @@ type tenureCount struct {
 	offered, held                      int64
 	unserved, pricedOut                int64
 	tenants, lessors                   int64
-	paid, forfeited                    int64
+	paid, forfeited, due               int64
 	noTitle, rentFunds                 int64
 	cutUnits, exemptUnits              int64
 	rentInForce, postedBefore, entitle int64
@@ -65,6 +65,16 @@ type rentStart struct {
 	exempt        bool
 }
 
+// rentFlow is one transfer of rent, kept for the money rows of RentPaid when an observer
+// is supplied: the endowment, the regions of the payer's and the payee's accounts, whether
+// the payee is the pool of the endowment's region, and the amount.
+type rentFlow struct {
+	cell     int
+	from, to RegionID
+	pool     bool
+	amount   int64
+}
+
 // rationScratch is the scratch of the module in a tick. Nothing in it is saved: the
 // entitlements are derived at P2.3, the grants at P2.6, the reservations and the starts
 // at P2.7, and all are cleared at the next P2.3.
@@ -83,6 +93,7 @@ type rationScratch struct {
 	lines            []startLine
 	charge           []tnr.Line
 	starts           []rentStart
+	flows            []rentFlow
 	rents            []int64
 	reserved         []int64
 	touched          []AgentID
@@ -107,7 +118,7 @@ func (t *tenure) entitlements() {
 		rt.ents, rt.commons, rt.counts = make([][]tnr.Holder, n), make([]int64, n), make([]tenureCount, n)
 	}
 	clear(rt.counts)
-	rt.starts = rt.starts[:0]
+	rt.starts, rt.flows = rt.starts[:0], rt.flows[:0]
 	for _, id := range rt.touched {
 		rt.reserved[id] = 0
 	}
@@ -439,6 +450,16 @@ func (t *tenure) settleCell(cell int, recs []rentStart) {
 	}
 }
 
+// addCount adds a money amount to a count of the tick; a sum past int64 is a broken
+// invariant (architecture.md rule 3.5), never a wrap.
+func addCount(sum, v int64) int64 {
+	r, ok := checked.Add(sum, v)
+	if !ok {
+		invariant("a rent count of the tick does not fit")
+	}
+	return r
+}
+
 // payRent moves the rent of one triple from the principal of the tenant's start to the
 // lessor (spec-land.md 5.3.3): nothing for an exempt request or to oneself, the part a
 // payee at the balance bound cannot receive is forfeited and not charged. The payer's
@@ -452,6 +473,7 @@ func (t *tenure) payRent(c *tenureCount, x rentStart, lessor AgentID, units int6
 	if !fits {
 		invariant("the rent of a triple does not fit after the cap of the start")
 	}
+	c.due = addCount(c.due, due)
 	to := t.account(lessor, t.regionOf(x.cell))
 	v, err := w.ledger.Account(to)
 	if err != nil {
@@ -461,14 +483,15 @@ func (t *tenure) payRent(c *tenureCount, x rentStart, lessor AgentID, units int6
 	if !ok {
 		invariant("the balance of a lessor is out of range after validation")
 	}
-	c.forfeited += lost
+	c.forfeited = addCount(c.forfeited, lost)
 	if paid == 0 {
 		return
 	}
 	if err := w.ledger.Transfer(x.account, to, paid, ledger.Rent); err != nil {
 		invariant("the ledger refused the rent of a start whose rent was reserved: " + err.Error())
 	}
-	c.paid += paid
+	c.paid = addCount(c.paid, paid)
+	t.noteFlow(x, lessor, paid)
 	w.welfare.addInputSpend(int(x.payer), paid)
 	if lessor >= AgentID(t.regions) {
 		w.welfare.addUnearned(int(lessor), paid)

@@ -19,7 +19,7 @@ func payerOf(w *World, id AgentID, units, rent int64) rentStart {
 
 // toSnapshot replays one tick of w up to and including the snapshot of P2.3, which builds
 // the entitlements, and stops there.
-func toSnapshot(t *testing.T, w *World) {
+func toSnapshot(t testing.TB, w *World) {
 	t.Helper()
 	if err := w.beginStep(); err != nil {
 		t.Fatalf("beginStep() error = %v, want nil", err)

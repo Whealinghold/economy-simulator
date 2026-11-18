@@ -1118,8 +1118,9 @@ negative delta is a damage and a positive one a restoration; the result is clamp
 result of 0 ruins the facility at once (cause `consumer`), with the table rebuild, the
 ground clamp and the forced `removeStore` of a store (5.4.3: storage's `StoreChanged` `removed`, cause `facility`, comes first, and `FacilityChanged` `ruined` carries `GoodsListed`). It is also how a consumer ends a store facility, since `RemoveStore` is refused `ErrStoreInUse` for one (5.4.3). Errors: `ErrModuleOff`,
 `ErrUnknownFacility` (new), `ErrOutOfBounds` (a delta above the bound
-`MaxDurability` in magnitude), `ErrDuplicateID`. An entry whose result equals the
-current condition is accepted and is not a change. It is the only call that RSK will
+`MaxDurability` in magnitude), `ErrDuplicateID`. A result above 0 that differs from the current condition emits `FacilityChanged` of kind
+`adjusted` (cause `consumer`, `Before` and `After` the condition, in either direction); an entry whose
+result equals the current condition is accepted and is not a change. It is the only call that RSK will
 need for a loss of capital (open question 7), and it creates and destroys nothing in
 the ledger.
 
@@ -1343,7 +1344,7 @@ map or a pointer, and both are built only when an observer was supplied
 
 | Event | Position | Class | Fields (besides `Tick`) |
 |-------|----------|-------|-------------------------|
-| `FacilityChanged` | construction (after the last `AgentSpawned`), P2.1, P2.7 (a job of duration 1), P7.1(d), the role change of `spec-world.md` 6.11 item 8 (`ruined`, `role_changed`), P8.3b, and the calls of 11 | E (per transition) | `Facility FacilityID`, `Class FacilityClassID`, `Region`, `To` (`NoRegion` unless a route with a target), `Owner AgentID` (after), `Kind` (`added`, `built`, `repaired`, `installed`, `transferred`, `ruined`), `Cause` (the causes below), `Before` and `After` (the condition; `Before` is 0 for a creation and `After` is 0 for a ruin), `Effect` (`eff` or `cap` after, 0 for a store), `GoodsListed` (lots moved to the estate by the forced removal of a store at a ruin, `estate_goods`; 0 otherwise) |
+| `FacilityChanged` | construction (after the last `AgentSpawned`), P2.1, P2.7 (a job of duration 1), P7.1(d), the role change of `spec-world.md` 6.11 item 8 (`ruined`, `role_changed`), P8.3b, and the calls of 11 | E (per transition) | `Facility FacilityID`, `Class FacilityClassID`, `Region`, `To` (`NoRegion` unless a route with a target), `Owner AgentID` (after), `Kind` (`added`, `built`, `repaired`, `installed`, `transferred`, `ruined`, `adjusted`), `Cause` (the causes below), `Before` and `After` (the condition; `Before` is 0 for a creation and `After` is 0 for a ruin), `Effect` (`eff` or `cap` after, 0 for a store), `GoodsListed` (lots moved to the estate by the forced removal of a store at a ruin, `estate_goods`; 0 otherwise) |
 | `FacilityLimited` | P8.3b step 5, per region ascending then class; never when `Cut`, `Refused`, `Voided` and `Pending` are all 0 | A (aggregate) | `Region`, `Class`, `Served` (executions started that used a facility of the class), `Cut` (executions not started for capacity though inputs and weight allowed them), `Refused` (starts refused whole, with a reason of 4.2.2), `Voided` (executions of a build or repair that did nothing at the completion, 4.3.4), `Pending` (store facilities waiting for `addStore`) |
 | `EndowmentAdjusted` (a new `Kind`) | P8.3b step 4 and the calls of 11 | C at a call; at P8.3b one per clamped endowment at most, bounded by regions times resources (an owed row to `spec-observability.md` 3.3.9) | `Kind` `facility`; the fields of `spec-resources.md` 14: the scales after, stock before and after, units lost |
 | `WorldCreated` (the names table gains) | construction | | the `FacilityClassID`s with their strings (`spec-observability.md` 3.2.4) |
@@ -1410,7 +1411,7 @@ bounded attributes (5.4). Section 19 gives the rows.
 
 | Name | Instrument | Unit | Attributes | Fed by |
 |------|-----------|------|------------|--------|
-| `economysim.facility.count` | UpDownCounter | `{facility}` | `economysim.facility_class`, `economysim.region` | `FacilityChanged` (+1 for `added` and `built`, -1 for `ruined`; `repaired`, `installed` and `transferred` change no count) |
+| `economysim.facility.count` | UpDownCounter | `{facility}` | `economysim.facility_class`, `economysim.region` | `FacilityChanged` (+1 for `added` and `built`, -1 for `ruined`; `repaired`, `installed`, `transferred` and `adjusted` change no count) |
 | `economysim.facility.limited` | Counter | `{execution}` | `economysim.facility_class`, `economysim.region`, `economysim.facility_limit` | `FacilityLimited` (`Cut` as `cut`, `Voided` as `voided`) |
 | `economysim.facility.refused` | Counter | `{start}` | `economysim.facility_class`, `economysim.region` | `FacilityLimited` (`Refused`: starts refused whole, one unit per start) |
 | `economysim.facility.pending` | Gauge | `{facility}` | `economysim.facility_class`, `economysim.region` | the snapshot's facility rows, `Pending` (store facilities not installed) |

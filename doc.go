@@ -1603,6 +1603,84 @@
 //   - Cash gap: the money a borrower's job needs before the job pays, over its horizon.
 //   - Round (of credit): the matching at P3.3b of the admitted requests and offers of a
 //     region at the lenders' posted rates; a lane of it is a region.
+//   - Fiscal: the optional module in which the treasury of a governed jurisdiction takes
+//     and gives money and goods by rules written as data; its presence in
+//     Config.Modules (Fiscal) switches it on (spec-fiscal.md). It creates and destroys no
+//     money and draws no random number.
+//   - Fiscal flow: one configured rule of the module, of six kinds (Tax, Duty, Toll,
+//     Payout, Purchase, Release), named by a string ID that is also its ledger reason;
+//     the six kinds and a money flow share one ID namespace.
+//   - Authority (of a fiscal flow): the governed jurisdiction whose treasury a flow pays
+//     into or out of, and whose chain bounds the regions the flow acts on.
+//   - Tax: a recurring transfer from a class of accounts to the treasury of its authority
+//     (Tax). A head tax is a fixed amount a household, a holding tax a rate on the balance
+//     above an exemption, a tax on a pool takes the estate account of a region, and a
+//     remittance is paid by a subordinate treasury; they are four ways to write one Tax.
+//   - Duty: a rate on the value of the trades of a market, paid by the buyer or the
+//     seller at P4.1a (Duty). A sales duty is paid by the seller, a purchase duty by the
+//     buyer, a tariff is a duty on a trade with an outside counterparty. Its base is the
+//     sum of the values of the matching trades of the tick for one payer.
+//   - Toll: a charge per carrying unit on a shipment that crosses a border, paid by the
+//     shipper at dispatch (Toll); a shipment that cannot pay is refused whole.
+//   - Payout: a recurring transfer from a treasury to a class of accounts, in money or in
+//     kind (Payout); when the treasury holds less than is due it is cut pro rata.
+//   - Standing order: a treasury's bid (Purchase) or ask (Release) for one commodity in the
+//     market of its seat region, at a fixed fraction of the reference price; a treasury
+//     reads no market price. Purchase and Release are the two configuration rows.
+//   - Counterparty (of a trade): the pseudo-agent of an outside node that takes the other
+//     side of a trade; it never pays a duty.
+//   - Payee: the account a fiscal transfer pays; the payer is the account it is taken from
+//     (qualified: not the payer of a delivery contract).
+//   - Cut (of a payout): the pro rata share a recipient receives when the treasury holds
+//     less than the total due, with the largest remainder and the keyed tie; the
+//     shortfall is not carried. Pro rata means in proportion to what each is due.
+//   - Window (of a fiscal flow): the ticks and seasons in which a flow acts (Window: Start,
+//     Until, Seasons); not the welfare window nor the price window.
+//   - Scale (of a fiscal flow): the flow's runtime factor in basis points, set between
+//     steps through the same slot as a money flow's; it is state and is not hashed.
+//   - Hire: the one-job contract of the hire form of the employment module
+//     (spec-employment.md 3.4): a worker household runs one recipe of an employer's
+//     hire list for the employer's account, for a wage fixed at formation and paid a
+//     tick at a time from an escrow. HireID is its ID, issued in order of formation;
+//     HireFormed and HireEnded are the events of a hire that forms and that ends, and
+//     HireRow is the snapshot row of a hire in flight.
+//   - Hire list: the recipes of an employer's block (Employer.Recipes) that a hired
+//     household may run for it, a subset of the role's own recipes.
+//   - Establishment: the most hired executions an employer has in progress at once
+//     (Employer.MaxHires), added to its own labour.
+//   - Vacancy: a position an employer posts for one recipe of its hire list, with the
+//     most it bids; HireRequest is the value the strategy returns, and VacancyRow the
+//     row of the labour round that counts what became of it.
+//   - Positions: the number of hired executions an employer can afford and supply
+//     this tick, the least of its establishment, its stock, its tools and its cash.
+//   - Labour offer: what a worker's strategy returns to be hired: the households it
+//     offers and the least wage it accepts. LabourOffer is the value.
+//   - Reservation wage: the least wage per household-tick a worker accepts, the value of
+//     its own best alternative; not the ledger's reservation, and the Reserve of a
+//     LabourOffer is the field.
+//   - Employer's bid: the most an employer pays for a position, the net value of the
+//     work per tick; not an order side, and the Bid of a HireRequest is the field.
+//   - Worker share: the share of the margin between the reservation wage and the bid
+//     that the worker receives, in basis points (Employer.WorkerShareBP); the wage is
+//     derived from it at formation and is never a field.
+//   - Labour round: the matching at P2.5a of the admitted labour offers and vacancies of
+//     a region, first fit, and the formation of the hires; LabourRound is the aggregate
+//     event of a region at P2.8b, with LabourRow its rows by worker role and VacancyRow
+//     its rows by employer role.
+//   - Lane (of the labour round): the households offering and the positions posted for
+//     one pair of a worker role and an employer role in a region; the lane of the
+//     solver and the lane of a merchant are not this.
+//   - Escrow (of a hire): the Escrow account that holds the bill of a hire, the wage
+//     times the households and the ticks, from formation to the end of the hire; it
+//     shares the free list of Escrow accounts with the delivery contracts.
+//   - Unmatched (household): a household that offered its labour and was not hired in
+//     the round; it works for itself that tick.
+//   - Unemployment: a measure of the households that offered and were not hired, never
+//     a state of an agent; the preset Unemployment reports it.
+//   - Hired yield: the factor Employer.HireYieldBP on the yield of a hired execution,
+//     in place of the trainee factor.
+//   - open_hire: the refusal of a relocation of an agent that is the principal of an
+//     open hire (ErrRegionBound).
 //   - Risk: the optional module that gives a shipment on an edge and a store of a class
 //     a chance to lose a share of its goods; its presence in Config.Modules (Risk)
 //     switches it on (spec-risk.md). "Hazard" is not used for a row.

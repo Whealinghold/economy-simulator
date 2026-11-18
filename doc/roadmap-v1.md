@@ -346,14 +346,14 @@ with the slice (`vision.md` section 4).
 | `skills.go`, `skills_queue.go`, `skills_report.go`, `internal/skill` (core data: no `Modules` pointer, no hash id; tag 10; plan 3-skl, status: PR A in development) | SKL | PRO, WEL |
 | `settlements.go`, `settlements_validate.go`, `settlements_report.go`, `internal/settlement` (plan 3-set, status: PR A and PR B merged, PR C in development) | SET | REG, SCL |
 | `storage.go`, `internal/room` (and the `Losses` preset of `indicator/`, FR-IND-059, with RSK) | STO | LED, GDS, PRO, TRN, AGT, CLR, MON, REG, EST, INT, CHK |
-| `employment.go`, `internal/employment` (the hire form, sections 3 to 17, extending the payroll form of the Stage 2 table; and the presets `Unemployment`, `WageBill`, `Employment` of `indicator/`, FR-IND-056 to 058) | EMP | AGT, WEL, PRO |
+| `employment.go`, `internal/employment` (the hire form, sections 3 to 17, extending the payroll form of the Stage 2 table; and the presets `Unemployment`, `WageBill`, `Employment` of `indicator/`, FR-IND-056 to 058; plan 3-emp, status: plan written; PR 1 in development) | EMP | AGT, WEL, PRO, LED, REG, EST, SKL, SUB, DEM, INT, CHK, OBS |
 | `tenure.go`, `internal/tenure` (plan 3-lnd, status: plan written; PR 1 in development) | LND | RES, EST, MON, PRO, AGT, WEL, DEM, SUB, LED, REG, INT, CHK |
 | `polity.go`, `internal/polity` | POL | REG, LED, EST |
 | `credit.go`, `internal/credit` | CRD | LED, MON, EST, WEL |
 | `risk.go`, `internal/risk` (and the `Losses` preset of `indicator/`, FR-IND-059, built here; plan 3-rsk, status: plan written; PR A in development) | RSK | TRN, STO |
 | `infrastructure.go`, `internal/facility` | CAP | PRO, RES, TRN, STO, SET |
 | `insurance.go`, `internal/insure` | INS | CRD, RSK |
-| `fiscal.go`, `internal/fiscal` | FIS | POL, MON, CLR, TRN, EXT |
+| `fiscal.go`, `internal/fiscal` (plan 3-fis, status: plan written; PR 1 in development) | FIS | POL, MON, CLR, TRN, EXT, LED, WEL, CAL, CHK, OBS, INT, MER, STO, EST |
 | `institutions.go`, `internal/institution` (plan 3-org, status: plan written; PR A in development; six continuation files `institutions_validate.go`, `institutions_warn.go`, `institutions_round.go`, `institutions_rights.go`, `institutions_legal.go`, `institutions_report.go`) | ORG | POL, SKL, SET |
 | `policy.go`, `internal/policy` (`Policy`, `WithPolicy`, `DirectPolicy`) | PLC | POL, FIS, INT |
 | `saving.go`, `internal/saving` | SAV | CAP, WEL |

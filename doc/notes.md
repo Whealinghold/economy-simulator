@@ -46,41 +46,41 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351, N-353 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
-| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384 |
-| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349 |
-| CHK | N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-368 |
+| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386 |
+| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371 |
+| CHK | N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384 |
+| CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-390, N-427 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398 |
-| DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-397, N-381 |
+| DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-424, N-425 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361 |
 | EXT | N-108, N-112, N-113, N-214 |
-| FIS | N-107, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-183, N-184, N-185, N-186, N-187, N-188, N-189, N-190, N-204 |
+| FIS | N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-185, N-187, N-188, N-190, N-204, N-389, N-391, N-392 |
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
-| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323 |
-| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384 |
-| MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
-| MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363 |
-| MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
-| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-377 |
+| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-391 |
+| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427 |
+| MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
+| MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
+| MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
+| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-385, N-386, N-427, N-377 |
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399 |
-| PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
+| PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
-| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-377 |
+| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377 |
 | SAV | N-145, N-156, N-195, N-197, N-362, N-382 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-140, N-192, N-268, N-348, N-365 |
@@ -89,12 +89,12 @@ PR description.
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375 |
 | STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399 |
-| SUB | N-121, N-228, N-268, N-244 |
+| SUB | N-121, N-228, N-268, N-244, N-426 |
 | TEC | N-358, N-359, N-360, N-361, N-384 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374 |
-| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-383 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346 |
-| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-384, N-373 |
+| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390 |
 
 ## Open notes
 
@@ -704,7 +704,7 @@ PR description.
 
 ### N-107 New money faucets and sinks start from MON
 
-- **Areas:** FIS, CRD, MON
+- **Areas:** CRD, MON
 - **Raised:** 2026-10-10, `spec-money-supply.md` 4.5, 9.5 and 10.1.
 - **Note:** Start from MON's mechanism: a grant or a levy on a class, a declared reason equal to the flow ID, closed for a run, with its boundary account created at construction, reported in `BoundaryFlow` and checked by the audit. Add a built-in ledger reason only for a mechanism that is not a grant or a levy (an interest flow, a trade with an external counterparty). MON's positions bind the later specs: no faucet reads an aggregate or grows with a balance (only a sink may be proportional to a balance), and a counterparty whose balance is created or destroyed outside conservation is a Boundary account. Tax, credit and the external sector are the likely first uses. A policy that changes a rate over time is PLC's, through the flow-scale slot (N-091).
 - **Update (2026-10-10, RES):** RES adds no faucet, no sink and no ledger reason: a draw and a regeneration are not transfers and an endowment is in no account (`spec-resources.md` 6.2.1). Depletion is made visible by events and an exact per-endowment identity (6.4), which a test and the audit check.
@@ -714,6 +714,7 @@ PR description.
 - **Update (2026-10-10, MER):** the delivery contract moves money between non-boundary accounts and adds no faucet, no sink and no reason (`spec-merchants.md` 9.6.1); the three escrow reasons already in the registry change owner to MER.
 - **Update (2026-10-13, Phase 1 of the ledger row):** applied for LED: the registry says which rows are built in and that every module row is declared with its module and has no boundary account while it is off (`spec-ledger.md` 3.4.1, 7.2.2, FR-LED-052). LED removed from the areas.
 - **Update (2026-10-13, STO, EMP, LND, CRD, CAP, RSK, FIS, SAV, TEC, PLC, INS):** each starts from MON's mechanism and adds a built-in internal reason only where the counterparty is not a grant or a levy, as the second sentence allows: EMP (three wage reasons), LND (a rent is not a grant or a levy: two reasons, a tax on rent is a MON levy on the holder role or FIS's), CRD (a loan moves existing money and interest is a transfer: three reasons; a creating lender is a MON grant with its own reason and a `Limit`), FIS (the carry, the declared reason, the scale and no aggregate; a ruler's creating or destroying flow is a MON target kind `treasury`), INS (a premium and a payout). STO's levy for a store is a MON flow (`spec-storage.md` 7.1); PLC changes a rate over time through the flow-scale slot (MON 10.4) and adds no flow. POL's `StartMoney` is `initial` into a Treasury account (`spec-polity.md` 5.4.1) and the reserved MON target name for a treasury is `treasury`, which FIS adds. CAP, RSK, SAV and TEC add no flow.
+- **Update (2026-11-18, plan 3-fis Phase 1):** applied for FIS: the module starts from MON's mechanism and declares each tax, duty, toll and payout as an internal reason (`spec-fiscal.md` 3.4, 22.1). FIS leaves the areas.
 
 ### N-108 What the resources module leaves to land, subsistence, infrastructure, the outside and migration
 
@@ -945,6 +946,7 @@ PR description.
 - **Raised:** 2026-10-11, `spec-integration.md` 3.6 and 19.
 - **Note:** INT is minimal (ADR 0003 decision 2) and does not offer: an act-now operation (an action inside a step), a timer on a shock, a bundle of slots applied as one, goods injected into a region, a capacity multiplier of an outside line (a partial embargo), a public cancel of a migration journey, or the removal of a household of the configuration by the consumer. A consumer's controller that reads measures and sets slots is outside the engine (L121): the engine guarantees conservation and determinism, not its stability. FIS and PLC are where a rule that sets taxes or rates belongs.
 - **Update (2026-10-13, SET, POL, CRD, FIS, SAV, TEC, PLC, ORG, RSK, INS):** not offered in version 1, by the later stage: SET a slot that sets a class; POL a transfer of a region between jurisdictions (N-161) and a law that forbids a move across a border; CRD a loan between named agents, early repayment, a change of a claim's terms and the cancel of one claim by ID (`spec-credit.md` 13.3); FIS a rate slot, a timer, a per-region scale, a tax on a reason, a treasury that hires or buys services, a public debt and a toll by value (`spec-fiscal.md` 24); SAV a call that sets a goal, a savings account and a call that makes a household build now; TEC setting experience directly, a duration or decay of an advance and a call that teaches a region a recipe it does not run (`spec-technology.md` 7.1.6); PLC a timer, a condition, a bundle of levers across actors, a policy that reads another jurisdiction's regions, a treasury that bids under a strategy, an actor that changes a cadence and a proportional built-in rule (`spec-policy.md` 17.1, 19); ORG a charter over carriage, a store or a facility, a wage control, a named holder and a call that admits or expels (N-194); RSK and INS a controller that sets risk scales, loadings or blocks from a measure, which is outside the engine (N-177). The rule that sets taxes and rates is `spec-policy.md` (a lever of kind `flow`).
+- **Update (2026-11-18, plan 3-fis Phase 1):** read: FIS offers no rate slot, timer, per-region scale, tax on a reason, treasury that hires or public debt (`spec-fiscal.md` 24); the flow scale is the existing slot. Left open for INT and PLC.
 
 ### N-132 A population with no demand module and no faucet has no healthy start
 
@@ -1011,7 +1013,7 @@ PR description.
 
 - **Areas:** RSK, CAP, SET, FIS, PLC, LND, ORG
 - **Raised:** 2026-10-13, `spec-storage.md` 3.2.3, 3.6.3, 8.3, 10.
-- **Note:** RSK reads the stored load and the stores by class (8.3). CAP calls `addStore` and `removeStore` (3.6.3), and the away test of `ErrAgentAway` is in `addStore`, so the completion of a store facility meets it and keeps the facility until the arrival. SET gates a store class by `StoreClass.Needs` and `ErrStoreLocked` (3.2.3, 10.3). A buffer store over a treasury's goods (a pack's word for it is flagged in STO's header) is FIS's (`spec-fiscal.md` 9.6.1; N-186): STO may accept a treasury as a holder later (FIS open question 8), and the release is PLC's lever or FIS's standing order. A keeper and a lease are a contract over the same room (LND, ORG; 10.4).
+- **Note:** RSK reads the stored load and the stores by class (8.3). CAP calls `addStore` and `removeStore` (3.6.3), and the away test of `ErrAgentAway` is in `addStore`, so the completion of a store facility meets it and keeps the facility until the arrival. SET gates a store class by `StoreClass.Needs` and `ErrStoreLocked` (3.2.3, 10.3). A buffer store over a treasury's goods (a pack's word for it is flagged in STO's header) is FIS's (`spec-fiscal.md` 9.6.1, settled in `spec-storage.md` 3.3.3): STO may accept a treasury as a holder later (FIS open question 8), and the release is PLC's lever or FIS's standing order. A keeper and a lease are a contract over the same room (LND, ORG; 10.4).
 - **Update (2026-11-14, plan 3-lnd Phase 1):** read: LND builds no keeper and no lease over a room (`spec-land.md` 7.4); a title is a share of an endowment, not of a room. Left open for ORG.
 - **Update (2026-11-14, plan 3-set Phase 1):** read; left open. SET PR A turns the validator rule `needs_module_off` into the real rule (a flag some class carries, the module on); the runtime gate is `regionHas`, wired in SET PR C (H-11).
 - **Update (2026-11-18, plan 3-rsk Phase 1):** read: RSK reads the stored load and the stores by class in-package (`w.sto.stores`, `w.sto.classes`, `storedLoad`), with no edit of `storage.go` (N-375). The other legs stay. Left open.
@@ -1040,6 +1042,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: `JobRequest` has no `Offer` or `Hire` in the slice. Left open for EMP.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open (EMP, Stage 3). `Work` is called only for a free agent at P2.5, as written.
 - **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form (`spec-employment.md` 24) posts no vacancy and calls no `Work`, so it neither needs nor settles this. Left open for the hire form.
+- **Update (2026-11-18, plan 3-emp Phase 1):** applied for the hire form: an employer with a job in progress posts no vacancy, because `Work` is called only for a free agent (`spec-employment.md` 4.1.3, `spec-agents.md` 7.1.10); the employer's own labour is the fallback and the establishment (`MaxHires`) is added to it. WLD 6.4 and AGT 6.2 do not change. Left open until the default strategy of PR 5 is built, then close.
 
 ### N-145 Profit with no outlet limits hired employment
 
@@ -1061,6 +1064,7 @@ PR description.
 - **Note:** `spec-welfare-and-wages.md` 6 defines `InKind` and a mechanism for the trainee's board only. The rule that would work for a wage is in `spec-employment.md` 22 item 1; the reason `wage_in_kind` is reserved.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: `InKind` is validated and unused; no mover and no position, so pay in kind is not built. Left open.
 - **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form pays money only (`wage_pay`); pay in kind stays unbuilt. Left open for the hire form.
+- **Update (2026-11-18, plan 3-emp Phase 1):** read: the hire form pays money only (`wage_pay`, `wage_escrow`, `wage_refund`); `wage_in_kind` stays reserved, `InKind` above 0 on a `Hireable` role raises the warning `inkind_wage_ignored` (`spec-employment.md` 14.2). Left open.
 
 ### N-148 The employer role's observed wage includes its profit on hands
 
@@ -1139,6 +1143,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 2):** read for the ledger additions; left open (not this row's). No treasury is involved. `Discard`'s two flows are attributed to the account's region like every other goods flow (FR-LED-053, `spec-ledger.md` 8.2.3), so a reader of the regional identity needs no extra term for them.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: the new snapshot field is a count of households and not a money flow, so it takes no part in the regional money identity. Left open for FIS and IND.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open (FIS, IND). The world reports `Pending` and `Construction` as the ledger gives them.
+- **Update (2026-11-18, plan 3-fis Phase 1):** read: the rebuild of the regional identity (`FiscalIn_r`, `FiscalOut_r` from `FiscalFlowApplied`) is tested in plan 3-fis PR 6 (`TestFiscal_RegionalIdentity`, `TestFiscal_MoneyRebuild`). Left open for IND and OBS until the presets are asked.
 
 ### N-160 Readers keyed by jurisdiction use one combining rule
 
@@ -1146,6 +1151,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-polity.md` 6.1, 6.2, 6.3.
 - **Note:** A table keyed by (jurisdiction, subject) has one row per key, absence is the default, canonical order, resolved once into a dense array by `RegionID`, and one of three modes (innermost, added, scaled with one rounding) over `Chain(region)`; a crossing is applied in the order `Exit` then `Enter`. A reader never reads a count of households or a money supply of a jurisdiction to change a rate of decision (`spec-world.md` 9.4.1); it adds its row to the table of hooks in 6.3.
 - **Update (2026-11-14, plan 3-lnd Phase 1):** read: tenure terms and holdings are keyed by region (`spec-land.md` 3.3.1), not by jurisdiction, so LND reads no table of this note's rule. Left open for FIS, ORG and PLC.
+- **Update (2026-11-18, plan 3-fis Phase 1):** read: FIS keys a flow by one authority and reads the chain of a region for the classes only, so it uses the combining rule of POL 6.1 for no table (plan 3-fis D4). Left open for ORG and PLC.
 - **Update (2026-11-18, plan 3-org Phase 1):** read: ORG reads the chain at construction only and resolves each table once, innermost, into a dense array by `RegionID` (`internal/institution.Resolve`); no crossing is offered. Left open for FIS and PLC.
 
 ### N-161 A transfer of a region between jurisdictions is reserved
@@ -1153,6 +1159,7 @@ PR description.
 - **Areas:** INT, RSK, FIS, ORG
 - **Raised:** 2026-10-13, `spec-polity.md` 7.4 and question 1.
 - **Note:** Its shape is fixed (a plural setter, at the call, a sparse saved list, the event `RegionTransferred`, a seat cannot leave); every reader that caches by jurisdiction must say what a transfer does to its state before it is offered.
+- **Update (2026-11-18, plan 3-fis Phase 1):** read: FIS caches no class by jurisdiction (the class of a flow is resolved per tick from the ledger, plan 3-fis D4), so a transfer of a region, when offered, changes no FIS state. Left open for INT, RSK and ORG.
 - **Update (2026-11-18, plan 3-org Phase 1):** read: no transfer of a region is offered by ORG, so its tables cache nothing that a transfer would stale. Left open.
 
 ### N-162 A paired comparison with a module on, off or binding is not aligned
@@ -1178,6 +1185,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The row says "pool" for the estate account and never "treasury".
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: the checkpoint row does not use the word "treasury" except as the account kind of the format (4.2.4). Left open.
 - **Update (2026-11-12, plan 2-28 review):** read: the payroll form says "pool" only for the sum of the payers' budgets, never for an estate account, and does not use "treasury". Left open.
+- **Update (2026-11-18, plan 3-fis Phase 1):** read: FIS code and comments say "treasury" for the account kind and "pool" for the estate account; `spec-fiscal.md` 4.4 and 8.6 keep the two. Left open for the other owners.
 
 ### N-164 Credit requests and offers are plan fields
 
@@ -1238,6 +1246,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-infrastructure.md` 7.1, CAP-A6 (L171).
 - **Note:** A site passes to the estate and idles; a successor needs a call (`TransferFacilities`) or, later, a lease or a fee (CAP open question 2 sketches the contract form).
 - **Update (2026-10-18, plan 1-9 Phase 1):** Leave open. Not this row's.
+- **Update (2026-11-18, plan 3-fis Phase 1):** read: FIS offers no fee for the use of a facility (`spec-fiscal.md` 24); a toll is on a border crossing only. Left open.
 - **Update (2026-11-18, plan 3-org Phase 1):** read: not ORG's (a right over a facility is reserved, N-194). Left open.
 
 ### N-173 Use of a facility by others is not in version 1
@@ -1245,13 +1254,15 @@ PR description.
 - **Areas:** ORG, FIS, MER, CAP
 - **Raised:** 2026-10-13, `spec-infrastructure.md` 5.1.5 and open question 2.
 - **Note:** A fee, a lease, a charter and an open-use ration are later specs' and need a hook at P2.5 and a ration like RES 5.3. ORG's reserved charter over a facility is the same gap (N-194); the two notes are kept apart on purpose, the facility side here and the right side there.
+- **Update (2026-11-18, plan 3-fis Phase 1):** read: same as N-174: FIS 7.6 says what a toll is not, and a fee on use is not built. Left open.
 - **Update (2026-11-18, plan 3-org Phase 1):** read: not ORG's (the charter over a facility is reserved, N-194). Left open.
 
 ### N-174 Edge limit, traffic wear and toll
 
 - **Areas:** TRN, FIS, CAP
 - **Raised:** 2026-10-13, `spec-infrastructure.md` open question 4.
-- **Note:** TRN has no edge limit; a bridge with a capacity, a wear by traffic and a toll each need a hook at dispatch. The toll part is FIS's (N-184, N-189); the three notes are kept apart on purpose.
+- **Note:** TRN has no edge limit; a bridge with a capacity, a wear by traffic and a toll each need a hook at dispatch. The toll part is FIS's (`spec-fiscal.md` 7, settled); the notes N-172, N-173 and this one are kept apart on purpose.
+- **Update (2026-11-18, plan 3-fis Phase 1):** read: the toll part is built by plan 3-fis (dispatch, row 22a, step 3a, `Routes.Toll`); an edge limit and a wear by traffic stay with CAP and TRN. Left open.
 
 ### N-175 A route layer applies to a direct shortest edge only
 
@@ -1304,31 +1315,13 @@ PR description.
 - **Note:** A route row names a mode (TRN) and an edge (REG), a store row a class (STO): validation must run after the owners' tables exist and report `ErrModuleDependency` when an owner is off.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row. Left open.
 
-### N-183 A tax is netted from income; a MON levy is not
-
-- **Areas:** WEL, MON, FIS
-- **Raised:** 2026-10-13, `spec-fiscal.md` 12.2.
-- **Note:** `income_t` gains `+P_t - T_t` for a payout and for a tax, duty or toll to a treasury, stored in the record's `G_t`, so the observed wage is gross; `spec-money-supply.md` 7.2 leaves a levy (a sink) un-netted. WEL assigns the letters and the rule (the plan's ruling F7): one rule per flow, the reason written once.
-- **Update (2026-10-17, plan 1-6 Phase 1):** read: left open for FIS (Stage 3). WEL 2.1.9 already assigns the letters, and `unearned` is the one signed field, so no field is added when FIS lands.
-
-### N-184 Transport's "never moves money" is excepted by a toll
-
-- **Areas:** TRN, FIS
-- **Raised:** 2026-10-13, `spec-fiscal.md` 7.4.
-- **Note:** `spec-transport.md` 3.3 and position 3 are edited; with the module off the position is true as it was. A toll is a fiscal flow paid at the dispatch (P3.2(c)); see N-174 and N-189.
-
 ### N-185 One order per agent, commodity, named lot and side
 
 - **Areas:** FIS
 - **Raised:** 2026-10-13, `spec-fiscal.md` 9.4.1.
 - **Note:** The rule of `spec-clearing.md` 3.1.1 becomes one order per agent, commodity, named lot and side. A treasury may place a bid and an ask for one commodity with `limit(Purchase) < limit(Release)` on the integer limit prices (9.2, not on the basis points), so they never cross and a treasury never matches itself.
 - **Update (2026-10-15, plan 1-3 Phase 1):** applied for CLR, which leaves the areas: the duplicate key of the book is (agent, commodity, named lot, side) (FR-CLR-004), and the one-bid-one-ask treasury case is tested with the two sides of one agent. FIS keeps the validation (`ErrFiscalShape`).
-
-### N-186 A treasury's goods have no room limit
-
-- **Areas:** STO, FIS
-- **Raised:** 2026-10-13, `spec-fiscal.md` 9.6.1.
-- **Note:** `spec-storage.md` 3.3.3 lists a treasury among the pseudo-agents that are never limited; H9 of `spec-polity.md` 6.3 (a jurisdiction as a limited holder) stays reserved.
+- **Update (2026-11-18, plan 3-fis Phase 1):** read: the clearing's key is applied; FIS builds the validation `ErrFiscalShape` (equal integer limits, two purchases of one commodity) in plan 3-fis PR 2 and closes the note there.
 
 ### N-187 A tax on a reason (rent, a wage, interest) needs a hook at the transfer
 
@@ -1337,6 +1330,8 @@ PR description.
 - **Note:** In version 1 a tax on a reason is a tax on the holder role; a hook at the transfer would let a flow tax one ledger reason whoever pays it.
 - **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form's `wage_pay` is one more reason a hook at the transfer could tax. Not built; left open.
 - **Update (2026-11-14, plan 3-lnd Phase 1):** read: the charge of rent is one function over (payer, payee, units, rent) in the plan (plan 3-lnd D5), so a hook that taxes a reason is one call in it later; not built here. Left open for FIS.
+- **Update (2026-11-18, plan 3-fis Phase 1):** read: FIS builds the charge of a tax as one function apart from the class walk (plan 3-fis, Cross-plan contract), so a tax on a reason is one call later. Left open.
+- **Update (2026-11-18, plan 3-emp Phase 1):** read: the transfer of `wage_pay` of the hire form is one function in `employment_hire.go` (plan 3-emp D5), so a hook that taxes a reason is one call in it later; not built here. Left open for FIS.
 
 ### N-188 Incidence is statutory; a duty is not in any limit price
 
@@ -1344,12 +1339,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-fiscal.md` 6.6 and 24 item 4.
 - **Note:** A view field would let the default strategy price a duty in; it is not adopted.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: no view field for a duty. Left open.
-
-### N-189 A merchant's margin subtracts the toll
-
-- **Areas:** MER, TRN, FIS
-- **Raised:** 2026-10-13, `spec-fiscal.md` 7.5.
-- **Note:** `Routes.Toll` (money per carrying unit on the shortest path at the tick) is read by MER's margin; see N-174.
+- **Update (2026-11-18, plan 3-fis Phase 1):** read: no view field for a duty is added (`spec-fiscal.md` 6.6); the toll reaches a strategy only through `RouteRow.Toll` for a merchant's margin. Left open for AGT.
 
 ### N-190 A legal price is a clamp of one side's limit
 
@@ -1358,6 +1348,8 @@ PR description.
 - **Note:** In the admission of a market (and of the contract and credit rounds) a bid is capped and an ask floored; any later spec that forms a price from two limits (a rent, a wage, a fee, a tariff) applies the same clamp at its own admission. Never a rejection and never a rule of the strategy.
 - **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form has no price formed from two limits, so no wage control applies to it. Left open for the hire form.
 - **Update (2026-11-14, plan 3-lnd Phase 1):** read: LND applies no legal clamp to the rent in force (`spec-land.md` 5.2.2: posted rent times scale); a legal clamp of rent is ORG's. Left open for ORG and EMP.
+- **Update (2026-11-18, plan 3-fis Phase 1):** read: FIS forms no price from two limits; a toll and a duty have no legal clamp, which is ORG's. Left open.
+- **Update (2026-11-18, plan 3-emp Phase 1):** read: the hire form forms a wage from two limits (the reservation and the bid, `spec-employment.md` 5.4) and applies no legal clamp; a wage control is ORG's, a named slot beside check 2 of 5.5 (plan 3-emp D7). Left open for ORG.
 
 ### N-191 A right is read at a start, an order and a place
 
@@ -1366,6 +1358,7 @@ PR description.
 - **Note:** Never at a continuation, a completion, a holding, a consumption or a shipment; a job in progress runs to its end.
 - **Update (2026-10-16, plan 1-5 Phase 1):** read for the production row; left open for ORG. `not_permitted` is a pair appended after `not_on_role` and before `zero_yield` (`spec-production.md` 4.2.1, position 2); a continuation, a completion and a holding read no right.
 - **Update (2026-11-14, plan 3-lnd Phase 1):** read: LND reads no right at a start in version 1; `no_title` and `rent_funds` come after `no_endowment` and before CAP's build reasons (`spec-land.md` 4.5.1). Left open for ORG.
+- **Update (2026-11-18, plan 3-emp Phase 1):** read: the hire form reads a right at the formation of a hire only, as check 2 `not_permitted` of 5.5 (a start of the worker's job); a continuation, a completion or a wage release reads none. The check is a named slot built with ORG. Left open for ORG.
 
 ### N-192 A body's places are a second limit into the headroom
 
@@ -1392,6 +1385,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-institutions.md` 5.8, 6.8, 7.1.3.
 - **Note:** A charter over carriage (`ship`), over a store or over a facility, a wage control, a holder that is a named household and a call that admits or expels a member are reserved with their shapes. The facility clause overlaps N-173, kept apart on purpose.
 - **Update (2026-11-12, plan 2-28 Phase 1):** a wage control is not offered by the payroll form either. Left open.
+- **Update (2026-11-18, plan 3-emp Phase 1):** read: the hire form offers no wage control either (`spec-employment.md` 5.6). Left open.
 
 ### N-195 Instalment claims for a credit-financed project
 
@@ -1457,6 +1451,7 @@ PR description.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The slots are Stage 2 and P0.3a is a module position; `beginStep` leaves the place.
 - **Update (2026-10-23, plan 2-2 Phase 1):** read: the slot setters are INT's; the checkpoint of the slice saves no slot. Left open.
 - **Update (2026-10-25, plan 2-3 Phase 7):** REG's internal form is `setEdgeStatuses(changes, cause)` (`regions_status.go`). It validates the batch and applies it all or none, and checks no world state: the `ErrInStep` and failed-world guards of the public call belong to INT's `SetEdgeStatuses`, and PLC's call at P0.3a runs inside the step by design. The edge slot is saved in tag 11, so a restored world answers as the original does. Left open.
+- **Update (2026-11-18, plan 3-fis Phase 1):** read: plan 3-fis D6 resolves a fiscal flow ID in the same internal form as `SetFlowScales`, so PLC's lever of kind `flow` can call it at P0.3a (note N-392). Left open.
 
 ### N-205 A new slot is a candidate lever kind; the kinds `rate`, `rent` and `legal` are reserved
 
@@ -2048,6 +2043,7 @@ PR description.
 - **Raised:** 2026-11-09, plan 2-18 D560.
 - **Note:** `Unemployment`, `WageBill`, `Employment` and `Losses` (rows 22 to 25 of `spec-indicators.md` 9.1, FR-IND-056 to FR-IND-059) need events and a reason that do not exist before Stage 3 (`LabourRound`, `StoreLoss`, the `Lost` fields, the reason `loss`). The plan of EMP and the plan of RSK/STO each add, in the same change, their `Observe` case in `indicator/tally_observe.go`, the tally rows, the preset and its tests; the roadmap rows name them.
 - **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form emits `PayrollPaid`, not `LabourRound`, so presets 22 to 25 stay with the hire form and Stage 3. Left open.
+- **Update (2026-11-18, plan 3-emp Phase 1):** read: the three presets of the hire form (`Unemployment`, `WageBill`, `Employment`) are built in PR 6 of plan 3-emp, with the `LabourRound` case of `indicator/tally_observe.go`; `Losses` stays with RSK and STO. Left open.
 - **Update (2026-11-18, plan 3-rsk Phase 1):** the `Losses` leg (row 25, FR-IND-059) is built in plan 3-rsk PR C, in new files of `indicator/` (N-376); the EMP leg (rows 22 to 24) stays. Left open.
 
 ### N-328 `internal/measure` imports `internal/checked`
@@ -2261,6 +2257,7 @@ PR description.
 - **Areas:** EMP
 - **Raised:** 2026-11-12, plan 2-28 Phase 1 (`spec-employment.md` 24); narrowed 2026-11-12, plan 2-28 Phase 3.
 - **Note:** The payroll form owed the position, the catalogue rows (`PayrollPaid`, `economysim.payroll.paid`), the reason `wage_pay` and the pooled-wage hook; Phase 3 built them (`p41bPayroll`, `internal/ledger.WagePay` with the row agent to agent, rank and code 23). What stays owed: the hire form appends `MaxOpen` to `Employment` and the hire block to `Employer` with the next free ids, adds the pairing escrow to agent to the `wage_pay` row of `internal/ledger` (the spec row already names both), and does not reuse `PayrollBP` for `WorkerShareBP`.
+- **Update (2026-11-18, plan 3-emp Phase 1):** applied in the spec, not yet in code: `spec-employment.md` 13, 24.3 and `spec-config.md` 8.2.2 take the next free ids (`Employment.Hire` 1, `MaxOpen` 2; `Employer.Recipes` 2, `MaxHires` 3, `WorkerShareBP` 4, `HireYieldBP` 5) and `PayrollBP` is written only when non-zero (N-371). The `wage_pay` row takes the second pairing in PR 3. Left open until PR 3.
 
 ### N-356 The payroll-aware solver: what it assumes and where it stops
 
@@ -2274,6 +2271,7 @@ PR description.
 - **Raised:** 2026-11-13, plan 3-sto Phase 1 (E1, measured with `lizard -l go -C 10 -a 8 -L 100 -w`).
 - **Note:** `fillAgentView` and `removeAgent` of `fanin.go` are at CCN 10 today, one guarded call (`if w.x != nil`) from the limit of N-243; `ckLines` of `transport_request.go` is at 9, `plannedRecipe` of `strategy_default.go` at 9, `limitList` of `production.go` at 9, and `ckProvisioned` of `transport_request.go` is already at 11. Every Stage 3 module that adds a guarded call to one of them, as ADR 0010 allows, forces a refactor first (a fixed-order table of module fillers called in a loop, or a split by concern) in the same change. The first module to need it makes it, in its own commit before the hook; the others reuse it.
 - **Update (2026-11-14, plan 3-lnd Phase 1, E3):** measured at `d996592` with the same command: `startJob` (`phase_production.go`) is at CCN 10, `removeAgent` at 10, `limitList` and `start` of `production.go` at 9, `consider` and `plannedRecipe` of `strategy_default.go` at 9, `checkpointCross` of `checkpoint_restore.go` already at 14. LND's hooks H3, H11 and H12 land there, so PR 3 and PR 4 of plan 3-lnd start with refactor-first commits; the first of STO and LND to land does the `removeAgent` one.
+- **Update (2026-11-18, plan 3-emp Phase 1, E8):** measured at `de1b1a9` with `lizard -l go -C 8 -a 8 -L 80`: `positionsProduce` and `positionsTail` of `tick.go`, `fillAgentView` of `fanin.go` and `auditModules` of `moneyflow.go` are at CCN 10; `classWithoutIncome` and `workAgent` at 9; `startJob` (the closure at `phase_production.go:400`), `removeAgent`, `moveAgent` at 8; `p27Start` at 4, `takeRole` at 4. The local run does not list `start` and `limitList` of `production.go`. Plan 3-emp budgets a refactor-first commit for each function at 10 before its hook (PR 3: `positionsProduce`, `auditModules`; PR 5: `fillAgentView`, `positionsTail` if P2.8b lands there).
 
 ### N-362 A decision to acquire a title is SAV's, with CRD's credit
 
@@ -2336,6 +2334,42 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-cap Phase 1, `tick.go`.
 - **Note:** `positionsTail` is at the Lizard limit (CCN 10). P8.3a (LND PR 5), P8.3b (CAP) and the later P8.1a and P8.1b hooks each add a guarded call to it, so the function is split once, as `positionsFlows` was, into the part from P5 to P7.2a and a new `positionsClose` for P8.1 to P8.4, in source order. Whoever lands second rebases onto the split and does not repeat it.
 
+### N-385 `FacilityChanged` kind `adjusted`: a loss of capital by RSK, and the metric
+
+- **Areas:** CAP, RSK, OBS
+- **Raised:** 2026-11-18, plan 3-cap PR 2, `spec-infrastructure.md` 11.2 and 14.1.
+- **Note:** an `AdjustFacilities` entry that changes a condition without ruining it emits `FacilityChanged` of kind `adjusted`, cause `consumer`, in either direction (owner decision, Q-A). RSK's loss of capital (open question 7 of CAP) goes through this call and so produces `adjusted` events, not `repaired`. `economysim.facility.count` ignores the kind, and a metric of the condition is read from the facility rows of the snapshot (`economysim.facility.condition`). Whoever builds the `otelobserver` row of `FacilityChanged` handles the seventh kind.
+
+### N-386 The `otelobserver` PR owes the facility instruments (candidates)
+
+- **Areas:** OBS, CAP
+- **Raised:** 2026-11-18, plan 3-cap PR 2 (observability review), plan Q3.
+- **Note:** CAP defers its five instruments to one adapter PR after Stage 3 (plan 3-cap Q3; `FacilityChanged` is in the adapter's `ignoredEvents` until then). The catalogue rows (`observability-and-logging.md` 5.3, 5.3.1) and the derivation test (`TestFacility_MetricsDerivable`, PR 4) exist, so the adapter PR needs only the code. It must: (1) feed `economysim.facility.count` from `FacilityChanged` (+1 `added` and `built`, -1 `ruined`) and seed it from the `Facilities` rows of the `WorldRestored` snapshot; (2) feed `limited` and `refused` from `FacilityLimited` (PR 3); (3) feed the gauges `pending` and `condition` from `RecordSnapshot` rows; (4) intern `Names.FacilityClasses` and add the attribute values `economysim.facility_class` and `economysim.facility_limit` (`cut`, `voided`); (5) take `FacilityChanged` and `FacilityLimited` out of `ignoredEvents`. One more candidate, not in the catalogue: a counter `economysim.facility.ruined` by `economysim.cause` (`decay`, `use`, `owner_removed`; closed set, bounded). `count` alone cannot say why capital fell, and a ruin by use against one by decay points at different faults. The adapter PR decides it with the catalogue edit; no core change is needed.
+
+### N-389 MON's grant and levy to a treasury are not built
+
+- **Areas:** MON, FIS
+- **Raised:** 2026-11-18, plan 3-fis Q5, `spec-fiscal.md` 4.2.
+- **Note:** FIS builds the kind constant `treasury` and the field `FlowTarget.Jurisdiction` because a `Tax.Target` is a `FlowTarget`. MON's own validation keeps rejecting the kind `treasury` in a money flow until a MON follow-up builds a grant to a treasury and a levy on one (the ruler's mint); a pack funds a treasury by `StartMoney` and by taxes. The warning `treasury_unfunded` is written for a world with no such grant.
+
+### N-390 `positionsTrade` is split: `positionsClear` holds P3.5 to P4.1a
+
+- **Areas:** WLD, CODE
+- **Raised:** 2026-11-18, plan 3-fis D15.
+- **Note:** The three calls FIS adds (P3.4a, P3.6c, P4.1a) would take `positionsTrade` past Lizard CCN 10, so plan 3-fis PR 6 splits it the way plan 2-14 O7 did: `positionsTrade` ends at P3.4a and a new `positionsClear` holds P3.5 onwards in source order. A later module that adds a call between P3.5 and P4.1b appends to `positionsClear`; the comments and the two lists of `tick_internal_test.go` name both functions.
+
+### N-391 The fiscal reasons are an Internal per-flow row family
+
+- **Areas:** LED, FIS
+- **Raised:** 2026-11-18, plan 3-fis D5.
+- **Note:** A tax, a duty, a toll and a payout is a ledger reason named by its flow ID, of kind internal, with no boundary account, numbered after the money-flow reasons by position. A later module that needs per-flow Internal reasons reuses the family (INS's premium and payout are fixed reasons and do not). The format-1 checkpoint fixtures must not move; a test pins the positions.
+
+### N-392 The flow scale has two owners in one flow-ID order
+
+- **Areas:** FIS, PLC
+- **Raised:** 2026-11-18, plan 3-fis D6.
+- **Note:** `SetFlowScales` resolves an ID against the money flows first and the fiscal flows second (one namespace), and `Slots().FlowScales` lists both in one flow-ID order. PLC's lever of kind `flow` calls the internal form at P0.3a and must resolve a fiscal ID the same way.
+
 ### N-397 EMP's hire form must add the executor test of a right
 
 - **Areas:** EMP, ORG
@@ -2353,6 +2387,30 @@ PR description.
 - **Areas:** ORG, REF, STY
 - **Raised:** 2026-11-18, `doc/plans/plan-3-org.md` E5, `spec-institutions.md` 14.3 and 17.
 - **Note:** ORG-S5 (S141) said the inert overlay (bodies declared, `Places` 0) equals the world without the module except four outputs, but with a declared body every region of its scope emits `MembershipChanged` (the first round admits every eligible household) and `Snapshot.Bodies` has rows. Settled in the spec: S141 excludes the module's own events and snapshot rows as SET-S4 does, and FR-ORG-001's strict form is tested on the module present and empty. The test of S141 (plan 3-org Phase 10) reads the corrected text.
+
+### N-424 The default strategy never asks a closed endowment
+
+- **Areas:** LND, EMP, AGT
+- **Raised:** 2026-11-18, plan 3-lnd PR 5 (Phase 6).
+- **Note:** the default strategy reads the title bound of its view (`spec-land.md` 4.6.2) and asks for nothing from a closed endowment, so own-use households are blocked (`OwnUseChanged.Blocked`) with `RentPaid.NoTitle` at 0 and no "tenure refusal" Warn. `RentFunds` and `PricedOut` are counted because the households ask. The counts of `NoTitle` and the Warn need a strategy or a hire form that asks anyway; the first spec of EMP that adds one reads this.
+
+### N-425 No pack of the reference chain charges rent before the five
+
+- **Areas:** LND, REF, EMP, DEM
+- **Raised:** 2026-11-18, plan 3-lnd PR 5 (Phase 6, D12, Q4).
+- **Note:** pack one with `overlay/resources.toml` or `resources-binding.toml` and `overlay/tenure.toml` charges no rent in 400 ticks (the growers draw on their own entitlements and the pool's let units lie idle), and the pack collapses (N-352). The first pack that lets units is the warm five with `overlay/resources-five-binding.toml` (3 units let, 6 paid at seed 1), so `testdata/golden/tenure/` is on the five and the rent circuit has no acceptance band. The cycle of S108 is not measured against `3 * step * (delay + 1) / 4` because the rent sits at its floor. A pack that rents and does not collapse is owed before a claim about the rent circuit.
+
+### N-426 A scenario with own-use households, tenure and migration needs an overlay that does not exist
+
+- **Areas:** LND, MIG, SUB, REF
+- **Raised:** 2026-11-18, plan 3-lnd PR 5 (Phase 7, S109).
+- **Note:** no overlay combines the own-use pack, the resources and tenure modules and migration, so S109 runs the forage world of the subsistence tests (four own-use households, a titled field) for closed, priced-out and exempt tenure, with no migration. A scenario that wants the three together adds the overlay first.
+
+### N-427 `play` keeps every line of a Debug logger in memory
+
+- **Areas:** CODE, OBS, LND
+- **Raised:** 2026-11-18, plan 3-lnd PR 5 (Phase 6, the log tests).
+- **Note:** a five-sized world with a logger that keeps every line took over 60 s and much memory in `play`, so `tenureLogScenario` is pack one with the overlays (200 ticks) and the Warn and Debug lines are proved on small worlds. A test that must read the Debug lines of a five-sized scenario needs a logger handler that filters or counts at the source.
 
 ## Read receipt
 
@@ -2386,6 +2444,29 @@ PR description.
 - **Raised:** 2026-11-17, plan 3-lnd PR 4, owner decisions delegated to the supervisor.
 - **Note:** `Titles` of a counterparty or a treasury is `ErrNotAHolder`, as in `spec-land.md` 6.3.4 (9.3 said `ErrUnknownAgent`). A `TransferTitles` price between one account (a release by the pool) moves nothing and the event keeps the agreed price (6.3.2). `ErrInsufficientFunds` stays unexported at the root; a consumer matches it through `errors.Is` on the call's error. The ledger row of `title_sale` reads "agent to agent, or estate on release (the pool pays)". An enclosure is paid to the pool (6.3.2); the row says what the supervisor chose and 6.3.2 owns the rule.
 
+### N-369 A hire world keeps the payroll duals out of the solver
+
+- **Areas:** VIA, EMP
+- **Raised:** 2026-11-18, plan 3-emp Phase 1 (`spec-employment.md` 22 item 7, ADR 0012).
+- **Note:** `SolveSteadyState` reads the payroll of the employment module from the configuration (ADR 0012) for the payroll form only. In the hire form the solver row is not changed: its report says nothing about wages, and the steady state with employers is not a zero-profit state (N-146). A wage-aware solver for the hire form needs the wage as a derived value of the round, which the solver cannot see; a later plan takes it up only if a pack needs it.
+
+### N-370 The escrow free list is shared by MER and EMP
+
+- **Areas:** EMP, MER, LED, CHK
+- **Raised:** 2026-11-18, plan 3-emp Phase 1 (`spec-employment.md` 12, plan D6).
+- **Note:** An Escrow account is free when no open contract and no open hire uses it. The free list is derived, never saved: `contract_settle.go` derives it in two places and `checkpoint_restore.go` checks that an Escrow account is used by a contract; the hire form adds the hire list as a second user through one helper, and with MER off and the hire form on the restore check must accept an Escrow account. The audit of "exactly `price * quantity`" (FR-MER-045) is for a contract's account only. Any later module that holds money in an Escrow account (CRD, FIS) goes through the same helper.
+
+### N-371 The employment form selector and the one-form rule
+
+- **Areas:** EMP, CFG
+- **Raised:** 2026-11-18, plan 3-emp Phase 1 (D1, `spec-employment.md` 24.3).
+- **Note:** `Employment.Hire` selects the hire form and the module is the payroll form without it. A world runs one form: the payroll pays any worker with a job in progress, a hired job included, so both together would pay twice. A block with the fields of the other form is `ErrEmploymentShape`. `PayrollBP` is written to the hash only when non-zero; every valid payroll block has it at least 1, so no valid payroll hash moves. A world that wants both forms is a later spec.
+
+### N-372 The event order of a removal: the rule file and the code win over `spec-employment.md` 6.5.2
+
+- **Areas:** EMP, WLD, OBS
+- **Raised:** 2026-11-18, plan 3-emp Phase 1 (D10).
+- **Note:** The first draft of 6.5.2 listed the worker's `HireEnded` before `TraineeshipEnded` and `ContractSettled`. `observability-and-logging.md` 4.3 and `removeAgent` put step 2c after the tenure call (`TitleTransferred`) and before `dropClaims`, so the order is: the job's `RecipeAbandoned`, `TraineeshipEnded`, `ContractSettled`, `TitleTransferred`, `HireEnded` (the worker's side, then the employer's in ascending hire ID), `LoanEnded`, `LoanPassed`, `CoverEnded`, `FacilityChanged`, `AgentBankrupted`, `EstateOpened`. 6.5.2 is corrected in the same change (Phase 1). A module that adds a step to a removal appends it to this order and does not insert it.
 ### N-373 The keyed draws of the risk module
 
 - **Areas:** RSK, WLD
@@ -2426,4 +2507,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 53853dea0d9db96e53be7b63
+NOTES-TAG: 8c30ecd1e02d79df8adb303c

@@ -563,6 +563,18 @@ const (
 	// CauseRemoval is the cause of a TitleTransferred that moves the titles of a
 	// removed agent to the pool of each endowment's region (spec-land.md 6.4.1).
 	CauseRemoval Cause = "removal"
+	// CauseRecipe is a FacilityChanged built or repaired at the completion of a job
+	// (spec-infrastructure.md 14.1).
+	CauseRecipe Cause = "recipe"
+	// CauseInitial is a FacilityChanged added at construction from an initial row.
+	CauseInitial Cause = "initial"
+	// CauseDecay is a facility ruined because its condition fell to 0 by decay.
+	CauseDecay Cause = "decay"
+	// CauseUse is a facility ruined because the wear of use took its condition to 0.
+	CauseUse Cause = "use"
+	// CauseOwnerRemoved is a FacilityChanged at the removal of the facility's owner:
+	// a transfer to the estate of its region, or the ruin of a store facility.
+	CauseOwnerRemoved Cause = "owner_removed"
 )
 
 // Kind is the kind of a boundary flow, a member of a closed set: a faucet
@@ -613,6 +625,9 @@ type Names struct {
 	// SettlementClasses holds the string ID of each SettlementClassID, in ascending
 	// order of Enter; nil when the settlements module is off.
 	SettlementClasses []string
+	// FacilityClasses holds the string ID of each FacilityClassID; nil when the
+	// infrastructure module is off.
+	FacilityClasses []string
 }
 
 // Amount is a quantity of one commodity.
@@ -2356,6 +2371,120 @@ type RentScaled struct {
 }
 
 func (RentScaled) isEvent() {}
+
+// RegionMoney is an amount of money of the households of one region: a row of the From
+// and To lists of RentPaid. A list holds one row per region with a non-zero amount, in
+// ascending RegionID.
+type RegionMoney struct {
+	Region RegionID
+	Money  Money
+}
+
+// RentPaid is emitted once per endowment that has a title, at P8.3a after
+// EndowmentChanged, in (RegionID, ResourceID) order, in a tick in which any of OwnUnits,
+// CommonsUnits, LetUnits, Idle, Held, Unserved, PricedOut, NoTitle, RentFunds, CutUnits,
+// Paid or Forfeited is non-zero or the posted rent changed, and never otherwise
+// (spec-land.md 13.1.1). It is emitted only when the tenure module is on. Every damper of
+// the module is counted here (N-045): the closure (Held), the clip for cash (PricedOut),
+// the cut for rent (CutUnits) and the band of the step (RentAfter).
+type RentPaid struct {
+	Tick int64
+	// Region and Resource are the endowment.
+	Region   RegionID
+	Resource ResourceID
+	// Rent is the rent in force that tick, money per unit let: the posted rent times the
+	// scale (spec-land.md 5.2.2).
+	Rent Money
+	// Entitled is the units of the stock entitled to holders, the stock less the commons.
+	Entitled int64
+	// OwnUnits, CommonsUnits and LetUnits are the units drawn in each tier; LetUnits is V
+	// of spec-land.md 4.4.1.
+	OwnUnits, CommonsUnits, LetUnits int64
+	// Offered is the let supply L, and Idle is L less LetUnits.
+	Offered, Idle int64
+	// Held is the unused entitlement a closed endowment did not let.
+	Held int64
+	// Unserved is X of spec-land.md 5.5.1: the units wanted at the rent in force and not
+	// served in the let tier.
+	Unserved int64
+	// PricedOut is the units clipped for cash (spec-land.md 4.3 step 3).
+	PricedOut int64
+	// Tenants is the requests that took let units and Lessors the holders paid.
+	Tenants, Lessors int64
+	// Paid is the money moved as rent and Forfeited the money not charged because a payee
+	// could not receive it (spec-land.md 5.3.3).
+	Paid, Forfeited Money
+	// NoTitle and RentFunds are the requests refused for each reason.
+	NoTitle, RentFunds int64
+	// CutUnits is C of spec-land.md 5.5.1: the let units granted and not taken for rent.
+	CutUnits int64
+	// Exempt is the let units drawn rent-free (OwnUseExempt).
+	Exempt int64
+	// RentAfter is the posted rent after the step, before the scale.
+	RentAfter Money
+	// ToPool is the money received by the pool of Region. From is the money paid, by the
+	// region of the payer's account, and To the money received by lessor households, by
+	// the region of the payee's account: with them an observer with no agent table
+	// rebuilds the money of the sectors (spec-land.md 13.1.1a, FR-OBS-041).
+	ToPool Money
+	From   []RegionMoney
+	To     []RegionMoney
+}
+
+func (RentPaid) isEvent() {}
+
+// FacilityKind is the kind of a FacilityChanged, a member of a closed set
+// (spec-infrastructure.md 14.1).
+type FacilityKind string
+
+const (
+	// FacilityAdded is a facility created at construction or by AddFacilities.
+	FacilityAdded FacilityKind = "added"
+	// FacilityBuilt is a facility created by the completion of a build recipe.
+	FacilityBuilt FacilityKind = "built"
+	// FacilityRepaired is condition restored by the completion of a repair recipe.
+	FacilityRepaired FacilityKind = "repaired"
+	// FacilityInstalled is the store of a store facility given to its owner.
+	FacilityInstalled FacilityKind = "installed"
+	// FacilityTransferred is a facility that passed to another owner.
+	FacilityTransferred FacilityKind = "transferred"
+	// FacilityAdjusted is a condition changed by an AdjustFacilities call that did not
+	// ruin the facility, up or down.
+	FacilityAdjusted FacilityKind = "adjusted"
+	// FacilityRuined is a facility whose condition fell to 0 and whose record ended.
+	FacilityRuined FacilityKind = "ruined"
+)
+
+// FacilityChanged is emitted once per facility transition (spec-infrastructure.md
+// 14.1): at construction after the last AgentSpawned, at a completion, at a removal or
+// a role change, at the facility step and at a call. It is emitted only when the
+// infrastructure module is on, and built only when an observer was supplied.
+type FacilityChanged struct {
+	Tick int64
+	// Facility is the facility, Class its class, Region the region it stands in and To
+	// the other end of a route that has one, NoRegion otherwise.
+	Facility FacilityID
+	Class    FacilityClassID
+	Region   RegionID
+	To       RegionID
+	// Owner is the owner after the transition.
+	Owner AgentID
+	// Kind is added, built, repaired, installed, transferred, ruined or adjusted.
+	Kind FacilityKind
+	// Cause is recipe, initial, consumer, decay, use, role_changed or owner_removed.
+	Cause Cause
+	// Before and After are the condition around the transition: Before is 0 for a
+	// creation and After is 0 for a ruin.
+	Before, After int64
+	// Effect is eff for a route or ground facility and cap for a site, after the
+	// transition; 0 for a store.
+	Effect int64
+	// GoodsListed is the lots moved to the estate by the forced removal of a store at a
+	// ruin; 0 otherwise.
+	GoodsListed int64
+}
+
+func (FacilityChanged) isEvent() {}
 
 // RouteRiskScaled is emitted once per route row whose scale a SetRouteRiskScales call
 // changes, in (From, To, Mode) order, after the whole call has been applied

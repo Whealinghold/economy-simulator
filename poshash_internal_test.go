@@ -425,6 +425,10 @@ func resourcesOn(w *World) bool { return w.res != nil }
 // P8.3c line, so the off position hashes do not move.
 func techOn(w *World) bool { return w.tec != nil }
 
+// tenureOn is the guard of the P8.3a row of the tenure module: an off world records no
+// line, so the off position hashes do not move.
+func tenureOn(w *World) bool { return w.tenure != nil }
+
 // moneyOn is the guard of the row of the money supply module: an off world
 // records no P1.7 line, so the off position hashes do not move (plan 2-6 D331).
 func moneyOn(w *World) bool { return w.money != nil }
@@ -542,6 +546,7 @@ var replayRows = []replayRow{
 	{id: "P8.1", run: (*World).p81Age},
 	{id: "P8.2", run: noErr((*World).p82Flows)},
 	{id: "P8.3", run: noErr((*World).p83Regen), on: resourcesOn},
+	{id: "P8.3a", run: noErr((*World).p83aRent), on: tenureOn},
 	{id: "P8.3c", run: noErr((*World).p83cTechnology), on: techOn},
 }
 

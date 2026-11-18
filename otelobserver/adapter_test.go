@@ -277,7 +277,7 @@ var (
 	ignoredEvents = []string{"EstateOpened", "EdgeStatusChanged", "ReliefPaid", "MoneyFlowEnded", "MoneyFlowScaled",
 		"PopulationScaled", "TransitFactorChanged", "OutsideEnded", "OutsideShocked", "YieldShocked",
 		"TraineeshipStarted", "TraineeshipCompleted", "TraineeshipEnded", "StoreChanged", "RoomLimited", "TechnologyAdvanced", "TechnologyAdjusted", "LoanEnded", "LoanPassed", "CreditSettled", "LoanFormed", "CreditRound", "CreditRateScaled",
-		"SettlementClassChanged", "SettlementHeld", "TitleTransferred", "RentScaled", "RouteRiskScaled"}
+		"SettlementClassChanged", "SettlementHeld", "TitleTransferred", "RentScaled", "RentPaid", "FacilityChanged", "RouteRiskScaled"}
 )
 
 // TestAdapter_ExhaustiveOverEvents verifies that every event type is on the

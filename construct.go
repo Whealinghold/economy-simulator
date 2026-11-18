@@ -86,6 +86,7 @@ func (w *World) construct(warnings []Warning) error {
 		}
 	}
 	b.draws()
+	b.w.infra.found(b.w) // step 8b: the initial facilities, after the warm start and the draws, with no draw of their own
 	return b.finish(warnings)
 }
 
@@ -163,6 +164,13 @@ func (w *World) allocate() {
 	w.tenure = newTenure(&w.cfg)
 	if w.tenure != nil {
 		w.tenure.world = w
+	}
+	w.infra = newInfrastructure(&w.cfg, w.set)
+	if w.infra != nil {
+		w.infra.world = w
+		if w.sto != nil {
+			w.sto.facilityCount = w.infra.installedOf // the seam of RemoveStore (spec-storage.md 3.6.2)
+		}
 	}
 	w.registerBounds()
 	if w.cfg.Modules.Estates != nil {
@@ -357,6 +365,7 @@ func namesOf(c *Config) Names {
 	n.StoreClasses = storeClassNames(c)
 	n.TechFields = techNames(c)
 	n.SettlementClasses = settlementNames(c)
+	n.FacilityClasses = facilityClassNames(c)
 	return n
 }
 
@@ -378,6 +387,7 @@ func modulesOn(c *Config) []string {
 		{"technology", m.Technology != nil},
 		{"settlements", m.Settlements != nil},
 		{"tenure", m.Tenure != nil},
+		{"infrastructure", m.Infrastructure != nil},
 		{"risk", m.Risk != nil},
 	}
 	on := []string{}
@@ -406,6 +416,7 @@ func (b *builder) announce(warnings []Warning) {
 		b.deliverCreated()
 	}
 	w.set.announce(w) // after the AgentSpawned events; the events only with an observer
+	w.infra.announce(w)
 }
 
 // deliverCreated delivers WorldCreated and the AgentSpawned events of the initial
@@ -486,6 +497,9 @@ func (w *World) summary() []slog.Attr {
 	}
 	if w.set != nil {
 		attrs = append(attrs, slog.Int(logkeys.SettlementClasses, w.set.n))
+	}
+	if w.infra != nil {
+		attrs = append(attrs, slog.Int(logkeys.FacilityClasses, len(w.infra.cls)), slog.Int(logkeys.Facilities, len(w.infra.fac)))
 	}
 	return attrs
 }

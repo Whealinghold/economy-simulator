@@ -55,15 +55,15 @@ func quietRun(t *testing.T, c economysim.Config, seed uint64, ticks int64) ([]ec
 // TestInfrastructure_ModuleOnWorldRuns verifies, for the configuration of
 // infrastructureConfig (all four kinds, three recipes with a clause, the transport,
 // resources and storage modules it depends on) and three seeds, that a world with the
-// module on is built, steps 40 ticks with the audit on, does not list the module
-// among the modules it runs, carries the hash of its configuration in WorldCreated,
+// module on is built, steps 40 ticks with the audit on, lists the module among the
+// modules it runs, carries the hash of its configuration in WorldCreated,
 // and gives the same events and the same final snapshot when run twice.
 //
 // Requirement: FR-CAP-001, FR-CAP-003
 //
-// Guard: this slice adds configuration, validation and the hash and no behaviour; a
-// world that failed to build with the block present, or one whose run changed with
-// the module's presence alone, would break every later step of the module.
+// Guard: a world that failed to build with the block present, or one whose run
+// changed with the module's presence alone, would break every later step of the
+// module.
 func TestInfrastructure_ModuleOnWorldRuns(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -81,8 +81,8 @@ func TestInfrastructure_ModuleOnWorldRuns(t *testing.T) {
 		if !ok || created.ConfigHash != want {
 			t.Errorf("seed %d: first event = %T with hash %x, want WorldCreated with the hash of the configuration %x", seed, res.Events[0], created.ConfigHash, want)
 		}
-		if slices.Contains(res.Final.Modules, "infrastructure") {
-			t.Errorf("seed %d: Snapshot.Modules = %v, want no infrastructure: the module has no behaviour yet", seed, res.Final.Modules)
+		if !slices.Contains(res.Final.Modules, "infrastructure") {
+			t.Errorf("seed %d: Snapshot.Modules = %v, want infrastructure listed", seed, res.Final.Modules)
 		}
 	}
 }
@@ -99,19 +99,32 @@ func runTwice(t *testing.T, c economysim.Config, seed uint64) (economysim.Snapsh
 	return a, b
 }
 
-// TestInfrastructure_LoadedPackRunsLikeTheModuleOff is the end-to-end proof of this
-// slice: the file form of the module is layered over pack one, loaded, validated,
-// built into a world and run for 400 ticks with the audit on, and it gives the same
-// events (other than WorldCreated) and the same final snapshot (other than the hash,
-// the names of the IDs and the module list) as pack one alone, for two seeds, while
-// its configuration hash differs.
+// withoutFacilityEvents drops the FacilityChanged events and counts them.
+func withoutFacilityEvents(events []economysim.Event) ([]economysim.Event, int) {
+	added := 0
+	out := slices.DeleteFunc(events, func(e economysim.Event) bool {
+		_, ok := e.(economysim.FacilityChanged)
+		if ok {
+			added++
+		}
+		return ok
+	})
+	return out, added
+}
+
+// TestInfrastructure_LoadedPackRunsLikeTheModuleOff is the end-to-end proof of the
+// module's neutrality: the file form of the module is layered over pack one, loaded,
+// validated, built into a world and run for 400 ticks with the audit on, and it gives
+// the same events as pack one alone but for WorldCreated and the FacilityChanged
+// events of the two initial mills, and the same final snapshot but for the hash, the
+// names of the IDs, the module list and the facility rows, for two seeds, while its
+// configuration hash differs. The overlay's recipe is listed by no role, so no start
+// uses the mills, and nothing times them yet.
 //
-// Requirement: FR-CAP-001, FR-CAP-045, FR-CAP-003
+// Requirement: FR-CAP-001, FR-CAP-045, FR-CAP-003, FR-CAP-009
 //
-// Guard: a class or a row that leaked into a result before its readers exist (a draw,
-// a ledger move, a gate) would move the golden of the reference chain; this test
-// fails first. The pull request that builds the step replaces it with the module's
-// behaviour.
+// Guard: a class or a row that leaked into a result (a draw, a ledger move, a gate)
+// would move the golden of the reference chain; this test fails first.
 func TestInfrastructure_LoadedPackRunsLikeTheModuleOff(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -128,6 +141,12 @@ func TestInfrastructure_LoadedPackRunsLikeTheModuleOff(t *testing.T) {
 	for _, seed := range []uint64{1, 2} {
 		offEvents, offSnap := quietRun(t, off, seed, 400)
 		onEvents, onSnap := quietRun(t, on, seed, 400)
+		var added int
+		onEvents, added = withoutFacilityEvents(onEvents)
+		if added != 2 {
+			t.Errorf("seed %d: %d FacilityChanged events, want 2 (the initial mills)", seed, added)
+		}
+		onSnap = withoutMillRow(t, seed, onSnap)
 		if !reflect.DeepEqual(offEvents, onEvents) {
 			t.Errorf("seed %d: the events of the pack with the module differ from those without it (%d and %d events)", seed, len(onEvents), len(offEvents))
 		}
@@ -135,4 +154,15 @@ func TestInfrastructure_LoadedPackRunsLikeTheModuleOff(t *testing.T) {
 			t.Errorf("seed %d: the final snapshot of the pack with the module differs from the one without it", seed)
 		}
 	}
+}
+
+// withoutMillRow checks the one facility row of the overlay (two mills) and returns the
+// snapshot without it.
+func withoutMillRow(t *testing.T, seed uint64, s economysim.Snapshot) economysim.Snapshot {
+	t.Helper()
+	if len(s.Facilities) != 1 || s.Facilities[0].Facilities != 2 {
+		t.Errorf("seed %d: Snapshot.Facilities = %+v, want one row of two mills", seed, s.Facilities)
+	}
+	s.Facilities = nil
+	return s
 }
