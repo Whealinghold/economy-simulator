@@ -38,7 +38,7 @@ func encodeConfig(c Config) []byte {
 	e.nested(2, func(e *encoder) { pairsCalendar(e, c.Calendar) })
 	encodeList(e, 3, c.Commodities, pairsCommodity)
 	encodeList(e, 4, c.Recipes, func(e *encoder, r Recipe) {
-		pairsRecipe(e, r, c.Modules.Resources != nil)
+		pairsRecipe(e, r, recipeModules{resources: c.Modules.Resources != nil, infrastructure: c.Modules.Infrastructure != nil})
 	})
 	encodeList(e, 5, c.Yields, pairsYield)
 	encodeList(e, 6, c.Roles, func(e *encoder, r Role) {
@@ -255,11 +255,16 @@ func pairsTool(e *encoder, t Tool) {
 	e.num(2, t.WearPerUse)
 }
 
-// pairsRecipe writes the pairs of a Recipe: ids 1 to 9. Label is presentation
+// recipeModules says which modules that add a field to a Recipe are on.
+type recipeModules struct{ resources, infrastructure bool }
+
+// pairsRecipe writes the pairs of a Recipe: ids 1 to 12. Label is presentation
 // only and has no id. Draws (9) is written only while the resources module is on
-// (spec-config.md 8.2.3), so a draw in a configuration that fails validation for
-// want of the module changes no hash.
-func pairsRecipe(e *encoder, r Recipe, resources bool) {
+// and Needs (10), Builds (11) and Repairs (12) only while the infrastructure module
+// is on (spec-config.md 8.2.3), so a field in a configuration that fails validation
+// for want of its module changes no hash. A non-nil clause is written even when its
+// fields are zero.
+func pairsRecipe(e *encoder, r Recipe, on recipeModules) {
 	e.text(1, r.ID)
 	e.num(2, r.Duration)
 	encodeList(e, 3, r.Inputs, pairsItem)
@@ -268,8 +273,23 @@ func pairsRecipe(e *encoder, r Recipe, resources bool) {
 	e.flag(6, r.Sited)
 	e.flag(7, r.TraineeEligible)
 	e.num(8, r.TraineeYield)
-	if resources {
+	if on.resources {
 		encodeList(e, 9, r.Draws, pairsDraw)
+	}
+	if on.infrastructure {
+		e.texts(10, r.Needs)
+		if r.Builds != nil {
+			e.id(11)
+			e.text(1, r.Builds.Class)
+			e.text(2, r.Builds.Toward)
+			e.end()
+		}
+		if r.Repairs != nil {
+			e.id(12)
+			e.text(1, r.Repairs.Class)
+			e.num(2, r.Repairs.Units)
+			e.end()
+		}
 	}
 }
 
@@ -512,12 +532,23 @@ func pairsLaterModules(e *encoder, m Modules) {
 	pairsLastModules(e, m)
 }
 
-// pairsLastModules writes the pairs of the modules of ids 15, 19, 21, 24 and 25 of Modules,
-// after those pairsLaterModules writes (a continuation for the Lizard limit).
+// pairsLastModules writes the pairs of the modules of ids 15, 16, 17, 19, 21, 24 and 25 of
+// Modules, after those pairsLaterModules writes (a continuation for the Lizard
+// limit).
 func pairsLastModules(e *encoder, m Modules) {
 	if m.Credit != nil {
 		e.id(15)
 		pairsCredit(e, *m.Credit)
+		e.end()
+	}
+	if m.Risk != nil {
+		e.id(16)
+		pairsRisk(e, *m.Risk)
+		e.end()
+	}
+	if m.Infrastructure != nil {
+		e.id(17)
+		pairsInfrastructure(e, *m.Infrastructure)
 		e.end()
 	}
 	if m.Polity != nil {
@@ -539,6 +570,36 @@ func pairsLastModules(e *encoder, m Modules) {
 		e.id(25)
 		e.end()
 	}
+}
+
+// pairsInfrastructure writes the pairs of an Infrastructure: Classes 1, in ID order,
+// and Initial 2, by key. A FacilityClass has ID 1, Kind 2, Durability 3, Decay 4,
+// WearPerUse 5, Capacity 6, BoostBP 7, Modes 8 (the mode IDs, sorted), Resource 9,
+// Store 10 and Needs 11 (Label is presentation only and has no id); an
+// InitialFacility has Region 1, Class 2, Toward 3, Role 4 and Count 5
+// (spec-config.md 8.2.2). A field at zero is not written, so decay = 0 in a file and
+// no decay hash alike.
+func pairsInfrastructure(e *encoder, m Infrastructure) {
+	encodeList(e, 1, m.Classes, func(e *encoder, c FacilityClass) {
+		e.text(1, c.ID)
+		e.text(2, c.Kind)
+		e.num(3, c.Durability)
+		e.num(4, c.Decay)
+		e.num(5, c.WearPerUse)
+		e.num(6, c.Capacity)
+		e.num(7, c.BoostBP)
+		e.texts(8, c.Modes)
+		e.text(9, c.Resource)
+		e.text(10, c.Store)
+		e.text(11, c.Needs)
+	})
+	encodeList(e, 2, m.Initial, func(e *encoder, r InitialFacility) {
+		e.text(1, r.Region)
+		e.text(2, r.Class)
+		e.text(3, r.Toward)
+		e.text(4, r.Role)
+		e.num(5, r.Count)
+	})
 }
 
 // pairsInstitutions writes the pairs of an Institutions: Bodies 1, Rights 2, Controls
@@ -726,6 +787,29 @@ func pairsTenure(e *encoder, t TenureConfig) {
 	e.num(5, t.RentCeilingBP)
 	e.flag(6, t.OwnUseExempt)
 	e.num(7, t.MaxHolderShareBP)
+}
+
+// pairsRisk writes the pairs of a Risk: Routes 1, Stores 2 (spec-config.md 8.2.2). A
+// RouteRisk has From 1, To 2, Mode 3, StrikeBP 4, SeverityBP 5 and Common 6; a
+// StoreRisk has Region 1, Class 2, StrikeBP 3, SeverityBP 4 and Common 5. The lists
+// are written in canonical order, and the pointer is written even when the module is
+// empty, so a module that is on differs from one that is off.
+func pairsRisk(e *encoder, r Risk) {
+	encodeList(e, 1, r.Routes, func(e *encoder, row RouteRisk) {
+		e.text(1, row.From)
+		e.text(2, row.To)
+		e.text(3, row.Mode)
+		e.num(4, row.StrikeBP)
+		e.num(5, row.SeverityBP)
+		e.flag(6, row.Common)
+	})
+	encodeList(e, 2, r.Stores, func(e *encoder, row StoreRisk) {
+		e.text(1, row.Region)
+		e.text(2, row.Class)
+		e.num(3, row.StrikeBP)
+		e.num(4, row.SeverityBP)
+		e.flag(5, row.Common)
+	})
 }
 
 // pairsPolity writes the pairs of a PolityConfig: Jurisdictions 1, Members 2.

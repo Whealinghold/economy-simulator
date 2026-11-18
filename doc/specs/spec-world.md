@@ -434,7 +434,7 @@ the hash of a checkpoint. At construction the accounts are created in this order
 | 1 | The Boundary accounts of the built-in reasons that are faucets or sinks: `initial` (money), then for each commodity in ascending commodity index the seven goods reasons `initial`, `recipe_input`, `recipe_output`, `disposal`, `consumption`, `spoilage`, `wear`; `1 + 7 * C` accounts for `C` commodities, whatever modules are on | the order of `spec-ledger.md` 3.4.2, which is not the registry order of 7.2 (the order of `BoundaryFlow` rows is reason-major, OBS 4.4.1.2) | LED 3.4.1 to 3.4.3, FR-LED-052 |
 | 2 | The Boundary accounts of the reasons of the declared money flows | ascending flow ID (a flow's reason is its ID) | LED FR-LED-052; MON 4.5 |
 | 3 | The Boundary accounts of the six `outside_*` reasons, with the module on: the money reasons first, then the goods reasons for each commodity that has a line side, in commodity order | | EXT 4.2.4 |
-| 3a | The Boundary accounts of the other faucet and sink reasons of the modules that are on (`want_consumption`, `haul_use`, `transit_use`, `loss`); a module that is off has none | the order of the `Modules` pointers, and within a module as row 1 (money reasons first, then goods by commodity) | LED 3.4.2, 7.2.2; N-226 confirmed by DEM: `want_consumption` is the first of them and its accounts are opened in the fourth group of the ledger constructor, after the built-in group and before the estates |
+| 3a | The Boundary accounts of the other faucet and sink reasons of the modules that are on (`want_consumption`, `haul_use`, `transit_use`, `loss`); a module that is off has none | the order of the `Modules` pointers, and within a module as row 1 (money reasons first, then goods by commodity) | LED 3.4.2, 7.2.2; N-226 confirmed by DEM: `want_consumption` is the first of them and its accounts are opened in the fourth group of the ledger constructor, after the built-in group and before the estates; confirmed by RSK (plan 3-rsk D4): `loss` is the goods-only group of the risk module, opened after the credit module's reasons in the order of the `Modules` pointers, commodity-major |
 | 4 | The estate account of each region | ascending `RegionID` | REG 3.6.1 |
 | 5 | The Outside account of each counterparty | ascending agent ID of the counterparty (5.3) | EXT 4.2.3 |
 | 5a | The Treasury account of each governed jurisdiction, with the polity module on | ascending `JurisdictionID` | POL 5.2.1 |
@@ -951,7 +951,7 @@ row.
    ended, in ascending cover ID (2f); and the `FacilityChanged` of each facility of the agent, in ascending facility ID
    (2g): `transferred` (cause `owner_removed`) for a site, route or ground facility,
    which passes to the estate of its region, and `ruined` (cause `owner_removed`) for a
-   store facility, its `StoreChanged` first (`spec-infrastructure.md` 7.1.1, AGT 3.6 step 2g); and last `AgentBankrupted`, then `EstateOpened`.
+   store facility, with no `StoreChanged` because storage's removal step emits none (`spec-infrastructure.md` 7.1.1, AGT 3.6 step 2g); and last `AgentBankrupted`, then `EstateOpened`.
    The removal of a **trainer** first ends its trainees' traineeships, and those
    events come first: trainee by trainee in ascending agent ID, each trainee's
    `RecipeAbandoned` (reason `principal_left`) and then its `TraineeshipEnded`
@@ -1131,12 +1131,17 @@ sites of the slice are:
 | `siteContract` | D6 | `0xF0FF7DEE8E50504B` | `tick`, `id` = the agent, `sub` = `2*i` for the agent's `i`-th submitted offer and `2*i+1` for its `i`-th submitted take (the plan index) |
 | `siteOutsideWalk` | D2 | `0x46AE095E114979AB` | `tick`, `id` = the node `RegionID`, `sub` = the `CommodityID` of the line (ADR 0008 open point 3, answered for D2) |
 | `siteAddAgent` | D12 | `0xE00949043F800843` | `tick` = `Tick()` at the call, `id` = the new agent |
+| `siteRiskCommon` | D13 | `0x7BECBB022BE68D1A` | `tick`, `id` = the `From` region, `sub` = `To * MaxModes + Mode` (the indices of the route row) |
+| `siteRiskDispatch` | D14 | `0x7E59E8F556FE1651` | `tick`, `id` = the shipment (keyed once per dispatched shipment, then one word per unit row with `P > 0` on its path, in path order) |
+| `siteRiskStoreCommon` | D15 (i) | `0x22650FB6363BD5BC` | `tick`, `id` = the region, `sub` = the store class (the store row) |
+| `siteRiskStore` | D15 (ii) | `0x85E20986FA93C736` | `tick`, `id` = the agent, `sub` = the store class (one word per store of the class, ascending) |
 
-The rows D13, D14 and D15 (and D17, a consumer's policy) have **no
-constant yet** (D12 has `siteAddAgent`, appended by the integration change): each is appended by the change that builds its module, with its name,
+The row D17 (a consumer's policy) has **no constant yet** (D12 has `siteAddAgent`, appended by the integration change;
+D13, D14 and D15 have the four sites of the risk module, appended in plan 3-rsk, N-373): each other row is appended by the change that builds its module, with its name,
 its value and the `id` the owner chooses (7.3, which lists the proposals of N-214); no
 code calls into an extension, or takes a word, at a row that has no constant (the
-modules of those rows are off in the slice). D16 takes no word (7.3).
+module of that row is off in the slice). D16 takes no word (7.3). D15 has two sites because a region and an
+agent share the `id` slot, and a common store row must not share a stream with an agent.
 
 Why the values are what they are. The first step of the fold adds the site to the seed,
 so `(seed a, site X)` and `(seed b, site Y)` name one stream if and only if
@@ -1273,7 +1278,7 @@ draw appends a row with a new ID, its count and its stream (7.1.4). The last col
 names the stream: the site, then the `id` (and the `sub`) with the `tick` of 7.3.2.
 `none yet` means that the row has no site constant (7.1.4); the `id` after it is the
 proposal of N-214 that the owner confirms when it appends the constant, and ADR 0008's
-open point 3 (a site with no natural entity: D13) stays open for it; D2 has its site, `siteOutsideWalk`.
+open point 3 is answered for D13 (the row is its entity, `siteRiskCommon`), as for D2 (`siteOutsideWalk`) and D6.
 
 | ID | When and where | Taken by | How many | In what order | Stream | Owner |
 |----|----------------|----------|----------|---------------|--------|-------|
@@ -1282,17 +1287,17 @@ open point 3 (a site with no natural entity: D13) stays open for it; D2 has its 
 | D17 | P0.3a, inside a policy actor's `Decide` | a consumer's `Policy`; the built-in policies take none | its own | due actors in ascending `ActorID`, call order | none yet: the actor | PLC 7.1.1 |
 | D2 | P1.8 | the world, per line with `WalkStepBP` above 0 | 1 | ascending (node `RegionID`, `CommodityID`) | `siteOutsideWalk`, the tick, the node, `sub` = the commodity (a line is named by two IDs, so a line added before it moves no other line's word) | EXT 5.1, 6.4 |
 | D3 | P2.5 | a consumer's `Work`; the default takes none | its own | rotation order, in call order | `siteWork`, the tick, the agent | AGT 7.1 |
-| D13 | P3.1a, with `Modules.Risk` | the world, per route row with `Common` and a loss probability above 0 | 1 | ascending (`From`, `To`, `Mode`) | none yet: the route row (open point 3) | RSK 4.2 |
+| D13 | P3.1a, with `Modules.Risk` | the world, per route row with `Common` and a loss probability above 0 | 1 | ascending (`From`, `To`, `Mode`) | `siteRiskCommon`, the tick, the `From` region, `sub` = `To * MaxModes + Mode`: one stream per row | RSK 4.2 |
 | D4 | P3.2(a), just before that agent's `Trade` | the world, per candidate of an informed agent's view, offered or not, when `RumourErrorBP` is above 0 | 1 | informed agents in ascending ID; within a view ascending source `RegionID`, then `CommodityID` | `siteInform`, the tick, the agent (keyed once per informed view, only when `RumourErrorBP` is above 0) | INF 5.5.2 |
 | D5 | P3.2(b), in `Trade` | the strategy: the default one per intent it considers; a consumer's own | per intent | agents in ascending ID; intents in canonical commodity order | `siteTrade`, the tick, the agent | AGT 7.5.3 |
-| D14 | P3.2(c) inside each agent's turn, after that agent's own words, and P3.3 after D6's words, with `Modules.Risk`: at the record of each dispatched shipment | the world, per unit row on the shipment's path with a loss probability above 0 | 1 | the shipments in the order they are dispatched, the rows of a path in path order | none yet: the shipment | RSK 4.1 |
+| D14 | P3.2(c) inside each agent's turn, after that agent's own words, and P3.3 after D6's words, with `Modules.Risk`: at the record of each dispatched shipment | the world, per unit row on the shipment's path with a loss probability above 0 | 1 | the shipments in the order they are dispatched, the rows of a path in path order | `siteRiskDispatch`, the tick, the shipment (keyed once per dispatched shipment, then one word per unit row with `P > 0` in path order) | RSK 4.1 |
 | D6 | P3.3, after admission and before the first lane | the world, per admitted offer in admission order, **then** per admitted take in admission order (admission itself is one pass over offers and takes in agent ID and plan order, MER 9.3; within each kind that pass is the admission order) | 1 | admission order | `siteContract`, the tick, the agent, `sub` = `2*i` (offer) or `2*i+1` (take), `i` the plan index (the key is that stream's first word) | MER 9.4.2 |
 | D7 | P4.1, inside each `Clear` | the **default clearing**, per admitted order of the market (the key), bids then asks, an estate's ask, a treasury's order and a counterparty's order included; a consumer's `Clearing` draws as it likes from the `Rand` it receives (7.2.2) | 1 | markets in ascending (`RegionID`, `CommodityID`); orders in input order (6.5.1) | `siteClearing`, the tick, the region, the commodity | CLR 4.2 |
 | D8 | P5.4 | the world, per admitted order **of a household agent** (the outcome's `Draw`), then the strategy's own in `Revise`; an estate's ask, a treasury's order and a counterparty's order has no outcome and takes no word (C21) | 1 | ascending (`RegionID`, `CommodityID`), admission order | `siteOutcome`, the tick, the agent, the commodity: **one stream per order** | BEL 4.5, 5.1.1 |
 | D9 | P7.1(c) | a consumer's `Spawner.Decide`; the default takes none | its own | regions ascending, call order | `siteSpawner`, the tick, the region | SPN 3.1.2, 10.2 |
 | D10 | P7.1(d), at each creation | the world, per new agent: the target ratio then the residue (D1's two) | 2 | plan order, regions ascending | `siteCreation`, the tick, the new agent | AGT 3.5.3 |
 | D11 | P7.2 | the world, per source pair of each **pushed** household that is evaluated, when `RumourErrorBP` is above 0, offered or not (INF 6.1.3 and FR-INF-051 say "reviewed", a larger set of MIG 13.1: the set is the pushed households, FR-MIG-013) | 1 | ascending agent ID; within an agent ascending (destination, commodity) | `siteMigration`, the tick, the agent (keyed once per evaluated pushed agent whose role has a recipe, only when `RumourErrorBP` is above 0, as `siteInform` is; none for `no_estimate`) | MIG 6.2.1, 10.2.1; INF 6.1.3 |
-| D15 | P8.1a, with `Modules.Risk` | the world, per common store row with a probability above 0, then per store of a limited agent with a stored load above 0 | 1 | common rows in table order, then agents ascending and their stores by class | none yet: the row, or the agent and the store class | RSK 6.2 |
+| D15 | P8.1a, with `Modules.Risk` | the world, per common store row with a probability above 0, then per store of a limited agent with a stored load above 0 | 1 | common rows in table order, then agents ascending and their stores by class | (i) `siteRiskStoreCommon`, the tick, the region, `sub` = the store class; (ii) `siteRiskStore`, the tick, the agent, `sub` = the store class: one word per store | RSK 6.2 |
 | D12 | between ticks, at the call | the world, per agent that INT adds: D10's two creation words | 2 | in the order of the calls | `siteAddAgent`, the tick of the next step, the new agent | AGT 10; INT 4.1.2 |
 
 The rows are in the order of a run, not of the ID. The IDs D13 to D17 are the draw IDs

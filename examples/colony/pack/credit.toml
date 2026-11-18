@@ -1,0 +1,20 @@
+# The credit layer of the borrowing player (examples/colony/borrow.go): the credit module on, the algae
+# tenders (a 12-tick job) may borrow and the drillers lend. The figures are placeholders of the example,
+# not values fixed from a source. Layer it after pack/second.toml and pack/warm-second.toml.
+
+[modules.credit]
+min_principal = 100
+shield_ticks = 2
+write_off_ticks = 6
+max_claims = 1000
+
+[role.algae_tender.credit.borrow]
+max_rate_bp = 2000
+max_debt_ticks = 30
+slack_ticks = 2
+
+[role.driller.credit.lend]
+rate_bp = 1200
+max_term_ticks = 30
+keep_ticks = 2
+share_bp = 5000

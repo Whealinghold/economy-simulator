@@ -916,6 +916,13 @@ func (w *World) auditModules() error {
 	if err := w.auditLaterModules(); err != nil {
 		return auditFailure(w.Tick(), err)
 	}
+	return w.auditFlows()
+}
+
+// auditFlows is the audit of the money flows: the boundary balance of each is its
+// total with the sign of its kind. It is split from auditModules to stay within the
+// Lizard complexity limit before the risk module's audit joins it (N-243).
+func (w *World) auditFlows() error {
 	if w.money == nil {
 		return nil
 	}

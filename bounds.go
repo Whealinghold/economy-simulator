@@ -621,6 +621,47 @@ const (
 	MaxTitleTransfers = 1_024
 )
 
+// The bound of the risk module (spec-risk.md 12.2). It is a placeholder (N-015, N-027).
+const (
+	// MaxRiskRows is the most rows of each table of the module, the route rows and
+	// the store rows.
+	MaxRiskRows = 4_096
+)
+
+// The bounds of the infrastructure module (spec-infrastructure.md 12.2). All are
+// placeholders (N-015, N-027), chosen so that every product of the spec fits in 128
+// bits (spec-infrastructure.md 13.3).
+const (
+	// MaxFacilityClasses is the most facility classes: classes are authored by hand.
+	MaxFacilityClasses = 64
+	// MaxDurability is the largest Durability of a class. A unit is the author's, and a
+	// product with a capacity or a boost fits.
+	MaxDurability = 1_000_000
+	// MaxFacilityCapacity is the largest Capacity of a site class, the executions a
+	// whole facility serves for one principal in a tick.
+	MaxFacilityCapacity = 100_000
+	// MaxBoostBP is the largest BoostBP of a route or ground class: a facility can at
+	// most raise a factor elevenfold.
+	MaxBoostBP = 100_000
+	// MaxTotalBoostBP is the cap of the sum of the gains that apply to one pair or one
+	// endowment.
+	MaxTotalBoostBP = 200_000
+	// MaxRouteModes is the most transport modes one route class speeds.
+	MaxRouteModes = 8
+	// MaxRecipeNeeds is the most site classes one recipe needs.
+	MaxRecipeNeeds = 2
+	// MaxFacilities is the most facilities in the world at once: the list is scanned
+	// once a tick.
+	MaxFacilities = 100_000
+	// MaxFacilitiesPerAgent is the most facilities one owner other than an estate
+	// holds: a household does not own a city, and its view carries them.
+	MaxFacilitiesPerAgent = 64
+	// MaxInitialCount is the largest Count of an initial row: construction is bounded.
+	MaxInitialCount = 1_000
+	// MaxInitialRows is the most initial rows of the module.
+	MaxInitialRows = 1_024
+)
+
 // The bounds of the institutions module (spec-institutions.md 9). All are
 // placeholders (N-015, N-027).
 const (

@@ -329,7 +329,7 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 	l.lastModules(m, cfg)
 }
 
-// lastModules reads the tables of technology, credit, tenure and institutions, in that order (a
+// lastModules reads the tables of technology, credit, tenure, risk and institutions, in that order (a
 // continuation of laterModules for the Lizard limit).
 func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 	if ts := m.sub("technology"); ts != nil {
@@ -344,10 +344,103 @@ func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Tenure = l.tenure(ts)
 		ts.finish()
 	}
+	if rs := m.sub("risk"); rs != nil {
+		cfg.Modules.Risk = l.risk(rs)
+		rs.finish()
+	}
+	if is := m.sub("infrastructure"); is != nil {
+		cfg.Modules.Infrastructure = l.infrastructure(is)
+		is.finish()
+	}
 	if is := m.sub("institutions"); is != nil {
 		cfg.Modules.Institutions = l.institutions(is)
 		is.finish()
 	}
+}
+
+// risk reads [modules.risk] (spec-config.md 6.2, spec-risk.md 12.1): a route row as
+// [route.<from>.<to>.<mode>] and a store row as [store.<region>.<class>], each with
+// strike_bp and severity_bp, which are required, and common, which is false when
+// absent. A key-less table switches the module on with no row. Every level is read
+// in the order of the keys; Validate and the hash apply the canonical order.
+func (l *loader) risk(t *tbl) *economysim.Risk {
+	var m economysim.Risk
+	t.entities("route", func(from string, f *tbl) {
+		f.eachSub(func(to string, e *tbl) {
+			e.eachSub(func(mode string, r *tbl) {
+				row := economysim.RouteRisk{From: from, To: to, Mode: mode}
+				r.need("strike_bp", integer(r, "strike_bp", &row.StrikeBP))
+				r.need("severity_bp", integer(r, "severity_bp", &row.SeverityBP))
+				r.flag("common", &row.Common)
+				m.Routes = append(m.Routes, row)
+			})
+		})
+	})
+	t.entities("store", func(region string, e *tbl) {
+		e.eachSub(func(class string, r *tbl) {
+			row := economysim.StoreRisk{Region: region, Class: class}
+			r.need("strike_bp", integer(r, "strike_bp", &row.StrikeBP))
+			r.need("severity_bp", integer(r, "severity_bp", &row.SeverityBP))
+			r.flag("common", &row.Common)
+			m.Stores = append(m.Stores, row)
+		})
+	})
+	return &m
+}
+
+// infrastructure reads [modules.infrastructure] (spec-config.md 6.2,
+// spec-infrastructure.md 12.1): a class as [class.<id>] and an initial row as an
+// element of the array [[initial]]. A key-less table switches the module on with
+// nothing in it. Every key of a class is optional here except its kind and its
+// durability, which have no zero value; Validate says which fields a kind needs.
+func (l *loader) infrastructure(t *tbl) *economysim.Infrastructure {
+	var m economysim.Infrastructure
+	t.entities("class", func(id string, e *tbl) {
+		c := economysim.FacilityClass{ID: id}
+		e.need("kind", e.text("kind", &c.Kind))
+		e.need("durability", integer(e, "durability", &c.Durability))
+		readInts(e, []intField{
+			{"decay", &c.Decay}, {"wear_per_use", &c.WearPerUse}, {"capacity", &c.Capacity},
+			{"boost_bp", &c.BoostBP},
+		})
+		e.strings("modes", &c.Modes)
+		e.text("resource", &c.Resource)
+		e.text("store", &c.Store)
+		e.text("needs", &c.Needs)
+		e.text("label", &c.Label)
+		m.Classes = append(m.Classes, c)
+	})
+	t.rows("initial", func(e *tbl) {
+		var r economysim.InitialFacility
+		e.need("region", e.text("region", &r.Region))
+		e.need("class", e.text("class", &r.Class))
+		e.text("toward", &r.Toward)
+		e.text("role", &r.Role)
+		e.need("count", integer(e, "count", &r.Count))
+		m.Initial = append(m.Initial, r)
+	})
+	return &m
+}
+
+// facilityClauses reads the keys needs, [builds] and [repairs] of a recipe
+// (spec-infrastructure.md 4.1.1) and reports whether the recipe has a build or a
+// repair, which has no required output (4.1.2 B3). Validate says the module must be
+// on and that at most one clause is set.
+func facilityClauses(t *tbl, r *economysim.Recipe) bool {
+	t.strings("needs", &r.Needs)
+	if b := t.sub("builds"); b != nil {
+		r.Builds = &economysim.FacilityBuild{}
+		b.need("class", b.text("class", &r.Builds.Class))
+		b.text("toward", &r.Builds.Toward)
+		b.finish()
+	}
+	if p := t.sub("repairs"); p != nil {
+		r.Repairs = &economysim.FacilityRepair{}
+		p.need("class", p.text("class", &r.Repairs.Class))
+		p.need("units", integer(p, "units", &r.Repairs.Units))
+		p.finish()
+	}
+	return r.Builds != nil || r.Repairs != nil
 }
 
 // institutions reads [modules.institutions] (spec-config.md 6.2, spec-institutions.md
@@ -691,9 +784,10 @@ func (l *loader) recipe(id string, t *tbl) economysim.Recipe {
 	}) {
 		r.Draws = draws
 	}
+	clause := facilityClauses(t, &r)
 	var outs []economysim.Output
 	var shared []bool // for each output, whether its cost share was written
-	t.need("outputs", t.rows("outputs", func(e *tbl) {
+	hasOutputs := t.rows("outputs", func(e *tbl) {
 		var o economysim.Output
 		e.need("commodity", e.text("commodity", &o.Commodity))
 		e.need("quantity", integer(e, "quantity", &o.Quantity))
@@ -701,7 +795,8 @@ func (l *loader) recipe(id string, t *tbl) economysim.Recipe {
 		e.flag("discard", &o.Discard)
 		outs = append(outs, o)
 		shared = append(shared, written)
-	}))
+	})
+	t.need("outputs", hasOutputs || clause) // a build or a repair needs none (B3)
 	kept := 0
 	for _, o := range outs {
 		if !o.Discard {

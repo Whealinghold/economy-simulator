@@ -65,21 +65,30 @@ func TestReaders_StaticCheck(t *testing.T) {
 			t.Fatalf("ReadFile(%s) = %v, want nil", f, err)
 		}
 		for n, line := range strings.Split(string(src), "\n") {
-			if strings.HasPrefix(strings.TrimSpace(line), "//") {
-				continue
-			}
-			for _, call := range []string{"regionHas(", "regionLimit(", "set.class[", "set.tab", "set.e[", "set.l["} {
-				// The institutions round reads the flag of a body's Needs through regionHas, at P1.9a,
-				// which is the reader of SET's hook H6 (spec-institutions.md 3.5.2).
-				if f == "institutions_round.go" && call == "regionHas(" {
-					continue
-				}
-				if strings.Contains(line, call) {
-					t.Errorf("%s:%d reads the class with %q, want only the settlements files to (spec-settlements.md 6.3)", f, n+1, call)
-				}
+			if call := classReadIn(f, line); call != "" {
+				t.Errorf("%s:%d reads the class with %q, want only the settlements files to (spec-settlements.md 6.3)", f, n+1, call)
 			}
 		}
 	}
+}
+
+// classReadIn returns the call through which a line of the file f reads the class of a
+// region, or "" when it reads none. The institutions round reads the flag of a body's
+// Needs through regionHas, at P1.9a, which is the reader of SET's hook H6
+// (spec-institutions.md 3.5.2), so that call is not a read of the class there.
+func classReadIn(f, line string) string {
+	if strings.HasPrefix(strings.TrimSpace(line), "//") {
+		return ""
+	}
+	for _, call := range []string{"regionHas(", "regionLimit(", "set.class[", "set.tab", "set.e[", "set.l["} {
+		if f == "institutions_round.go" && call == "regionHas(" {
+			continue
+		}
+		if strings.Contains(line, call) {
+			return call
+		}
+	}
+	return ""
 }
 
 // TestEntryLimited_RoleCeilingField verifies that the two counts of the ceiling are

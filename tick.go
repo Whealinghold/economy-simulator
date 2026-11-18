@@ -152,9 +152,9 @@ func (w *World) positionsFlows() error {
 }
 
 // positionsProduce is the middle of the straight line, from phase 2 to the
-// plans and the contract round of the trade phase (P3.3), split from positions to stay within the Lizard complexity limit
+// production halt (P2.8a), split from positions to stay within the Lizard complexity limit
 // (N-243, plan 2-14 O7). The position test reads it as part of the straight line,
-// in source order between positionsFlows and positionsTrade.
+// in source order between positionsFlows and positionsPlan.
 func (w *World) positionsProduce() error {
 	w.p21Complete()
 	if w.skills != nil {
@@ -175,6 +175,15 @@ func (w *World) positionsProduce() error {
 		w.p28OwnUse()
 	}
 	w.p28aHalted()
+	return w.positionsPlan()
+}
+
+// positionsPlan is the start of the trade phase of the straight line, from P3.1 to
+// the contract round (P3.3), split from positionsProduce to stay within the Lizard
+// complexity limit before the risk module's P3.1a joins it (N-243). The position
+// test reads it as part of the straight line, between positionsProduce and
+// positionsTrade.
+func (w *World) positionsPlan() error {
 	if w.transport != nil {
 		w.p31Fix()
 	}
@@ -190,7 +199,7 @@ func (w *World) positionsProduce() error {
 // positionsTrade is the trade phase of the straight line, from P3.1 to the
 // clearing, split from positionsProduce to stay within the Lizard complexity
 // limit (N-243). The position test reads it as part of the straight line, between
-// positionsProduce and positionsTail.
+// positionsPlan and positionsTail.
 func (w *World) positionsTrade() error {
 	if w.mer != nil && w.mer.roles > 0 {
 		w.p33aPlanned()
@@ -234,8 +243,8 @@ func (w *World) positionsSettle() error {
 	return w.positionsTail()
 }
 
-// positionsTail is the last part of the straight line, from phase 5 to the
-// migration of P7.2, split from positions to stay within the Lizard complexity limit
+// positionsTail is the part of the straight line from phase 5 to the migration of
+// P7.2, split from positions to stay within the Lizard complexity limit
 // (N-243). The position test reads it as part of the straight line, after
 // positionsSettle and in source order.
 func (w *World) positionsTail() error {
@@ -264,10 +273,11 @@ func (w *World) positionsTail() error {
 	return w.positionsClose()
 }
 
-// positionsClose is the end of the straight line, from P7.2a to the audit, split
-// from positionsTail to stay within the Lizard complexity limit when the
-// institutions module joined it (N-243, plan 3-org Phase 4). The position test reads
-// it as part of the straight line, after positionsTail and in source order.
+// positionsClose is the part of the straight line from the settlement review
+// (P7.2a) to the institutions of P7.2b, split from positionsTail to stay within the
+// Lizard complexity limit when the institutions module joined it (N-243, plan 3-org
+// Phase 4). The position test reads it as part of the straight line, after
+// positionsTail and before positionsEnd, in source order.
 func (w *World) positionsClose() error {
 	if w.set != nil {
 		w.p72aSettlement()
@@ -275,6 +285,14 @@ func (w *World) positionsClose() error {
 	if w.org != nil {
 		w.p72bInstitutions()
 	}
+	return w.positionsEnd()
+}
+
+// positionsEnd is the end of the straight line, from the ageing of phase 8 to the
+// audit, split from positionsTail to stay within the Lizard complexity limit before
+// the risk module's P8.1a joins it (N-243). The position test reads it as part of
+// the straight line, after positionsClose and in source order.
+func (w *World) positionsEnd() error {
 	if err := w.p81Age(); err != nil {
 		return err
 	}
