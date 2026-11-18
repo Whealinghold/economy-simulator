@@ -1633,4 +1633,45 @@
 //     takes a share of at arrival, the mode's vehicle left out (ShipmentArrived
 //     carries AccountLost).
 //   - StoreLoss: the event of one agent and store class struck at P8.1a.
+//   - Body: a named set of households selected by role and region, with a limit on how many
+//     (its places), a limit on its members' trainees and an optional need. It has no account,
+//     agent ID or state of its own. Institutions is the module's configuration, Body its row,
+//     BodyID the typed ID of a body, an index in ascending order of its ID, and NoBody means
+//     none.
+//   - Member, outsider: a household that the membership round admitted to a body in the region
+//     it is in, and an eligible household that was not. Eligible: a household whose role is on
+//     the body's list and whose region is in its scope; a pseudo-agent never is.
+//   - Place (of a body), headroom (of a body): the households of a body's roles that a region of
+//     its scope may hold, 0 meaning no limit, and what is left of it for entry, births and a
+//     completion; a role in a body has the least of its class limit's and its body's.
+//   - Seniority: the order of admission to a body, by the tick the household took its role,
+//     then a stateless key of the tick and the agent, then the agent ID.
+//   - Right: the exclusive claim of a body, or of nobody (a prohibition), to one activity on
+//     one subject in one scope key. RightID is the typed ID of a right and Right its row.
+//   - Activity, subject, scope key: what a right gates (produce, sell, buy or train), the
+//     recipe, commodity or role it is about, and the region or jurisdiction it holds in.
+//   - In force, suspended: a right that is the innermost row of the region's chain, and one a
+//     consumer has set aside between ticks, which leaves its key open.
+//   - Principal, executor, Who: the household that starts a job and the one that works it
+//     (a hire); the field Who of a right says whose membership a produce right tests.
+//   - Control: a legal range for the price of one commodity in one scope, a cap and a floor in
+//     basis points of the effective reference price. ControlID is the typed ID of a control or
+//     a rate limit, one namespace, and Control is its row.
+//   - Rate limit: a legal cap on the yearly rate a borrower may accept in a scope. RateLimit is
+//     its row.
+//   - Legal range, cap, floor, clamp, legal price: the range of a control in minor units, the
+//     highest and lowest limit price it allows (the cap and the floor stay qualified: the
+//     settlement floor and the region cap are other things), the replacement of a bid's limit
+//     above the cap and of an ask's below the floor in the admission of the market, and the
+//     price that results.
+//   - Membership round: the pass at P1.9a that lapses and admits members by seniority.
+//   - Held completion: the completion of a traineeship that waits for headroom in the target
+//     role while the trainee keeps its trainer's place.
+//   - Need: the settlement flag a region's class must carry for a body to admit anyone there.
+//   - LegalLevel, RightSuspension: the entries of the two slots, SetLegalLevels and
+//     SetRightSuspensions, that set the cap and floor of a control and suspend a right.
+//   - BodyRow, LegalRow: the snapshot rows of a body in a region and of a changed legal level.
+//   - MembershipChanged, RightRefused, PriceControlled, LegalLevelSet, RightSuspensionSet: the
+//     events of the membership round, of the refusals of a right, of the clamps of a control
+//     and of the two slots.
 package economysim

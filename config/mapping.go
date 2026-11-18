@@ -329,7 +329,7 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 	l.lastModules(m, cfg)
 }
 
-// lastModules reads the tables of technology, credit, tenure and risk, in that order (a
+// lastModules reads the tables of technology, credit, tenure, risk and institutions, in that order (a
 // continuation of laterModules for the Lizard limit).
 func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 	if ts := m.sub("technology"); ts != nil {
@@ -347,6 +347,10 @@ func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 	if rs := m.sub("risk"); rs != nil {
 		cfg.Modules.Risk = l.risk(rs)
 		rs.finish()
+	}
+	if is := m.sub("institutions"); is != nil {
+		cfg.Modules.Institutions = l.institutions(is)
+		is.finish()
 	}
 }
 
@@ -376,6 +380,58 @@ func (l *loader) risk(t *tbl) *economysim.Risk {
 			r.flag("common", &row.Common)
 			m.Stores = append(m.Stores, row)
 		})
+	})
+	return &m
+}
+
+// institutions reads [modules.institutions] (spec-config.md 6.2, spec-institutions.md
+// 9): the key own_use_bound, a body as [body.<id>] (keys roles, regions, jurisdictions,
+// places, max_trainees, needs, label), a right as [right.<id>] (body, activity,
+// subject, region, jurisdiction, who, label), a control as [control.<id>] (commodity,
+// region, jurisdiction, cap_bp, floor_bp, label) and a rate limit as [rate_limit.<id>]
+// (region, jurisdiction, cap_bp, label). A key-less table switches the module on with
+// nothing declared. The rows come out in ID order because every level is read in the
+// order of the keys.
+func (l *loader) institutions(t *tbl) *economysim.Institutions {
+	m := economysim.DefaultInstitutions()
+	t.flag("own_use_bound", &m.OwnUseBound)
+	t.entities("body", func(id string, e *tbl) {
+		b := economysim.Body{ID: id}
+		e.strings("roles", &b.Roles)
+		e.strings("regions", &b.Regions)
+		e.strings("jurisdictions", &b.Jurisdictions)
+		readInts(e, []intField{{"places", &b.Places}, {"max_trainees", &b.MaxTrainees}})
+		e.text("needs", &b.Needs)
+		e.text("label", &b.Label)
+		m.Bodies = append(m.Bodies, b)
+	})
+	t.entities("right", func(id string, e *tbl) {
+		r := economysim.Right{ID: id}
+		e.text("body", &r.Body)
+		e.need("activity", e.text("activity", &r.Activity))
+		e.need("subject", e.text("subject", &r.Subject))
+		e.text("region", &r.Region)
+		e.text("jurisdiction", &r.Jurisdiction)
+		e.text("who", &r.Who)
+		e.text("label", &r.Label)
+		m.Rights = append(m.Rights, r)
+	})
+	t.entities("control", func(id string, e *tbl) {
+		c := economysim.Control{ID: id}
+		e.need("commodity", e.text("commodity", &c.Commodity))
+		e.text("region", &c.Region)
+		e.text("jurisdiction", &c.Jurisdiction)
+		readInts(e, []intField{{"cap_bp", &c.CapBP}, {"floor_bp", &c.FloorBP}})
+		e.text("label", &c.Label)
+		m.Controls = append(m.Controls, c)
+	})
+	t.entities("rate_limit", func(id string, e *tbl) {
+		r := economysim.RateLimit{ID: id}
+		e.text("region", &r.Region)
+		e.text("jurisdiction", &r.Jurisdiction)
+		e.need("cap_bp", integer(e, "cap_bp", &r.CapBP))
+		e.text("label", &r.Label)
+		m.RateLimits = append(m.RateLimits, r)
 	})
 	return &m
 }

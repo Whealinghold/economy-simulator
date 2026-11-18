@@ -512,7 +512,7 @@ func pairsLaterModules(e *encoder, m Modules) {
 	pairsLastModules(e, m)
 }
 
-// pairsLastModules writes the pairs of the modules of ids 15, 16, 19, 24 and 25 of Modules,
+// pairsLastModules writes the pairs of the modules of ids 15, 16, 19, 21, 24 and 25 of Modules,
 // after those pairsLaterModules writes (a continuation for the Lizard limit).
 func pairsLastModules(e *encoder, m Modules) {
 	if m.Credit != nil {
@@ -530,6 +530,11 @@ func pairsLastModules(e *encoder, m Modules) {
 		pairsPolity(e, *m.Polity)
 		e.end()
 	}
+	if m.Institutions != nil {
+		e.id(21)
+		pairsInstitutions(e, *m.Institutions)
+		e.end()
+	}
 	if m.Technology != nil {
 		e.id(24)
 		pairsTechnology(e, *m.Technology)
@@ -539,6 +544,50 @@ func pairsLastModules(e *encoder, m Modules) {
 		e.id(25)
 		e.end()
 	}
+}
+
+// pairsInstitutions writes the pairs of an Institutions: Bodies 1, Rights 2, Controls
+// 3, RateLimits 4, OwnUseBound 5. A Body has ID 1, Roles 2, Regions 3, Jurisdictions 4
+// (each the sorted IDs), Places 5, MaxTrainees 6 and Needs 7; a Right has ID 1, Body 2,
+// Activity 3, Subject 4, Region 5, Jurisdiction 6 and Who 7; a Control has ID 1,
+// Commodity 2, Region 3, Jurisdiction 4, CapBP 5 and FloorBP 6; a RateLimit has ID 1,
+// Region 2, Jurisdiction 3 and CapBP 4 (Label is presentation only and has no id). The
+// four lists are in ID order. The legal levels and the right suspensions of the slots
+// are state and are not hashed (spec-institutions.md 7.1, FR-ORG-038).
+func pairsInstitutions(e *encoder, m Institutions) {
+	encodeList(e, 1, m.Bodies, func(e *encoder, b Body) {
+		e.text(1, b.ID)
+		e.texts(2, b.Roles)
+		e.texts(3, b.Regions)
+		e.texts(4, b.Jurisdictions)
+		e.num(5, b.Places)
+		e.num(6, b.MaxTrainees)
+		e.text(7, b.Needs)
+	})
+	encodeList(e, 2, m.Rights, func(e *encoder, r Right) {
+		e.text(1, r.ID)
+		e.text(2, r.Body)
+		e.text(3, r.Activity)
+		e.text(4, r.Subject)
+		e.text(5, r.Region)
+		e.text(6, r.Jurisdiction)
+		e.text(7, r.Who)
+	})
+	encodeList(e, 3, m.Controls, func(e *encoder, c Control) {
+		e.text(1, c.ID)
+		e.text(2, c.Commodity)
+		e.text(3, c.Region)
+		e.text(4, c.Jurisdiction)
+		e.num(5, c.CapBP)
+		e.num(6, c.FloorBP)
+	})
+	encodeList(e, 4, m.RateLimits, func(e *encoder, l RateLimit) {
+		e.text(1, l.ID)
+		e.text(2, l.Region)
+		e.text(3, l.Jurisdiction)
+		e.num(4, l.CapBP)
+	})
+	e.flag(5, m.OwnUseBound)
 }
 
 // pairsTechnology writes the pairs of a Technology: Fields 1, in ID order. A
