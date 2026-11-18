@@ -5,6 +5,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -38,29 +39,46 @@ func TestPackage_NoFloatNoRootNoDraw(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parse %s: %v", name, err)
 		}
-		for _, imp := range f.Imports {
-			path, _ := strconv.Unquote(imp.Path.Value)
-			switch {
-			case strings.Contains(path, "."):
-				if path != "github.com/Whealinghold/economy-sim/internal/checked" {
-					t.Errorf("%s imports %s, want the standard library and internal/checked only", name, path)
-				}
-			default:
-				for _, bad := range forbidden {
-					if path == bad {
-						t.Errorf("%s imports %s", name, path)
-					}
-				}
-			}
+		for _, problem := range sourceProblems(name, f, forbidden) {
+			t.Error(problem)
 		}
-		ast.Inspect(f, func(n ast.Node) bool {
-			if id, ok := n.(*ast.Ident); ok && (id.Name == "float32" || id.Name == "float64") {
-				t.Errorf("%s uses %s", name, id.Name)
-			}
-			return true
-		})
 	}
 	if sources < 5 {
 		t.Errorf("parsed %d source files, want at least 5: the guard is looking at the wrong place", sources)
 	}
+}
+
+// sourceProblems lists what a parsed source file breaks: an import outside the
+// standard library and internal/checked, a forbidden standard package, or a
+// float type.
+func sourceProblems(name string, f *ast.File, forbidden []string) []string {
+	var problems []string
+	for _, imp := range f.Imports {
+		path, _ := strconv.Unquote(imp.Path.Value)
+		if problem := importProblem(name, path, forbidden); problem != "" {
+			problems = append(problems, problem)
+		}
+	}
+	ast.Inspect(f, func(n ast.Node) bool {
+		if id, ok := n.(*ast.Ident); ok && (id.Name == "float32" || id.Name == "float64") {
+			problems = append(problems, name+" uses "+id.Name)
+		}
+		return true
+	})
+	return problems
+}
+
+// importProblem returns the complaint about one import path, or "" when the
+// path is allowed.
+func importProblem(name, path string, forbidden []string) string {
+	if strings.Contains(path, ".") {
+		if path != "github.com/Whealinghold/economy-sim/internal/checked" {
+			return name + " imports " + path + ", want the standard library and internal/checked only"
+		}
+		return ""
+	}
+	if slices.Contains(forbidden, path) {
+		return name + " imports " + path
+	}
+	return ""
 }

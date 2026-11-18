@@ -30,10 +30,32 @@ type Circuit struct {
 // false when an input is out of range (PhiBP is 0 to 9 999) or the product does
 // not fit.
 func HiredMilli(c Circuit) (int64, bool) {
-	if c.Employers < 0 || c.Upkeep < 0 || c.Units < 1 || c.PhiBP < 0 || c.PhiBP >= WholeBP ||
-		c.SpendMaxShareBP < 0 || c.SpendHalfTicks < 0 || c.Places < 0 {
+	if !circuitInRange(c) {
 		return 0, false
 	}
+	milli, ok := hiredScaled(c)
+	if !ok {
+		return 0, false
+	}
+	places, ok := checked.Mul(c.Places, 1000)
+	if !ok {
+		return 0, false
+	}
+	return min(milli, places), true
+}
+
+// circuitInRange reports whether every input of HiredMilli is in range: none
+// negative, Units at least 1 and PhiBP below WholeBP.
+func circuitInRange(c Circuit) bool {
+	return c.Employers >= 0 && c.Upkeep >= 0 && c.Units >= 1 &&
+		c.PhiBP >= 0 && c.PhiBP < WholeBP &&
+		c.SpendMaxShareBP >= 0 && c.SpendHalfTicks >= 0 && c.Places >= 0
+}
+
+// hiredScaled returns E * u_e * (10 000 + S * H) * 1 000 / ((10 000 - PhiBP) *
+// a), rounded down and not yet capped at Places. It reports false when a step
+// does not fit.
+func hiredScaled(c Circuit) (int64, bool) {
 	spendCap, ok := checked.Mul(c.SpendMaxShareBP, c.SpendHalfTicks)
 	if !ok {
 		return 0, false
@@ -55,13 +77,5 @@ func HiredMilli(c Circuit) (int64, bool) {
 	if !ok {
 		return 0, false
 	}
-	milli, ok := checked.MulDivFloor(scaled, gain, den)
-	if !ok {
-		return 0, false
-	}
-	places, ok := checked.Mul(c.Places, 1000)
-	if !ok {
-		return 0, false
-	}
-	return min(milli, places), true
+	return checked.MulDivFloor(scaled, gain, den)
 }

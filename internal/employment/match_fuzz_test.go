@@ -1,6 +1,7 @@
 package employment_test
 
 import (
+	"fmt"
 	"reflect"
 	"slices"
 	"testing"
@@ -42,27 +43,8 @@ func FuzzRound(f *testing.F) {
 		var a employment.Result
 		employment.Round(&a, slices.Clone(offers), slices.Clone(vacancies), lane, check)
 
-		seen := map[int]bool{}
-		for _, h := range a.Hires {
-			if seen[h.Offer] {
-				t.Fatalf("offer %d hired twice", h.Offer)
-			}
-			seen[h.Offer] = true
-			if h.Wage < h.Reserve || h.Wage > h.Bid || h.Wage < 1 {
-				t.Fatalf("hire %+v: wage outside [reserve, bid] or below 1", h)
-			}
-		}
-		if int64(len(a.Hires)) > lane.MaxOpen {
-			t.Fatalf("%d hires formed under MaxOpen %d", len(a.Hires), lane.MaxOpen)
-		}
-		positions := map[int]int64{}
-		for _, v := range vacancies {
-			positions[v.Ref] = v.Positions
-		}
-		for _, v := range a.Vacancies {
-			if v.Left < 0 || v.Filled+v.Left != positions[v.Ref] {
-				t.Fatalf("vacancy %+v: left negative or positions not conserved (%d)", v, positions[v.Ref])
-			}
+		if problem := roundProblem(a, vacancies, lane); problem != "" {
+			t.Fatal(problem)
 		}
 
 		slices.Reverse(offers)
@@ -73,6 +55,44 @@ func FuzzRound(f *testing.F) {
 			t.Fatalf("result depends on the input order:\n%+v\n%+v", a, b)
 		}
 	})
+}
+
+// roundProblem returns the first invariant a result breaks, or "" when it
+// holds: each offer hired once, each wage in [reserve, bid] and at least 1, at
+// most MaxOpen hires, and each vacancy's positions conserved.
+func roundProblem(a employment.Result, vacancies []employment.Vacancy, lane employment.Lane) string {
+	if problem := hiresProblem(a.Hires); problem != "" {
+		return problem
+	}
+	if int64(len(a.Hires)) > lane.MaxOpen {
+		return fmt.Sprintf("%d hires formed under MaxOpen %d", len(a.Hires), lane.MaxOpen)
+	}
+	positions := map[int]int64{}
+	for _, v := range vacancies {
+		positions[v.Ref] = v.Positions
+	}
+	for _, v := range a.Vacancies {
+		if v.Left < 0 || v.Filled+v.Left != positions[v.Ref] {
+			return fmt.Sprintf("vacancy %+v: left negative or positions not conserved (%d)", v, positions[v.Ref])
+		}
+	}
+	return ""
+}
+
+// hiresProblem returns the first complaint about a list of hires: an offer
+// hired twice or a wage outside [reserve, bid] or below 1.
+func hiresProblem(hires []employment.Hire) string {
+	seen := map[int]bool{}
+	for _, h := range hires {
+		if seen[h.Offer] {
+			return fmt.Sprintf("offer %d hired twice", h.Offer)
+		}
+		seen[h.Offer] = true
+		if h.Wage < h.Reserve || h.Wage > h.Bid || h.Wage < 1 {
+			return fmt.Sprintf("hire %+v: wage outside [reserve, bid] or below 1", h)
+		}
+	}
+	return ""
 }
 
 // BenchmarkRound reports the cost of one round of a lane of 200 offers and 50
