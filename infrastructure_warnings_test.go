@@ -37,6 +37,25 @@ func TestInfrastructureWarnings(t *testing.T) {
 			"facility_unbuildable@modules.infrastructure.class.forge",
 			"unrunnable_recipe@recipes.grind.needs",
 		}},
+		{"a recipe that needs two classes nothing creates is warned once", func(c *economysim.Config) {
+			c.Modules.Infrastructure.Classes = append(c.Modules.Infrastructure.Classes, forge,
+				economysim.FacilityClass{ID: "kiln", Kind: "site", Durability: 100, Capacity: 1})
+			recipeOf(c, "grind").Needs = []string{"forge", "kiln"}
+		}, []string{
+			"facility_unbuildable@modules.infrastructure.class.forge",
+			"facility_unbuildable@modules.infrastructure.class.kiln",
+			"facility_unused@modules.infrastructure.class.mill",
+			"unrunnable_recipe@recipes.grind.needs",
+		}},
+		{"a recipe no role lists is not unrunnable", func(c *economysim.Config) {
+			c.Modules.Infrastructure.Classes = append(c.Modules.Infrastructure.Classes, forge)
+			r := economysim.DefaultRecipe()
+			r.ID, r.Duration = "idle", 1
+			r.Inputs = []economysim.Item{{Commodity: "seed", Quantity: 1}}
+			r.Outputs = []economysim.Output{{Commodity: "staple", Quantity: 1, CostShare: 10_000}}
+			r.Needs = []string{"forge"}
+			c.Recipes = append(c.Recipes, r)
+		}, []string{"facility_unbuildable@modules.infrastructure.class.forge", "facility_unused@modules.infrastructure.class.forge"}},
 		{"decay with no repair", func(c *economysim.Config) { facilityOf(c, "drain").Decay = 1 },
 			[]string{"decay_without_repair@modules.infrastructure.class.drain"}},
 		{"use wear with no repair", func(c *economysim.Config) {

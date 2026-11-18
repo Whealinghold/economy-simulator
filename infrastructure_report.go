@@ -13,13 +13,14 @@ import "slices"
 type facilityUsage struct {
 	needed, built, repaired, initial map[string]bool // membership tests only
 	modes                            map[string]bool // transport modes of the merchant blocks
+	listed                           map[string]bool // recipes some role lists
 }
 
 // facilityUsageOf scans the roles once.
 func facilityUsageOf(c *Config, lk lookup) facilityUsage {
 	u := facilityUsage{
 		needed: map[string]bool{}, built: map[string]bool{}, repaired: map[string]bool{},
-		initial: map[string]bool{}, modes: map[string]bool{},
+		initial: map[string]bool{}, modes: map[string]bool{}, listed: map[string]bool{},
 	}
 	for _, r := range c.Modules.Infrastructure.Initial {
 		u.initial[r.Class] = true
@@ -36,6 +37,7 @@ func facilityUsageOf(c *Config, lk lookup) facilityUsage {
 			if rc == nil {
 				continue
 			}
+			u.listed[id] = true
 			for _, n := range rc.Needs {
 				u.needed[n] = true
 			}
@@ -65,10 +67,14 @@ func infrastructureWarnings(c *Config, lk lookup) []Warning {
 		out = append(out, facilityClassWarnings(c, lk, u, cl)...)
 	}
 	for i := range c.Recipes {
-		for _, id := range c.Recipes[i].Needs {
-			if !u.initial[id] && !u.built[id] {
-				out = append(out, Warning{Path: []string{"recipes", c.Recipes[i].ID, "needs"}, Rule: "unrunnable_recipe"})
-			}
+		rc := &c.Recipes[i]
+		// A recipe no role lists never runs, so it is unused_recipe's and not this
+		// rule's; one warning a recipe, whatever number of its classes are missing.
+		if !u.listed[rc.ID] {
+			continue
+		}
+		if slices.ContainsFunc(rc.Needs, func(id string) bool { return !u.initial[id] && !u.built[id] }) {
+			out = append(out, Warning{Path: []string{"recipes", rc.ID, "needs"}, Rule: "unrunnable_recipe"})
 		}
 	}
 	return append(out, facilityGateWarnings(c, m)...)
