@@ -318,8 +318,7 @@ func (w *World) saveAgents(cw *codec.Writer) error {
 	}
 	cw.Count(int(w.live.agents))
 	w.eachLive(func(a *agent) { w.saveAgent(cw, a, names) })
-	// Excluded from coverage (testing.md 9.5): agentTails is empty until the storage
-	// and institutions modules append to it, and their change tests the loop.
+	// The module blocks of tag 3 after the agent list, in module order (agentTails).
 	for _, t := range agentTails {
 		if t.present(&w.cfg) {
 			t.save(w, cw)

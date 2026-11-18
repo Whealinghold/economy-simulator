@@ -91,6 +91,8 @@ type agentTail struct {
 }
 
 // agentTails holds the blocks of tag 3 after the agent list, in module order. It
-// is empty until the storage and institutions modules are built, which append to
-// it.
-var agentTails = [...]agentTail{}
+// has the stores of the storage module; the institutions module appends its block
+// after it.
+var agentTails = [...]agentTail{
+	{present: func(c *Config) bool { return c.Modules.Storage != nil }, save: (*World).saveStores, load: (*World).loadStores},
+}

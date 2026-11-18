@@ -43,9 +43,7 @@ type restoreCtx struct {
 // already hold the checkpoint's state. The error is ErrCheckpointVersion, ErrCheckpointCorrupt,
 // ErrCheckpointConfig, ErrCheckpointExtension, ErrOptionContext (WithSeed is refused:
 // the checkpoint holds the seed, and WithReseed is the way to another continuation)
-// or what NewWorld returns for the configuration. A checkpoint of a world with the
-// storage module on is refused with ErrCheckpointCorrupt until its stores are saved
-// (plan 3-sto Phase 8): the bytes are not damaged, but a restore would lose the stores.
+// or what NewWorld returns for the configuration.
 //
 // The world is at the tick of the checkpoint with the effective seed of its
 // header, or of the reseed. It emits no WorldCreated and no AgentSpawned; an
@@ -99,11 +97,6 @@ func restoreShell(cfg Config, f frame, opts []Option) (*World, options, error) {
 // load their state. A failure at any step before the last touches nothing the
 // consumer owns.
 func (w *World) restoreState(rs *restoreCtx, sections []byte) error {
-	if w.cfg.Modules.Storage != nil {
-		// The stores are not saved until plan 3-sto Phase 8 (PR 5): a restore would
-		// drop the stores of the role rows and change the room of every account.
-		return fmt.Errorf("%w: the storage module is on and its stores are not in the checkpoint yet (plan 3-sto Phase 8)", ErrCheckpointCorrupt)
-	}
 	bodies, err := splitSections(&w.cfg, sections)
 	if err != nil {
 		return err
@@ -302,6 +295,41 @@ func loadExtensionState(have []extEntry, recs []extRecord) error {
 	return nil
 }
 
+// loadStores reads the block of tag 3 that follows the agent list when the storage
+// module is on (spec-storage.md 15.1, 15.3), for each live agent in ascending ID: the
+// class indexes strictly ascending and below the number of classes, each count at
+// least 1, at most MaxStoresPerAgent stores in all, and none for an agent of a role
+// with no base room. The room, the load and the pledge are derived, in rebuildStorage.
+func (w *World) loadStores(r *codec.Reader) {
+	s := w.sto
+	if len(w.agents) > 0 {
+		s.grow(AgentID(len(w.agents) - 1))
+	}
+	w.eachLive(func(a *agent) {
+		var prev uint64
+		total := int64(0)
+		for i := range r.Count(2) {
+			c := r.Strict(prev, i > 0)
+			k := r.Bounded("stores of a class", MaxStoresPerAgent)
+			switch {
+			case r.Err() != nil:
+				return
+			case c >= uint64(len(s.classes)):
+				r.Failf("agent %d owns stores of class index %d of %d classes", a.id, c, len(s.classes))
+				return
+			case k < 1 || !s.limited(a) || total+k > MaxStoresPerAgent:
+				r.Failf("agent %d has %d stores of class %d: none is saved, an unlimited role owns none and at most %d are owned", a.id, k, c, MaxStoresPerAgent)
+				return
+			}
+			if s.stores[a.id] == nil {
+				s.stores[a.id] = make([]uint8, len(s.classes))
+			}
+			s.stores[a.id][c] = uint8(k)
+			prev, total = c, total+k
+		}
+	})
+}
+
 // loadExtensions is the reader of tag 34 in the table. The entries were read and
 // checked whole at step 4, before any section, and their state is loaded last at
 // step 11 (spec-checkpoint.md 6.2.1); here the section is only consumed.
@@ -370,6 +398,11 @@ func (w *World) checkpointCross() error {
 	}
 	if err := w.flightCross(); err != nil {
 		return err
+	}
+	if w.sto != nil {
+		if err := w.rebuildStorage(); err != nil {
+			return err
+		}
 	}
 	if w.money != nil {
 		return w.moneyCross()
