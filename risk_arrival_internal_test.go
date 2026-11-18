@@ -1,6 +1,10 @@
 package economysim
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/Whealinghold/economy-sim/internal/ledger"
+)
 
 // This file tests step 0 of an arrival and what it reaches (plan 3-rsk Phase 5): the
 // loss of the Transit account and of the traveller's own account, the order guard,
@@ -249,5 +253,37 @@ func TestContract_LostBorneByDeliverer(t *testing.T) {
 	}
 	if b := lossBoundary(t, w, cGrain); b != 2 {
 		t.Errorf("boundary of loss for grain = %d, want 2", b)
+	}
+}
+
+// TestArrival_NoEarmarkAtStepZero verifies that no account holds an earmark at a tick
+// boundary of a self-carried trip, so the loss of step 0 (phase 1, which takes the
+// held units of the traveller's account) never meets an earmarked unit that Move
+// would refuse: a reservation is made at the admission of an ask in phase 3 or 4 and
+// released with its book at clearing, inside the same tick.
+//
+// Guard: tripLoss counts earmarked units in held and a refusal would panic through
+// invariant. If a reservation outlived its tick, step 0 would crash at the next
+// arrival; this test fails first, at the boundary, and names the account.
+func TestArrival_NoEarmarkAtStepZero(t *testing.T) {
+	t.Parallel()
+	row := RouteRisk{From: "a_home", To: "b_far", Mode: "foot", StrikeBP: 10_000, SeverityBP: 5_000}
+	w, rec := newShipWorld(t, riskShip(row), onTick(0, toFar(Line{Commodity: grain, Quantity: 2})))
+	for tick := 0; tick < 3; tick++ {
+		step(t, w, 1)
+		for id := 0; id < w.ledger.Len(); id++ {
+			v, err := w.ledger.Account(id)
+			if err != nil || v.Closed || v.Kind == ledger.KindBoundary {
+				continue
+			}
+			for c := range w.cfg.Commodities {
+				if _, reserved, err := w.ledger.Holding(id, c); err != nil || reserved != 0 {
+					t.Errorf("after tick %d account %d commodity %d: earmarked %d, error %v, want 0 and nil", tick, id, c, reserved, err)
+				}
+			}
+		}
+	}
+	if len(of[ShipmentArrived](rec)) != 1 {
+		t.Fatalf("ShipmentArrived events = %d, want the trip to have arrived and struck step 0", len(of[ShipmentArrived](rec)))
 	}
 }
