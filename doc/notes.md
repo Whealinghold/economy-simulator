@@ -51,11 +51,11 @@ PR description.
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358 |
 | CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349 |
-| CHK | N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360 |
+| CHK | N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-368 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241 |
 | CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354 |
-| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362 |
+| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
@@ -2274,6 +2274,18 @@ PR description.
 - **Note:** The `Warn` "no places open" of `spec-skill-barriers.md` 8.3 is emitted for a queue kept waiting by a negative gain only (FR-SKL-022). A queue kept waiting for want of a trainer (no agent of the role holds a free place) has no `Warn`: it is the Debug line "traineeship refused" with the reason `no_trainer` and the snapshot (`Trainers` 0 or `Places` 0 with `Queue` above 0). Widening the `Warn` to `no_trainer` is a spec decision for the owner. `RoleRow.Held` is 0 until a module limits the headroom of a role (`skills.headroom`, SET and ORG): the module that sets the hook computes it, and must restore it (a held trainee is saved, so a restore can derive it).
 - **Update (2026-11-14, plan 3-skl PR B2):** built as the spec says; the owner has not decided on the widening. Left open.
 
+### N-367 CRD: the default borrower's term is clamped to `MaxCreditTerm`
+
+- **Areas:** CRD
+- **Raised:** 2026-11-17, CRD PR 4 (owner decision of the supervisor, `phase-3-decisions.md`).
+- **Note:** `DefaultBorrow` asks for the principal of the whole horizon `H` but a term of `min(H, MaxCreditTerm)` (`spec-credit.md` 10.2), so a huge `SlackTicks` no longer makes a request that admission refuses `invalid_term`. The claim then falls due before the cash of a job longer than the bound arrives: a pack that sets `SlackTicks` that high accepts the overdue cycle. Left open for a pack-level check (a `SlackTicks` plus the longest recipe above `MaxCreditTerm`) if one is wanted.
+
+### N-368 CRD: the directive's `Borrow` and `Lend` are saved in the agent record
+
+- **Areas:** CRD, CHK
+- **Raised:** 2026-11-17, CRD PR 4.
+- **Note:** `spec-checkpoint.md` 4.2 tag 3 and `spec-credit.md` 17.1 now list the two fields that `saveDirectiveCredit` writes after the directive, only with `Modules.Credit` on. Any later module that adds a field to `Directive` must add its own group the same way (written only with its module on) so the bytes of format 1 do not move.
+
 ## Read receipt
 
 ### N-358 A gain is not a recipe
@@ -2316,4 +2328,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: f85c4b2d7217a479ec7c16dc
+NOTES-TAG: 7e6bfc470aaa9243f3527d8d

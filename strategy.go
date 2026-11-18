@@ -209,10 +209,10 @@ func (d Directed) Work(v *AgentView, rng *rand.Rand) JobRequest {
 // Trade runs the fallback, then removes the fallback's intents for the
 // commodities in Hold, replaces its intent for a commodity the directive has an
 // intent for, adds the other intents of the directive in canonical commodity
-// order and appends its discards. It allocates only what the plan's slices grow
-// by.
+// order and appends its discards. A request or an offer of the directive replaces
+// those the fallback appended. It allocates only what the plan's slices grow by.
 func (d Directed) Trade(v *AgentView, rng *rand.Rand, p *TradePlan) {
-	n0 := len(p.Intents)
+	n0, nb, nl := len(p.Intents), len(p.Borrow), len(p.Lend)
 	if d.Fallback != nil {
 		d.Fallback.Trade(v, rng, p)
 	}
@@ -220,6 +220,7 @@ func (d Directed) Trade(v *AgentView, rng *rand.Rand, p *TradePlan) {
 		return
 	}
 	dir := &v.Directive
+	directCredit(p, dir, nb, nl)
 	kept := p.Intents[:n0]
 	for _, in := range p.Intents[n0:] {
 		if j := firstIntentFor(dir.Intents, in.Commodity); j >= 0 {
@@ -240,6 +241,20 @@ func (d Directed) Trade(v *AgentView, rng *rand.Rand, p *TradePlan) {
 		p.Intents = insertIntent(p.Intents, n0, in)
 	}
 	p.Discards = append(p.Discards, dir.Discards...)
+}
+
+// directCredit replaces the request and the offer the fallback appended to the plan
+// (from the indexes nb and nl) by those of the directive, when it has any
+// (spec-credit.md 10.5). A fallback is caller code: one that cut the plan below the
+// index it was called at leaves the directive's entry after what it kept, never
+// before what the plan held, and never exposes an entry it dropped.
+func directCredit(p *TradePlan, dir *Directive, nb, nl int) {
+	if dir.Borrow != nil {
+		p.Borrow = append(p.Borrow[:min(nb, len(p.Borrow))], *dir.Borrow)
+	}
+	if dir.Lend != nil {
+		p.Lend = append(p.Lend[:min(nl, len(p.Lend))], *dir.Lend)
+	}
 }
 
 // Revise is the fallback's; with a nil Fallback it keeps the belief.

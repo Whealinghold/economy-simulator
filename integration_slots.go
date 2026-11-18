@@ -449,6 +449,7 @@ type SlotState struct {
 	RegenScales    []EndowmentScale
 	OutsideShocks  []OutsideShock
 	RentScales     []EndowmentScale
+	RateScales     []RegionScale
 }
 
 // Slots returns a deep copy of the slots that hold a value other than their default
@@ -474,6 +475,7 @@ func (w *World) Slots() (SlotState, error) {
 	w.endowmentSlots(&s)
 	w.outsideSlots(&s)
 	w.tenureSlots(&s)
+	w.creditSlots(&s)
 	return s, nil
 }
 

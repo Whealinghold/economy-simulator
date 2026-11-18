@@ -2112,6 +2112,20 @@ type CreditSettled struct {
 
 func (CreditSettled) isEvent() {}
 
+// CreditRateScaled is emitted once per region whose rate scale a SetRateScales call
+// changes, in ascending Region order, after the whole call has been applied, with the
+// Tick the next step runs (spec-credit.md 13.1, 16.1). It is emitted only when the
+// credit module is on.
+type CreditRateScaled struct {
+	Tick int64
+	// Region is the region whose scale changed.
+	Region RegionID
+	// BeforeBP and AfterBP are the scale before and after, in basis points.
+	BeforeBP, AfterBP int64
+}
+
+func (CreditRateScaled) isEvent() {}
+
 // The reasons a request or an offer of the credit round is refused whole at admission
 // (spec-credit.md 5.2), constants of Reason in the order of the table. A refusal is
 // counted in CreditRound and logged at Debug and is not an error of Step.
