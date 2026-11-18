@@ -68,7 +68,8 @@ func (v *validator) orgCounts(m *Institutions) bool {
 }
 
 // orgIDs is ErrInvalidID and ErrDuplicateID: an ID that does not match spec-config.md
-// 3.3 or is used twice in its namespace (a control and a rate limit share one), two
+// 3.3 or is used twice in its namespace (a control and a rate limit share one), an
+// entry twice in a list of a body, two
 // rights with one (activity, subject, scope key), two controls with one (commodity,
 // scope key) and two rate limits with one scope key.
 func (v *validator) orgIDs(m *Institutions) bool {
@@ -76,6 +77,7 @@ func (v *validator) orgIDs(m *Institutions) bool {
 	bodies := make(map[string]bool, len(m.Bodies)) // membership tests only
 	for i := range m.Bodies {
 		v.orgID(bodies, orgBodyPath(i, "id"), m.Bodies[i].ID)
+		v.orgBodyLists(i, m.Bodies[i])
 	}
 	rights, keys := make(map[string]bool, len(m.Rights)), make(map[[4]string]bool, len(m.Rights))
 	for i, r := range m.Rights {
@@ -92,6 +94,25 @@ func (v *validator) orgIDs(m *Institutions) bool {
 		v.orgKey(rows, orgLimitPath(i, "region"), [4]string{"rate_limit", "", l.Region, l.Jurisdiction})
 	}
 	return len(v.rep.errs) == n
+}
+
+// orgBodyLists reports an entry that a body lists twice in its Roles, Regions or
+// Jurisdictions. A repeat would build the same world as the single entry yet hash
+// differently (canonical sorts a list and does not drop a repeat), so it is a mistake and
+// not a second spelling.
+func (v *validator) orgBodyLists(i int, b Body) {
+	for _, l := range []struct {
+		key  string
+		list []string
+	}{{"roles", b.Roles}, {"regions", b.Regions}, {"jurisdictions", b.Jurisdictions}} {
+		seen := make(map[string]bool, len(l.list)) // membership tests only
+		for j, id := range l.list {
+			if seen[id] {
+				v.rep.add(ErrDuplicateID, orgBodyPath(i, l.key+"["+itoa(j)+"]"), id, "")
+			}
+			seen[id] = true
+		}
+	}
 }
 
 // orgID reports an ID that is not valid or is already in seen, and records it.
