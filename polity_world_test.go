@@ -355,7 +355,9 @@ func TestPolity_NoRegionFieldRead(t *testing.T) {
 	allowed := map[string]bool{"polity.go": true, "polity_validate.go": true, "config.go": true, "construct.go": true, "event.go": true, "world.go": true, "snapshot.go": true, "validate.go": true,
 		"hash.go": true, "errors.go": true, "bounds.go": true, "defaults.go": true, "doc.go": true}
 	for _, f := range files {
-		if strings.HasSuffix(f, "_test.go") || allowed[f] {
+		// The institutions module reads the jurisdictions of a scope and the chain of a region (spec-institutions.md
+		// 3.1, 6.1.3; the readers of spec-polity.md 6.1, N-160): its files may name them, and read no region tunable.
+		if strings.HasSuffix(f, "_test.go") || allowed[f] || strings.HasPrefix(f, "institutions") {
 			continue
 		}
 		b, err := os.ReadFile(f)
