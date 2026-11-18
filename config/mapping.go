@@ -32,6 +32,16 @@ func (t *tbl) at(key string) []string {
 	return append(t.path[:len(t.path):len(t.path)], key)
 }
 
+// has says any of the keys is present, without marking it read.
+func (t *tbl) has(keys ...string) bool {
+	for _, k := range keys {
+		if _, ok := t.m[k]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 // get returns the value of key and marks it read.
 func (t *tbl) get(key string) (any, bool) {
 	v, ok := t.m[key]
@@ -311,7 +321,7 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 		es.finish()
 	}
 	if es := m.sub("employment"); es != nil {
-		cfg.Modules.Employment = &economysim.Employment{}
+		cfg.Modules.Employment = l.employment(es)
 		es.finish()
 	}
 	if ps := m.sub("polity"); ps != nil {
@@ -862,8 +872,7 @@ func (l *loader) role(id string, t *tbl) economysim.Role {
 	}
 	t.flag("hireable", &r.Hireable)
 	if es := t.sub("employer"); es != nil {
-		e := economysim.DefaultEmployer()
-		integer(es, "payroll_bp", &e.PayrollBP)
+		e := employer(es)
 		es.finish()
 		r.Employer = &e
 	}

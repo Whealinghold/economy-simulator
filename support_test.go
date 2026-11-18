@@ -45,6 +45,9 @@ var (
 	// one-demand (testing.md 7.1.1).
 	packOneDemandEmployment     = []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml", "overlay/employment.toml"}
 	packOneDemandEmploymentCold = []string{"base.toml", "demand.toml", "one-demand.toml", "overlay/employment.toml"}
+	// packOneDemandHire is one-demand with the employment module alone added, in its hire
+	// form (overlay/employment-hire.toml), which replaces the payroll overlay.
+	packOneDemandHire = []string{"base.toml", "demand.toml", "one-demand.toml", "warm-one-demand.toml", "overlay/employment-hire.toml"}
 )
 
 const chainsDir = "testdata/chains"

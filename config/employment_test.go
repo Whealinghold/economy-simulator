@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -70,11 +71,11 @@ func TestLoad_Employment(t *testing.T) {
 	}
 }
 
-// TestLoad_EmploymentRejects verifies that the payroll form's loader refuses what
-// the file must not say: a key of the hire form (the form this one is a subset of),
-// a payroll_bp that is not an integer, a key outside the employer block, and an
-// employment table that is not a table. Each case breaks one thing in an otherwise
-// valid document.
+// TestLoad_EmploymentRejects verifies that the loader refuses what the file must
+// not say: a payroll_bp that is not an integer, a key of the hire form with the
+// wrong type, an unknown key, a key outside the employer block, and an employment
+// table that is not a table. Each case breaks one thing in an otherwise valid
+// document.
 //
 // Requirement: FR-EMP-080
 func TestLoad_EmploymentRejects(t *testing.T) {
@@ -82,8 +83,12 @@ func TestLoad_EmploymentRejects(t *testing.T) {
 	tests := []struct {
 		name, doc string
 	}{
-		{"hire-form key of the module", minimal + "[modules.employment]\nmax_open = 4\n"},
-		{"hire-form key of the block", minimal + "[modules.employment]\n[role.a.employer]\nmax_hires = 2\n"},
+		{"hire as an integer", minimal + "[modules.employment]\nhire = 1\n"},
+		{"max_open as a float", minimal + "[modules.employment]\nhire = true\nmax_open = 4.5\n"},
+		{"unknown key of the module", minimal + "[modules.employment]\nhires = true\n"},
+		{"recipes as a string", minimal + "[modules.employment]\nhire = true\n[role.a.employer]\nrecipes = \"prepare\"\n"},
+		{"max_hires as a string", minimal + "[modules.employment]\nhire = true\n[role.a.employer]\nmax_hires = \"2\"\n"},
+		{"unknown key of the block", minimal + "[modules.employment]\nhire = true\n[role.a.employer]\nworker_share = 5000\n"},
 		{"payroll_bp as a float", minimal + "[modules.employment]\n[role.a.employer]\npayroll_bp = 5000.5\n"},
 		{"payroll_bp as a string", minimal + "[modules.employment]\n[role.a.employer]\npayroll_bp = \"5000\"\n"},
 		{"hireable as an integer", minimal + "[modules.employment]\n[role.a]\nhireable = 1\n"},
@@ -96,6 +101,116 @@ func TestLoad_EmploymentRejects(t *testing.T) {
 				t.Errorf("Parse(%s) = %+v, nil, want an error", tt.name, cfg)
 			}
 		})
+	}
+}
+
+// hireDoc is a hire-form document: the module with its MaxOpen, an employer role
+// with the four fields of the block and a Hireable role, in the form of
+// spec-employment.md 24.5.2 and 13.
+const hireDoc = minimal + `
+[modules.employment]
+hire = true
+max_open = 50
+[role.boss]
+recipes = ["prepare", "grind"]
+[role.boss.employer]
+recipes = ["grind", "prepare"]
+max_hires = 6
+worker_share_bp = 4000
+hire_yield_bp = 8000
+[role.hand]
+hireable = true
+`
+
+// TestLoad_EmploymentHire verifies that the keys of spec-employment.md 13 load the
+// hire form: hire and max_open on the module, the four fields on the block read
+// over DefaultHireEmployer (an absent key takes its default and PayrollBP stays 0,
+// so the mixed form is never made by a default), a block with only payroll_bp
+// stays the payroll form, and an absent max_open with hire takes the default.
+//
+// Requirement: FR-EMP-079, FR-EMP-080
+func TestLoad_EmploymentHire(t *testing.T) {
+	t.Parallel()
+	got, err := parseStrings(hireDoc)
+	if err != nil {
+		t.Fatalf("Parse(hireDoc) error = %v, want nil", err)
+	}
+	if want := (economysim.Employment{Hire: true, MaxOpen: 50}); !reflect.DeepEqual(*got.Modules.Employment, want) {
+		t.Errorf("Parse(hireDoc).Modules.Employment = %+v, want %+v", *got.Modules.Employment, want)
+	}
+	wantBlock := economysim.Employer{Recipes: []string{"grind", "prepare"}, MaxHires: 6, WorkerShareBP: 4_000, HireYieldBP: 8_000}
+	if boss := got.Roles[0]; !reflect.DeepEqual(*boss.Employer, wantBlock) {
+		t.Errorf("Parse(hireDoc) boss block = %+v, want %+v", *boss.Employer, wantBlock)
+	}
+	def, err := parseStrings(minimal + "[modules.employment]\nhire = true\n[role.a.employer]\nrecipes = [\"x\"]\n")
+	if err != nil {
+		t.Fatalf("Parse(defaults) error = %v, want nil", err)
+	}
+	wantDef := economysim.DefaultHireEmployer()
+	wantDef.Recipes = []string{"x"}
+	if def.Modules.Employment.MaxOpen != economysim.DefaultMaxOpen || !reflect.DeepEqual(*def.Roles[0].Employer, wantDef) {
+		t.Errorf("Parse(defaults) = %+v and %+v, want MaxOpen %d and block %+v",
+			*def.Modules.Employment, *def.Roles[0].Employer, economysim.DefaultMaxOpen, wantDef)
+	}
+	pay, err := parseStrings(minimal + "[modules.employment]\n[role.a.employer]\npayroll_bp = 3000\n")
+	if err != nil {
+		t.Fatalf("Parse(payroll) error = %v, want nil", err)
+	}
+	if want := (economysim.Employer{PayrollBP: 3_000}); !reflect.DeepEqual(*pay.Roles[0].Employer, want) || pay.Modules.Employment.Hire {
+		t.Errorf("Parse(payroll) = %+v and %+v, want the payroll block %+v and Hire false", *pay.Roles[0].Employer, *pay.Modules.Employment, want)
+	}
+}
+
+// TestLoad_EmploymentHireHashesAsGoValue verifies that the hire-form document and
+// the same configuration built in Go hash alike, whatever the order of the hire
+// list (the file writes grind first, the Go value prepare first).
+//
+// Requirement: FR-EMP-079, FR-CFG-086
+func TestLoad_EmploymentHireHashesAsGoValue(t *testing.T) {
+	t.Parallel()
+	got, err := parseStrings(hireDoc)
+	if err != nil {
+		t.Fatalf("Parse(hireDoc) error = %v, want nil", err)
+	}
+	boss := economysim.DefaultRole()
+	boss.ID, boss.Recipes = "boss", []string{"prepare", "grind"}
+	boss.Employer = &economysim.Employer{Recipes: []string{"prepare", "grind"}, MaxHires: 6, WorkerShareBP: 4_000, HireYieldBP: 8_000}
+	hand := economysim.DefaultRole()
+	hand.ID, hand.Hireable = "hand", true
+	goValue := economysim.Config{World: economysim.DefaultWorldParams(), Calendar: economysim.DefaultCalendar(), Roles: []economysim.Role{boss, hand}}
+	goValue.Modules.Employment = &economysim.Employment{Hire: true, MaxOpen: 50}
+	if economysim.HashConfig(got) != economysim.HashConfig(goValue) {
+		t.Errorf("HashConfig(file) != HashConfig(the same Go value), want equal (FR-EMP-079)")
+	}
+}
+
+// TestLoad_EmploymentHireEmptyBlockIsRefused verifies that an employer table with
+// no key in a hire-form world is loaded and then refused by Validate with
+// ErrEmploymentShape: the loader reads the roles before the modules, so the block
+// takes the payroll default, and the validator must turn that mixed form (PayrollBP above 0 in the hire form, and no
+// hire list) into an error rather than a block that runs. With the module in the
+// payroll form the same table is the default block and loads.
+//
+// Requirement: FR-EMP-080, FR-EMP-004
+//
+// Guard: the spec gives the hire form no default for the hire list. If the loader
+// ever defaulted an empty block to a valid hire block, a forgotten hire list would
+// pass silently; this pins the refusal.
+func TestLoad_EmploymentHireEmptyBlockIsRefused(t *testing.T) {
+	t.Parallel()
+	hire, err := parseStrings(minimal + "[modules.employment]\nhire = true\n[role.a.employer]\n")
+	if err != nil {
+		t.Fatalf("Parse(hire form, empty employer table) error = %v, want nil", err)
+	}
+	if err := hire.Validate(); !errors.Is(err, economysim.ErrEmploymentShape) {
+		t.Errorf("Validate(hire form, empty employer table) error = %v, want ErrEmploymentShape", err)
+	}
+	got, err := parseStrings(minimal + "[modules.employment]\n[role.a.employer]\n")
+	if err != nil {
+		t.Fatalf("Parse(payroll form, empty employer table) error = %v, want nil", err)
+	}
+	if want := economysim.DefaultEmployer(); !reflect.DeepEqual(*got.Roles[0].Employer, want) {
+		t.Errorf("Parse(payroll form, empty employer table) block = %+v, want %+v", *got.Roles[0].Employer, want)
 	}
 }
 
@@ -113,5 +228,7 @@ func TestLoad_EmploymentRejects(t *testing.T) {
 func FuzzLoadEmployment(f *testing.F) {
 	f.Add([]byte(employmentDoc), []byte("[role.boss.employer]\npayroll_bp = 0\n"), []byte("[modules.employment]\nbogus = 1\n"))
 	f.Add([]byte(minimal), []byte("[role.a.employer]\npayroll_bp = 10001\n"), []byte("[role.a]\nhireable = \"yes\"\n"))
+	f.Add([]byte(hireDoc), []byte("[role.boss.employer]\nrecipes = [1]\n"), []byte("[modules.employment]\nmax_open = -1\n"))
+	f.Add([]byte(minimal), []byte("[modules.employment]\nhire = true\nmax_open = 9223372036854775807\n"), []byte("[role.a.employer]\nmax_hires = 0\npayroll_bp = 1\n"))
 	f.Fuzz(loadProperties)
 }
