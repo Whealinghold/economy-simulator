@@ -48,9 +48,10 @@ const institutionsWorldSeeds = 2
 // Go code of the module) loads, validates, is accepted by NewWorld and runs detTicks ticks
 // under the audit; that the module is on with its rows in the world's configuration and
 // in the configuration hash; that two builds of one seed agree; and that the run is the
-// run of pack one without the module, snapshot for snapshot, since the module has no
-// behaviour yet (plan 3-org, PR A: the readers come in the next pull requests, whose tests
-// compare their results with this run).
+// run of pack one without the module, snapshot for snapshot, apart from the module's own
+// outputs (its names, rows and hash), since no reader of a right or a control exists yet:
+// the round of memberships changes no result (plan 3-org, PR B; the readers come in the
+// next pull requests, whose tests compare their results with this run).
 //
 // Requirement: FR-ORG-001, FR-ORG-051, FR-CFG-094
 //
@@ -88,20 +89,23 @@ func TestConfigOnly_InstitutionsFileBuildsAndRuns(t *testing.T) {
 				t.Errorf("seed %d: two builds of the institutions world differ", seed)
 			}
 			if !reflect.DeepEqual(withoutConfigHash(a.Final), withoutConfigHash(base.Final)) {
-				t.Errorf("seed %d: the final snapshot with the module on differs from the one without it, want the same apart from the configuration hash: the module has no behaviour yet", seed)
+				t.Errorf("seed %d: the final snapshot with the module on differs from the one without it, want the same apart from the module's own outputs: no reader of a right exists yet", seed)
 			}
 			for tick, s := range base.Samples {
 				if !reflect.DeepEqual(withoutConfigHash(a.Samples[tick]), withoutConfigHash(s)) {
-					t.Errorf("seed %d: the snapshot after tick %d differs with the module on, want the same apart from the configuration hash", seed, tick)
+					t.Errorf("seed %d: the snapshot after tick %d differs with the module on, want the same apart from the module's own outputs", seed, tick)
 				}
 			}
 		})
 	}
 }
 
-// withoutConfigHash returns the snapshot without its configuration hash, which differs
-// between a world and the same world with a module added that does nothing.
+// withoutConfigHash returns the snapshot without the outputs of the institutions module:
+// its configuration hash, which differs between a world and the same world with a module
+// added that moves nothing, the list of modules, the names of its entities and its rows.
 func withoutConfigHash(s economysim.Snapshot) economysim.Snapshot {
-	s.ConfigHash = [32]byte{}
+	s.ConfigHash, s.Modules = [32]byte{}, nil
+	s.Names.Bodies, s.Names.Rights, s.Names.Controls = nil, nil, nil
+	s.Bodies, s.LegalLevels, s.Suspended = nil, nil, nil
 	return s
 }
