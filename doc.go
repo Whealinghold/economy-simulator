@@ -1603,4 +1603,165 @@
 //   - Cash gap: the money a borrower's job needs before the job pays, over its horizon.
 //   - Round (of credit): the matching at P3.3b of the admitted requests and offers of a
 //     region at the lenders' posted rates; a lane of it is a region.
+//   - Hire: the one-job contract of the hire form of the employment module
+//     (spec-employment.md 3.4): a worker household runs one recipe of an employer's
+//     hire list for the employer's account, for a wage fixed at formation and paid a
+//     tick at a time from an escrow. HireID is its ID, issued in order of formation;
+//     HireFormed and HireEnded are the events of a hire that forms and that ends, and
+//     HireRow is the snapshot row of a hire in flight.
+//   - Hire list: the recipes of an employer's block (Employer.Recipes) that a hired
+//     household may run for it, a subset of the role's own recipes.
+//   - Establishment: the most hired executions an employer has in progress at once
+//     (Employer.MaxHires), added to its own labour.
+//   - Vacancy: a position an employer posts for one recipe of its hire list, with the
+//     most it bids; HireRequest is the value the strategy returns, and VacancyRow the
+//     row of the labour round that counts what became of it.
+//   - Positions: the number of hired executions an employer can afford and supply
+//     this tick, the least of its establishment, its stock, its tools and its cash.
+//   - Labour offer: what a worker's strategy returns to be hired: the households it
+//     offers and the least wage it accepts. LabourOffer is the value.
+//   - Reservation wage: the least wage per household-tick a worker accepts, the value of
+//     its own best alternative; not the ledger's reservation, and the Reserve of a
+//     LabourOffer is the field.
+//   - Employer's bid: the most an employer pays for a position, the net value of the
+//     work per tick; not an order side, and the Bid of a HireRequest is the field.
+//   - Worker share: the share of the margin between the reservation wage and the bid
+//     that the worker receives, in basis points (Employer.WorkerShareBP); the wage is
+//     derived from it at formation and is never a field.
+//   - Labour round: the matching at P2.5a of the admitted labour offers and vacancies of
+//     a region, first fit, and the formation of the hires; LabourRound is the aggregate
+//     event of a region at P2.8b, with LabourRow its rows by worker role and VacancyRow
+//     its rows by employer role.
+//   - Lane (of the labour round): the households offering and the positions posted for
+//     one pair of a worker role and an employer role in a region; the lane of the
+//     solver and the lane of a merchant are not this.
+//   - Escrow (of a hire): the Escrow account that holds the bill of a hire, the wage
+//     times the households and the ticks, from formation to the end of the hire; it
+//     shares the free list of Escrow accounts with the delivery contracts.
+//   - Unmatched (household): a household that offered its labour and was not hired in
+//     the round; it works for itself that tick.
+//   - Unemployment: a measure of the households that offered and were not hired, never
+//     a state of an agent; the preset Unemployment reports it.
+//   - Hired yield: the factor Employer.HireYieldBP on the yield of a hired execution,
+//     in place of the trainee factor.
+//   - open_hire: the refusal of a relocation of an agent that is the principal of an
+//     open hire (ErrRegionBound).
+//   - Risk: the optional module that gives a shipment on an edge and a store of a class
+//     a chance to lose a share of its goods; its presence in Config.Modules (Risk)
+//     switches it on (spec-risk.md). "Hazard" is not used for a row.
+//   - Risk row: a route row (RouteRisk: an edge and a mode) or a store row (StoreRisk: a
+//     region and a store class); absence is no risk.
+//   - Exposure: what a strike can reach: a cargo in a Transit account, a trip account
+//     of a self-carried trip, or a stored part of a limited account; not a household
+//     base room, money, an estate, and not POL's or POP's "exposed" household.
+//   - Strike: the event that a draw of the world is below the effective probability of
+//     a row; a strike with no loss is still a strike.
+//   - Severity: the share of each commodity a strike takes, SeverityBP of a row.
+//   - Common row, unit row: a row drawn once a tick for everything it meets, or once for
+//     each shipment or store it meets (Common is the flag).
+//   - Effective probability: the strike probability of a row times its risk scale over
+//     10 000, at most 10 000; a row at 0 takes no draw.
+//   - Loss share: the LossBP of a shipment, fixed at dispatch from the struck rows of its
+//     path and applied at its arrival; the kept share is 10 000 less it.
+//   - Stored fraction: the part, in basis points, of a limited account's load that a
+//     store of a class holds, the larger of its mass and bulk fractions.
+//   - Expected loss: the loss share of a route in the mean over its rows, read by an
+//     agent as RouteRow.LossBP and RouteLoss; never applied to the ledger.
+//   - Risk scale: a slot between ticks, from 0 to MaxShockBP, that scales the strike
+//     probability of a row and never its severity (RouteRiskScale and StoreRiskScale
+//     are the entries of a call, RouteRiskScaled and StoreRiskScaled its events); not
+//     the capacity scale of RES nor the birth scale of POP.
+//   - Total loss: a shipment whose loss share is 10 000.
+//   - Trip account: the holdings of the traveller of a self-carried trip, which a strike
+//     takes a share of at arrival, the mode's vehicle left out (ShipmentArrived
+//     carries AccountLost).
+//   - StoreLoss: the event of one agent and store class struck at P8.1a.
+//   - Infrastructure: the optional module of fixed capital; its presence in Config.Modules
+//     (Infrastructure is its configuration) switches it on (spec-infrastructure.md).
+//   - Facility: a record of fixed capital with an owner, a region, a class and a condition;
+//     it is not a good and it has no ledger account (FacilityID is its ID, issued in order
+//     of creation and never reused; FacilityState, FacilityView and FacilityRow are its
+//     forms at a query, in a strategy's view and in the snapshot).
+//   - Facility class: data, keyed by ID: a kind and the fields the kind uses (FacilityClass
+//     is its configuration row, FacilityClassID its typed ID, an index in ascending ID
+//     order).
+//   - Kind (of a facility class): one of four constants, site, route, ground or store; the
+//     words are kinds and not entities of the world, and they are not the words of the
+//     other specs with the same spelling (a route is not a region edge, a site is not the
+//     site factor of a yield profile). FacilityKind is the closed set of the transitions of
+//     a facility, not this.
+//   - Site: a facility that a recipe needs (Recipe.Needs) and that serves a number of
+//     executions a tick.
+//   - Route (facility): a facility that speeds the transit factor of an edge.
+//   - Ground improvement: a facility that raises the effective capacity of an endowment.
+//   - Store facility: a facility that installs a store of a store class in its owner's
+//     account.
+//   - Condition: the wear units a facility has left, from 1 to the durability of its class
+//     (0 is ruin and the record is removed). The durability of a class is not the
+//     durability of a commodity.
+//   - Decay: the units of condition a facility loses each tick, used or not.
+//   - Use wear: the units a site loses for each execution it serves, at the start of the
+//     job.
+//   - Effect fraction: the share of its effect a facility gives, its condition over its
+//     durability, rounded down for a gain and up for a capacity.
+//   - Gain (of facilities): the capped sum of the effect fractions of the route or ground facilities that
+//     apply to a pair or an endowment, in basis points.
+//   - Ruin: the end of a facility, at condition 0; the ID is not reused.
+//   - Repair: a job whose completion restores condition to the principal's facilities,
+//     most worn first (FacilityRepair is its clause).
+//   - Build: a job whose completion creates facilities for its principal (FacilityBuild is
+//     its clause; InitialFacility is the row that creates them at construction, NewFacility
+//     the entry of a call).
+//   - Commissioning: the entry of a new facility into the effect tables, at the next
+//     facility step P8.3b, so a facility built in a tick acts from the next.
+//   - Effect table: the per-class and per-region capacities, gains and counts derived from
+//     the facility records; rebuilt at P8.3b and at a call, never saved.
+//   - Install, pending (of a store facility): a store facility is installed when the store
+//     is added to its owner's account; it is pending while the owner is away, has no room
+//     or has moved.
+//   - FacilityAdjustment, FacilityTransfer: the entries of the calls that set a condition
+//     and move a facility to another owner.
+//   - FacilityChanged, FacilityLimited: the events of a facility transition and of the
+//     facility step's aggregate of a region and class.
+//   - Body: a named set of households selected by role and region, with a limit on how many
+//     (its places), a limit on its members' trainees and an optional need. It has no account,
+//     agent ID or state of its own. Institutions is the module's configuration, Body its row,
+//     BodyID the typed ID of a body, an index in ascending order of its ID, and NoBody means
+//     none.
+//   - Member, outsider: a household that the membership round admitted to a body in the region
+//     it is in, and an eligible household that was not. Eligible: a household whose role is on
+//     the body's list and whose region is in its scope; a pseudo-agent never is.
+//   - Place (of a body), headroom (of a body): the households of a body's roles that a region of
+//     its scope may hold, 0 meaning no limit, and what is left of it for entry, births and a
+//     completion; a role in a body has the least of its class limit's and its body's.
+//   - Seniority: the order of admission to a body, by the tick the household took its role,
+//     then a stateless key of the tick and the agent, then the agent ID.
+//   - Right: the exclusive claim of a body, or of nobody (a prohibition), to one activity on
+//     one subject in one scope key. RightID is the typed ID of a right and Right its row.
+//   - Activity, subject, scope key: what a right gates (produce, sell, buy or train), the
+//     recipe, commodity or role it is about, and the region or jurisdiction it holds in.
+//   - In force, suspended: a right that is the innermost row of the region's chain, and one a
+//     consumer has set aside between ticks, which leaves its key open.
+//   - Principal, executor, Who: the household that starts a job and the one that works it
+//     (a hire); the field Who of a right says whose membership a produce right tests.
+//   - Control: a legal range for the price of one commodity in one scope, a cap and a floor in
+//     basis points of the effective reference price. ControlID is the typed ID of a control or
+//     a rate limit, one namespace, and Control is its row.
+//   - Rate limit: a legal cap on the yearly rate a borrower may accept in a scope. RateLimit is
+//     its row.
+//   - Legal range, cap, floor, clamp, legal price: the range of a control in minor units, the
+//     highest and lowest limit price it allows (the cap and the floor stay qualified: the
+//     settlement floor and the region cap are other things), the replacement of a bid's limit
+//     above the cap and of an ask's below the floor in the admission of the market, and the
+//     price that results.
+//   - Membership round: the pass at P1.9a that lapses and admits members by seniority.
+//   - Held completion: the completion of a traineeship that waits for headroom in the target
+//     role while the trainee keeps its trainer's place.
+//   - Need: the settlement flag a region's class must carry for a body to admit anyone there.
+//   - LegalLevel, RightSuspension: the entries of the two slots, SetLegalLevels and
+//     SetRightSuspensions, that set the cap and floor of a control and suspend a right.
+//   - BodyRow, LegalRow: the snapshot rows of a body in a region and of a changed legal level.
+//   - MembershipChanged, RightRefused, PriceControlled, LegalLevelSet, RightSuspensionSet: the
+//     events of the membership round, of the refusals of a right, of the clamps of a control
+//     and of the two slots.
 package economysim

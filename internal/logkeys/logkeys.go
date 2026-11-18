@@ -221,10 +221,43 @@ const (
 	Borrowers = "borrowers"
 )
 
+// The keys of the infrastructure module (spec-infrastructure.md 14.3): a facility ID
+// (int64), a facility class ID (string), the counts of facilities and of facility
+// classes in the construction summary, and the condition of a facility in units of its
+// durability (int64).
+const (
+	Facility        = "facility"
+	FacilityClass   = "facility_class"
+	Facilities      = "facilities"
+	FacilityClasses = "facility_classes"
+	Condition       = "condition"
+)
+
 // Rent is money per unit of an endowment, in minor units (int64), and Share a share
 // in basis points (int64), as the share of a title or of a strike, in the lines of
 // the tenure module.
 const (
 	Rent  = "rent"
 	Share = "share"
+)
+
+// Rows is a count of risk rows (route and store rows), in the construction summary
+// of the risk module (spec-risk.md 14.3).
+const Rows = "rows"
+
+// The keys of the institutions module (spec-institutions.md 11.3): the ID of a body, of
+// a right and of a control, the activity a right gates, the places of a body and the
+// households waiting for one, and the counts of bodies, rights and controls in the
+// construction summary. The reason value not_member is a log-only reason of this
+// module, in the rule table's row for reason.
+const (
+	Body     = "body"
+	Right    = "right"
+	Control  = "control"
+	Activity = "activity"
+	Places   = "places"
+	Waiting  = "waiting"
+	Bodies   = "bodies"
+	Rights   = "rights"
+	Controls = "controls"
 )

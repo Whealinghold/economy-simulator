@@ -1085,6 +1085,7 @@ schedule, the knots of an abundance curve). The groups are the registry's answer
 | S-STO08 | FlowTarget | Store | S | STO 7.1.2 12.3 | C1 | - |
 | S-EMP01 | Role | Hireable, Employer | S | EMP 13 | C1 | - |
 | S-EMP02 | Employer | Recipes | S | EMP 13 | C1 | - |
+| S-EMP03 | Employment | Hire | S | EMP 13 24.3 | C1 | - |
 | S-SET01 | Settlements | Classes, Regions | S | SET 8 | C1 | - |
 | S-SET02 | SettlementClass | ID, Enter, Flags, Limits | S | SET 8 | C1 | - |
 | S-SET03 | ClassLimit | Name, Value | S | SET 8 | C1 | - |

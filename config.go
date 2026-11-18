@@ -157,6 +157,26 @@ type Modules struct {
 	// nothing). It needs Modules.Resources. Its hash id is 14, whatever its place in
 	// this struct.
 	Tenure *TenureConfig
+	// Risk is the risk module: the chance that a shipment on an edge loses a share of
+	// its cargo and that a store loses a share of the goods held above the base room,
+	// as data (spec-risk.md). Nil is off; non-nil is on, even when empty (an empty
+	// module has no row and does nothing). Route rows need Modules.Transport and store
+	// rows need Modules.Storage. Its hash id is 16, whatever its place in this struct.
+	Risk *Risk
+	// Infrastructure is the infrastructure module: fixed capital with a condition,
+	// held by an owner and not a good, of four kinds (site, route, ground, store),
+	// built and repaired by recipes with the clauses Needs, Builds and Repairs
+	// (spec-infrastructure.md). Nil is off; non-nil is on, even when empty (an
+	// empty module has no class and does nothing). Its hash id is 17, whatever its
+	// place in this struct.
+	Infrastructure *Infrastructure
+
+	// Institutions is the institutions module: bodies that select households, the
+	// exclusive rights that a body holds over an activity, and legal prices
+	// (spec-institutions.md). Nil is off; non-nil is on, even when empty (an empty
+	// module has no body, right or control and does nothing). Its hash id is 21,
+	// whatever its place in this struct.
+	Institutions *Institutions
 }
 
 // Credit is the configuration of the credit module (spec-credit.md 4.1, 14). Its
@@ -217,6 +237,141 @@ type BorrowTerms struct {
 	// SlackTicks is the ticks added to the horizon of the borrower's gap, 0 to
 	// MaxCreditTerm.
 	SlackTicks int64
+}
+
+// Infrastructure is the configuration of the infrastructure module
+// (spec-infrastructure.md 12.1): the facility classes and the facilities that exist
+// at tick 0. Its presence switches the module on. The module has no tunable of its
+// own and no default class: an empty Classes is legal and inert. After construction
+// the classes are in ID order and the rows by key (spec-config.md 3.4).
+type Infrastructure struct {
+	// Classes are the facility classes, at most MaxFacilityClasses, canonical by ID;
+	// the index of a class in this order is its FacilityClassID. Hash id 1.
+	Classes []FacilityClass
+	// Initial are the facilities that exist at tick 0, at most MaxInitialRows, one
+	// row per key (Region, Class, Toward, Role), canonical by that key
+	// (spec-infrastructure.md 3.4.2). Hash id 2.
+	Initial []InitialFacility
+}
+
+// FacilityClass is a kind of facility with the fields its kind uses
+// (spec-infrastructure.md 3.1.1): plain data. A field that the kind does not use
+// must be its zero value (ErrFacilityShape) and a field it requires must be set
+// (spec-infrastructure.md 3.1.2). Every number is a placeholder (N-015, N-027).
+type FacilityClass struct {
+	// ID is [a-z][a-z0-9_]* of at most MaxIDLength bytes, unique among classes. Hash
+	// id 1.
+	ID string
+	// Kind is one of the four constants "site", "route", "ground" or "store" (a
+	// closed set, not an identifier). Required. Hash id 2.
+	Kind string
+	// Durability is the condition units of a new facility, 2 to MaxDurability.
+	// Required. The durability of a class is not the durability of a commodity. Hash
+	// id 3.
+	Durability int64
+	// Decay is the units lost each tick, used or not, 0 to Durability - 1. 0 is no
+	// decay. Hash id 4.
+	Decay int64
+	// WearPerUse is the units a site loses for each execution it serves, 0 to
+	// Durability; a site only. 0 is no use wear. Hash id 5.
+	WearPerUse int64
+	// Capacity is the executions per principal and tick that a whole facility
+	// serves, 1 to MaxFacilityCapacity; a site only, required for a site. It is not
+	// the capacity of an endowment or of a store. Hash id 6.
+	Capacity int64
+	// BoostBP is the gain of a whole facility, in basis points, 1 to MaxBoostBP; a
+	// route or a ground improvement only, required for both. Hash id 7.
+	BoostBP int64
+	// Modes are the transport modes a route speeds, canonical by ID: 1 to
+	// MaxRouteModes, a route only, each a mode of the transport module. Hash id 8.
+	Modes []string
+	// Resource is the resource whose endowment a ground improvement raises; a ground
+	// only, a resource of the resources module. Hash id 9.
+	Resource string
+	// Store is the store class a store facility installs; a store only, a store class
+	// of the storage module (spec-storage.md 3.2). Hash id 10.
+	Store string
+	// Needs is the settlement flag the region's class must carry to build a facility
+	// of the class (spec-infrastructure.md 8); empty is none. It needs
+	// Modules.Settlements and a flag some class carries. It is a flag, not the list
+	// of site classes of Recipe.Needs. Hash id 11.
+	Needs string
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// InitialFacility is a number of facilities of a class in a region at construction
+// (spec-infrastructure.md 3.4.2), the form of StartStock for capital. One row per key
+// (Region, Class, Toward, Role).
+type InitialFacility struct {
+	// Region is a region of the configuration, not an outside node. Required. Hash
+	// id 1.
+	Region string
+	// Class is a facility class. Required. Hash id 2.
+	Class string
+	// Toward is the region at the other end of the edge a route speeds; empty is
+	// every edge that leaves Region. A route only. Hash id 3.
+	Toward string
+	// Role is the role whose agents hold the facilities, round robin in ascending
+	// agent ID; empty is the region's estate. A store row needs a role. Hash id 4.
+	Role string
+	// Count is the facilities of the row, 1 to MaxInitialCount. Required. Hash id 5.
+	Count int64
+}
+
+// FacilityBuild is the clause of a recipe whose completion creates facilities
+// (spec-infrastructure.md 4.1.1).
+type FacilityBuild struct {
+	// Class is the facility class the completion creates. Required. Hash id 1.
+	Class string
+	// Toward is the region at the other end of the edge a route speeds; empty is
+	// every edge that leaves the principal's region. A route class only. Hash id 2.
+	Toward string
+}
+
+// FacilityRepair is the clause of a recipe whose completion restores condition
+// (spec-infrastructure.md 4.1.1).
+type FacilityRepair struct {
+	// Class is the facility class whose facilities the principal owns and the job
+	// restores. Required. Hash id 1.
+	Class string
+	// Units is the condition units one execution restores, 1 to the Durability of
+	// the class. Required. Hash id 2.
+	Units int64
+}
+
+// canonical returns a copy of the module with the classes by ID and the initial
+// rows by key, each route's modes sorted (spec-config.md 3.4,
+// spec-infrastructure.md 12.1), nil for nil. The mode lists are copied, so the copy
+// owns them.
+func (m *Infrastructure) canonical() *Infrastructure {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Classes = sortedBy(m.Classes, func(a, b FacilityClass) int { return cmp.Compare(a.ID, b.ID) })
+	for i := range out.Classes {
+		out.Classes[i].Modes = sortedBy(out.Classes[i].Modes, cmp.Compare[string])
+	}
+	out.Initial = sortedBy(m.Initial, func(a, b InitialFacility) int {
+		return cmp.Or(cmp.Compare(a.Region, b.Region), cmp.Compare(a.Class, b.Class),
+			cmp.Compare(a.Toward, b.Toward), cmp.Compare(a.Role, b.Role))
+	})
+	return &out
+}
+
+// canonicalFacility sorts the site classes a recipe needs and copies the two
+// clauses, so a change of the consumer's Config after construction moves no recipe.
+func (r *Recipe) canonicalFacility() {
+	r.Needs = sortedBy(r.Needs, cmp.Compare[string])
+	if r.Builds != nil {
+		b := *r.Builds
+		r.Builds = &b
+	}
+	if r.Repairs != nil {
+		p := *r.Repairs
+		r.Repairs = &p
+	}
 }
 
 // Technology is the configuration of the technology module (spec-technology.md
@@ -641,6 +796,74 @@ func (m *TenureConfig) canonical() *TenureConfig {
 	if out.MaxHolderShareBP == 0 {
 		out.MaxHolderShareBP = DefaultMaxHolderShareBP
 	}
+	return &out
+}
+
+// Risk is the configuration of the risk module (spec-risk.md 12.1). Its presence
+// switches the module on. It has no default: no row is no risk. After construction
+// the rows are in canonical order (spec-config.md 3.4). Every number is a
+// placeholder (N-015, N-027).
+type Risk struct {
+	// Routes are the route rows, one per (From, To, Mode), at most MaxRiskRows,
+	// canonical by those keys.
+	Routes []RouteRisk
+	// Stores are the store rows, one per (Region, Class), at most MaxRiskRows,
+	// canonical by those keys.
+	Stores []StoreRisk
+}
+
+// RouteRisk is the risk a shipment of one mode runs on one directed edge
+// (spec-risk.md 3.2.1). A direction and a mode are separate rows.
+type RouteRisk struct {
+	// From and To are the region IDs of a configured edge, neither an outside node.
+	From, To string
+	// Mode is a transport mode ID.
+	Mode string
+	// StrikeBP is the probability of a strike per shipment on the edge, in basis
+	// points, 1 to 10 000.
+	StrikeBP int64
+	// SeverityBP is the share of each commodity a strike takes, in basis points, 1 to
+	// 10 000.
+	SeverityBP int64
+	// Common says one draw a tick decides every shipment dispatched on the row
+	// (spec-risk.md 3.3), where false draws once per shipment.
+	Common bool
+}
+
+// StoreRisk is the risk the stores of one class in one region run each tick
+// (spec-risk.md 3.2.2).
+type StoreRisk struct {
+	// Region is a region ID that is not an outside node.
+	Region string
+	// Class is a store class ID.
+	Class string
+	// StrikeBP is the probability that a store of the class is struck in a tick, in
+	// basis points, 1 to 10 000.
+	StrikeBP int64
+	// SeverityBP is the share of the stored goods in the struck store that a strike
+	// takes, in basis points, 1 to 10 000.
+	SeverityBP int64
+	// Common says one draw a tick decides every store of the class in the region,
+	// where false draws once per store.
+	Common bool
+}
+
+// canonical returns a copy of the module with the route rows by (From, To, Mode)
+// and the store rows by (Region, Class), nil for nil (spec-config.md 3.4,
+// spec-risk.md 3.2.3). The regions, the modes and the store classes are in ID
+// order in a canonical configuration, so the order of an ID is the order of its
+// index, which is the order the spec names.
+func (m *Risk) canonical() *Risk {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Routes = sortedBy(m.Routes, func(a, b RouteRisk) int {
+		return cmp.Or(cmp.Compare(a.From, b.From), cmp.Compare(a.To, b.To), cmp.Compare(a.Mode, b.Mode))
+	})
+	out.Stores = sortedBy(m.Stores, func(a, b StoreRisk) int {
+		return cmp.Or(cmp.Compare(a.Region, b.Region), cmp.Compare(a.Class, b.Class))
+	})
 	return &out
 }
 
@@ -1388,6 +1611,21 @@ type Recipe struct {
 	// needs the resources module (spec-resources.md 3.1.3). Its hash id is 9; it
 	// is written only while the module is on.
 	Draws []Draw
+	// Needs are the site classes the principal must hold a usable facility of to
+	// start the recipe, by class ID in canonical order, at most MaxRecipeNeeds, each
+	// once (spec-infrastructure.md 4.1.2 B6). It needs the infrastructure module.
+	// Its hash id is 10; it is written only while the module is on.
+	Needs []string
+	// Builds is the clause of a recipe whose completion creates facilities
+	// (spec-infrastructure.md 4.1.1). Nil is none; at most one of Builds and
+	// Repairs. It needs the infrastructure module. Its hash id is 11; it is written
+	// only while the module is on, and when non-nil even if every field is zero.
+	Builds *FacilityBuild
+	// Repairs is the clause of a recipe whose completion restores condition to the
+	// principal's facilities (spec-infrastructure.md 4.1.1). Nil is none. It needs
+	// the infrastructure module. Its hash id is 12; it is written only while the
+	// module is on, and when non-nil even if every field is zero.
+	Repairs *FacilityRepair
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string
@@ -1682,6 +1920,7 @@ func (c Config) canonical() Config {
 		r.Outputs = sortedBy(r.Outputs, func(a, b Output) int { return cmp.Compare(a.Commodity, b.Commodity) })
 		r.Requires = sortedBy(r.Requires, func(a, b Tool) int { return cmp.Compare(a.Commodity, b.Commodity) })
 		r.Draws = sortedBy(r.Draws, func(a, b Draw) int { return cmp.Compare(a.Resource, b.Resource) })
+		r.canonicalFacility()
 	}
 	out.Yields = sortedBy(c.Yields, func(a, b YieldProfile) int {
 		return cmp.Or(cmp.Compare(a.Region, b.Region), cmp.Compare(a.Recipe, b.Recipe))
@@ -1743,6 +1982,9 @@ func (c Config) canonical() Config {
 	out.Modules.Credit = c.Modules.Credit.canonical()
 	out.Modules.Technology = c.Modules.Technology.canonical()
 	out.Modules.Tenure = c.Modules.Tenure.canonical()
+	out.Modules.Risk = c.Modules.Risk.canonical()
+	out.Modules.Infrastructure = c.Modules.Infrastructure.canonical()
+	out.Modules.Institutions = c.Modules.Institutions.canonical()
 	return out
 }
 
@@ -1966,4 +2208,178 @@ type OutsideGate struct {
 	// ScaleBP multiplies both quotes of the gate, 1 to MaxGateScaleBP. Default
 	// 10 000.
 	ScaleBP int64
+}
+
+// The activities a right reserves (spec-institutions.md 5.1.2), a closed set of rule
+// constants, and the values of Right.Who for a produce right (5.3).
+const (
+	// ActivityProduce reserves the start of a recipe; its Subject is a recipe.
+	ActivityProduce = "produce"
+	// ActivitySell reserves the sale of a commodity; its Subject is a commodity.
+	ActivitySell = "sell"
+	// ActivityBuy reserves the purchase of a commodity; its Subject is a commodity.
+	ActivityBuy = "buy"
+	// ActivityTrain reserves the training for a role; its Subject is a role.
+	ActivityTrain = "train"
+	// WhoPrincipal tests the membership of the account whose inputs a job uses.
+	WhoPrincipal = "principal"
+	// WhoExecutor tests the membership of the household that works.
+	WhoExecutor = "executor"
+	// WhoBoth tests both against the same body.
+	WhoBoth = "both"
+)
+
+// Institutions is the configuration of the institutions module
+// (spec-institutions.md 9): the bodies, the rights, the price controls and the rate
+// limits. Its presence switches the module on; the zero value is the module on with
+// nothing declared, which is the world without it. After construction the lists are
+// in canonical order (spec-config.md 3.4). Its hash id is 21.
+type Institutions struct {
+	// Bodies are the bodies, at most MaxBodies, canonical by ID; the index of a body in
+	// this order is its BodyID. Its hash id is 1.
+	Bodies []Body
+	// Rights are the rights, at most MaxRights, canonical by ID; the index of a right
+	// in this order is its RightID. Its hash id is 2.
+	Rights []Right
+	// Controls are the price controls, canonical by ID. With RateLimits they are at
+	// most MaxControls; the index of a control among the controls and then the rate
+	// limits is its ControlID. Its hash id is 3.
+	Controls []Control
+	// RateLimits are the legal caps on the rate of credit, canonical by ID. Its hash
+	// id is 4.
+	RateLimits []RateLimit
+	// OwnUseBound says a produce right also binds an own-use job (spec-institutions.md
+	// 5.5.2). Its hash id is 5; false is the default.
+	OwnUseBound bool
+}
+
+// Body is a named set of households selected by role and region, with a limit on how
+// many (spec-institutions.md 3.1): plain data. It has no account, no agent ID and no
+// state of its own.
+type Body struct {
+	// ID is [a-z][a-z0-9_]* of at most MaxIDLength bytes, unique among bodies. Its hash
+	// id is 1.
+	ID string
+	// Roles are the roles whose households may be members, canonical by ID: at least
+	// one, each defined and listed once, no (role, region) in two bodies. Its hash id is 2.
+	Roles []string
+	// Regions are the regions of the scope, canonical by ID: each defined, listed once
+	// and not an outside node. With Jurisdictions the scope is the union. Its hash id is 3.
+	Regions []string
+	// Jurisdictions are the jurisdictions whose regions join the scope, canonical by
+	// ID: each defined and listed once, and the module needs Modules.Polity. Its hash id is 4.
+	Jurisdictions []string
+	// Places is the most households of the body's roles that each region of the scope
+	// may hold, 0 to MaxHouseholds; 0 is no limit. Its hash id is 5.
+	Places int64
+	// MaxTrainees is the member's limit on trainees, 0 to 100; 0 is the role's alone.
+	// Its hash id is 6.
+	MaxTrainees int64
+	// Needs is the settlement flag the class of a region must carry for the body to
+	// admit anyone there; empty is none. It needs Modules.Settlements. Its hash id is 7.
+	Needs string
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// Right reserves an activity on a subject, in a scope, to the members of a body, or to
+// nobody when Body is empty (spec-institutions.md 5.1).
+type Right struct {
+	// ID is the identity, as a body's. Its hash id is 1.
+	ID string
+	// Body is the holder, a defined body; empty is a prohibition. Its hash id is 2.
+	Body string
+	// Activity is ActivityProduce, ActivitySell, ActivityBuy or ActivityTrain. Its hash
+	// id is 3.
+	Activity string
+	// Subject is a recipe (produce), a commodity (sell, buy) or a role (train). Its hash
+	// id is 4.
+	Subject string
+	// Region is the scope key, a defined region that is not an outside node; exactly
+	// one of Region and Jurisdiction is set. Its hash id is 5.
+	Region string
+	// Jurisdiction is the scope key as a jurisdiction; it needs Modules.Polity. Its hash
+	// id is 6.
+	Jurisdiction string
+	// Who is whose membership a produce right tests: WhoPrincipal (the default, and
+	// canonical writes it for a produce right), WhoExecutor or WhoBoth. It is empty on
+	// any other activity. Its hash id is 7.
+	Who string
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// Control is a legal range for the price of a commodity: a cap, a floor or both, in
+// basis points of the commodity's effective reference price (spec-institutions.md
+// 6.1.1).
+type Control struct {
+	// ID is the identity, as a body's, one namespace with the rate limits. Its hash id
+	// is 1.
+	ID string
+	// Commodity is a defined commodity. Its hash id is 2.
+	Commodity string
+	// Region is the scope key, a defined region that is not an outside node; exactly one
+	// of Region and Jurisdiction is set. Its hash id is 3.
+	Region string
+	// Jurisdiction is the scope key as a jurisdiction; it needs Modules.Polity. Its hash
+	// id is 4.
+	Jurisdiction string
+	// CapBP is the cap in basis points of the effective reference price, 0 to
+	// MaxBasisPoints; 0 is none. Its hash id is 5.
+	CapBP int64
+	// FloorBP is the floor, 0 to CapBP when a cap is set, else 0 to MaxBasisPoints; 0 is
+	// none. Its hash id is 6.
+	FloorBP int64
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// RateLimit is a legal cap on the yearly rate of a loan: the highest effective rate at
+// which a borrower may borrow in the scope (spec-institutions.md 6.1.1). It needs
+// Modules.Credit.
+type RateLimit struct {
+	// ID is the identity, as a control's. Its hash id is 1.
+	ID string
+	// Region is the scope key, a defined region that is not an outside node; exactly one
+	// of Region and Jurisdiction is set. Its hash id is 2.
+	Region string
+	// Jurisdiction is the scope key as a jurisdiction; it needs Modules.Polity. Its hash
+	// id is 3.
+	Jurisdiction string
+	// CapBP is the yearly cap, absolute, 0 to MaxCreditRateBP; 0 is interest-free. Its
+	// hash id is 4.
+	CapBP int64
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// canonical returns a copy of the module with the bodies, rights, controls and rate
+// limits sorted by ID and the lists of a body sorted (spec-config.md 3.4,
+// spec-institutions.md 3.2.1), nil for nil. The lists are copied, so the copy owns
+// them; a produce right with no Who gets WhoPrincipal, its default, and another right
+// with WhoPrincipal gets none, so the two spellings of a default hash alike.
+func (m *Institutions) canonical() *Institutions {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Bodies = sortedBy(m.Bodies, func(a, b Body) int { return cmp.Compare(a.ID, b.ID) })
+	for i := range out.Bodies {
+		b := &out.Bodies[i]
+		b.Roles = sortedBy(b.Roles, cmp.Compare[string])
+		b.Regions = sortedBy(b.Regions, cmp.Compare[string])
+		b.Jurisdictions = sortedBy(b.Jurisdictions, cmp.Compare[string])
+	}
+	out.Rights = sortedBy(m.Rights, func(a, b Right) int { return cmp.Compare(a.ID, b.ID) })
+	for i := range out.Rights {
+		switch r := &out.Rights[i]; {
+		case r.Activity == ActivityProduce && r.Who == "":
+			r.Who = WhoPrincipal
+		case r.Activity != ActivityProduce && r.Who == WhoPrincipal:
+			r.Who = ""
+		}
+	}
+	out.Controls = sortedBy(m.Controls, func(a, b Control) int { return cmp.Compare(a.ID, b.ID) })
+	out.RateLimits = sortedBy(m.RateLimits, func(a, b RateLimit) int { return cmp.Compare(a.ID, b.ID) })
+	return &out
 }

@@ -1,8 +1,13 @@
-// Package employment is the arithmetic of the payroll form of the employment
-// module (spec-employment.md 24): the budget of a payer and the split of the
-// pool among the workers. It works on primitive structs and knows no role, agent
-// or region; the root converts at the call (architecture.md 2.9). It takes no
-// random source and keeps no state.
+// Package employment is the arithmetic of the employment module. The payroll
+// form (spec-employment.md 24) is the budget of a payer and the split of the
+// pool among the workers (this file). The hire form (sections 3 to 17) is the
+// wage and the bill of a hire (wage.go), the order of the offers and vacancies
+// of a lane (order.go), first-fit matching with the fit, the closing and the
+// cap on open hires (match.go), the positions an employer posts (positions.go)
+// and the closed form of the wage and demand circuit, a test oracle (circuit.go).
+// It works on primitive structs and knows no role, agent or region; the root
+// converts at the call (architecture.md 2.9). It takes no random source and
+// keeps no state: the tie keys are computed by the root and passed in.
 package employment
 
 import "github.com/Whealinghold/economy-sim/internal/checked"

@@ -637,3 +637,71 @@ var (
 	// pseudo-agent other than the estate of the endowment's region.
 	ErrNotAHolder = errors.New("agent cannot hold a title")
 )
+
+// The sentinels of the risk module (spec-risk.md 13.1, 9.2). The module reuses
+// ErrModuleDependency, ErrUnknownRegion, ErrUnknownEdge, ErrUnknownMode,
+// ErrUnknownStoreClass, ErrOutsideNode, ErrDuplicateID, ErrOutOfBounds, ErrInStep,
+// ErrWorldFailed and ErrModuleOff.
+var (
+	// ErrRiskShape is a risk row whose StrikeBP or SeverityBP is outside 1 to 10 000.
+	ErrRiskShape = errors.New("risk row has the wrong shape")
+	// ErrUnknownRiskRow is a risk scale that names a key with no row, in a call of
+	// SetRouteRiskScales or SetStoreRiskScales.
+	ErrUnknownRiskRow = errors.New("unknown risk row")
+)
+
+// The sentinels of the infrastructure module (spec-infrastructure.md 13.1,
+// FR-CAP-003, FR-CAP-004), matched with errors.Is (N-075). The module reuses
+// ErrOutOfBounds, ErrDuplicateID, ErrUnknownMode, ErrUnknownResource,
+// ErrUnknownStoreClass, ErrUnknownRegion, ErrUnknownRole, ErrSameRegion,
+// ErrOutsideNode, ErrUnknownEdge, ErrModuleDependency, ErrEligibleHasTool,
+// ErrRecipeNoOutput and ErrOverflow.
+var (
+	// ErrFacilityShape is a facility class with a field its kind does not use or
+	// without one it requires, a clause that does not fit its class, both Builds and
+	// Repairs on a recipe, a Needs class that is not a site or is listed twice, an
+	// output of a Builds or Repairs recipe that is not a discard, or a store row with no
+	// role (spec-infrastructure.md 3.1.2, 4.1.2).
+	ErrFacilityShape = errors.New("facility configuration has the wrong shape")
+	// ErrFacilityNoCost is a recipe with Builds or Repairs and no input: capital is
+	// never free (spec-infrastructure.md 4.1.2 B2).
+	ErrFacilityNoCost = errors.New("build or repair recipe has no input")
+	// ErrFacilityHolder is an initial row whose role has no agent in the region, or a
+	// store row whose role has no base room (spec-infrastructure.md 3.4.2).
+	ErrFacilityHolder = errors.New("initial facilities have no holder")
+	// ErrFacilityCount is initial rows that add up to more than MaxFacilities, or a
+	// round robin that would give an agent more than MaxFacilitiesPerAgent
+	// (spec-infrastructure.md 3.2.3).
+	ErrFacilityCount = errors.New("too many facilities")
+	// ErrUnknownFacilityClass is a recipe clause or an initial row that names a
+	// facility class that is not configured.
+	ErrUnknownFacilityClass = errors.New("unknown facility class")
+)
+
+// The sentinels of the institutions module (spec-institutions.md 10.1, 7.1.1). They
+// are root sentinels matched with errors.Is; the module reuses ErrInvalidID,
+// ErrDuplicateID, ErrTooMany, ErrModuleDependency, ErrUnknownRole, ErrUnknownRegion,
+// ErrUnknownJurisdiction, ErrUnknownRecipe, ErrUnknownCommodity,
+// ErrUnknownSettlementFlag, ErrOutsideNode, ErrOutOfBounds and ErrModuleOff.
+var (
+	// ErrUnknownBody is a right's Body that names no body.
+	ErrUnknownBody = errors.New("unknown body")
+	// ErrBodyShape is a body with no role, or with no region in its scope (no
+	// Regions and no covering Jurisdictions).
+	ErrBodyShape = errors.New("body has the wrong shape")
+	// ErrBodyOverlap is a (role, region) that is in the scope of two bodies.
+	ErrBodyOverlap = errors.New("role and region are in two bodies")
+	// ErrRightShape is a right of the wrong shape: an activity outside the four, a
+	// subject of the wrong kind for the activity, both or neither of Region and
+	// Jurisdiction, or a Who other than principal on an activity other than produce.
+	ErrRightShape = errors.New("right has the wrong shape")
+	// ErrControlShape is a control or rate limit of the wrong shape: both or neither
+	// of Region and Jurisdiction, a FloorBP above a CapBP when both are set.
+	ErrControlShape = errors.New("control has the wrong shape")
+	// ErrUnknownControl is a control or rate limit that is not configured, named by a
+	// call (spec-institutions.md 7.1.1).
+	ErrUnknownControl = errors.New("unknown control")
+	// ErrUnknownRight is a right that is not configured, named by a call
+	// (spec-institutions.md 7.1.1).
+	ErrUnknownRight = errors.New("unknown right")
+)

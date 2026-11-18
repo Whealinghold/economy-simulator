@@ -292,6 +292,9 @@ var invariantTable = []invariantCase{
 	{"one-demand+employment", packOneDemandEmployment, 4, 0, "", nil},
 	{"one+population", packOnePopulation, 4, 0, "", nil},
 	{"one+storage", packOneStorage, 4, 0, "", nil},
+	// Plan 3-crd Phase 10: the credit overlay, where claims form, fall due, are written off and are
+	// waterfalled at a removal, so the conservation of money holds across every claim operation.
+	{"one+credit", packOneCredit, 4, 0, "", nil},
 	{"three", []string{"base.toml", "three.toml", "warm-three.toml"}, 4, 0, "", nil},
 	{"two+trade", tradeWarm("two"), 4, 0, "", nil},
 	{"two+transport", packTwoTransport, 4, 0, "", nil},
