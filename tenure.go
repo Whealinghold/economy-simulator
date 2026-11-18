@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/Whealinghold/economy-sim/internal/checked"
 	tnr "github.com/Whealinghold/economy-sim/internal/tenure"
 )
 
@@ -288,7 +289,7 @@ func (w *World) auditTenure() error {
 		if sum > wholeBP {
 			return fmt.Errorf("tenure: endowment %s: the shares sum to %d, above %d", w.endowmentName(cell), sum, wholeBP)
 		}
-		if c := t.rentCounts(cell); c.paid+c.forfeited != c.due {
+		if c := t.rentCounts(cell); !rentAudited(c) {
 			return fmt.Errorf("tenure: endowment %s: rent paid %d and forfeited %d, want the %d due (rent times the units charged)", w.endowmentName(cell), c.paid, c.forfeited, c.due)
 		}
 	}
@@ -323,4 +324,11 @@ func holdsTitle(c *Config, role string) bool {
 	return slices.ContainsFunc(c.Modules.Tenure.Holdings, func(h Holding) bool {
 		return h.Holder.Kind == HolderKindRole && h.Holder.Role == role
 	})
+}
+
+// rentAudited is the identity of FR-LND-037 for the counts of one endowment: the rent paid
+// plus the rent forfeited is the rent due. A sum past int64 is a failed audit.
+func rentAudited(c tenureCount) bool {
+	sum, ok := checked.Add(c.paid, c.forfeited)
+	return ok && sum == c.due
 }
