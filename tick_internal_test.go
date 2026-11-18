@@ -66,17 +66,17 @@ func readSpecPositions(t *testing.T) []specPosition {
 }
 
 // isStraightLinePart says whether name is a part of the straight line of tick.go:
-// one of the five parts that positions hands over to, and with withRoot positions
+// one of the seven parts that positions hands over to, and with withRoot positions
 // itself.
 func isStraightLinePart(name string, withRoot bool) bool {
 	switch name {
-	case "positionsFlows", "positionsProduce", "positionsTrade", "positionsSettle", "positionsTail":
+	case "positionsFlows", "positionsProduce", "positionsPlan", "positionsTrade", "positionsSettle", "positionsTail", "positionsEnd":
 		return true
 	}
 	return withRoot && name == "positions"
 }
 
-// straightLineCalls reads the functions positions, positionsFlows, positionsProduce, positionsTrade, positionsSettle and positionsTail of tick.go with go/parser and
+// straightLineCalls reads the functions positions, positionsFlows, positionsProduce, positionsPlan, positionsTrade, positionsSettle, positionsTail and positionsEnd of tick.go with go/parser and
 // returns the position IDs of the calls made on the receiver, in source order,
 // and the names of any other call it makes. The ID of p21Complete is "P2.1".
 func straightLineCalls(t *testing.T, src string) (ids, others []string) {

@@ -241,6 +241,10 @@ const (
 	Share = "share"
 )
 
+// Rows is a count of risk rows (route and store rows), in the construction summary
+// of the risk module (spec-risk.md 14.3).
+const Rows = "rows"
+
 // The keys of the institutions module (spec-institutions.md 11.3): the ID of a body, of
 // a right and of a control, the activity a right gates, the places of a body and the
 // households waiting for one, and the counts of bodies, rights and controls in the

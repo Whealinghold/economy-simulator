@@ -621,6 +621,13 @@ const (
 	MaxTitleTransfers = 1_024
 )
 
+// The bound of the risk module (spec-risk.md 12.2). It is a placeholder (N-015, N-027).
+const (
+	// MaxRiskRows is the most rows of each table of the module, the route rows and
+	// the store rows.
+	MaxRiskRows = 4_096
+)
+
 // The bounds of the infrastructure module (spec-infrastructure.md 12.2). All are
 // placeholders (N-015, N-027), chosen so that every product of the spec fits in 128
 // bits (spec-infrastructure.md 13.3).

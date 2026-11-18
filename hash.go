@@ -532,13 +532,18 @@ func pairsLaterModules(e *encoder, m Modules) {
 	pairsLastModules(e, m)
 }
 
-// pairsLastModules writes the pairs of the modules of ids 15, 17, 19, 21, 24 and 25 of
+// pairsLastModules writes the pairs of the modules of ids 15, 16, 17, 19, 21, 24 and 25 of
 // Modules, after those pairsLaterModules writes (a continuation for the Lizard
 // limit).
 func pairsLastModules(e *encoder, m Modules) {
 	if m.Credit != nil {
 		e.id(15)
 		pairsCredit(e, *m.Credit)
+		e.end()
+	}
+	if m.Risk != nil {
+		e.id(16)
+		pairsRisk(e, *m.Risk)
 		e.end()
 	}
 	if m.Infrastructure != nil {
@@ -782,6 +787,29 @@ func pairsTenure(e *encoder, t TenureConfig) {
 	e.num(5, t.RentCeilingBP)
 	e.flag(6, t.OwnUseExempt)
 	e.num(7, t.MaxHolderShareBP)
+}
+
+// pairsRisk writes the pairs of a Risk: Routes 1, Stores 2 (spec-config.md 8.2.2). A
+// RouteRisk has From 1, To 2, Mode 3, StrikeBP 4, SeverityBP 5 and Common 6; a
+// StoreRisk has Region 1, Class 2, StrikeBP 3, SeverityBP 4 and Common 5. The lists
+// are written in canonical order, and the pointer is written even when the module is
+// empty, so a module that is on differs from one that is off.
+func pairsRisk(e *encoder, r Risk) {
+	encodeList(e, 1, r.Routes, func(e *encoder, row RouteRisk) {
+		e.text(1, row.From)
+		e.text(2, row.To)
+		e.text(3, row.Mode)
+		e.num(4, row.StrikeBP)
+		e.num(5, row.SeverityBP)
+		e.flag(6, row.Common)
+	})
+	encodeList(e, 2, r.Stores, func(e *encoder, row StoreRisk) {
+		e.text(1, row.Region)
+		e.text(2, row.Class)
+		e.num(3, row.StrikeBP)
+		e.num(4, row.SeverityBP)
+		e.flag(5, row.Common)
+	})
 }
 
 // pairsPolity writes the pairs of a PolityConfig: Jurisdictions 1, Members 2.
