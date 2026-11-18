@@ -50,14 +50,14 @@ PR description.
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358 |
-| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349 |
-| CHK | N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360 |
+| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371 |
+| CHK | N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241 |
 | CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361 |
@@ -68,12 +68,12 @@ PR description.
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
-| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323 |
+| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370 |
 | LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366 |
-| MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
+| MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
-| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349 |
+| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372 |
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
@@ -92,9 +92,9 @@ PR description.
 | SUB | N-121, N-228, N-268, N-244 |
 | TEC | N-358, N-359, N-360, N-361 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322 |
-| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346 |
-| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360 |
+| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372 |
 
 ## Open notes
 
@@ -1036,6 +1036,7 @@ PR description.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: `JobRequest` has no `Offer` or `Hire` in the slice. Left open for EMP.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open (EMP, Stage 3). `Work` is called only for a free agent at P2.5, as written.
 - **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form (`spec-employment.md` 24) posts no vacancy and calls no `Work`, so it neither needs nor settles this. Left open for the hire form.
+- **Update (2026-11-18, plan 3-emp Phase 1):** applied for the hire form: an employer with a job in progress posts no vacancy, because `Work` is called only for a free agent (`spec-employment.md` 4.1.3, `spec-agents.md` 7.1.10); the employer's own labour is the fallback and the establishment (`MaxHires`) is added to it. WLD 6.4 and AGT 6.2 do not change. Left open until the default strategy of PR 5 is built, then close.
 
 ### N-145 Profit with no outlet limits hired employment
 
@@ -1057,6 +1058,7 @@ PR description.
 - **Note:** `spec-welfare-and-wages.md` 6 defines `InKind` and a mechanism for the trainee's board only. The rule that would work for a wage is in `spec-employment.md` 22 item 1; the reason `wage_in_kind` is reserved.
 - **Update (2026-10-17, plan 1-6 Phase 1):** read: `InKind` is validated and unused; no mover and no position, so pay in kind is not built. Left open.
 - **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form pays money only (`wage_pay`); pay in kind stays unbuilt. Left open for the hire form.
+- **Update (2026-11-18, plan 3-emp Phase 1):** read: the hire form pays money only (`wage_pay`, `wage_escrow`, `wage_refund`); `wage_in_kind` stays reserved, `InKind` above 0 on a `Hireable` role raises the warning `inkind_wage_ignored` (`spec-employment.md` 14.2). Left open.
 
 ### N-148 The employer role's observed wage includes its profit on hands
 
@@ -1325,6 +1327,7 @@ PR description.
 - **Note:** In version 1 a tax on a reason is a tax on the holder role; a hook at the transfer would let a flow tax one ledger reason whoever pays it.
 - **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form's `wage_pay` is one more reason a hook at the transfer could tax. Not built; left open.
 - **Update (2026-11-14, plan 3-lnd Phase 1):** read: the charge of rent is one function over (payer, payee, units, rent) in the plan (plan 3-lnd D5), so a hook that taxes a reason is one call in it later; not built here. Left open for FIS.
+- **Update (2026-11-18, plan 3-emp Phase 1):** read: the transfer of `wage_pay` of the hire form is one function in `employment_hire.go` (plan 3-emp D5), so a hook that taxes a reason is one call in it later; not built here. Left open for FIS.
 
 ### N-188 Incidence is statutory; a duty is not in any limit price
 
@@ -1346,6 +1349,7 @@ PR description.
 - **Note:** In the admission of a market (and of the contract and credit rounds) a bid is capped and an ask floored; any later spec that forms a price from two limits (a rent, a wage, a fee, a tariff) applies the same clamp at its own admission. Never a rejection and never a rule of the strategy.
 - **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form has no price formed from two limits, so no wage control applies to it. Left open for the hire form.
 - **Update (2026-11-14, plan 3-lnd Phase 1):** read: LND applies no legal clamp to the rent in force (`spec-land.md` 5.2.2: posted rent times scale); a legal clamp of rent is ORG's. Left open for ORG and EMP.
+- **Update (2026-11-18, plan 3-emp Phase 1):** read: the hire form forms a wage from two limits (the reservation and the bid, `spec-employment.md` 5.4) and applies no legal clamp; a wage control is ORG's, a named slot beside check 2 of 5.5 (plan 3-emp D7). Left open for ORG.
 
 ### N-191 A right is read at a start, an order and a place
 
@@ -1354,6 +1358,7 @@ PR description.
 - **Note:** Never at a continuation, a completion, a holding, a consumption or a shipment; a job in progress runs to its end.
 - **Update (2026-10-16, plan 1-5 Phase 1):** read for the production row; left open for ORG. `not_permitted` is a pair appended after `not_on_role` and before `zero_yield` (`spec-production.md` 4.2.1, position 2); a continuation, a completion and a holding read no right.
 - **Update (2026-11-14, plan 3-lnd Phase 1):** read: LND reads no right at a start in version 1; `no_title` and `rent_funds` come after `no_endowment` and before CAP's build reasons (`spec-land.md` 4.5.1). Left open for ORG.
+- **Update (2026-11-18, plan 3-emp Phase 1):** read: the hire form reads a right at the formation of a hire only, as check 2 `not_permitted` of 5.5 (a start of the worker's job); a continuation, a completion or a wage release reads none. The check is a named slot built with ORG. Left open for ORG.
 
 ### N-192 A body's places are a second limit into the headroom
 
@@ -1378,6 +1383,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-institutions.md` 5.8, 6.8, 7.1.3.
 - **Note:** A charter over carriage (`ship`), over a store or over a facility, a wage control, a holder that is a named household and a call that admits or expels a member are reserved with their shapes. The facility clause overlaps N-173, kept apart on purpose.
 - **Update (2026-11-12, plan 2-28 Phase 1):** a wage control is not offered by the payroll form either. Left open.
+- **Update (2026-11-18, plan 3-emp Phase 1):** read: the hire form offers no wage control either (`spec-employment.md` 5.6). Left open.
 
 ### N-195 Instalment claims for a credit-financed project
 
@@ -2023,6 +2029,7 @@ PR description.
 - **Raised:** 2026-11-09, plan 2-18 D560.
 - **Note:** `Unemployment`, `WageBill`, `Employment` and `Losses` (rows 22 to 25 of `spec-indicators.md` 9.1, FR-IND-056 to FR-IND-059) need events and a reason that do not exist before Stage 3 (`LabourRound`, `StoreLoss`, the `Lost` fields, the reason `loss`). The plan of EMP and the plan of RSK/STO each add, in the same change, their `Observe` case in `indicator/tally_observe.go`, the tally rows, the preset and its tests; the roadmap rows name them.
 - **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form emits `PayrollPaid`, not `LabourRound`, so presets 22 to 25 stay with the hire form and Stage 3. Left open.
+- **Update (2026-11-18, plan 3-emp Phase 1):** read: the three presets of the hire form (`Unemployment`, `WageBill`, `Employment`) are built in PR 6 of plan 3-emp, with the `LabourRound` case of `indicator/tally_observe.go`; `Losses` stays with RSK and STO. Left open.
 
 ### N-328 `internal/measure` imports `internal/checked`
 
@@ -2235,6 +2242,7 @@ PR description.
 - **Areas:** EMP
 - **Raised:** 2026-11-12, plan 2-28 Phase 1 (`spec-employment.md` 24); narrowed 2026-11-12, plan 2-28 Phase 3.
 - **Note:** The payroll form owed the position, the catalogue rows (`PayrollPaid`, `economysim.payroll.paid`), the reason `wage_pay` and the pooled-wage hook; Phase 3 built them (`p41bPayroll`, `internal/ledger.WagePay` with the row agent to agent, rank and code 23). What stays owed: the hire form appends `MaxOpen` to `Employment` and the hire block to `Employer` with the next free ids, adds the pairing escrow to agent to the `wage_pay` row of `internal/ledger` (the spec row already names both), and does not reuse `PayrollBP` for `WorkerShareBP`.
+- **Update (2026-11-18, plan 3-emp Phase 1):** applied in the spec, not yet in code: `spec-employment.md` 13, 24.3 and `spec-config.md` 8.2.2 take the next free ids (`Employment.Hire` 1, `MaxOpen` 2; `Employer.Recipes` 2, `MaxHires` 3, `WorkerShareBP` 4, `HireYieldBP` 5) and `PayrollBP` is written only when non-zero (N-371). The `wage_pay` row takes the second pairing in PR 3. Left open until PR 3.
 
 ### N-356 The payroll-aware solver: what it assumes and where it stops
 
@@ -2248,6 +2256,7 @@ PR description.
 - **Raised:** 2026-11-13, plan 3-sto Phase 1 (E1, measured with `lizard -l go -C 10 -a 8 -L 100 -w`).
 - **Note:** `fillAgentView` and `removeAgent` of `fanin.go` are at CCN 10 today, one guarded call (`if w.x != nil`) from the limit of N-243; `ckLines` of `transport_request.go` is at 9, `plannedRecipe` of `strategy_default.go` at 9, `limitList` of `production.go` at 9, and `ckProvisioned` of `transport_request.go` is already at 11. Every Stage 3 module that adds a guarded call to one of them, as ADR 0010 allows, forces a refactor first (a fixed-order table of module fillers called in a loop, or a split by concern) in the same change. The first module to need it makes it, in its own commit before the hook; the others reuse it.
 - **Update (2026-11-14, plan 3-lnd Phase 1, E3):** measured at `d996592` with the same command: `startJob` (`phase_production.go`) is at CCN 10, `removeAgent` at 10, `limitList` and `start` of `production.go` at 9, `consider` and `plannedRecipe` of `strategy_default.go` at 9, `checkpointCross` of `checkpoint_restore.go` already at 14. LND's hooks H3, H11 and H12 land there, so PR 3 and PR 4 of plan 3-lnd start with refactor-first commits; the first of STO and LND to land does the `removeAgent` one.
+- **Update (2026-11-18, plan 3-emp Phase 1, E8):** measured at `de1b1a9` with `lizard -l go -C 8 -a 8 -L 80`: `positionsProduce` and `positionsTail` of `tick.go`, `fillAgentView` of `fanin.go` and `auditModules` of `moneyflow.go` are at CCN 10; `classWithoutIncome` and `workAgent` at 9; `startJob` (the closure at `phase_production.go:400`), `removeAgent`, `moveAgent` at 8; `p27Start` at 4, `takeRole` at 4. The local run does not list `start` and `limitList` of `production.go`. Plan 3-emp budgets a refactor-first commit for each function at 10 before its hook (PR 3: `positionsProduce`, `auditModules`; PR 5: `fillAgentView`, `positionsTail` if P2.8b lands there).
 
 ### N-362 A decision to acquire a title is SAV's, with CRD's credit
 
@@ -2306,6 +2315,30 @@ PR description.
 - **Raised:** 2026-11-17, plan 3-lnd PR 4, owner decisions delegated to the supervisor.
 - **Note:** `Titles` of a counterparty or a treasury is `ErrNotAHolder`, as in `spec-land.md` 6.3.4 (9.3 said `ErrUnknownAgent`). A `TransferTitles` price between one account (a release by the pool) moves nothing and the event keeps the agreed price (6.3.2). `ErrInsufficientFunds` stays unexported at the root; a consumer matches it through `errors.Is` on the call's error. The ledger row of `title_sale` reads "agent to agent, or estate on release (the pool pays)". An enclosure is paid to the pool (6.3.2); the row says what the supervisor chose and 6.3.2 owns the rule.
 
+### N-369 A hire world keeps the payroll duals out of the solver
+
+- **Areas:** VIA, EMP
+- **Raised:** 2026-11-18, plan 3-emp Phase 1 (`spec-employment.md` 22 item 7, ADR 0012).
+- **Note:** `SolveSteadyState` reads the payroll of the employment module from the configuration (ADR 0012) for the payroll form only. In the hire form the solver row is not changed: its report says nothing about wages, and the steady state with employers is not a zero-profit state (N-146). A wage-aware solver for the hire form needs the wage as a derived value of the round, which the solver cannot see; a later plan takes it up only if a pack needs it.
+
+### N-370 The escrow free list is shared by MER and EMP
+
+- **Areas:** EMP, MER, LED, CHK
+- **Raised:** 2026-11-18, plan 3-emp Phase 1 (`spec-employment.md` 12, plan D6).
+- **Note:** An Escrow account is free when no open contract and no open hire uses it. The free list is derived, never saved: `contract_settle.go` derives it in two places and `checkpoint_restore.go` checks that an Escrow account is used by a contract; the hire form adds the hire list as a second user through one helper, and with MER off and the hire form on the restore check must accept an Escrow account. The audit of "exactly `price * quantity`" (FR-MER-045) is for a contract's account only. Any later module that holds money in an Escrow account (CRD, FIS) goes through the same helper.
+
+### N-371 The employment form selector and the one-form rule
+
+- **Areas:** EMP, CFG
+- **Raised:** 2026-11-18, plan 3-emp Phase 1 (D1, `spec-employment.md` 24.3).
+- **Note:** `Employment.Hire` selects the hire form and the module is the payroll form without it. A world runs one form: the payroll pays any worker with a job in progress, a hired job included, so both together would pay twice. A block with the fields of the other form is `ErrEmploymentShape`. `PayrollBP` is written to the hash only when non-zero; every valid payroll block has it at least 1, so no valid payroll hash moves. A world that wants both forms is a later spec.
+
+### N-372 The event order of a removal: the rule file and the code win over `spec-employment.md` 6.5.2
+
+- **Areas:** EMP, WLD, OBS
+- **Raised:** 2026-11-18, plan 3-emp Phase 1 (D10).
+- **Note:** The first draft of 6.5.2 listed the worker's `HireEnded` before `TraineeshipEnded` and `ContractSettled`. `observability-and-logging.md` 4.3 and `removeAgent` put step 2c after the tenure call (`TitleTransferred`) and before `dropClaims`, so the order is: the job's `RecipeAbandoned`, `TraineeshipEnded`, `ContractSettled`, `TitleTransferred`, `HireEnded` (the worker's side, then the employer's in ascending hire ID), `LoanEnded`, `LoanPassed`, `CoverEnded`, `FacilityChanged`, `AgentBankrupted`, `EstateOpened`. 6.5.2 is corrected in the same change (Phase 1). A module that adds a step to a removal appends it to this order and does not insert it.
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2316,4 +2349,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: f85c4b2d7217a479ec7c16dc
+NOTES-TAG: 54e3696d50f09a906d0f154e
