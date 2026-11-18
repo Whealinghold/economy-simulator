@@ -33,8 +33,8 @@ var validationSentinels = []error{
 	economysim.ErrRoomShape, economysim.ErrNotLimited, economysim.ErrUnknownStoreClass,
 	economysim.ErrUnknownSettlementClass, economysim.ErrUnknownSettlementFlag, economysim.ErrUnknownLimit,
 	economysim.ErrTechShape, economysim.ErrTechRecipeOverlap,
-	economysim.ErrCreditShape,
-	economysim.ErrTitleShares, economysim.ErrTitleCap,
+	economysim.ErrCreditShape, economysim.ErrModeShape,
+	economysim.ErrTitleShares, economysim.ErrTitleCap, economysim.ErrRiskShape,
 }
 
 // validationErrors returns every *ValidationError of an error, in the order of
