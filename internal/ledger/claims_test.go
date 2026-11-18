@@ -584,7 +584,7 @@ func TestMarkOverdue_SetsOnlyTheFirstTick(t *testing.T) {
 // reservation, then money or goods, then an open claim; and that an account
 // closes once its claims have ended, with no account opened for a claim.
 //
-// Requirement: FR-LED-009
+// Requirement: FR-LED-009, FR-CRD-007
 func TestClose_ChecksClaimLast(t *testing.T) {
 	t.Parallel()
 	c := newCfix(t)
