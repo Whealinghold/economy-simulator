@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -15,16 +16,16 @@ import (
 //
 // Requirement: FR-EMP-002, FR-EMP-003, FR-EMP-004, FR-EMP-059
 func FuzzValidateEmployment(f *testing.F) {
-	f.Add(true, int64(1_000), int64(0), int64(4), int64(5_000), int64(10_000), "prepare", "prepare")
-	f.Add(false, int64(0), int64(5_000), int64(0), int64(0), int64(0), "", "")
-	f.Add(true, int64(-1), int64(5_000), int64(1_001), int64(0), int64(100_001), "nowhere", "dig_mineral")
-	f.Add(true, int64(1<<62), int64(-1), int64(1<<62), int64(1<<62), int64(1<<62), "prepare", "prepare_basic")
-	f.Fuzz(func(t *testing.T, hire bool, maxOpen, payrollBP, maxHires, share, yield int64, r1, r2 string) {
+	f.Add(true, int64(1_000), int64(0), int64(4), int64(5_000), int64(10_000), "prepare,prepare")
+	f.Add(false, int64(0), int64(5_000), int64(0), int64(0), int64(0), ",")
+	f.Add(true, int64(-1), int64(5_000), int64(1_001), int64(0), int64(100_001), "nowhere,dig_mineral")
+	f.Add(true, int64(1<<62), int64(-1), int64(1<<62), int64(1<<62), int64(1<<62), "prepare,prepare_basic")
+	f.Fuzz(func(t *testing.T, hire bool, maxOpen, payrollBP, maxHires, share, yield int64, recipes string) {
 		c := hireConfig()
 		c.Modules.Employment = &economysim.Employment{Hire: hire, MaxOpen: maxOpen}
 		e := roleOf(&c, "cook").Employer
 		e.PayrollBP, e.MaxHires, e.WorkerShareBP, e.HireYieldBP = payrollBP, maxHires, share, yield
-		e.Recipes = []string{r1, r2}
+		e.Recipes = strings.Split(recipes, ",")
 		err := c.Validate()
 		var ve *economysim.ValidationError
 		if err != nil && !errors.As(err, &ve) {
