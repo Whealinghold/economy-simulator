@@ -450,6 +450,16 @@ func (t *tenure) settleCell(cell int, recs []rentStart) {
 	}
 }
 
+// addCount adds a money amount to a count of the tick; a sum past int64 is a broken
+// invariant (architecture.md rule 3.5), never a wrap.
+func addCount(sum, v int64) int64 {
+	r, ok := checked.Add(sum, v)
+	if !ok {
+		invariant("a rent count of the tick does not fit")
+	}
+	return r
+}
+
 // payRent moves the rent of one triple from the principal of the tenant's start to the
 // lessor (spec-land.md 5.3.3): nothing for an exempt request or to oneself, the part a
 // payee at the balance bound cannot receive is forfeited and not charged. The payer's
@@ -463,7 +473,7 @@ func (t *tenure) payRent(c *tenureCount, x rentStart, lessor AgentID, units int6
 	if !fits {
 		invariant("the rent of a triple does not fit after the cap of the start")
 	}
-	c.due += due
+	c.due = addCount(c.due, due)
 	to := t.account(lessor, t.regionOf(x.cell))
 	v, err := w.ledger.Account(to)
 	if err != nil {
@@ -473,14 +483,14 @@ func (t *tenure) payRent(c *tenureCount, x rentStart, lessor AgentID, units int6
 	if !ok {
 		invariant("the balance of a lessor is out of range after validation")
 	}
-	c.forfeited += lost
+	c.forfeited = addCount(c.forfeited, lost)
 	if paid == 0 {
 		return
 	}
 	if err := w.ledger.Transfer(x.account, to, paid, ledger.Rent); err != nil {
 		invariant("the ledger refused the rent of a start whose rent was reserved: " + err.Error())
 	}
-	c.paid += paid
+	c.paid = addCount(c.paid, paid)
 	t.noteFlow(x, lessor, paid)
 	w.welfare.addInputSpend(int(x.payer), paid)
 	if lessor >= AgentID(t.regions) {
