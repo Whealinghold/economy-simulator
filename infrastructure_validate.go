@@ -469,7 +469,10 @@ func (v *validator) facilityHolders(m *Infrastructure) {
 	agents := make(map[[2]string]int64, len(v.c.Groups)) // lookup only
 	for _, g := range v.c.Groups {
 		if a, _, _, ok := groupShape(v.c.World, g); ok {
-			agents[[2]string{g.Region, g.Role}] = a
+			// A repeated (region, role) is reported by phase 3 of Validate; its
+			// agents add up, as in the settlement census, so the answer does not
+			// depend on which of the copies comes last.
+			agents[[2]string{g.Region, g.Role}] += a
 		}
 	}
 	perAgent := make(map[[2]string]int64, len(m.Initial)) // the first agent's count; lookup only

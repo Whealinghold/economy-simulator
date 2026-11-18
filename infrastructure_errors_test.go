@@ -61,6 +61,14 @@ func TestValidateInfrastructure_Order(t *testing.T) {
 			c.Modules.Storage = nil
 			recipeOf(c, "build_mill").Inputs = nil
 		}, economysim.ErrModuleDependency, economysim.ErrFacilityNoCost},
+		{"a repeated group does not make a holder count of its own", func(c *economysim.Config) {
+			c.Modules.Infrastructure.Initial[2].Count = 1_000
+			for _, g := range slices.Clone(c.Groups) {
+				if g.Role == "grower" {
+					c.Groups = append(c.Groups, g)
+				}
+			}
+		}, economysim.ErrDuplicateID, economysim.ErrFacilityCount},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
