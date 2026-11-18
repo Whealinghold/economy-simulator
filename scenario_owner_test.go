@@ -37,6 +37,8 @@ var stageTwoScenarios = []struct {
 	{107, 111, "plan 3-lnd (LND-S1 to LND-S5)"},
 	// S148 (TEC-S1) in the second pull request of plan 3-tec; S149 to S154 in the third.
 	{148, 154, "plan 3-tec (TEC-S1 to TEC-S7)"},
+	// S114 to S118 (CRD-S1 to CRD-S5) in the fifth pull request of plan 3-crd.
+	{114, 118, "plan 3-crd (CRD-S1 to CRD-S5)"},
 	// S91 to S96 (STO-S1 to STO-S6) in the fifth pull request of plan 3-sto.
 	{91, 96, "plan 3-sto (STO-S1 to STO-S6)"},
 }

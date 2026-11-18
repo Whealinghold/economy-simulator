@@ -146,8 +146,13 @@ func TestExamples_PackCopiesAgree(t *testing.T) {
 	if err != nil {
 		t.Fatalf("glob the colony pack: %v", err)
 	}
-	if len(extra) != 2 {
-		t.Errorf("colony pack has %d files %v, want the 2 copies of testdata/chains/second/", len(extra), extra)
+	// The two copies and pack/credit.toml, the credit layer of the borrowing player, which is the
+	// example's own and is no copy.
+	if len(extra) != 3 {
+		t.Errorf("colony pack has %d files %v, want the 2 copies of testdata/chains/second/ and credit.toml", len(extra), extra)
+	}
+	if !slices.Contains(extra, filepath.Join("examples", "colony", "pack", "credit.toml")) {
+		t.Errorf("colony pack files %v lack credit.toml", extra)
 	}
 }
 
