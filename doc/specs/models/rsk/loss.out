@@ -1,11 +1,12 @@
-== 1. The world's words and the strike test (spec-risk.md 3.4.2) ==
-seed  0: words b18c97843f57bb91 d7046f21f79eba31 -> draw(10000) = 6935, 8399
-seed  1: words af9d32bf75779748 b7672df032bf0473 -> draw(10000) = 6859, 7164
-seed 42: words 61c88529c9612c1b 2608d8a3075aa168 -> draw(10000) = 3819, 1485
+== 1. The first word of a keyed stream and the strike test (spec-risk.md 3.4.2) ==
+stream (siteRiskDispatch, tick 12, shipment 1): the first word, reduced by the world's draw
+seed  0: word 69873149135c003b -> draw(10000) = 4122
+seed  1: word 639c5467fb12e337 -> draw(10000) = 3891
+seed 42: word 2e86243358f4536d -> draw(10000) = 1817
 
 == 2. Worked example A: a hired shipment over two rows (spec-risk.md 18.1) ==
-D13 (common row, P=1000): draw 3819 -> spared
-D14 (unit row,   P=3000): draw 1485 -> struck
+D13 (common row, P=1000): draw 2566 -> spared
+D14 (unit row,   P=3000): draw 1817 -> struck
 LossBP = 2500 (kept 7500)
 expected loss of the route (8.1.1) = 1305
 line a: shipped 40 spoiled 3 held 37 lost rhe(37*2500,10000)=9 delivered 28

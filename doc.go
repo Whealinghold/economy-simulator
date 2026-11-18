@@ -1603,6 +1603,79 @@
 //   - Cash gap: the money a borrower's job needs before the job pays, over its horizon.
 //   - Round (of credit): the matching at P3.3b of the admitted requests and offers of a
 //     region at the lenders' posted rates; a lane of it is a region.
+//   - Hire: the one-job contract of the hire form of the employment module
+//     (spec-employment.md 3.4): a worker household runs one recipe of an employer's
+//     hire list for the employer's account, for a wage fixed at formation and paid a
+//     tick at a time from an escrow. HireID is its ID, issued in order of formation;
+//     HireFormed and HireEnded are the events of a hire that forms and that ends, and
+//     HireRow is the snapshot row of a hire in flight.
+//   - Hire list: the recipes of an employer's block (Employer.Recipes) that a hired
+//     household may run for it, a subset of the role's own recipes.
+//   - Establishment: the most hired executions an employer has in progress at once
+//     (Employer.MaxHires), added to its own labour.
+//   - Vacancy: a position an employer posts for one recipe of its hire list, with the
+//     most it bids; HireRequest is the value the strategy returns, and VacancyRow the
+//     row of the labour round that counts what became of it.
+//   - Positions: the number of hired executions an employer can afford and supply
+//     this tick, the least of its establishment, its stock, its tools and its cash.
+//   - Labour offer: what a worker's strategy returns to be hired: the households it
+//     offers and the least wage it accepts. LabourOffer is the value.
+//   - Reservation wage: the least wage per household-tick a worker accepts, the value of
+//     its own best alternative; not the ledger's reservation, and the Reserve of a
+//     LabourOffer is the field.
+//   - Employer's bid: the most an employer pays for a position, the net value of the
+//     work per tick; not an order side, and the Bid of a HireRequest is the field.
+//   - Worker share: the share of the margin between the reservation wage and the bid
+//     that the worker receives, in basis points (Employer.WorkerShareBP); the wage is
+//     derived from it at formation and is never a field.
+//   - Labour round: the matching at P2.5a of the admitted labour offers and vacancies of
+//     a region, first fit, and the formation of the hires; LabourRound is the aggregate
+//     event of a region at P2.8b, with LabourRow its rows by worker role and VacancyRow
+//     its rows by employer role.
+//   - Lane (of the labour round): the households offering and the positions posted for
+//     one pair of a worker role and an employer role in a region; the lane of the
+//     solver and the lane of a merchant are not this.
+//   - Escrow (of a hire): the Escrow account that holds the bill of a hire, the wage
+//     times the households and the ticks, from formation to the end of the hire; it
+//     shares the free list of Escrow accounts with the delivery contracts.
+//   - Unmatched (household): a household that offered its labour and was not hired in
+//     the round; it works for itself that tick.
+//   - Unemployment: a measure of the households that offered and were not hired, never
+//     a state of an agent; the preset Unemployment reports it.
+//   - Hired yield: the factor Employer.HireYieldBP on the yield of a hired execution,
+//     in place of the trainee factor.
+//   - open_hire: the refusal of a relocation of an agent that is the principal of an
+//     open hire (ErrRegionBound).
+//   - Risk: the optional module that gives a shipment on an edge and a store of a class
+//     a chance to lose a share of its goods; its presence in Config.Modules (Risk)
+//     switches it on (spec-risk.md). "Hazard" is not used for a row.
+//   - Risk row: a route row (RouteRisk: an edge and a mode) or a store row (StoreRisk: a
+//     region and a store class); absence is no risk.
+//   - Exposure: what a strike can reach: a cargo in a Transit account, a trip account
+//     of a self-carried trip, or a stored part of a limited account; not a household
+//     base room, money, an estate, and not POL's or POP's "exposed" household.
+//   - Strike: the event that a draw of the world is below the effective probability of
+//     a row; a strike with no loss is still a strike.
+//   - Severity: the share of each commodity a strike takes, SeverityBP of a row.
+//   - Common row, unit row: a row drawn once a tick for everything it meets, or once for
+//     each shipment or store it meets (Common is the flag).
+//   - Effective probability: the strike probability of a row times its risk scale over
+//     10 000, at most 10 000; a row at 0 takes no draw.
+//   - Loss share: the LossBP of a shipment, fixed at dispatch from the struck rows of its
+//     path and applied at its arrival; the kept share is 10 000 less it.
+//   - Stored fraction: the part, in basis points, of a limited account's load that a
+//     store of a class holds, the larger of its mass and bulk fractions.
+//   - Expected loss: the loss share of a route in the mean over its rows, read by an
+//     agent as RouteRow.LossBP and RouteLoss; never applied to the ledger.
+//   - Risk scale: a slot between ticks, from 0 to MaxShockBP, that scales the strike
+//     probability of a row and never its severity (RouteRiskScale and StoreRiskScale
+//     are the entries of a call, RouteRiskScaled and StoreRiskScaled its events); not
+//     the capacity scale of RES nor the birth scale of POP.
+//   - Total loss: a shipment whose loss share is 10 000.
+//   - Trip account: the holdings of the traveller of a self-carried trip, which a strike
+//     takes a share of at arrival, the mode's vehicle left out (ShipmentArrived
+//     carries AccountLost).
+//   - StoreLoss: the event of one agent and store class struck at P8.1a.
 //   - Infrastructure: the optional module of fixed capital; its presence in Config.Modules
 //     (Infrastructure is its configuration) switches it on (spec-infrastructure.md).
 //   - Facility: a record of fixed capital with an owner, a region, a class and a condition;

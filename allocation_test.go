@@ -43,6 +43,14 @@ const storageStepAllocBaseline = 70
 // change (rule 8.2).
 const tenureStepAllocBaseline = 72
 
+// creditStepAllocBaseline is the allocation limit of a Step of pack one with the credit module on
+// (overlay/credit.toml): 94, 24 above the off world's 70. Measured under -race at 50 ticks, seed 1: the 20
+// measured steps are the ticks 50 to 69, in which the first loans of the pack form (tick 58), so the 24 are
+// the run the module makes (a claim record, its slot in the ledger's list and in the indexes of the module, and
+// the growth of the due ring), not a cost of the settlement or the round themselves, which work in scratch
+// (NFR-CRD-001, TestCredit_AllocsPerRun). Raising it is a reviewed change (rule 8.2).
+const creditStepAllocBaseline = 94
+
 // TestStep_AllocationsStayAtTheBaseline checks that a full Step of pack one
 // allocates no more than the baseline. Not parallel: testing.AllocsPerRun
 // panics in a parallel test. Allocation counts differ under -race, so the test
@@ -67,6 +75,7 @@ func TestStep_AllocationsStayAtTheBaseline(t *testing.T) {
 		{"one+faucet-sunk", packOneFaucetSunk, moneyStepAllocBaseline, false},
 		{"one+external-agent", packOne, externalAgentStepAllocBaseline, true},
 		{"one+storage", packOneStorage, storageStepAllocBaseline, false}, // NFR-STO-002: the off world's figure, see the constant
+		{"one+credit", packOneCredit, creditStepAllocBaseline, false},    // NFR-CRD-001: the settlement and the round work in scratch
 		{"one+resources+tenure", append(slices.Clone(packOneResources), "overlay/tenure.toml"), tenureStepAllocBaseline, false},
 		{"one+external", packExternal(), stepAllocBaseline, false}, // NFR-EXT-001: no more than the off world (36 measured)
 	} {

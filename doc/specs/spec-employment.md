@@ -41,6 +41,9 @@ branches on one.
 names and seams of the hire (`Modules.Employment`, `Role.Hireable`, `Role.Employer`, the reason `wage_pay`,
 the welfare terms `Y_t` and `V_t`, 8.4) and none of its machinery; where section 24 and an earlier section
 differ, section 24 governs the payroll form and the earlier section the hire form.
+**A world runs one form.** `Employment.Hire` (13) selects the hire form; with it false the module is the
+payroll form, byte for byte. The two never run together: in the hire form P4.1b does not run, and a
+hired job is not paid a second time by the payroll (which pays any worker with a job in progress).
 
 Terms in **bold** on first use are new domain terms. They must be added to the
 glossary in `doc.go` before any code uses them (architecture.md 3.2). "Consumer"
@@ -496,7 +499,7 @@ block and **close the vacancy**. The others (4 to 8 and 10 to 12) depend on the 
 the vacancy's **fit** (the largest block it can still take) to `m - 1`, so a later offer of `m`
 or more skips it without a new count and a smaller one may still be formed; a vacancy whose fit
 reaches 0 is closed, and its remaining positions are counted once as unfilled with the reason
-of the last failure. The wage below 1 of 5.4.1 belongs to the pair and skips the vacancy for
+of the last failure. A vacancy whose fit is still above 0 after a failed block check stays open, and a round that ends with it unfilled counts its positions as `no_labour`. The wage below 1 of 5.4.1 belongs to the pair and skips the vacancy for
 this offer only.
 
 1. **`too_many_hires`**: the hires open in the lane's region are `MaxOpen` (13). The lane is
@@ -713,14 +716,18 @@ and before CRD's 2d and 2e, so before the money of the removed agent moves to th
   abandoned with `principal_left`, the remainder of the escrow returns to **the employer's own
   account** (so that the waterfall of step 2d sees it), and the hire ends (`employer_left`).
 
-The events of one removal, in the order of `spec-world.md` 6.11 item 8 (every event of a
-removal precedes `AgentBankrupted`; the steps are 2b `TitleTransferred`, 2c here, then CRD's 2d
-and 2e, INS's 2f and CAP's 2g): first, as 6.11 says,
-the trainees of a trainer being removed; then the hires of an employer being removed, hire by
-hire in ascending hire ID, each `RecipeAbandoned` of the worker's job (`principal_left`) and
-then `HireEnded` (`employer_left`); then the agent's own list (`RecipeAbandoned` for its job,
-`HireEnded` (`worker_left`) if it was a worker, `TraineeshipEnded`, `ContractSettled`,
-`AgentBankrupted`, `EstateOpened`). A role change of an employer emits, for each hire in
+The events of one removal follow `removeAgent` and `observability-and-logging.md` 4.3 (every
+event of a removal precedes `AgentBankrupted`; the steps are 2b `TitleTransferred`, 2c here, then
+CRD's 2d and 2e, INS's 2f and CAP's 2g): first, as 6.11 says, the trainees of a trainer being
+removed (`TraineeshipEnded`, ascending agent ID); then the agent's own `RecipeAbandoned` for its job
+(`agent_removed`, step 1), `TraineeshipEnded` if it was in a traineeship, and `ContractSettled` for
+each contract it delivered; then step 2b `TitleTransferred` for each title moved; then step 2c, the
+hires of the agent, the worker's side first (`HireEnded`, `worker_left`) and then the employer's side,
+hire by hire in ascending hire ID, each the worker's `RecipeAbandoned` (`principal_left`) and then
+`HireEnded` (`employer_left`); then 2d to 2g; last `AgentBankrupted` and `EstateOpened`. An earlier
+draft listed the hire's end before `TraineeshipEnded` and `ContractSettled`: the rule file and the
+code order win (architecture.md 2.10.4: the order of a removal is written once), and N-372 records
+the correction. A role change of an employer emits, for each hire in
 ascending ID, `RecipeAbandoned` (`principal_left`) and `HireEnded` (`employer_role`), then its
 own `RecipeAbandoned` and `RoleChanged`; that of a worker emits `RecipeAbandoned`
 (`role_changed`), `HireEnded` (`worker_role`) and `RoleChanged`.
@@ -1146,9 +1153,11 @@ hired households was read. The bounds are validation bounds in `bounds.go` (`spe
 | Scope | Field | Meaning | Default | Bound |
 |-------|-------|---------|---------|-------|
 | Modules | `Employment` | the labour round and the hired job: present means on (`spec-config.md` 3.2) | nil (off) | |
-| Employment | `MaxOpen` | the most hires open at once **in a region** (5.5 check 1) | 1 000 (placeholder) | 1 to `MaxHireRecords` |
+| Employment | `Hire` | selects the hire form (the module is the payroll form of 24 when false); the two forms never run together | false | a bool |
+| Employment | `MaxOpen` | the most hires open at once **in a region** (5.5 check 1); read only with `Hire` | 1 000 (placeholder) | 1 to `MaxHireRecords` |
 | Role | `Hireable` | the role's households may offer their labour (3.1) | false | a bool; needs the module |
 | Role | `Employer` | the employer block; nil means the role does not hire (3.2) | nil | needs the module |
+| Employer | `PayrollBP` | the payroll form's share (24.3.2); must be 0 in the hire form | see 24.3 | 1 to 10 000 in the payroll form |
 | Employer | `Recipes` | the hire list, a subset of `Role.Recipes` | required | at least 1, known, no duplicate, on the role's list |
 | Employer | `MaxHires` | the establishment: hired executions in progress at once | 4 (placeholder) | 1 to `MaxEstablishment` |
 | Employer | `WorkerShareBP` | the worker's share of the margin between its reservation and the bid, in basis points | 5 000 (the midpoint; placeholder) | 1 to 10 000 |
@@ -1192,7 +1201,7 @@ runs them.
 | `ErrOutOfBounds` | a field of 13 outside its bound |
 | `ErrUnknownRecipe` | a hire-list entry that is not a recipe |
 | `ErrDuplicateID` | a recipe twice in a hire list |
-| `ErrEmploymentShape` (new, a root sentinel) | an employer block on a role with an empty `Recipes`; an empty hire list; a hire-list recipe that is not on `Role.Recipes`; a role that is both `Hireable` and an employer |
+| `ErrEmploymentShape` (new, a root sentinel) | an employer block on a role with an empty `Recipes`; an empty hire list; a hire-list recipe that is not on `Role.Recipes`; a role that is both `Hireable` and an employer; the mixed form (`Hire` false with any of the four hire fields set, or `Hire` true with `PayrollBP` above 0: one form per world, 24.3.2) |
 | `ErrEmployerWeight` (new, a root sentinel) | an employer role with a group of scale above 1, or whose households exceed one per agent (an agent of weight above 1) |
 | `ErrModuleDependency` | `Hireable` or an employer block while `Modules.Employment` is absent |
 
@@ -1317,14 +1326,14 @@ and a tick's payments are `H`.
 ## 16. State contributed to a checkpoint
 
 Every spec lists the state it contributes (ADR 0002). This spec's, all plain data in a fixed
-order with no maps, a new section of `spec-checkpoint.md` 4.2 (gate `Modules.Employment`). **Its
-position** among the 23 sections is after Merchants (21) and before Integration (22), because a
-hire names an Escrow account and agents that earlier sections hold (4.2.1 puts sections 12 to 22
-in the order of the dependencies between modules): it takes tag 22 and Integration and Extensions
-become 23 and 24, the numbering being CHK's. **A section added and a renumbering change the format
-version** (`spec-checkpoint.md` 9.3), which the edit asks CHK to bump; the golden file of a world
-with the module off does not change in content (the section is absent, 4.2.1) but its version
-does:
+order with no maps, a section of `spec-checkpoint.md` 4.2 (gate `Modules.Employment`, hire form
+only). **Its tag is 24**, the row that `spec-checkpoint.md` 4.2 already holds (the sections are
+numbered by tag and a module's section is appended, never inserted: architecture.md 2.10.5). An
+earlier draft of this section took tag 22 and renumbered Integration and Extensions, which changed
+the format version; that text is stale. The **format version stays 1**: a section is gated by its
+module, so a world with the module off writes no section, and the golden file and the checkpoint
+fixtures of such a world do not change (`spec-checkpoint.md` 9.3, 4.2.1). The payroll form writes
+no section. The section holds:
 
 - the **next hire ID**;
 - the **hires in flight**, in ascending hire ID: the ID, the employer, the worker (agents), the
@@ -1834,8 +1843,8 @@ guarded call from `welfare.go` into the module file with no logic of its own.
 ### 24.3 The fields
 
 24.3.1. `Config.Modules.Employment` is a pointer, present means on, and in this form it has **no
-field**: its presence is its whole contribution, as `Estates`. `MaxOpen` of section 13 belongs
-to the hire form and is appended with it. `Role.Hireable` (a bool, default false) and
+field**: its presence is its whole contribution, as `Estates`. The hire form appends two fields of
+its own to it, `Hire` (a bool, false: this form) and `MaxOpen` (13), read only when `Hire` is true. `Role.Hireable` (a bool, default false) and
 `Role.Employer` (a pointer to the block below, default nil) are the fields of 3.1 and 3.2.
 
 24.3.2. The employer block of this form has one field:
@@ -1845,8 +1854,10 @@ to the hire form and is appended with it. `Role.Hireable` (a bool, default false
 | `PayrollBP` | the share of the payer's receipts of the tick that is paid as wages, in basis points (24.1.3) | 5 000 (placeholder: the value of the spike of ADR 0011) | 1 to 10 000 |
 
 The block of the hire form (`Recipes`, `MaxHires`, `WorkerShareBP`, `HireYieldBP`) is appended to
-it in that form, with the next free ids, and a role that has both kinds of field is a question for
-that form. Every default is a placeholder (N-015, N-027): no source on the size of a wage share
+it in that form, with the next free ids. **One form per world, and one form per block:** in the
+payroll form (`Hire` false) the four hire fields must be empty or 0, and in the hire form `PayrollBP`
+must be 0, each an `ErrEmploymentShape`. `WorkerShareBP` is a new field and never reuses `PayrollBP`
+(N-355). Every default is a placeholder (N-015, N-027): no source on the size of a wage share
 was used, and the pack sets it.
 
 24.3.3. The rule constants (not parameters): the position, the cumulative floor of 24.1.4, the
@@ -1875,7 +1886,12 @@ the rule).
 `spec-config.md` 3.2): the pair is the id and the terminator and nothing else, written even though
 it has no field. `Role.Hireable` is id 23 and `Role.Employer` id 24 of `Role` (the next free ids
 of the struct: 21 and 22 are the merchants', and the settlement module's `Needs` and `Ceiling`
-take the ids after these when they are built); `PayrollBP` is id 1 of `Employer`. A role with
+take the ids after these when they are built); `PayrollBP` is id 1 of `Employer`. The hire form
+appends inner pairs: `Employment.Hire` id 1 (written only when true) and `MaxOpen` id 2 (written
+only with `Hire`; `canonical` writes the default 1 000 when `Hire` is set, as N-345 allows for a
+field the module owns), and of `Employer` `Recipes` id 2 (a set: sorted in `canonical`, list order
+irrelevant), `MaxHires` 3, `WorkerShareBP` 4 and `HireYieldBP` 5. `PayrollBP` is written only when
+non-zero, which changes no valid payroll hash (every valid payroll block has it at least 1). A role with
 `Hireable` false and no block writes nothing, so the hash of the all-off reference is unchanged.
 
 24.5.2. The file: `[modules.employment]` (a table with no key switches the module on),

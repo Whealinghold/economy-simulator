@@ -329,7 +329,7 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 	l.lastModules(m, cfg)
 }
 
-// lastModules reads the tables of technology, credit, tenure and institutions, in that order (a
+// lastModules reads the tables of technology, credit, tenure, risk and institutions, in that order (a
 // continuation of laterModules for the Lizard limit).
 func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 	if ts := m.sub("technology"); ts != nil {
@@ -344,6 +344,10 @@ func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Tenure = l.tenure(ts)
 		ts.finish()
 	}
+	if rs := m.sub("risk"); rs != nil {
+		cfg.Modules.Risk = l.risk(rs)
+		rs.finish()
+	}
 	if is := m.sub("infrastructure"); is != nil {
 		cfg.Modules.Infrastructure = l.infrastructure(is)
 		is.finish()
@@ -352,6 +356,36 @@ func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Institutions = l.institutions(is)
 		is.finish()
 	}
+}
+
+// risk reads [modules.risk] (spec-config.md 6.2, spec-risk.md 12.1): a route row as
+// [route.<from>.<to>.<mode>] and a store row as [store.<region>.<class>], each with
+// strike_bp and severity_bp, which are required, and common, which is false when
+// absent. A key-less table switches the module on with no row. Every level is read
+// in the order of the keys; Validate and the hash apply the canonical order.
+func (l *loader) risk(t *tbl) *economysim.Risk {
+	var m economysim.Risk
+	t.entities("route", func(from string, f *tbl) {
+		f.eachSub(func(to string, e *tbl) {
+			e.eachSub(func(mode string, r *tbl) {
+				row := economysim.RouteRisk{From: from, To: to, Mode: mode}
+				r.need("strike_bp", integer(r, "strike_bp", &row.StrikeBP))
+				r.need("severity_bp", integer(r, "severity_bp", &row.SeverityBP))
+				r.flag("common", &row.Common)
+				m.Routes = append(m.Routes, row)
+			})
+		})
+	})
+	t.entities("store", func(region string, e *tbl) {
+		e.eachSub(func(class string, r *tbl) {
+			row := economysim.StoreRisk{Region: region, Class: class}
+			r.need("strike_bp", integer(r, "strike_bp", &row.StrikeBP))
+			r.need("severity_bp", integer(r, "severity_bp", &row.SeverityBP))
+			r.flag("common", &row.Common)
+			m.Stores = append(m.Stores, row)
+		})
+	})
+	return &m
 }
 
 // infrastructure reads [modules.infrastructure] (spec-config.md 6.2,

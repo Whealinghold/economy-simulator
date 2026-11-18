@@ -8,12 +8,14 @@ docker run --rm -e PYTHONDONTWRITEBYTECODE=1 -v "$PWD/doc/specs/models/rsk":/w -
 ```
 
 It is a model of the **rules** of sections 3 to 6 and 8 of the spec with integers and
-placeholder numbers (the PCG and its seeding are those of `models/wld/seed.py`, which
-matches Go 1.25). It does not show that any default is stable (note N-027).
+placeholder numbers (the PCG and its keyed seeding are those of `models/wld/seed.py`, which
+matches Go 1.25; parts 1 and 2 use the four keyed sites of the module, ADR 0008, and the
+simulated runs of parts 6 and 7 use a plain seeded generator, which is a statistic and not
+a stream of the world). It does not show that any default is stable (note N-027).
 
 | Part | What it shows | Spec |
 |------|---------------|------|
-| 1 | the first words of seeds 0, 1 and 42 reduced by the world's draw, and the strike test | 3.4.2 |
+| 1 | the first word of the keyed stream (`siteRiskDispatch`, tick 12, shipment 1) of seeds 0, 1 and 42 reduced by the world's draw, and the strike test | 3.4.2, 11.2 |
 | 2 | example A: two rows, one common, one unit, the combined share, the loss of four lines (one with a spoiled part, a tie to even), a contract's pay and refund | 4.1, 4.3, 5.2, 5.3, 5.6, 18.1 |
 | 3 | example B: a limited owner with two store classes, the stored fraction `phi`, the share and the loss by class | 6.1, 6.3, 18.2 |
 | 4 | example C: the traveller's own account, a `Vehicle` among its holdings (not exposed) | 5.4, 18.3 |

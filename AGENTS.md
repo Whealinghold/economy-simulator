@@ -148,6 +148,9 @@ economy-sim/
 │   credit_round.go credit_settle.go credit_strategy.go credit_report.go
 │   credit_state.go (CRD)
 │   polity_validate.go (POL)
+│   employment_validate.go employment_round.go employment_hire.go
+│   employment_report.go employment_strategy.go (EMP)
+│   risk_validate.go (RSK)
 │   infrastructure_validate.go infrastructure_step.go infrastructure_calls.go
 │   infrastructure_build.go infrastructure_report.go infrastructure_state.go (CAP)
 │   institutions_validate.go institutions_warn.go institutions_round.go

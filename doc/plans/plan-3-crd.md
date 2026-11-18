@@ -423,3 +423,37 @@ Deviations and choices the plan left open:
 - The fork test uses pack one with `creditLiveDoc`, seed 1: the first loans form at tick 58 and 59, the first are due from 66, the main wave of 202 claims at 123. `credit.toml` and the chosen golden pack are Phase 10.
 
 Left open: the instruments of the otelobserver adapter are not built (Q3); the nine metrics are only proved derivable. `agent.go` (655 non-comment lines) and `event.go` (987) were already past 500 before this PR; the PR adds a few lines to each (two fields and one call, one event) and moves none.
+
+## PR 5 result (Phase 10, recorded when PR 5 was built)
+
+Rule tags read: architecture=5c0416f502ba5a59f7b2ae08, observability=9ebd6516273680595f477c95, testing=66af7645b01fef4e2796c367. No rule file, spec or note was edited, so no notes tag applies; the leads below are for whoever next changes a spec or a note (the numbers N-420 to N-423 were not used).
+
+Built: `testdata/chains/overlay/credit.toml`, the module-alone golden `testdata/golden/credit/{one.txt,events-one.txt,one.positions.txt}` (new files, recorded once), `TestGolden_Credit`, `TestGolden_CreditEvents`, `TestPositionHash_CreditAlone`, `TestGolden_CreditOffUnmoved`, `TestDeterminism_Credit`, the row `one+credit` of `TestStep_AllocationsStayAtTheBaseline` (94, 24 above the off world's 70) and of `invariantTable`, the scenarios S114 to S118 (S114 to S118 join `stageTwoScenarios`) and the colony example's borrowing player. `golden/off/`, `golden/all/`, the pinned hash and the checkpoint fixtures are untouched.
+
+The pack of the golden (Q4, the probe of Phase 10): a throwaway test over seeds 1 to 4, 400 ticks, the audit on, with `credit.toml` layered on the warm `one`, `two` and `five` (the payroll pack was not probed: its roles are another set). Every pack records loans formed, repaid in full and removed with a debtor (the waterfall): `one` seed 1 formed 892, repaid 181, written off 596, debtor removed 115. So the golden is pack `one` and the fallback of Q4 is not needed. No existing pack was edited.
+
+What the golden says, read against `golden/off/` (testing.md 7.2): the configuration hash differs (the module is on), the construction warning `interest_rounds_to_zero modules/credit` is new (the placeholder rate of 600 basis points rounds the interest of the short terms to 0; it is the warning of 15.2 doing its job on a placeholder), and the markets, the roles and the region lines differ because the loans change who buys what. The events file holds the module's five events in the golden's aggregate form: 892 `LoanFormed`, 892 `LoanEnded`, 5 `LoanPassed`, 400 `CreditRound` and 71 `CreditSettled`. The position file has 24 lines a tick (the 22 of the off set plus P1.7a and P3.3b).
+
+Scenarios (counters and one-line reports, no snapshots kept per seed, seeds 1 to `scenarioSeedCount()`, 200 ticks, the audit on):
+
+- S114 (CRD-S1): cold and warm, credit on and off. Exact: the audit at every step, no trace with the module off, the identities of 3.6 and `Lent` equal to the sum of the `LoanFormed` principal with it on. Reported: with the cold start every household of the role asks in the first ticks (the pulse of STB-L167): 1 900 to 2 900 loans of 150 to 250 each, all but 3 repaid, interest 45 to 267 in all, and `Unfilled` in the hundreds of millions (the cause was not investigated); in the warm run the first rounds are at tick 58 to 59 and, of 890 to 1 400 loans, 67 to 81% are written off, 15 to 25% repaid and 1 to 14% end by a removal; unfed household-ticks are about 59 000 to 62 000 cold, with credit on or off, and 21 000 to 25 000 warm, where credit on lowers them by 3 to 15% on the seeds.
+- S114 off-is-neutral: the module on with no block equals the module absent in every event after `WorldCreated` and every sampled snapshot, except the hash and `Modules`.
+- S115 (CRD-S2): a yield shock of 5 000 at tick 60 and 15 000 at tick 120, the pool's relief on (estates module, `PoolRelease` 1 000) and off. Exact: the audit and the identities. Reported: defaults, lost principal 3.3 to 5.8 million and interest, the arrears rows at the end (0 to 61), relief 2.4 to 4.5 million with relief on; relief on lowers the lost principal by 1 to 29% on the seeds (mostly 8 to 23%) and does not remove the write-offs.
+- S116 (CRD-S3): the total of money equals its start at every tick, the pair identity and rows hold at every tick, over the seeds.
+- S117 (CRD-S4): with `World.Scale` 4 a borrower is a cohort of up to four households; 14 to 133 falls of weight hit a debtor with open claims per seed; every claim that stays open keeps its principal, interest and debtor (a claim is not split, 9.3), and the debt per household rises with each fall (the report line gives the first: on seed 1 an agent of 3 households falls to 2 at tick 59 with 11 395 owed, 3 798 per household before the fall and 5 697 after it).
+- S118 (CRD-S5): at tick 100 `SetRateScales` and `ForgiveClaims` on the credit pack; the rows go, no money moves, lost totals rise by what was owed, the identities hold, and the original and two restores agree for 60 ticks (and from a checkpoint at tick 122 with claims open).
+
+The cost: S114 to S118 together took about 45 s in one plain run on the dev host; the gate F cost of the whole root package was not measured here, and the seeds drop to one under `-race` through `scenarioSeedCount()`.
+
+Deviations and choices the plan left open:
+
+- The overlay uses `min_principal = 1` and the figures of `creditLiveDoc` (the labelled placeholders of PR 4's fork test), not the 5 000 of `creditPackDoc`: with 5 000 no request is made at all on pack one (the grower's gap is smaller).
+- S115 is CRD-S2 of spec-credit.md 18.3 (the shocks and the relief), as spec-stability.md 2322 to 2326 number it; the plan's Phase 10 text puts the cold-and-warm legs under S114 and S115 and the stability table puts them under S114 alone, so S114 has the four legs.
+- The example is a borrowing player added to `examples/colony` (a flag `-borrow`, `pack/credit.toml`, `borrow.go`), not a new example module: a new module would need a new line in `architecture.md` 2.6 and `AGENTS.md` and so a fresh rule tag, a line that always conflicts across the branches in flight. The guard `TestExamples_PackCopiesAgree` counts the colony's pack as 3 files, 2 copies and the example's own layer. The directive of the player is made every tick, because it replaces the role's default request only for the next step (a request of 1, below `min_principal`, while it owes).
+- `TestCredit_AllocsPerRun`, `TestCredit_RoundCost` and `TestCredit_NoDraws` of PR 2 and 3 already exist; PR 5 adds no cost test.
+
+Left open (leads, no note written):
+
+- On pack one with the placeholders most loans (60 to 85%) are written off at the shield and the write-off tick: the default borrower asks for the gap of its job and the pack's grower income does not cover the principal over the term. This is the hazard CRD-A1 and STB-L163 record; a default rule or a pack figure that changed it is a decision for a note and the owner (N-027), not for this PR.
+- The placeholder rate rounds the interest of the short terms to 0 (the warning `interest_rounds_to_zero`): the golden records the warning; a rate above 600 or a longer term would remove it.
+- `TestScenarioS117` reports the debt per household before and after a fall of weight and asserts only that a claim is whole; no spec rule says what a household's debt should be after a fall, so none is asserted.

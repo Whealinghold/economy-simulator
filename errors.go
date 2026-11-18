@@ -638,6 +638,18 @@ var (
 	ErrNotAHolder = errors.New("agent cannot hold a title")
 )
 
+// The sentinels of the risk module (spec-risk.md 13.1, 9.2). The module reuses
+// ErrModuleDependency, ErrUnknownRegion, ErrUnknownEdge, ErrUnknownMode,
+// ErrUnknownStoreClass, ErrOutsideNode, ErrDuplicateID, ErrOutOfBounds, ErrInStep,
+// ErrWorldFailed and ErrModuleOff.
+var (
+	// ErrRiskShape is a risk row whose StrikeBP or SeverityBP is outside 1 to 10 000.
+	ErrRiskShape = errors.New("risk row has the wrong shape")
+	// ErrUnknownRiskRow is a risk scale that names a key with no row, in a call of
+	// SetRouteRiskScales or SetStoreRiskScales.
+	ErrUnknownRiskRow = errors.New("unknown risk row")
+)
+
 // The sentinels of the infrastructure module (spec-infrastructure.md 13.1,
 // FR-CAP-003, FR-CAP-004), matched with errors.Is (N-075). The module reuses
 // ErrOutOfBounds, ErrDuplicateID, ErrUnknownMode, ErrUnknownResource,
