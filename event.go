@@ -2395,7 +2395,7 @@ type FacilityChanged struct {
 	To       RegionID
 	// Owner is the owner after the transition.
 	Owner AgentID
-	// Kind is added, built, repaired, installed, transferred or ruined.
+	// Kind is added, built, repaired, installed, transferred, ruined or adjusted.
 	Kind FacilityKind
 	// Cause is recipe, initial, consumer, decay, use, role_changed or owner_removed.
 	Cause Cause

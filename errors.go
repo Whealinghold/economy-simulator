@@ -678,7 +678,7 @@ var (
 	// not in the region (spec-infrastructure.md 5.4.3).
 	ErrFacilityRegion = errors.New("owner of a store facility is not in its region")
 	// ErrFacilityOwner is an owner that is a pseudo-agent other than the estate of the
-	// facility's region, or an estate for a store facility.
+	// facility's region (an estate owner of a store facility is ErrFacilityShape).
 	ErrFacilityOwner = errors.New("invalid facility owner")
 	// ErrFacilityNotTransferable is a TransferFacilities of a store facility
 	// (spec-infrastructure.md 5.4.4).

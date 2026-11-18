@@ -275,16 +275,26 @@ func (w *World) reportFacility(f *facility, kind FacilityKind, cause Cause, befo
 			Owner: f.owner, Kind: kind, Cause: cause, Before: before, After: after, Effect: n.eff(f), GoodsListed: goods})
 	}
 	ctx := context.Background()
-	if msg := facilityMessages[kind]; msg != "" && w.log.Enabled(ctx, slog.LevelDebug) {
+	if msg := facilityMessage(kind); msg != "" && w.log.Enabled(ctx, slog.LevelDebug) {
 		w.log.LogAttrs(ctx, slog.LevelDebug, msg, slog.Int64(logkeys.Tick, w.Tick()),
 			slog.Int64(logkeys.Facility, int64(f.id)), slog.String(logkeys.FacilityClass, w.cfg.Modules.Infrastructure.Classes[f.class].ID),
 			slog.Int64(logkeys.Agent, int64(f.owner)), slog.Int64(logkeys.Condition, after))
 	}
 }
 
-// facilityMessages are the constant messages of the Debug lines of 14.3; a kind with no
-// entry has no line (a facility added is reported by its event).
-var facilityMessages = map[FacilityKind]string{
-	FacilityBuilt: "facility built", FacilityRepaired: "facility repaired",
-	FacilityRuined: "facility ruined", FacilityInstalled: "facility installed",
+// facilityMessage is the constant message of the Debug line of 14.3; a kind with no line
+// (a facility added is reported by its event) returns "". A function, not a package-level
+// map, so no mutable package state exists.
+func facilityMessage(k FacilityKind) string {
+	switch k {
+	case FacilityBuilt:
+		return "facility built"
+	case FacilityRepaired:
+		return "facility repaired"
+	case FacilityRuined:
+		return "facility ruined"
+	case FacilityInstalled:
+		return "facility installed"
+	}
+	return ""
 }
