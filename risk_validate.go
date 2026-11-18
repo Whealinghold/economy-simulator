@@ -177,7 +177,7 @@ func riskWarnings(c *Config) []Warning {
 // configured graph, at the configured distances, crosses. An edge (a, b) is on the
 // path of some pair exactly when NextHop(a, t) is b for some region t, because the
 // path from a starts with that hop. A graph that does not build, or a row whose
-// regions are not defined, gives nothing: Validate reports those.
+// regions or edge are not defined, gives nothing: Validate reports those.
 func riskOffPath(c *Config, m *Risk) []Warning {
 	g, err := NewGraph(*c)
 	if err != nil {
@@ -188,8 +188,8 @@ func riskOffPath(c *Config, m *Risk) []Warning {
 		r := &m.Routes[i]
 		from, ok1 := g.Lookup(r.From)
 		to, ok2 := g.Lookup(r.To)
-		if !ok1 || !ok2 {
-			continue
+		if !ok1 || !ok2 || !slices.ContainsFunc(c.Edges, func(e Edge) bool { return e.From == r.From && e.To == r.To }) {
+			continue // Validate reports an unknown region or edge
 		}
 		used := false
 		for t := range RegionID(g.Len()) {
