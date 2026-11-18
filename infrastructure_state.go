@@ -300,8 +300,8 @@ func (w *World) loadFacilities(rs *restoreCtx, r *codec.Reader) error {
 		if r.Err() != nil {
 			return nil
 		}
-		if f.id >= n.next {
-			return fmt.Errorf("%w: facility %d is not below the next ID %d", ErrCheckpointCorrupt, f.id, n.next)
+		if f.id < 1 || f.id >= n.next {
+			return fmt.Errorf("%w: facility %d is not from 1 to below the next ID %d", ErrCheckpointCorrupt, f.id, n.next)
 		}
 		if err := n.checkRecord(&f); err != nil {
 			return fmt.Errorf("%w: %w", ErrCheckpointCorrupt, err)

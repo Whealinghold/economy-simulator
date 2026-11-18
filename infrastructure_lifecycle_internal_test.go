@@ -290,6 +290,7 @@ func TestCheckpoint_FacilitiesRefusals(t *testing.T) {
 		mut  func(w *World)
 	}{
 		{"next ID not above the last", func(w *World) { w.infra.next = w.infra.fac[len(w.infra.fac)-1].id }},
+		{"ID 0", func(w *World) { w.infra.fac[0].id = 0 }},
 		{"condition above durability", func(w *World) { w.infra.fac[0].condition = 99_999 }},
 		{"condition 0", func(w *World) { w.infra.fac[0].condition = 0 }},
 		{"owner not live", func(w *World) { w.infra.fac[0].owner = 999 }},

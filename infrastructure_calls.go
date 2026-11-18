@@ -3,6 +3,7 @@ package economysim
 import (
 	"cmp"
 	"fmt"
+	"math"
 	"slices"
 )
 
@@ -77,6 +78,9 @@ func (w *World) AddFacilities(adds []NewFacility) ([]FacilityID, error) {
 	n := w.infra
 	if len(adds) > MaxFacilities {
 		return nil, fmt.Errorf("AddFacilities: %w", argError(ErrOutOfBounds, itoa(len(adds)), "MaxFacilities", "adds"))
+	}
+	if n.next > math.MaxInt64-FacilityID(len(adds)) { // a restored next ID near the top: the IDs must not wrap
+		return nil, fmt.Errorf("AddFacilities: %w", argError(ErrFacilityCap, i64(int64(n.next)), "next facility ID", "adds"))
 	}
 	plan := make([]addPlan, len(adds))
 	budget := addBudget{total: len(n.fac), perOwner: map[AgentID]int{}, stores: map[AgentID]int{}}

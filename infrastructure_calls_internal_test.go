@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"errors"
+	"math"
 	"reflect"
 	"slices"
 	"testing"
@@ -228,6 +229,26 @@ func TestAddFacilities_Caps(t *testing.T) {
 	}
 	if _, err := w.AddFacilities(adds); err != nil {
 		t.Errorf("AddFacilities of %d to the estate = %v, want nil: the estate has no per-owner bound", len(adds), err)
+	}
+}
+
+// TestAddFacilities_NextIDNearTheTop verifies that a call refuses to take IDs that would
+// wrap past the largest int64 (a next ID restored near the top) and creates nothing.
+//
+// Requirement: FR-CAP-034
+func TestAddFacilities_NextIDNearTheTop(t *testing.T) {
+	t.Parallel()
+	w := facWorld(t, nil)
+	w.infra.next = math.MaxInt64 - 1
+	adds := []NewFacility{
+		{Class: clsMill, Region: 0, Toward: NoRegion, Owner: facMiller(w)},
+		{Class: clsMill, Region: 0, Toward: NoRegion, Owner: facMiller(w)},
+	}
+	if _, err := w.AddFacilities(adds); !errors.Is(err, ErrFacilityCap) || len(w.infra.fac) != 0 {
+		t.Errorf("AddFacilities near the top = %v with %d facilities, want ErrFacilityCap and none", err, len(w.infra.fac))
+	}
+	if _, err := w.AddFacilities(adds[:1]); err != nil {
+		t.Errorf("AddFacilities of one entry with room for it = %v, want nil", err)
 	}
 }
 
