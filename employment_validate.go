@@ -110,12 +110,8 @@ func (v *validator) hireEmployer(eb []string, r *Role) {
 // 3.2, 14.1).
 func (v *validator) hireList(p []string, r *Role) {
 	b := r.Employer
-	if len(b.Recipes) == 0 {
-		v.rep.add(ErrEmploymentShape, p, "0", "1")
-		return
-	}
-	if len(r.Recipes) == 0 {
-		v.rep.add(ErrEmploymentShape, p, "0", "role recipes")
+	if len(b.Recipes) == 0 || len(r.Recipes) == 0 {
+		v.rep.add(ErrEmploymentShape, p, itoa(len(b.Recipes)), "1")
 		return
 	}
 	seen := make(map[string]bool, len(b.Recipes))
@@ -282,20 +278,10 @@ func wageWarnings(c *Config, lk lookup, r *Role, workers []*Role, regions []stri
 	if slices.ContainsFunc(workers, func(w *Role) bool { return wage < upkeepValue(c, lk, w, regions) }) {
 		out = append(out, Warning{Path: append(slices.Clone(eb), "worker_share_bp"), Rule: "wage_below_upkeep"})
 	}
-	if bill, ok := fullBill(wage, r.Employer.MaxHires, longest); ok && int64(r.StartMoney) < bill {
+	if bill, ok := payroll.Bill(wage, longest, r.Employer.MaxHires); ok && int64(r.StartMoney) < bill {
 		out = append(out, Warning{Path: []string{"roles", r.ID, "start_money"}, Rule: "payroll_exceeds_money"})
 	}
 	return out
-}
-
-// fullBill is the bill of one full establishment: the wage over the longest job of
-// the hire list for MaxHires households (spec-employment.md 14.2).
-func fullBill(wage, hires, ticks int64) (int64, bool) {
-	perHire, ok := checked.Mul(wage, ticks)
-	if !ok {
-		return 0, false
-	}
-	return checked.Mul(perHire, hires)
 }
 
 // groupRegions are the regions where the role has a group, in group order.

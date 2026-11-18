@@ -522,7 +522,8 @@ var (
 var (
 	// ErrEmploymentShape is a role that is both Hireable and an employer, or the
 	// employment module on with no role that has an employer block or with no
-	// Hireable role.
+	// Hireable role (payroll form); in the hire form also a mixed form, an empty
+	// hire list or one off Role.Recipes, and MaxOpen set without Hire.
 	ErrEmploymentShape = errors.New("employment has the wrong shape")
 	// ErrEmployerWeight is an employer role with a group of scale above 1, or
 	// whose households exceed one per agent: an employer has weight 1
