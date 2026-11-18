@@ -46,7 +46,7 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351, N-353 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-424 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358 |
@@ -54,10 +54,10 @@ PR description.
 | CHK | N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-368 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354 |
+| CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-427 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368 |
-| DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356 |
+| DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-424, N-425 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361 |
@@ -69,16 +69,16 @@ PR description.
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323 |
-| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366 |
+| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-424, N-425, N-426, N-427 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
-| MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363 |
+| MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
-| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349 |
+| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-427 |
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-425, N-426 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226, N-327 |
 | SAV | N-145, N-156, N-195, N-197, N-362 |
@@ -89,7 +89,7 @@ PR description.
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357 |
 | STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361 |
-| SUB | N-121, N-228, N-268, N-244 |
+| SUB | N-121, N-228, N-268, N-244, N-426 |
 | TEC | N-358, N-359, N-360, N-361 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364 |
@@ -2286,6 +2286,30 @@ PR description.
 - **Raised:** 2026-11-17, CRD PR 4.
 - **Note:** `spec-checkpoint.md` 4.2 tag 3 and `spec-credit.md` 17.1 now list the two fields that `saveDirectiveCredit` writes after the directive, only with `Modules.Credit` on. Any later module that adds a field to `Directive` must add its own group the same way (written only with its module on) so the bytes of format 1 do not move.
 
+### N-424 The default strategy never asks a closed endowment
+
+- **Areas:** LND, EMP, AGT
+- **Raised:** 2026-11-18, plan 3-lnd PR 5 (Phase 6).
+- **Note:** the default strategy reads the title bound of its view (`spec-land.md` 4.6.2) and asks for nothing from a closed endowment, so own-use households are blocked (`OwnUseChanged.Blocked`) with `RentPaid.NoTitle` at 0 and no "tenure refusal" Warn. `RentFunds` and `PricedOut` are counted because the households ask. The counts of `NoTitle` and the Warn need a strategy or a hire form that asks anyway; the first spec of EMP that adds one reads this.
+
+### N-425 No pack of the reference chain charges rent before the five
+
+- **Areas:** LND, REF, EMP, DEM
+- **Raised:** 2026-11-18, plan 3-lnd PR 5 (Phase 6, D12, Q4).
+- **Note:** pack one with `overlay/resources.toml` or `resources-binding.toml` and `overlay/tenure.toml` charges no rent in 400 ticks (the growers draw on their own entitlements and the pool's let units lie idle), and the pack collapses (N-352). The first pack that lets units is the warm five with `overlay/resources-five-binding.toml` (3 units let, 6 paid at seed 1), so `testdata/golden/tenure/` is on the five and the rent circuit has no acceptance band. The cycle of S108 is not measured against `3 * step * (delay + 1) / 4` because the rent sits at its floor. A pack that rents and does not collapse is owed before a claim about the rent circuit.
+
+### N-426 A scenario with own-use households, tenure and migration needs an overlay that does not exist
+
+- **Areas:** LND, MIG, SUB, REF
+- **Raised:** 2026-11-18, plan 3-lnd PR 5 (Phase 7, S109).
+- **Note:** no overlay combines the own-use pack, the resources and tenure modules and migration, so S109 runs the forage world of the subsistence tests (four own-use households, a titled field) for closed, priced-out and exempt tenure, with no migration. A scenario that wants the three together adds the overlay first.
+
+### N-427 `play` keeps every line of a Debug logger in memory
+
+- **Areas:** CODE, OBS, LND
+- **Raised:** 2026-11-18, plan 3-lnd PR 5 (Phase 6, the log tests).
+- **Note:** a five-sized world with a logger that keeps every line took over 60 s and much memory in `play`, so `tenureLogScenario` is pack one with the overlays (200 ticks) and the Warn and Debug lines are proved on small worlds. A test that must read the Debug lines of a five-sized scenario needs a logger handler that filters or counts at the source.
+
 ## Read receipt
 
 ### N-358 A gain is not a recipe
@@ -2328,4 +2352,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 7e6bfc470aaa9243f3527d8d
+NOTES-TAG: 6cb9defb19bddbf122700d74
