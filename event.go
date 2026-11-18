@@ -2374,6 +2374,9 @@ const (
 	FacilityInstalled FacilityKind = "installed"
 	// FacilityTransferred is a facility that passed to another owner.
 	FacilityTransferred FacilityKind = "transferred"
+	// FacilityAdjusted is a condition changed by an AdjustFacilities call that did not
+	// ruin the facility, up or down.
+	FacilityAdjusted FacilityKind = "adjusted"
 	// FacilityRuined is a facility whose condition fell to 0 and whose record ended.
 	FacilityRuined FacilityKind = "ruined"
 )

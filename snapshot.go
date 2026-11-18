@@ -438,9 +438,7 @@ func (w *World) Snapshot() (Snapshot, error) {
 	w.snapshotContracts(&s)
 	w.snapshotTechnology(&s)
 	w.snapshotClaims(&s)
-	if w.infra != nil {
-		s.Facilities = w.facilityRows()
-	}
+	w.snapshotFacilities(&s)
 	if err := w.snapshotTreasuries(&s); err != nil {
 		return Snapshot{}, fmt.Errorf("snapshot at tick %d: %w", w.Tick(), err)
 	}

@@ -219,6 +219,13 @@ type FacilityRow struct {
 	Pending int64
 }
 
+// snapshotFacilities fills the facility rows of the snapshot, nothing with the module off.
+func (w *World) snapshotFacilities(s *Snapshot) {
+	if w.infra != nil {
+		s.Facilities = w.facilityRows()
+	}
+}
+
 // facilityRows builds the snapshot rows (14.5), a deep copy in ascending (region, class).
 func (w *World) facilityRows() []FacilityRow {
 	n := w.infra
@@ -257,15 +264,12 @@ func (n *infrastructure) announce(w *World) {
 }
 
 // reportFacility delivers FacilityChanged for a transition of f, after it is applied,
-// and logs the Debug line of a build, repair, install or ruin. before is the condition
-// before the transition and goods the lots a forced removal of a store listed to the
-// estate. The event is built only with an observer (observability-and-logging.md 4.5).
+// and logs the Debug line of a build, repair, install or ruin. f is the record after the
+// transition (for a ruin, a copy with condition 0), before is the condition before it and
+// goods the lots a forced removal of a store listed to the estate. The event is built only with an observer (observability-and-logging.md 4.5).
 func (w *World) reportFacility(f *facility, kind FacilityKind, cause Cause, before, goods int64) {
 	n := w.infra
-	after := f.condition
-	if kind == FacilityRuined {
-		after = 0
-	}
+	after := f.condition // 0 for a ruin: the caller passes the record as it ends
 	if w.obs.supplied {
 		w.obs.deliver(FacilityChanged{Tick: w.Tick(), Facility: f.id, Class: f.class, Region: f.region, To: f.to,
 			Owner: f.owner, Kind: kind, Cause: cause, Before: before, After: after, Effect: n.eff(f), GoodsListed: goods})

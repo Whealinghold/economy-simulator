@@ -2,7 +2,10 @@ package economysim
 
 import (
 	"fmt"
+	"math"
 	"slices"
+
+	"github.com/Whealinghold/economy-sim/internal/codec"
 )
 
 // This file is the bookkeeping of the facility records (spec-infrastructure.md 3.2):
@@ -176,4 +179,133 @@ func (w *World) fillFacilityState(st *AgentState, a *agent) {
 		return
 	}
 	st.Facilities = w.infra.ownedBy(a.id)
+}
+
+// remove deletes the record at position i and unindexes it.
+func (n *infrastructure) remove(i int) {
+	f := n.fac[i]
+	n.unindex(f.owner, f.id)
+	if f.installed {
+		n.uninstall(f.owner, f.class)
+	}
+	n.fac = slices.Delete(n.fac, i, i+1)
+}
+
+// unindex takes the ID from the list of its owner, dropping the list when it is empty.
+func (n *infrastructure) unindex(owner AgentID, id FacilityID) {
+	list := n.byOwner[owner]
+	if i, ok := slices.BinarySearch(list, id); ok {
+		list = slices.Delete(list, i, i+1)
+	}
+	if len(list) == 0 {
+		delete(n.byOwner, owner)
+		return
+	}
+	n.byOwner[owner] = list
+}
+
+// give moves the facility at position i to the owner, keeping both lists in ascending ID.
+func (n *infrastructure) give(i int, to AgentID) {
+	f := &n.fac[i]
+	n.unindex(f.owner, f.id)
+	list := n.byOwner[to]
+	j, _ := slices.BinarySearch(list, f.id)
+	n.byOwner[to] = slices.Insert(list, j, f.id)
+	f.owner = to
+}
+
+// install records that the store of the facility at position i has been given.
+func (n *infrastructure) install(i int) {
+	f := &n.fac[i]
+	f.installed = true
+	n.installed[ownerClass{f.owner, f.class}]++
+}
+
+// uninstall drops one installed store facility of the owner and class from the count.
+func (n *infrastructure) uninstall(owner AgentID, class FacilityClassID) {
+	k := ownerClass{owner, class}
+	if n.installed[k] <= 1 {
+		delete(n.installed, k)
+		return
+	}
+	n.installed[k]--
+}
+
+// held is the number of facilities an owner holds.
+func (n *infrastructure) held(owner AgentID) int { return len(n.byOwner[owner]) }
+
+// saveFacilities is tag 27 (spec-infrastructure.md 15.1): the ID the next creation takes,
+// the count and for each facility in ascending ID its ID, class index, region, target
+// (NoRegion written as 0 and a region r as r + 1), owner, condition, built tick and
+// installed flag. The effect tables and the lists by owner are derived and never saved.
+func (w *World) saveFacilities(cw *codec.Writer) error {
+	n := w.infra
+	cw.U(uint64(n.next))
+	cw.Count(len(n.fac))
+	for i := range n.fac {
+		f := &n.fac[i]
+		cw.U(uint64(f.id))
+		cw.U(uint64(f.class))
+		cw.U(uint64(f.region))
+		cw.U(uint64(f.to + 1))
+		cw.U(uint64(f.owner))
+		cw.U(uint64(f.condition))
+		cw.U(uint64(f.built))
+		cw.B(f.installed)
+	}
+	return nil
+}
+
+// loadFacilities reads tag 27 into the state a world with the module has built, which
+// holds no facility, and applies the checks of spec-infrastructure.md 15.3 in the order of
+// spec-checkpoint.md 6.2: the IDs are strictly ascending and below the next ID, a class
+// index is below the count of classes, and each record passes checkRecord (its condition,
+// region, target, owner and installed flag). The counts and the installed stores are
+// checked by the audit that every restore ends with. The effect tables are rebuilt from the
+// records, after the sections they read (agents, resources and transport) are in.
+func (w *World) loadFacilities(rs *restoreCtx, r *codec.Reader) error {
+	n := w.infra
+	next := r.Bounded("next facility ID", math.MaxInt64)
+	count := r.Count(8)
+	if r.Err() != nil {
+		return nil
+	}
+	if next < 1 || count > MaxFacilities {
+		r.Failf("next facility ID %d and %d facilities, want a next ID of at least 1 and at most %d facilities", next, count, MaxFacilities)
+		return nil
+	}
+	n.next = FacilityID(next)
+	var prev uint64
+	for k := range count {
+		f := facility{id: FacilityID(r.Strict(prev, k > 0))}
+		prev = uint64(f.id)
+		f.class = FacilityClassID(r.Index(uint64(len(n.cls))))
+		f.region = RegionID(r.Index(uint64(n.regions)))
+		f.to = RegionID(r.Index(uint64(n.regions)+1)) - 1
+		f.owner = AgentID(r.Bounded("facility owner", math.MaxInt32))
+		f.condition = r.Bounded("facility condition", MaxDurability)
+		f.built = r.Bounded("facility built tick", rs.tick)
+		f.installed = r.B()
+		if r.Err() != nil {
+			return nil
+		}
+		if f.id >= n.next {
+			return fmt.Errorf("%w: facility %d is not below the next ID %d", ErrCheckpointCorrupt, f.id, n.next)
+		}
+		if err := n.checkRecord(&f); err != nil {
+			return fmt.Errorf("%w: %w", ErrCheckpointCorrupt, err)
+		}
+		n.adopt(f)
+	}
+	n.rebuild()
+	return nil
+}
+
+// adopt appends a restored record, which is above every record before it, and indexes it.
+func (n *infrastructure) adopt(f facility) {
+	n.fac = append(n.fac, f)
+	n.byOwner[f.owner] = append(n.byOwner[f.owner], f.id)
+	if f.installed {
+		n.installed[ownerClass{f.owner, f.class}]++
+	}
 }
