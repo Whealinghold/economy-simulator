@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"errors"
+	"math"
 	"slices"
 	"testing"
 
@@ -94,6 +95,22 @@ func countWarning(ws []economysim.Warning, rule string, path []string) int {
 		}
 	}
 	return n
+}
+
+// TestFiscalWarnings_DutySumSaturates verifies that two duty rates whose sum overflows
+// int64 raise duty_stack_above_whole and do not wrap into a sum below the whole value.
+// Warnings reads a configuration that does not validate.
+//
+// Requirement: FR-FIS-013
+func TestFiscalWarnings_DutySumSaturates(t *testing.T) {
+	t.Parallel()
+	c := fiscalConfig()
+	m := c.Modules.Fiscal
+	m.Duties[0].RateBP = math.MaxInt64
+	m.Duties = append(m.Duties, economysim.Duty{ID: "more", Authority: "crown", Region: "north", Payer: m.Duties[0].Payer, RateBP: math.MaxInt64})
+	if n := countWarning(c.Warnings(), "duty_stack_above_whole", fiscalPathOf("duties", m.Duties[0].ID)); n != 1 {
+		t.Errorf("Warnings() has %d of duty_stack_above_whole, want 1 for rates that overflow int64 when added", n)
+	}
 }
 
 // TestFiscalWarnings_OffRaisesNone verifies that a configuration with the module off

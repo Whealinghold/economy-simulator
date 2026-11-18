@@ -1,6 +1,11 @@
 package economysim
 
-import "slices"
+import (
+	"math"
+	"slices"
+
+	"github.com/Whealinghold/economy-sim/internal/checked"
+)
 
 // This file is the warnings of the fiscal module (spec-fiscal.md 15.2, FR-FIS-013; a
 // continuation file of fiscal_validate.go, architecture.md 2.6). None fails
@@ -291,7 +296,13 @@ func (w *fiscalWarner) stack(flagged []bool, commodities []string, region, scope
 			if d.Payer != payer || !w.matches(d, region, scope, commodity) {
 				continue
 			}
-			sum += d.RateBP
+			// Warnings read a configuration that may not validate: a sum that cannot be
+			// added is above the whole value, never a wrapped one.
+			if s, ok := checked.Add(sum, d.RateBP); ok {
+				sum = s
+			} else {
+				sum = math.MaxInt64
+			}
 			if first < 0 {
 				first = i
 			}
