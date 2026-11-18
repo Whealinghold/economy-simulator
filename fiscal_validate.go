@@ -222,7 +222,7 @@ func (k *fiscalCheck) windows() bool {
 	for _, f := range k.flows {
 		w := f.window
 		v.inRange(fiscalPath(f, "window", "start"), w.Start, 0, math.MaxInt64-1)
-		if w.Until != 0 && w.Until <= w.Start {
+		if w.Until != 0 && w.Until <= w.Start && w.Start < math.MaxInt64 {
 			v.rep.add(ErrOutOfBounds, fiscalPath(f, "window", "until"), i64(w.Until), i64(w.Start+1))
 		}
 		seen := make(map[string]bool, len(w.Seasons)) // a membership test only

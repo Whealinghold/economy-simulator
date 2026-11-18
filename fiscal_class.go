@@ -1,5 +1,7 @@
 package economysim
 
+import "strings"
+
 // This file is the part of the fiscal module that names the class a flow acts on
 // (spec-fiscal.md 3.2; a continuation file of fiscal.go, architecture.md 2.6). It
 // holds the class rules of validateFiscal, the last phase of 15.1.
@@ -72,7 +74,7 @@ func (k *fiscalCheck) region(f fiscalFlow, key, id string) {
 	if id == "" {
 		return
 	}
-	p := append(fiscalPath(f), splitKey(key)...)
+	p := append(fiscalPath(f), strings.Split(key, ".")...)
 	r, ok := k.cc.regionID(id)
 	if !ok || !k.v.region[id] {
 		k.v.rep.add(ErrUnknownRegion, p, id, "")
@@ -81,19 +83,6 @@ func (k *fiscalCheck) region(f fiscalFlow, key, id string) {
 	if a, ok := k.pol.Lookup(f.authority); ok && !k.pol.Covers(a, r) {
 		k.v.rep.add(ErrNotCovered, p, id, "")
 	}
-}
-
-// splitKey splits a dotted key into its path segments.
-func splitKey(key string) []string {
-	var out []string
-	start := 0
-	for i := 0; i <= len(key); i++ {
-		if i == len(key) || key[i] == '.' {
-			out = append(out, key[start:i])
-			start = i + 1
-		}
-	}
-	return out
 }
 
 // commodity checks a commodity name: defined (ErrUnknownCommodity); an empty name is

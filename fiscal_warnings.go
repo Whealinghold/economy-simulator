@@ -264,10 +264,11 @@ func (w *fiscalWarner) drawn(commodity string) bool {
 // dutyWarnings raises duty_stack_above_whole.
 func (w *fiscalWarner) dutyWarnings() {
 	flagged := make([]bool, len(w.m.Duties))
+	commodities := append([]string{""}, w.dutyCommodities()...)
 	for _, r := range w.c.Regions {
 		for _, scope := range []string{ScopeDomestic, ScopeImport, ScopeExport} {
 			for _, payer := range []string{DutySeller, DutyBuyer} {
-				w.stack(flagged, r.ID, scope, payer)
+				w.stack(flagged, commodities, r.ID, scope, payer)
 			}
 		}
 	}
@@ -282,8 +283,8 @@ func (w *fiscalWarner) dutyWarnings() {
 // a payer and flags the first of them when the sum is above the whole value of the
 // trade. Each commodity named by a duty is tried, and the trade of a commodity none
 // names, so the sum is of the duties that one trade of some commodity meets.
-func (w *fiscalWarner) stack(flagged []bool, region, scope, payer string) {
-	for _, commodity := range append([]string{""}, w.dutyCommodities()...) {
+func (w *fiscalWarner) stack(flagged []bool, commodities []string, region, scope, payer string) {
+	for _, commodity := range commodities {
 		var sum int64
 		first := -1
 		for i, d := range w.m.Duties {
