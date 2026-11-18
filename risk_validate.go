@@ -28,6 +28,16 @@ func (v *validator) validateRisk() {
 	v.riskStores(m.Stores)
 }
 
+// riskEdgeSet is the set of the configured directed edges as (From, To), for a
+// membership test only.
+func riskEdgeSet(c *Config) map[[2]string]bool {
+	edges := make(map[[2]string]bool, len(c.Edges))
+	for _, e := range c.Edges {
+		edges[[2]string{e.From, e.To}] = true
+	}
+	return edges
+}
+
 // riskCount reports ErrOutOfBounds for a table with more than MaxRiskRows rows and
 // says whether the rows may be read.
 func (v *validator) riskCount(table string, n int) bool {
@@ -77,10 +87,7 @@ func (v *validator) riskRoutes(rows []RouteRisk) {
 		return
 	}
 	outside := outsideNodeSet(&v.c)
-	edges := make(map[[2]string]bool, len(v.c.Edges)) // a membership test only
-	for _, e := range v.c.Edges {
-		edges[[2]string{e.From, e.To}] = true
-	}
+	edges := riskEdgeSet(&v.c)
 	seen := make(map[[3]string]bool, len(rows)) // a membership test only
 	for i := range rows {
 		r := &rows[i]
@@ -149,10 +156,13 @@ func (v *validator) riskStores(rows []StoreRisk) {
 
 // riskWarnings are the four warnings of spec-risk.md 13.2 (FR-RSK-004), none of
 // which fails validation: no_risk_rows, risk_edge_off_path, risk_store_class_unowned
-// and risk_certain. It is nil with the module off and logs nothing itself.
+// and risk_certain. It is nil with the module off and logs nothing itself. Warnings
+// calls it on the configuration as written, before Validate, so a table over
+// MaxRiskRows gives nothing: Validate refuses it as ErrOutOfBounds and its rows are
+// not read.
 func riskWarnings(c *Config) []Warning {
 	m := c.Modules.Risk
-	if m == nil {
+	if m == nil || len(m.Routes) > MaxRiskRows || len(m.Stores) > MaxRiskRows {
 		return nil
 	}
 	if len(m.Routes) == 0 && len(m.Stores) == 0 {
@@ -183,12 +193,13 @@ func riskOffPath(c *Config, m *Risk) []Warning {
 	if err != nil {
 		return nil
 	}
+	edges := riskEdgeSet(c)
 	var out []Warning
 	for i := range m.Routes {
 		r := &m.Routes[i]
 		from, ok1 := g.Lookup(r.From)
 		to, ok2 := g.Lookup(r.To)
-		if !ok1 || !ok2 || !slices.ContainsFunc(c.Edges, func(e Edge) bool { return e.From == r.From && e.To == r.To }) {
+		if !ok1 || !ok2 || !edges[[2]string{r.From, r.To}] {
 			continue // Validate reports an unknown region or edge
 		}
 		used := false

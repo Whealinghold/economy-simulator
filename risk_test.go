@@ -307,6 +307,48 @@ func TestWarnings_RiskRowWithoutEdgeIsNotOffPath(t *testing.T) {
 	}
 }
 
+// TestWarnings_RiskTableOverTheBoundIsSilent verifies that a risk table with more
+// than MaxRiskRows rows raises no risk warning, so that Warnings, which reads the
+// rows as written before any validation, does no work in proportion to a table
+// that Validate refuses as ErrOutOfBounds.
+//
+// Requirement: FR-RSK-003, FR-RSK-004
+//
+// Guard: Warnings runs the risk warnings on the raw configuration, so without the
+// bound a Go-built table of any length costs a pass of the region graph per row
+// and one risk_certain warning per row. The rows here are certain, which warns
+// when the bound is absent.
+func TestWarnings_RiskTableOverTheBoundIsSilent(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		set  func(m *economysim.Risk)
+	}{
+		{"routes", func(m *economysim.Risk) {
+			m.Routes = slices.Repeat([]economysim.RouteRisk{{From: "north", To: "south", Mode: "foot", StrikeBP: 10_000, SeverityBP: 100}}, economysim.MaxRiskRows+1)
+		}},
+		{"stores", func(m *economysim.Risk) {
+			m.Stores = slices.Repeat([]economysim.StoreRisk{{Region: "north", Class: "bin", StrikeBP: 10_000, SeverityBP: 100}}, economysim.MaxRiskRows+1)
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := riskConfig()
+			tt.set(c.Modules.Risk)
+			if err := c.Validate(); !errors.Is(err, economysim.ErrOutOfBounds) {
+				t.Fatalf("Validate(%s over the bound) = %v, want ErrOutOfBounds", tt.name, err)
+			}
+			for _, w := range c.Warnings() {
+				if len(w.Path) > 1 && w.Path[0] == "modules" && w.Path[1] == "risk" {
+					t.Errorf("Warnings(%s over the bound) = %v %q, want no risk warning", tt.name, w.Path, w.Rule)
+					break
+				}
+			}
+		})
+	}
+}
+
 // TestWarnings_AbsentRowSilent verifies that the module off, and the module on with
 // rows that touch every edge and class, raise no risk warning, and that absence of
 // a row is no warning (spec-risk.md 3.2.3).
