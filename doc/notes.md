@@ -50,11 +50,11 @@ PR description.
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358 |
-| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349 |
-| CHK | N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-368 |
+| CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349 |
+| CHK | N-402, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-368 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354 |
+| CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-397 |
@@ -74,7 +74,7 @@ PR description.
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
 | OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349 |
-| ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399 |
+| ORG | N-400, N-401, N-403, N-404, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358 |
@@ -83,7 +83,7 @@ PR description.
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-214, N-226, N-327 |
 | SAV | N-145, N-156, N-195, N-197, N-362 |
 | SCL | N-030, N-198, N-222, N-300 |
-| SET | N-140, N-192, N-268, N-348, N-365 |
+| SET | N-404, N-140, N-192, N-268, N-348, N-365 |
 | SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
 | SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
@@ -1743,6 +1743,7 @@ PR description.
 - **Update (2026-11-11, plan 2-11, plan 2-14 audit):** POP keeps the death carry in the module's slice (plan 2-11 D423). The frozen own-use flag of an agent on a journey now has a behavioural test, `TestJourney_SkippedByOwnUseFlagStep` (FR-SUB-010); plan 2-24 need not build it. Left open.
 - **Update (2026-11-13, plan 3-skl Phase 1):** read: the traineeship state is in the module's slices (`w.skills`), the agent type gets no field. Left open as a standing rule.
 - **Update (2026-11-18, plan 3-org Phase 1):** applied for ORG: the membership is a pair of slices of the module (`member`, `memberRegion`, indexed by agent slot) saved in the agent tail of tag 3; the agent type gets no field. Removed with the code (plan 3-org PR B).
+- **Update (2026-11-18, plan 3-org PR B):** built: the membership is `member` and `memberRegion` in `institutions.go`, saved in the agent record of tag 3 by `institutions_report.go` and read back by the restore; `agent.go` gained no field. Kept open as the standing rule for the modules still to come (the earlier line said to remove it with the code; it is not removed because it binds each module's PR).
 
 ### N-245 A tunable a module's default rule reads joins the view's Tunables group
 
@@ -2320,6 +2321,36 @@ PR description.
 - **Raised:** 2026-11-18, `doc/plans/plan-3-org.md` E5, `spec-institutions.md` 14.3 and 17.
 - **Note:** ORG-S5 (S141) said the inert overlay (bodies declared, `Places` 0) equals the world without the module except four outputs, but with a declared body every region of its scope emits `MembershipChanged` (the first round admits every eligible household) and `Snapshot.Bodies` has rows. Settled in the spec: S141 excludes the module's own events and snapshot rows as SET-S4 does, and FR-ORG-001's strict form is tested on the module present and empty. The test of S141 (plan 3-org Phase 10) reads the corrected text.
 
+### N-400 ORG: the configuration hash does not dedupe the lists of a body
+
+- **Areas:** ORG, CFG
+- **Raised:** 2026-11-18, plan 3-org PR A review, `spec-institutions.md` 10.1.
+- **Note:** `Institutions.canonical` hashes `Roles`, `Regions` and `Jurisdictions` of a body in the order given, so two configurations that list the same set in another order, or twice, hash differently and resolve the same tables. The spec is silent on a repeated entry. The CFG owner decides between rejecting a duplicate (a sentinel and a row of 10.1), sorting the lists in `canonical`, or leaving it. Nothing in ORG depends on the answer.
+
+### N-401 ORG: the tests that plant state are replaced by the call's tests in PR D
+
+- **Areas:** ORG
+- **Raised:** 2026-11-18, plan 3-org PR B.
+- **Note:** PR B builds the resolved rights and ranges, the levels in force and the suspensions, and saves them in tag 31, but nothing sets a level or a suspension before PR D. `MembershipChanged.Held` is 0 until PR D. Until then `orgTablesToy` and the levels test plant the state in the module's fields. PR D replaces them with tests of `SetLegalLevels` and `SetRightSuspended` and of the held completion, and removes the planting.
+
+### N-402 CHK: `hashWorld` of a restored world differs from the uninterrupted one
+
+- **Areas:** CHK, CODE
+- **Raised:** 2026-11-18, plan 3-org PR B; reproduced on `origin/phase-3` at `e4459da`, with no ORG code.
+- **Note:** in an internal test, `w := newMill(t, millConfig(2, 10))`, three steps, `Checkpoint`, `RestoreWorld` with the same configuration: `hashWorld(w) != hashWorld(restored)` at the restore and after three more steps on both, with every module off. The fork tests compare events, snapshots, checkpoint bytes and logs, and those agree, so the difference is in state the walk of `hashWorld` reaches that the checkpoint does not save (a cache, a scratch slice, a nil or empty slice, a pointer value), not in the model. Not ORG's. The CHK owner finds which field, and either saves it, leaves it out of the walk with a reason, or documents that the hash is not a restore invariant.
+
+### N-403 ORG: mutation testing is owed
+
+- **Areas:** ORG, CODE
+- **Raised:** 2026-11-18, plan 3-org PR B.
+- **Note:** `gomu` has not run on `institutions*.go` or on `internal/institution` (testing.md 9.4: Docker only, `--cpus` and `--memory` capped, `GOMAXPROCS` to match). It runs once PR C and PR D have landed, so one run covers the whole module.
+
+### N-404 ORG: the allow-lists of two guard tests name the ORG files
+
+- **Areas:** ORG, SET
+- **Raised:** 2026-11-18, plan 3-org PR B.
+- **Note:** `TestReaders_StaticCheck` lets `institutions_round.go` read the flag with `regionHas` (SET's hook H6, `spec-institutions.md` 3.5.2), and `TestPolity_NoRegionFieldRead` lists the other ORG files among those that may name a jurisdiction (POL's rule). PR C and PR D add files that read the same things: each adds its file to the same two lists, and does not widen a list to a pattern.
+
 ## Read receipt
 
 ### N-358 A gain is not a recipe
@@ -2362,4 +2393,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 0ba64f82ffd4915c694e657e
+NOTES-TAG: 2f6f9d8f86f5c37ff91f2bf5
