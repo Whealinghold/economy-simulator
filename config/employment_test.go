@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -125,10 +126,9 @@ hireable = true
 // hire form: hire and max_open on the module, the four fields on the block read
 // over DefaultHireEmployer (an absent key takes its default and PayrollBP stays 0,
 // so the mixed form is never made by a default), a block with only payroll_bp
-// stays the payroll form, an absent max_open with hire takes the default, and a
-// file and the same Go value hash alike, whatever the order of the hire list.
+// stays the payroll form, and an absent max_open with hire takes the default.
 //
-// Requirement: FR-EMP-079, FR-EMP-080, FR-CFG-086
+// Requirement: FR-EMP-079, FR-EMP-080
 func TestLoad_EmploymentHire(t *testing.T) {
 	t.Parallel()
 	got, err := parseStrings(hireDoc)
@@ -159,6 +159,19 @@ func TestLoad_EmploymentHire(t *testing.T) {
 	if want := (economysim.Employer{PayrollBP: 3_000}); !reflect.DeepEqual(*pay.Roles[0].Employer, want) || pay.Modules.Employment.Hire {
 		t.Errorf("Parse(payroll) = %+v and %+v, want the payroll block %+v and Hire false", *pay.Roles[0].Employer, *pay.Modules.Employment, want)
 	}
+}
+
+// TestLoad_EmploymentHireHashesAsGoValue verifies that the hire-form document and
+// the same configuration built in Go hash alike, whatever the order of the hire
+// list (the file writes grind first, the Go value prepare first).
+//
+// Requirement: FR-EMP-079, FR-CFG-086
+func TestLoad_EmploymentHireHashesAsGoValue(t *testing.T) {
+	t.Parallel()
+	got, err := parseStrings(hireDoc)
+	if err != nil {
+		t.Fatalf("Parse(hireDoc) error = %v, want nil", err)
+	}
 	boss := economysim.DefaultRole()
 	boss.ID, boss.Recipes = "boss", []string{"prepare", "grind"}
 	boss.Employer = &economysim.Employer{Recipes: []string{"prepare", "grind"}, MaxHires: 6, WorkerShareBP: 4_000, HireYieldBP: 8_000}
@@ -168,6 +181,36 @@ func TestLoad_EmploymentHire(t *testing.T) {
 	goValue.Modules.Employment = &economysim.Employment{Hire: true, MaxOpen: 50}
 	if economysim.HashConfig(got) != economysim.HashConfig(goValue) {
 		t.Errorf("HashConfig(file) != HashConfig(the same Go value), want equal (FR-EMP-079)")
+	}
+}
+
+// TestLoad_EmploymentHireEmptyBlockIsRefused verifies that an employer table with
+// no key in a hire-form world is loaded and then refused by Validate with
+// ErrEmploymentShape: the loader reads the roles before the modules, so the block
+// takes the payroll default, and the validator must turn that mixed form (PayrollBP above 0 in the hire form, and no
+// hire list) into an error rather than a block that runs. With the module in the
+// payroll form the same table is the default block and loads.
+//
+// Requirement: FR-EMP-080, FR-EMP-004
+//
+// Guard: the spec gives the hire form no default for the hire list. If the loader
+// ever defaulted an empty block to a valid hire block, a forgotten hire list would
+// pass silently; this pins the refusal.
+func TestLoad_EmploymentHireEmptyBlockIsRefused(t *testing.T) {
+	t.Parallel()
+	hire, err := parseStrings(minimal + "[modules.employment]\nhire = true\n[role.a.employer]\n")
+	if err != nil {
+		t.Fatalf("Parse(hire form, empty employer table) error = %v, want nil", err)
+	}
+	if err := hire.Validate(); !errors.Is(err, economysim.ErrEmploymentShape) {
+		t.Errorf("Validate(hire form, empty employer table) error = %v, want ErrEmploymentShape", err)
+	}
+	got, err := parseStrings(minimal + "[modules.employment]\n[role.a.employer]\n")
+	if err != nil {
+		t.Fatalf("Parse(payroll form, empty employer table) error = %v, want nil", err)
+	}
+	if want := economysim.DefaultEmployer(); !reflect.DeepEqual(*got.Roles[0].Employer, want) {
+		t.Errorf("Parse(payroll form, empty employer table) block = %+v, want %+v", *got.Roles[0].Employer, want)
 	}
 }
 
