@@ -272,6 +272,41 @@ func TestWarnings_Risk(t *testing.T) {
 	}
 }
 
+// TestWarnings_RiskRowWithoutEdgeIsNotOffPath verifies that a route row whose two
+// regions are defined but whose edge is not configured raises no
+// risk_edge_off_path: Validate reports it as ErrUnknownEdge, and a second report
+// for the same row would be wrong, because "off path" is a claim about a
+// configured edge.
+//
+// Requirement: FR-RSK-003, FR-RSK-004
+//
+// Fix: plan 3-rsk review 1. riskOffPath looked only for a hop from the row's origin
+// to its destination, so a row with no edge between two regions that a path joins
+// by way of a third was warned as off path as well as refused.
+func TestWarnings_RiskRowWithoutEdgeIsNotOffPath(t *testing.T) {
+	t.Parallel()
+	c := riskConfig()
+	// north and south are joined only by way of mid: no edge north to south.
+	mid := economysim.DefaultRegion()
+	mid.ID = "mid"
+	c.Regions = append(c.Regions, mid)
+	c.Edges = []economysim.Edge{
+		{From: "north", To: "mid", Distance: 40}, {From: "mid", To: "south", Distance: 40},
+		{From: "south", To: "mid", Distance: 40}, {From: "mid", To: "north", Distance: 40},
+	}
+	c.Modules.Risk = &economysim.Risk{
+		Routes: []economysim.RouteRisk{{From: "north", To: "south", Mode: "foot", StrikeBP: 100, SeverityBP: 100}},
+	}
+	if err := c.Validate(); !errors.Is(err, economysim.ErrUnknownEdge) {
+		t.Fatalf("Validate(a route row with no edge) = %v, want ErrUnknownEdge", err)
+	}
+	for _, w := range c.Warnings() {
+		if w.Rule == "risk_edge_off_path" {
+			t.Errorf("Warnings(a route row with no edge) = %v %q, want no risk_edge_off_path", w.Path, w.Rule)
+		}
+	}
+}
+
 // TestWarnings_AbsentRowSilent verifies that the module off, and the module on with
 // rows that touch every edge and class, raise no risk warning, and that absence of
 // a row is no warning (spec-risk.md 3.2.3).
