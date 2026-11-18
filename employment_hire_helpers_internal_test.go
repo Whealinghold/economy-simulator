@@ -77,13 +77,7 @@ func hireWorld(t *testing.T, o hireOpts, plan func(v *AgentView) JobRequest, opt
 	if o.farmTools > 0 {
 		farm.StartStock = append(farm.StartStock, Item{Commodity: "plough", Quantity: Quantity(o.farmTools)})
 	}
-	rec := Recipe{ID: "tend", Duration: o.duration, Sited: o.sited, TraineeYield: 5_000, Outputs: []Output{{Commodity: "grain", Quantity: 2, CostShare: 10_000}}}
-	if o.input {
-		rec.Inputs = []Item{{Commodity: "grain", Quantity: 1}}
-	}
-	if o.tool {
-		rec.Requires = []Tool{{Commodity: "plough", WearPerUse: 1}}
-	}
+	rec := hireRecipe(o)
 	cfg := Config{World: world, Calendar: DefaultCalendar(), Commodities: []Commodity{grain}, Roles: []Role{farm, hand}, Recipes: []Recipe{rec}}
 	if o.tool {
 		cfg.Commodities = append(cfg.Commodities, plough)
@@ -104,6 +98,19 @@ func hireWorld(t *testing.T, o hireOpts, plan func(v *AgentView) JobRequest, opt
 		t.Fatalf("NewWorld() error = %v, want nil", err)
 	}
 	return w
+}
+
+// hireRecipe is the recipe "tend" of the options: it takes 1 grain an execution with
+// input, needs a plough with tool, and is sited (with no yield row) with sited.
+func hireRecipe(o hireOpts) Recipe {
+	rec := Recipe{ID: "tend", Duration: o.duration, Sited: o.sited, TraineeYield: 5_000, Outputs: []Output{{Commodity: "grain", Quantity: 2, CostShare: 10_000}}}
+	if o.input {
+		rec.Inputs = []Item{{Commodity: "grain", Quantity: 1}}
+	}
+	if o.tool {
+		rec.Requires = []Tool{{Commodity: "plough", WearPerUse: 1}}
+	}
+	return rec
 }
 
 // defaultHire fills the zero fields of the options with the values the tests share.
