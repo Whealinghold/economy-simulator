@@ -675,3 +675,17 @@ const (
 	// (the skills module's, spec-institutions.md 9).
 	MaxBodyTrainees = 100
 )
+
+// The bounds of the hire form of the employment module (spec-employment.md 13).
+// Both are provisional placeholders (N-015, N-027).
+const (
+	// MaxEstablishment is the largest Employer.MaxHires: the hired executions of one
+	// employer in progress at once. With MaxQuantity and MaxPrice the product of a
+	// bill (wage, Duration, executions) fits int64 through the 128-bit helper, and
+	// an establishment above a thousand households is not one agent.
+	MaxEstablishment = 1_000
+	// MaxHireRecords is the largest Employment.MaxOpen: the hires open at once in a
+	// region, and so the Escrow accounts of the hires are at most this many (as
+	// MaxContracts).
+	MaxHireRecords = 1_000_000
+)

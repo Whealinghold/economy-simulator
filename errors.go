@@ -524,6 +524,10 @@ var (
 	// employment module on with no role that has an employer block or with no
 	// Hireable role.
 	ErrEmploymentShape = errors.New("employment has the wrong shape")
+	// ErrEmployerWeight is an employer role with a group of scale above 1, or
+	// whose households exceed one per agent: an employer has weight 1
+	// (spec-employment.md 3.6, 14.1).
+	ErrEmployerWeight = errors.New("employer role has a weight above 1")
 )
 
 // The sentinels of the polity module (spec-polity.md 9.1). They are root sentinels
