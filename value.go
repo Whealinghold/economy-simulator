@@ -69,6 +69,16 @@ type SettlementClassID int
 // NoSettlementClass means no class: the From of the event of a founding.
 const NoSettlementClass SettlementClassID = -1
 
+// FacilityClassID is the index of a facility class in ascending order of its ID
+// string, which is its position in Config().Modules.Infrastructure.Classes
+// (spec-infrastructure.md 3.1.4). It is not stable across configurations; use the
+// string ID to persist or exchange.
+type FacilityClassID int
+
+// FacilityID identifies a facility. IDs are assigned in creation order from 1 and are
+// never reused (spec-infrastructure.md 3.2.1).
+type FacilityID int64
+
 // ShipmentID identifies a shipment. IDs are assigned in order of dispatch from 0
 // and are never reused within a world.
 type ShipmentID int64

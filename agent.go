@@ -767,6 +767,11 @@ type AgentState struct {
 	// a block. Credit is what the agent owes and is owed (spec-credit.md 10.1).
 	HasCredit bool
 	Credit    CreditState
+
+	// Facilities are the facilities the agent owns in every region, in ascending ID,
+	// at most MaxFacilitiesPerAgent; empty while the infrastructure module is off
+	// (spec-infrastructure.md 11.4).
+	Facilities []FacilityState
 }
 
 // HoldingState is a commodity an agent holds: its units and the units of them that
@@ -833,6 +838,7 @@ func (w *World) Agent(id AgentID) (AgentState, error) {
 	}
 	w.fillModuleGroups(&st, a)
 	w.fillCreditState(&st, a)
+	w.fillFacilityState(&st, a)
 	return st, nil
 }
 
