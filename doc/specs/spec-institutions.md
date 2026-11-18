@@ -1007,7 +1007,7 @@ recipes, commodities, bodies); shapes; overlap; bounds.
 
 | Sentinel | Rejects |
 |----------|---------|
-| `ErrInvalidID`, `ErrDuplicateID` | an ID that does not match `spec-config.md` 3.3, or twice; two rights with one (activity, subject, scope key); two controls with one (commodity, scope key); two rate limits with one scope key |
+| `ErrInvalidID`, `ErrDuplicateID` | an ID that does not match `spec-config.md` 3.3, or twice; an entry twice in a body list (`Roles`, `Regions`, `Jurisdictions`); two rights with one (activity, subject, scope key); two controls with one (commodity, scope key); two rate limits with one scope key |
 | `ErrTooMany` | more than `MaxBodies`, `MaxRights` or `MaxControls` |
 | `ErrModuleDependency` | a `Jurisdictions` entry or a right, control or rate limit keyed by a jurisdiction while `Modules.Polity` is absent; a `Needs` while `Modules.Settlements` is absent; a rate limit while `Modules.Credit` is absent |
 | `ErrUnknownRole`, `ErrUnknownRegion`, `ErrUnknownJurisdiction`, `ErrUnknownRecipe`, `ErrUnknownCommodity`, `ErrUnknownSettlementFlag` (SET's, 9.1 there) | a reference that names nothing, a `Needs` that no class carries included |
