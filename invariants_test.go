@@ -279,6 +279,9 @@ var invariantTable = []invariantCase{
 	{"one-demand", packOneDemand, 4, 0, "", nil},
 	{"one+faucet-sunk", packOneFaucetSunk, 4, 0, "", nil},
 	{"one+resources", packOneResources, scenarioSeeds, 0, "", nil},
+	// Plan 3-lnd Phase 7: the titles of the tenure overlay on the refilling endowment (no rent
+	// is charged on pack one; the five of the golden is the pack that lets units).
+	{"one+resources+tenure", append(slices.Clone(packOneResources), "overlay/tenure.toml"), 4, 0, "", nil},
 	{"one+subsistence", packOneSubsistence, 4, 0, "", nil},
 	// Plan 3-skl Phase 5: the traineeship overlay (120 ticks of training on cook and crafter_a),
 	// so a trainee's board, its job for the trainer and the completions are under the invariants.
