@@ -329,3 +329,9 @@ func DefaultRegionSettlement(region string) RegionSettlement {
 // shield, never written off, no keep, no slack), and a rate is required and never
 // defaulted, 0 being interest-free. Its bounds are in bounds.go (MaxCreditRateBP,
 // MaxCreditTerm, MaxOpenClaims).
+
+// The infrastructure module (spec-infrastructure.md 12.1.2) has no tunable of its
+// own and no default class or macro constant (N-027): Kind and Durability are
+// required, and every other optional field of a class defaults to 0, which turns its
+// mechanism off (no decay, no use wear). Its bounds are in bounds.go
+// (MaxFacilityClasses to MaxInitialRows).
