@@ -326,6 +326,7 @@ func (w *World) p83aRent() {
 	flow := 0
 	for cell := range t.holds {
 		if !t.titled(cell) {
+			t.noTitleRun[cell], t.rentFundsRun[cell] = 0, 0 // a tick with no title has no refusal: the run breaks
 			continue
 		}
 		flow = t.rentCell(cell, flow)
