@@ -37,7 +37,7 @@ func spwView() *RegionView {
 }
 
 func spwRole(id RoleID, wage Money, hh int64) RoleView {
-	return RoleView{Role: id, Households: hh, Agents: hh, Wage: wage, HasWage: true, Upkeep: 1000, ExpectedWorkTicks: 250}
+	return RoleView{NoLimit: true, Role: id, Households: hh, Agents: hh, Wage: wage, HasWage: true, Upkeep: 1000, ExpectedWorkTicks: 250}
 }
 
 func spwAgent(id AgentID, role RoleID, w int64) RegionAgent {
