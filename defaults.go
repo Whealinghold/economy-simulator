@@ -329,3 +329,12 @@ func DefaultRegionSettlement(region string) RegionSettlement {
 // shield, never written off, no keep, no slack), and a rate is required and never
 // defaulted, 0 being interest-free. Its bounds are in bounds.go (MaxCreditRateBP,
 // MaxCreditTerm, MaxOpenClaims).
+
+// The institutions module (spec-institutions.md 9) has no tunable with a default that
+// moves a result: the module defaults to no body, no right, no control and no rate
+// limit, which is the world without it, and OwnUseBound is false. A produce right
+// with no Who is read as WhoPrincipal (Institutions.canonical). Its bounds are in
+// bounds.go (MaxBodies, MaxRights, MaxControls).
+
+// DefaultInstitutions returns the module with nothing declared and OwnUseBound false.
+func DefaultInstitutions() Institutions { return Institutions{} }

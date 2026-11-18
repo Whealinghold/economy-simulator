@@ -936,7 +936,9 @@ the input, tool or yield checks. Any other refusal is production's, with its rea
   commodity under a `sell` or `buy` right of a body that the agent is not a member of is
   rejected with `not_permitted` (`spec-institutions.md` 5.6.2, FR-ORG-024); the world checks it
   while it builds the orders, **after** `not_tradable` and before the market's checks, and it
-  does not apply to a pseudo-agent, which holds no membership (FR-AGT-085). Every other
+  does not apply to a pseudo-agent, which holds no membership (FR-AGT-085); the fact is the
+  field `NotPermitted` of `clearing.Facts`, set by the world's one resolver of the facts of an
+  order (`spec-clearing.md` 3.2.1.1). Every other
   rejection is the market's (`spec-clearing.md` 3.2): `invalid_price`, `invalid_quantity`,
   `insufficient_funds`, `insufficient_stock`, `no_room` (with the storage module on),
   `overflow`, `holding_limit` and `receipt_limit`.
