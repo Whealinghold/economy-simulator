@@ -74,6 +74,7 @@ var positionList = [...]position{
 	{"P8.1", "LED", line},
 	{"P8.2", "LED", line},
 	{"P8.3", "RES", line},
+	{"P8.3a", "LND", line},
 	{"P8.3c", "TEC", line},
 	{"P8.4", "LED", line},
 	{"P8.5", "OBS", bracket}, // TickEnded, in endStep
@@ -91,7 +92,7 @@ var notBuiltPositions = [...]string{
 	"P3.1a", "P3.3c", "P3.4a", "P3.6b", "P3.6c",
 	"P4.1a",
 	"P7.2b",
-	"P8.1a", "P8.1b", "P8.3a", "P8.3b",
+	"P8.1a", "P8.1b", "P8.3b",
 }
 
 // positions is the straight line of a step: one call for each position of
@@ -230,7 +231,7 @@ func (w *World) positionsSettle() error {
 	return w.positionsTail()
 }
 
-// positionsTail is the last part of the straight line, from phase 5, split from
+// positionsTail is the part of the straight line from phase 5 to P8.3, split from
 // positions to stay within the Lizard complexity limit (N-243). The position test
 // reads it as part of the straight line, after positionsProduce and in source
 // order.
@@ -265,6 +266,16 @@ func (w *World) positionsTail() error {
 	}
 	w.p82Flows()
 	w.p83Regen()
+	return w.positionsClose()
+}
+
+// positionsClose is the end of the straight line, from P8.3a to the audit, split from
+// positionsTail to stay within the Lizard complexity limit (N-243, plan 3-lnd). The
+// position test reads it as part of the straight line, after positionsTail.
+func (w *World) positionsClose() error {
+	if w.tenure != nil {
+		w.p83aRent()
+	}
 	if w.tec != nil {
 		w.p83cTechnology()
 	}

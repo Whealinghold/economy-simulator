@@ -91,6 +91,9 @@ type tenure struct {
 	noTitleRun, rentFundsRun []int64
 	// capBP is MaxHolderShareBP, the most one agent may hold; the pool is exempt.
 	capBP int64
+	// stepBP, floorBP and ceilBP are RentStepBP, RentFloorBP and RentCeilingBP, the band of
+	// the rent step (spec-land.md 5.5.1). Derived.
+	stepBP, floorBP, ceilBP int64
 	// stepping says the posted rent is state: RentStepBP is above 0, and ownUseExempt
 	// says a request for an own-use recipe pays no rent (OwnUseExempt).
 	stepping, ownUseExempt bool
@@ -109,7 +112,8 @@ func newTenure(c *Config) *tenure {
 	}
 	t := &tenure{regions: len(c.Regions), resources: len(c.Modules.Resources.Resources),
 		capBP: cmp.Or(m.MaxHolderShareBP, DefaultMaxHolderShareBP), stepping: m.RentStepBP > 0,
-		ownUseExempt: m.OwnUseExempt}
+		ownUseExempt: m.OwnUseExempt, stepBP: m.RentStepBP, floorBP: m.RentFloorBP,
+		ceilBP: cmp.Or(m.RentCeilingBP, DefaultRentCeilingBP)}
 	n := t.regions * t.resources
 	t.holds, t.base, t.hasTerm, t.closed = make([][]title, n), make([]int64, n), make([]bool, n), make([]bool, n)
 	t.posted, t.scale = make([]int64, n), make([]int64, n)

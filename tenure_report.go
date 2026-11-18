@@ -1,11 +1,16 @@
 package economysim
 
 import (
+	"cmp"
+	"context"
 	"fmt"
+	"log/slog"
 	"math"
+	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/codec"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 	tnr "github.com/Whealinghold/economy-sim/internal/tenure"
 )
 
@@ -291,4 +296,146 @@ func (t *tenure) fillRecipe(r *RecipeView, region RegionID, a *agent) {
 			}
 		}
 	}
+}
+
+// noteFlow keeps one transfer of rent for the money rows of RentPaid, when an observer is
+// supplied: the region of the payer's account, and the lessor's, or the endowment's region
+// for the pool.
+func (t *tenure) noteFlow(x rentStart, lessor AgentID, paid int64) {
+	w, rt := t.world, &t.rt
+	if !w.obs.supplied {
+		return
+	}
+	f := rentFlow{cell: x.cell, from: w.regionOf(&w.agents[x.payer]), to: t.regionOf(x.cell), pool: lessor < AgentID(t.regions), amount: paid}
+	if !f.pool {
+		f.to = w.regionOf(&w.agents[lessor])
+	}
+	rt.flows = append(rt.flows, f)
+}
+
+// p83aRent is P8.3a (spec-land.md 5.5, 8.1): for every endowment that has a title, in
+// (RegionID, ResourceID) order, the rent step on the counts of the tick, the runs of the
+// refusals and their Warn, the Debug line of the rent charged and the event RentPaid. The
+// new posted rent applies from the next tick (P1.2 reads it). The counts are the scratch of
+// P2.3 to P2.7; a world with no tick yet has none.
+func (w *World) p83aRent() {
+	t := w.tenure
+	if len(t.rt.counts) == 0 {
+		return
+	}
+	flow := 0
+	for cell := range t.holds {
+		if !t.titled(cell) {
+			continue
+		}
+		flow = t.rentCell(cell, flow)
+	}
+}
+
+// rentCell is P8.3a for one endowment; flow is the index of its first transfer of rent in
+// the scratch, which is in ascending endowment order, and the result is the index after the
+// last.
+func (t *tenure) rentCell(cell, flow int) int {
+	w := t.world
+	c := &t.rt.counts[cell]
+	rent, before := t.rentInForce(cell), t.posted[cell]
+	after, ok := tnr.Step(tnr.StepIn{Posted: before, Base: t.base[cell], StepBP: t.stepBP, FloorBP: t.floorBP, CeilBP: t.ceilBP,
+		Unserved: c.unserved, Idle: c.idleUnits(), Cut: c.cutUnits, Closed: t.closed[cell]})
+	if !ok {
+		invariant("the rent step of an endowment is out of range after validation")
+	}
+	t.posted[cell] = after
+	t.noTitleRun[cell] = nextRun(t.noTitleRun[cell], c.noTitle)
+	t.rentFundsRun[cell] = nextRun(t.rentFundsRun[cell], c.rentFunds)
+	t.warnRefusal(cell, ReasonNoTitle, c.noTitle, t.noTitleRun[cell], rent)
+	t.warnRefusal(cell, ReasonRentFunds, c.rentFunds, t.rentFundsRun[cell], rent)
+	if c.paid > 0 {
+		t.debugCharged(cell, rent, c.letUnits)
+	}
+	if !w.obs.supplied {
+		return flow
+	}
+	e := RentPaid{Tick: w.Tick(), Region: t.regionOf(cell), Resource: t.resourceOf(cell), Rent: Money(rent), Entitled: c.entitle,
+		OwnUnits: c.ownUnits, CommonsUnits: c.commonsUnits, LetUnits: c.letUnits, Offered: c.offered, Idle: c.idleUnits(),
+		Held: c.held, Unserved: c.unserved, PricedOut: c.pricedOut, Tenants: c.tenants, Lessors: c.lessors,
+		Paid: Money(c.paid), Forfeited: Money(c.forfeited), NoTitle: c.noTitle, RentFunds: c.rentFunds,
+		CutUnits: c.cutUnits, Exempt: c.exemptUnits, RentAfter: Money(after)}
+	flow = t.moneyRows(&e, cell, flow)
+	if e.quiet() && after == before {
+		return flow
+	}
+	w.obs.deliver(e)
+	return flow
+}
+
+// quiet reports that none of the counts that make a RentPaid due is non-zero
+// (spec-land.md 13.1.1); the posted rent is tested by the caller.
+func (e *RentPaid) quiet() bool {
+	return e.OwnUnits|e.CommonsUnits|e.LetUnits|e.Idle|e.Held|e.Unserved|e.PricedOut|e.NoTitle|e.RentFunds|e.CutUnits|
+		int64(e.Paid)|int64(e.Forfeited) == 0
+}
+
+// moneyRows sets ToPool, From and To of the event from the transfers of the endowment
+// that start at flow, and returns the index after them. A row is made for each region with
+// a non-zero amount, in ascending RegionID.
+func (t *tenure) moneyRows(e *RentPaid, cell, flow int) int {
+	fs := t.rt.flows
+	for ; flow < len(fs) && fs[flow].cell == cell; flow++ {
+		f := fs[flow]
+		e.From = addRegionMoney(e.From, f.from, f.amount)
+		if f.pool {
+			e.ToPool += Money(f.amount)
+		} else {
+			e.To = addRegionMoney(e.To, f.to, f.amount)
+		}
+	}
+	return flow
+}
+
+// addRegionMoney adds an amount to the row of a region in a list kept in ascending RegionID.
+func addRegionMoney(list []RegionMoney, region RegionID, amount int64) []RegionMoney {
+	i, found := slices.BinarySearchFunc(list, region, func(x RegionMoney, r RegionID) int { return cmp.Compare(x.Region, r) })
+	if found {
+		list[i].Money += Money(amount)
+		return list
+	}
+	return slices.Insert(list, i, RegionMoney{Region: region, Money: Money(amount)})
+}
+
+// nextRun is the run of consecutive ticks with a refusal after a tick with n refusals.
+func nextRun(run, n int64) int64 {
+	if n > 0 {
+		return run + 1
+	}
+	return 0
+}
+
+// warnRefusal writes the Warn "tenure refusal" for an endowment and a reason in a tick with
+// n requests refused: at the first tick of a run and at every tenth after it (spec-land.md
+// 13.2). Its volume is bounded by regions times resources times two.
+func (t *tenure) warnRefusal(cell int, reason Reason, n, run, rent int64) {
+	w := t.world
+	if n == 0 || (run != 1 && run%10 != 0) {
+		return
+	}
+	ctx := context.Background()
+	if !w.log.Enabled(ctx, slog.LevelWarn) {
+		return
+	}
+	w.log.LogAttrs(ctx, slog.LevelWarn, "tenure refusal", slog.Int64(logkeys.Tick, w.Tick()),
+		slog.Int(logkeys.Region, int(t.regionOf(cell))), slog.Int(logkeys.Resource, int(t.resourceOf(cell))),
+		slog.Int64(logkeys.Rent, rent), slog.Int64(logkeys.Agents, n), slog.String(logkeys.Reason, string(reason)))
+}
+
+// debugCharged writes the Debug line "rent charged" for an endowment on which rent was
+// paid this tick (spec-land.md 13.2).
+func (t *tenure) debugCharged(cell int, rent, units int64) {
+	w := t.world
+	ctx := context.Background()
+	if !w.log.Enabled(ctx, slog.LevelDebug) {
+		return
+	}
+	w.log.LogAttrs(ctx, slog.LevelDebug, "rent charged", slog.Int64(logkeys.Tick, w.Tick()),
+		slog.Int(logkeys.Region, int(t.regionOf(cell))), slog.Int(logkeys.Resource, int(t.resourceOf(cell))),
+		slog.Int64(logkeys.Rent, rent), slog.Int64(logkeys.Quantity, units))
 }
