@@ -44,7 +44,7 @@ func (w *World) Direct(id AgentID, d Directive) error {
 // mailbox is the directive as the agent keeps it: a deep copy, so the caller's
 // slices can change after the call, or nil for a directive with nothing in it.
 func (d *Directive) mailbox() *Directive {
-	if d == nil || d.Job == nil && len(d.Intents) == 0 && len(d.Discards) == 0 && len(d.Hold) == 0 {
+	if d == nil || d.Job == nil && len(d.Intents) == 0 && len(d.Discards) == 0 && len(d.Hold) == 0 && d.Borrow == nil && d.Lend == nil {
 		return nil
 	}
 	c := Directive{Sticky: d.Sticky}
@@ -52,16 +52,20 @@ func (d *Directive) mailbox() *Directive {
 		j := *d.Job
 		c.Job = &j
 	}
+	c.Borrow, c.Lend = d.cloneCredit()
 	c.Intents = slices.Clone(d.Intents)
 	c.Discards = slices.Clone(d.Discards)
 	c.Hold = slices.Clone(d.Hold)
 	return &c
 }
 
-// checkDirective is rows 2 to 6 of the table of spec-integration.md 4.3.2, in
-// order. Row 1 (the module of Offer, Hire, Borrow and Lend) and row 7 wait for the
-// modules that own those fields (plan 2-17 Scope).
+// checkDirective is the table of spec-integration.md 4.3.2, in order: row 1 (the
+// module of Borrow and Lend; the Offer and Hire of employment wait for that module),
+// rows 2 to 6, and row 7 (the bounds and the block of Borrow and Lend).
 func (w *World) checkDirective(a *agent, d *Directive) error {
+	if err := w.checkCreditModule(d); err != nil {
+		return err
+	}
 	if err := w.checkDirectedJob(a, d.Job); err != nil {
 		return err
 	}
@@ -77,7 +81,10 @@ func (w *World) checkDirective(a *agent, d *Directive) error {
 	if err := w.checkDirectedDiscards(d.Discards); err != nil {
 		return err
 	}
-	return w.checkDirectedHold(d.Hold)
+	if err := w.checkDirectedHold(d.Hold); err != nil {
+		return err
+	}
+	return w.checkCreditDirective(a, d)
 }
 
 // checkDirectedJob is rows 2 and 3: a recipe that exists and is on the role's list

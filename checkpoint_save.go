@@ -30,6 +30,29 @@ func (w *World) eachLive(f func(a *agent)) {
 	}
 }
 
+// saveStores is the block of tag 3 that follows the agent list when the storage module
+// is on (spec-storage.md 15.1): for each live agent in ascending ID, the number of
+// classes of which it owns a store and, for each, the class index and the count,
+// ascending by class index. Most agents own none and write one byte.
+func (w *World) saveStores(cw *codec.Writer) {
+	s := w.sto
+	w.eachLive(func(a *agent) {
+		n := 0
+		for c := range s.classes {
+			if s.count(a.id, c) > 0 {
+				n++
+			}
+		}
+		cw.Count(n)
+		for c := range s.classes {
+			if k := s.count(a.id, c); k > 0 {
+				cw.U(uint64(c))
+				cw.U(uint64(k))
+			}
+		}
+	})
+}
+
 // strategyName is the name an agent's strategy is saved under (spec-checkpoint.md
 // 4.2, tag 3): the role's configured name for an index below the role count, else
 // the name of the extra table, which an external agent's strategy is.
