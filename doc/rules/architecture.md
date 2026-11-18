@@ -143,6 +143,9 @@ economy-sim/
   credit_round.go  credit_settle.go  credit_strategy.go  credit_report.go
   credit_state.go                                                     (CRD)
   polity_validate.go                                                  (POL)
+  fiscal_validate.go  fiscal_warnings.go  fiscal_hash.go  fiscal_class.go
+  fiscal_tax.go  fiscal_payout.go  fiscal_duty.go  fiscal_toll.go
+  fiscal_orders.go  fiscal_report.go  fiscal_state.go                  (FIS)
   employment_validate.go  employment_round.go  employment_hire.go
   employment_report.go  employment_strategy.go                        (EMP)
   risk_validate.go                                                    (RSK)
@@ -1097,4 +1100,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: dcf04f1ce22f6eb654b58a0e
+RULE-TAG: 645d155e21f440e7e94863d7
