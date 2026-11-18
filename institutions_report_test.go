@@ -525,3 +525,41 @@ func TestEvents_MetricsDerivable(t *testing.T) {
 		t.Errorf("waiting from the snapshot = %d and from the event = %d, want 15 and 15", got, last.Waiting)
 	}
 }
+
+// TestDeterminism_Institutions verifies that the world with the module on ends in the same
+// snapshot and state hash whatever the way it is driven: a plain run, Run in chunks, a
+// logger, an observer, the audit. Its events equal the reference's, so the round and the
+// reports take no part of the run's shape (FR-ORG-053).
+//
+// Requirement: FR-ORG-053, NFR-ORG-004, FR-WLD-063
+//
+// Guard: the round sorts its candidates by a total order and the report walks the pairs by
+// index; an iteration over a map, or a scratch that kept a count across ticks, would show
+// here as a run that differs by the way it was driven.
+func TestDeterminism_Institutions(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	const ticks = detTicks
+	cfg := orgWaitingConfig()
+	base := runPack(t, cfg, detStep(runSpec{Seed: 1, Ticks: ticks}))
+	ref := runPack(t, cfg, detStep(runSpec{Seed: 1, Ticks: ticks, Observe: true}))
+	refEvents := renderEvents(withoutRunBrackets(ref))
+	for _, tc := range detCases(true) {
+		spec := tc.spec()
+		spec.Seed, spec.Ticks = 1, ticks
+		got := runPack(t, cfg, spec)
+		if !reflect.DeepEqual(got.Final, base.Final) {
+			t.Errorf("case %q: final snapshot differs from the bare run", tc.name)
+		}
+		if economysim.HashWorld(got.World) != economysim.HashWorld(base.World) {
+			t.Errorf("case %q: state hash of the world differs from the bare run", tc.name)
+		}
+		if spec.Observe {
+			if d := firstLineDiff(refEvents, renderEvents(withoutRunBrackets(got))); d != "" {
+				t.Errorf("case %q: events differ from the reference at %s", tc.name, d)
+			}
+		}
+	}
+}
