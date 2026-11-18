@@ -46,11 +46,8 @@ var stageTwoScenarios = []struct {
 // entry) and on a number with no test that is not listed. Whoever builds a scenario deletes
 // its entry.
 var scenariosNotBuilt = map[int]string{
-	35:  "plan 7 (MON-S3, the pool grant); not built when plan 2-24 was written",
-	75:  "plan 24: WLD-S3, the cold leg of S18 and the Duration 10 leg, which waits for a pack with such a recipe",
-	108: "plan 3-lnd PR 5 (LND-S2, the rent step)",
-	109: "plan 3-lnd PR 5 (LND-S3, the closed case)",
-	110: "plan 3-lnd PR 5 (LND-S4, the erosion by removals)",
+	35: "plan 7 (MON-S3, the pool grant); not built when plan 2-24 was written",
+	75: "plan 24: WLD-S3, the cold leg of S18 and the Duration 10 leg, which waits for a pack with such a recipe",
 }
 
 var scenarioTestRe = regexp.MustCompile(`(?m)^func TestScenarioS(\d+)_`)

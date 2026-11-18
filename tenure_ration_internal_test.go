@@ -26,7 +26,7 @@ func rationConfig(stock, poolBP int64, closed bool) Config {
 // toStart replays one tick of w up to and including the starts of P2.7 and stops there,
 // so the state of the production phase can be read before the trades. The world is not
 // stepped again.
-func toStart(t *testing.T, w *World) {
+func toStart(t testing.TB, w *World) {
 	t.Helper()
 	if err := w.beginStep(); err != nil {
 		t.Fatalf("beginStep() error = %v, want nil", err)
