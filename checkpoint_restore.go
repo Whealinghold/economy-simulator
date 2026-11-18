@@ -426,9 +426,9 @@ func (w *World) flightCross() error {
 
 // inFlightAccount reports whether the account is one the modules in flight read: a
 // Transit account with the transport module on, an Escrow account with the merchants
-// module on (their cross-checks and the audit, transport_state.go, contract_settle.go).
+// module on (their cross-checks and the audit, transport_state.go, contract_settle.go), or with the hire form of the employment module.
 func (w *World) inFlightAccount(v ledger.View) bool {
-	return v.Kind == ledger.KindTransit && w.transport != nil || v.Kind == ledger.KindEscrow && w.mer != nil && w.mer.on
+	return v.Kind == ledger.KindTransit && w.transport != nil || v.Kind == ledger.KindEscrow && (w.mer != nil && w.mer.on || w.employment.isHire())
 }
 
 // coreCross is the checks of checkpointCross that the sections of the core need.

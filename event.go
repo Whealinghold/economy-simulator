@@ -1979,6 +1979,121 @@ type PayrollPaid struct {
 
 func (PayrollPaid) isEvent() {}
 
+// The reasons of the labour round (spec-employment.md 5.2, 5.5), constants of
+// Reason. The admission reasons refuse an offer or a vacancy whole; the others
+// are the refusals of a formation and of a vacancy left open at the end of the
+// round. The reasons of the checks that are the production module's (no_tool,
+// no_input, zero_yield, no_site, no_endowment, no_title, rent_funds, no_room,
+// invalid_price, in_traineeship) are the constants of that module.
+const (
+	// ReasonEmploymentOff is an offer or a vacancy returned while the hire form of
+	// the employment module is not on. It is logged at Debug only.
+	ReasonEmploymentOff Reason = "employment_off"
+	// ReasonNotHireable is an offer of an agent whose role is not Hireable.
+	ReasonNotHireable Reason = "not_hireable"
+	// ReasonInOwnUse is an offer of an agent in the own-use mode.
+	ReasonInOwnUse Reason = "in_own_use"
+	// ReasonInvalidHouseholds is an offer of fewer than 1 household or of more than
+	// the agent's weight.
+	ReasonInvalidHouseholds Reason = "invalid_households"
+	// ReasonNotEmployer is a vacancy of an agent whose role has no employer block.
+	ReasonNotEmployer Reason = "not_employer"
+	// ReasonNotOnHireList is a vacancy of a recipe that is not on the hire list of
+	// the role.
+	ReasonNotOnHireList Reason = "not_on_hire_list"
+	// ReasonInvalidPositions is a vacancy of fewer than 1 position.
+	ReasonInvalidPositions Reason = "invalid_positions"
+	// ReasonEmployerFull is a vacancy of an employer that has no place left in its
+	// establishment.
+	ReasonEmployerFull Reason = "employer_full"
+	// ReasonTooManyHires closes the lane of a region: the hires open in it are
+	// MaxOpen.
+	ReasonTooManyHires Reason = "too_many_hires"
+	// ReasonNoLabour is the reason of a vacancy that stayed open to the end of the
+	// round with positions left: no offer reached it.
+	ReasonNoLabour Reason = "no_labour"
+	// ReasonEmployerFunds is a formation refused because the employer's available
+	// money is below the bill of the job.
+	ReasonEmployerFunds Reason = "employer_funds"
+)
+
+// The causes of HireEnded (spec-employment.md 15.1), constants of Cause.
+const (
+	// CauseCompleted is a hire whose job completed.
+	CauseCompleted Cause = "completed"
+	// CauseWorkerLeft is a hire that ended with the removal of its worker.
+	CauseWorkerLeft Cause = "worker_left"
+	// CauseWorkerRole is a hire that ended because its worker changed role.
+	CauseWorkerRole Cause = "worker_role"
+	// CauseWorkerMoved is a hire that ended because its worker's account changed
+	// region.
+	CauseWorkerMoved Cause = "worker_moved"
+	// CauseEmployerLeft is a hire that ended with the removal of its employer.
+	CauseEmployerLeft Cause = "employer_left"
+	// CauseEmployerRole is a hire that ended because its employer changed role.
+	CauseEmployerRole Cause = "employer_role"
+	// CauseNotStarted is a hire whose job started no execution (the ration, the
+	// rent or the room cut it to nothing), the whole escrow refunded.
+	CauseNotStarted Cause = "not_started"
+)
+
+// HireFormed is emitted when a hire is formed, at P2.5a in formation order
+// (spec-employment.md 5.5, 15.1). It is per hire, like ContractFormed. Money is
+// in minor units.
+type HireFormed struct {
+	Tick int64
+	// Hire is the hire, Region the region of the lane (the employer's and the
+	// worker's), Employer and Worker the two agents and EmployerRole and
+	// WorkerRole their roles.
+	Hire         HireID
+	Region       RegionID
+	Employer     AgentID
+	Worker       AgentID
+	EmployerRole RoleID
+	WorkerRole   RoleID
+	// Recipe is the recipe the worker runs for the employer and Households the
+	// executions of the job.
+	Recipe     RecipeID
+	Households int64
+	// Wage is the wage per household-tick, Ticks the duration of the job and
+	// Escrowed the bill moved to the Escrow account: Wage times Ticks times
+	// Households.
+	Wage     Money
+	Ticks    int64
+	Escrowed Money
+	// Reserve and Bid are the two limits that fixed the wage.
+	Reserve Price
+	Bid     Price
+}
+
+func (HireFormed) isEvent() {}
+
+// HireEnded is emitted when a hire ends, once: at the completion at P2.1 or P2.7,
+// at a start that starts nothing, with a removal, a role change or a move
+// (spec-employment.md 6.3, 6.4, 15.1). It is per hire. Money is in minor units.
+type HireEnded struct {
+	Tick int64
+	// Hire is the hire, Region the employer's region at the event, Employer and
+	// Worker the two agents and Recipe the recipe of the job.
+	Hire     HireID
+	Region   RegionID
+	Employer AgentID
+	Worker   AgentID
+	Recipe   RecipeID
+	// Households is the executions of the job at the end.
+	Households int64
+	// Worked is the working ticks paid and Paid the wages paid over the hire.
+	Worked int64
+	Paid   Money
+	// Refunded is the remainder of the escrow at the end, returned to the employer.
+	// The refund of a cut start is not here: it is in the LabourRound of its tick.
+	Refunded Money
+	// Cause says why the hire ended.
+	Cause Cause
+}
+
+func (HireEnded) isEvent() {}
+
 // TraineeshipStarted is emitted when a place is filled from the queue and an
 // applicant becomes a trainee, in a region's entry step at P7.1(a), after the
 // completions of the step (spec-skill-barriers.md 4.7, 8.1; spec-observability.md

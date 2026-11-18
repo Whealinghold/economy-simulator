@@ -183,6 +183,36 @@ type JobRequest struct {
 	Recipe RecipeID
 	// Executions is the most executions to start; 0 means the most it can run.
 	Executions int64
+
+	// Offer is a worker's offer of its households for hire and Hire an employer's
+	// vacancies (spec-employment.md 4.1). The zero values mean none, so every
+	// strategy that does not set them returns what it returned before. They are
+	// read in the hire form of the employment module only, and are read when NoJob
+	// is set too: an agent with no job of its own may offer its labour.
+	Offer LabourOffer
+	Hire  HireRequest
+}
+
+// LabourOffer offers households for a wage (spec-employment.md 4.1). It is
+// indivisible: all of them are hired, or none. Households 0 means no offer.
+type LabourOffer struct {
+	// Households is the number of households offered, 1 to the agent's weight.
+	Households int64
+	// Reserve is the least wage per household-tick the agent accepts, 0 to
+	// MaxPrice.
+	Reserve Price
+}
+
+// HireRequest posts vacancies of one recipe of the employer's hire list
+// (spec-employment.md 4.1). Positions 0 means no vacancy.
+type HireRequest struct {
+	// Recipe is the recipe the hired households run; it must be on the hire list
+	// of the employer's role.
+	Recipe RecipeID
+	// Positions is the executions wanted, at least 1.
+	Positions int64
+	// Bid is the most the employer pays per household-tick, 1 to MaxPrice.
+	Bid Price
 }
 
 // Directed is a Strategy that does what the agent's directive says and leaves

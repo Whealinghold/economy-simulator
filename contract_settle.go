@@ -197,6 +197,7 @@ func (w *World) auditContracts() error {
 		return fmt.Errorf("audit at tick %d: %w: contracts: %s", w.Tick(), ErrAuditFailed, fmt.Sprintf(format, args...))
 	}
 	used := make(map[int]bool, len(w.mer.open))
+	w.employment.markEscrow(used)
 	for i := range w.mer.open {
 		if msg := w.contractFault(i, used); msg != "" {
 			return fail("contract %d: %s", w.mer.open[i].id, msg)
@@ -269,6 +270,7 @@ func (w *World) freeEscrowFault(used map[int]bool) string {
 // escrow in total and by destination region, and adds it to the money of the world
 // (spec-merchants.md 15.4, 9.6.3). It leaves the snapshot alone with the module off.
 func (w *World) snapshotContracts(s *Snapshot) {
+	w.snapshotHireEscrow(s) // the Escrow accounts of the hires are in the contract sector too (spec-employment.md 7.4.1)
 	if w.mer == nil || !w.mer.on {
 		return
 	}
@@ -371,6 +373,7 @@ func (w *World) readContract(rs *restoreCtx, r *codec.Reader) contract {
 // is every open Escrow account of the region that no contract names.
 func (w *World) merchantsCross() error {
 	used := make(map[int]bool, len(w.mer.open))
+	w.employment.markEscrow(used)
 	for i := range w.mer.open {
 		ct := &w.mer.open[i]
 		msg := w.contractFault(i, used)
