@@ -309,16 +309,26 @@ func (w *orgWarner) seedsOf(region string) (t seedTable, ok bool) {
 
 // capBelowSeedCost is cap_below_seed_cost for one region: with a warm start, a cap
 // below CostFloor of the full unit cost, at the warm start's prices and wage, of a
-// recipe that makes the commodity (spec-production.md 9.4, spec-viability.md 8.2.3).
+// recipe of a role with a group in the region that makes the commodity (spec-production.md 9.4, spec-viability.md 8.2.3).
 func (w *orgWarner) capBelowSeedCost(region, commodity string, capPrice int64) bool {
 	seeds, ok := w.seedsOf(region)
 	if !ok {
 		return false
 	}
-	for i := range w.c.Recipes {
-		unit := w.seedUnitCost(&w.c.Recipes[i], commodity, seeds)
-		if floor, ok := checked.MulDiv(unit, w.c.World.CostFloor, wholeBP); unit > 0 && ok && capPrice < floor {
-			return true
+	for i := range w.c.Roles {
+		ro := &w.c.Roles[i]
+		if w.groups[[2]string{region, ro.ID}] <= 0 {
+			continue
+		}
+		for _, id := range ro.Recipes {
+			rc := w.lk.recipe[id]
+			if rc == nil {
+				continue
+			}
+			unit := w.seedUnitCost(rc, commodity, seeds)
+			if floor, ok := checked.MulDiv(unit, w.c.World.CostFloor, wholeBP); unit > 0 && ok && capPrice < floor {
+				return true
+			}
 		}
 	}
 	return false
@@ -334,10 +344,16 @@ func (w *orgWarner) seedUnitCost(rc *Recipe, commodity string, seeds seedTable) 
 		}
 		var terms []production.Term
 		for _, it := range rc.Inputs {
+			if _, known := seeds.index[it.Commodity]; !known {
+				return 0
+			}
 			terms = append(terms, production.Term{Commodity: seeds.index[it.Commodity], Quantity: int64(it.Quantity)})
 		}
 		var wear []production.Wear
 		for _, t := range rc.Requires {
+			if _, known := seeds.index[t.Commodity]; !known {
+				return 0
+			}
 			if cm := w.lk.commodity[t.Commodity]; cm != nil {
 				wear = append(wear, production.Wear{Commodity: seeds.index[t.Commodity], WearPerUse: t.WearPerUse, Durability: cm.Durability})
 			}

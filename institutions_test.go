@@ -394,6 +394,22 @@ func TestValidateInstitutions_PhaseOrder(t *testing.T) {
 	}
 }
 
+// TestValidateInstitutions_InvalidIDIsNotADuplicate verifies that two bodies with one ID
+// that is invalid report ErrInvalidID and no ErrDuplicateID.
+//
+// Guard: the invalid ID is the mistake; a duplicate error on top of it hides which error
+// comes first for a caller that matches the first.
+func TestValidateInstitutions_InvalidIDIsNotADuplicate(t *testing.T) {
+	t.Parallel()
+	c := institutionsConfig()
+	m := c.Modules.Institutions
+	m.Bodies[0].ID = "Guild"
+	m.Bodies = append(m.Bodies, economysim.Body{ID: "Guild", Roles: []string{"cook"}, Regions: []string{"north"}})
+	if err := c.Validate(); !errors.Is(err, economysim.ErrInvalidID) || errors.Is(err, economysim.ErrDuplicateID) {
+		t.Errorf("Validate() = %v, want ErrInvalidID and no ErrDuplicateID", err)
+	}
+}
+
 // TestSentinels_Institutions verifies that the seven sentinels of the module are
 // distinct and say what they are, so errors.Is tells one from another and from the
 // sentinels they sit beside.

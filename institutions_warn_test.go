@@ -1,6 +1,7 @@
 package economysim_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -116,4 +117,47 @@ func TestWarnings_InstitutionsOffAndEmpty(t *testing.T) {
 	c.Modules.Institutions.Rights[0].Body = "nowhere"
 	c.Modules.Institutions.Controls[0].Commodity = "nowhere"
 	_ = c.Warnings() // must not panic on names that are not declared
+}
+
+// TestWarnings_CapBelowSeedCostScope verifies that cap_below_seed_cost reads only the
+// recipes of a role with a group in the region of the scope, and that a recipe input
+// naming a commodity that is not declared is skipped, not priced as the first commodity.
+//
+// Requirement: FR-ORG-048
+//
+// Guard: spec-institutions.md 10.2 says "a recipe that makes the commodity in the scope".
+// Without the test the warning fires for a recipe no seller of the scope can run, or from
+// the seed price of commodity 0 for an undeclared name.
+func TestWarnings_CapBelowSeedCostScope(t *testing.T) {
+	t.Parallel()
+	const want = "cap_below_seed_cost@modules.institutions.control.assize"
+	has := func(c economysim.Config) bool {
+		return slices.Contains(institutionsWarningRules(c), want)
+	}
+	seed := func() economysim.Config {
+		c := institutionsConfig()
+		c.Modules.Institutions.Controls[0].CapBP, c.Modules.Institutions.Controls[0].FloorBP = 6_000, 0
+		return c
+	}
+	if c := seed(); !has(c) {
+		t.Fatalf("Warnings() = %v, want %q for the cap under the seed cost", institutionsWarningRules(c), want)
+	}
+	c := seed()
+	for i := range c.Groups {
+		if c.Groups[i].Role == "grower" {
+			c.Groups[i].Households = 0 // the only role whose recipe makes staple has no household in north
+		}
+	}
+	if has(c) {
+		t.Errorf("Warnings() = %v, want no %q when no household of the scope runs a recipe of the commodity", institutionsWarningRules(c), want)
+	}
+	c = seed()
+	for i := range c.Recipes {
+		for j := range c.Recipes[i].Inputs {
+			c.Recipes[i].Inputs[j].Commodity = "nowhere"
+		}
+	}
+	if has(c) {
+		t.Errorf("Warnings() = %v, want no %q when a recipe input is not a declared commodity", institutionsWarningRules(c), want)
+	}
 }

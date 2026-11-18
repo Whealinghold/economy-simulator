@@ -83,6 +83,8 @@ func (o *Outcome) Lapsed(k Lapsed, w int64) {
 // (the body's need is not met in the place) nobody is admitted and every candidate is
 // counted Barred. free is the headroom of the place before the round, from Headroom.
 //
+// A candidate of weight 0 or less is ignored: it is not admitted and not counted.
+//
 // Admit sorts cands in place, appends the IDs of the admitted candidates, in the
 // order admitted, to dst and returns it with the counts of Admitted, Skipped,
 // Barred and Waiting (the lapse counts are the caller's). The result is a function of
@@ -100,6 +102,9 @@ func Admit(dst []int32, cands []Candidate, free int64, limited, barred bool) ([]
 		return dst, out
 	}
 	for _, c := range cands {
+		if c.Weight <= 0 {
+			continue // a cohort of no household is no candidate (Headroom and Tally clamp likewise)
+		}
 		if limited && c.Weight > free {
 			out.Skipped += c.Weight
 			out.Waiting += c.Weight

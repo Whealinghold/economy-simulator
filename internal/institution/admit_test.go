@@ -317,3 +317,23 @@ func FuzzAdmit(f *testing.F) {
 		}
 	})
 }
+
+// TestAdmit_NonPositiveWeightIsNoCandidate verifies that a candidate of weight 0 or less
+// is neither admitted nor counted, and does not change the free places of the ones behind.
+//
+// Guard: a negative weight would raise the free places and the admitted count, and break
+// the idempotence of a second round; Headroom and Tally clamp a negative likewise.
+func TestAdmit_NonPositiveWeightIsNoCandidate(t *testing.T) {
+	t.Parallel()
+	cands := []institution.Candidate{
+		{ID: 1, Weight: -3, Since: 0, Key: 1},
+		{ID: 2, Weight: 0, Since: 0, Key: 2},
+		{ID: 3, Weight: 2, Since: 0, Key: 3},
+		{ID: 4, Weight: 1, Since: 0, Key: 4},
+	}
+	got, out := institution.Admit(nil, cands, 2, true, false)
+	// Only 3 (2 households) fits in the 2 free places; 4 (1) is skipped, 1 and 2 are ignored.
+	if want := (institution.Outcome{Admitted: 2, Skipped: 1, Waiting: 1}); out != want || !slices.Equal(got, []int32{3}) {
+		t.Errorf("Admit = %v, %+v, want [3], %+v", got, out, want)
+	}
+}
