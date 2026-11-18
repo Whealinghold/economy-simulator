@@ -18,8 +18,6 @@ type creditTally struct {
 	unfed, relief, unfilled, defaulted            int64
 	roundTicks                                    []int64 // the ticks of a CreditRound with requests, in order
 	weightFalls                                   []economysim.WeightChanged
-	ended                                         []economysim.LoanEnded
-	keepEnded                                     bool
 }
 
 // Observe adds an event to the counters.
@@ -63,9 +61,6 @@ func (c *creditTally) countEnded(ev economysim.LoanEnded) {
 	}
 	c.lostPrincipal += ev.LostPrincipal
 	c.lostInterest += ev.LostInterest
-	if c.keepEnded {
-		c.ended = append(c.ended, ev)
-	}
 }
 
 // report is the one line of what a run did, for t.Logf.

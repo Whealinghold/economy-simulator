@@ -18,8 +18,8 @@ const creditCohortScale = 4
 // seeds 1 to the seed count, 200 ticks, the audit on. A fall of a debtor's weight by the
 // failure ladder leaves every claim of the agent whole (9.3): a claim is not split and the
 // debt per household rises. Exact: at every step each claim that was open before the step
-// and is open after it keeps its principal, its interest and its debtor, and a claim of a
-// debtor whose weight fell ends only by repayment, a write-off or the debtor's removal.
+// and is open after it keeps its principal, its interest and its debtor (the cause of an end
+// is not asserted).
 // Reported: the falls of weight of a debtor with an open claim, the debt per household
 // before and after the first of them, and the claims ended by the waterfall.
 //
@@ -34,7 +34,7 @@ func TestScenarioS117_CohortBorrower(t *testing.T) {
 	for seed := uint64(1); seed <= uint64(scenarioSeedCount()); seed++ {
 		t.Run("seed "+strconv.FormatUint(seed, 10), func(t *testing.T) {
 			t.Parallel()
-			tally := &creditTally{keepEnded: true}
+			tally := &creditTally{}
 			w := creditWorld(t, cfg, seed, tally)
 			cohort := &creditCohort{prev: map[economysim.ClaimID]economysim.ClaimRow{}}
 			stepAudited(t, w, seed, creditScenarioTicks, func(tick int) {

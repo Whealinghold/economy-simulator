@@ -41,7 +41,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	ticks := fl.Int64("ticks", 400, "ticks to run")
 	every := fl.Int64("every", 100, "ticks between two lines")
 	audit := fl.Bool("audit", false, "audit the books after every step")
-	borrow := fl.Bool("borrow", false, "run the borrowing player of borrow.go instead of the report")
+	borrow := fl.Bool("borrow", false, "run the borrowing player of borrow.go instead of the report (always audited; -every and -audit are ignored)")
 	if err := fl.Parse(args); err != nil {
 		return 2
 	}
