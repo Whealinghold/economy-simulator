@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"slices"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -41,10 +42,10 @@ func riskRun(t *testing.T, c economysim.Config, seed uint64, ticks int64) ([]eco
 	return events, snap
 }
 
-// withoutLoss returns snap with the boundary rows of the reason loss taken out,
-// and fails the test if one of them holds a balance: the module on opens those
-// accounts (spec-world.md 5.2 row 3a), which a module that is off does not have,
-// and a run with no strike leaves them at 0 (FR-RSK-005).
+// withoutLoss returns snap with what the module on adds to a snapshot taken out: the
+// boundary rows of the reason loss, which the module opens (spec-world.md 5.2 row
+// 3a) and a run with no strike leaves at 0 (the test fails if one holds a balance),
+// and its name in the list of modules (FR-RSK-005).
 func withoutLoss(t *testing.T, snap economysim.Snapshot) economysim.Snapshot {
 	t.Helper()
 	var rows []economysim.BoundaryRow
@@ -56,6 +57,7 @@ func withoutLoss(t *testing.T, snap economysim.Snapshot) economysim.Snapshot {
 		}
 	}
 	snap.Boundary = rows
+	snap.Modules = slices.DeleteFunc(slices.Clone(snap.Modules), func(m string) bool { return m == "risk" })
 	return snap
 }
 

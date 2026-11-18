@@ -110,7 +110,7 @@ func (w *World) buildRoutes() {
 			}
 			for m := range modes {
 				ticks, haul, ok := w.travel(RegionID(g), RegionID(to), ModeID(m))
-				v.routes[g] = append(v.routes[g], RouteRow{To: RegionID(to), Mode: ModeID(m), Has: ok && !w.isOutsideNode(RegionID(to)), Ticks: ticks, HaulPerUnit: haul})
+				v.routes[g] = append(v.routes[g], RouteRow{To: RegionID(to), Mode: ModeID(m), Has: ok && !w.isOutsideNode(RegionID(to)), Ticks: ticks, HaulPerUnit: haul, LossBP: w.risk.viewLoss(RegionID(g), RegionID(to), ModeID(m), ok && !w.isOutsideNode(RegionID(to)))})
 			}
 		}
 	}
@@ -240,7 +240,7 @@ func (w *World) Away(agent AgentID) bool {
 // (the formula is the risk module's, which replaces the body).
 func (w *World) RouteLoss(from, to RegionID, mode ModeID) (bp int64, ok bool) {
 	_, _, ok = w.travel(from, to, mode)
-	return 0, ok
+	return w.risk.viewLoss(from, to, mode, ok), ok
 }
 
 // factorKey checks that the module is on and the mode and both regions are

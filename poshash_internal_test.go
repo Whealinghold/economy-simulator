@@ -454,6 +454,9 @@ func merchantRolesOn(w *World) bool { return w.mer != nil && w.mer.roles > 0 }
 // plan 2-14): an off world records no line for them.
 func migrationOn(w *World) bool { return w.migration != nil }
 
+// riskOn is the guard of the row of the risk module (P3.1a).
+func riskOn(w *World) bool { return w.risk != nil }
+
 // settlementsOn is the guard of the row of the settlements module (P7.2a).
 func settlementsOn(w *World) bool { return w.set != nil }
 
@@ -513,6 +516,7 @@ var replayRows = []replayRow{
 	{id: "P2.8", run: noErr((*World).p28OwnUse), on: subsistenceOn},
 	{id: "P2.8a", run: noErr((*World).p28aHalted)},
 	{id: "P3.1", run: noErr((*World).p31Fix), on: transportOn},
+	{id: "P3.1a", run: noErr((*World).p31aCommon), on: riskOn},
 	{id: "P3.2", run: (*World).p32Trade},
 	{id: "P3.3", run: noErr((*World).p33Round), on: contractsOn},
 	{id: "P3.3a", run: noErr((*World).p33aPlanned), on: merchantRolesOn},

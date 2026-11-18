@@ -124,7 +124,6 @@ var deferredCore = map[string]string{}
 // Stage 0). The change that appends one deletes its entry.
 var notBuiltFields = []string{
 	"ShipmentDispatched.Toll",     // fiscal module, FIS 16.1
-	"ShipmentDispatched.LossBP",   // risk module, RSK 14.1
 	"ShipmentArrived.AccountLost", // risk module, RSK 14.1
 }
 

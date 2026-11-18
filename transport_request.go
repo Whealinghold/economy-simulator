@@ -434,7 +434,10 @@ func (w *World) send(c *shipCtx) shipment {
 	} else {
 		w.spendTrip(a, c)
 	}
-	// 3a: the toll (FIS). 4a: the risk (RSK).
+	// 3a: the toll (FIS).
+	if w.risk != nil {
+		s.loss = w.riskStrike(&s) // 4a: the risk
+	}
 	t.next++
 	t.ships = append(t.ships, s)
 	t.due.Push(s.arrives, int64(s.id))
@@ -510,6 +513,6 @@ func (w *World) deliverDispatched(s *shipment) {
 	w.obs.deliver(ShipmentDispatched{
 		Tick: s.dispatched, Shipment: s.id, Mode: s.mode, Region: s.from, To: s.to,
 		Shipper: s.shipper, Traveller: s.traveller, Consignee: s.consignee, Hired: s.hired,
-		Arrives: s.arrives, Units: s.units, HaulUnits: s.haulUnits, Lines: lines,
+		Arrives: s.arrives, Units: s.units, HaulUnits: s.haulUnits, Lines: lines, LossBP: s.loss,
 	})
 }

@@ -1490,6 +1490,10 @@ type ShipmentDispatched struct {
 	Units, HaulUnits int64
 	// Lines is what is shipped, by commodity.
 	Lines []Amount
+	// LossBP is the share of every commodity of the cargo a strike takes at the
+	// arrival, fixed at the dispatch by the risk module (spec-risk.md 4.1, 14.1): 0
+	// for no strike or with the module off.
+	LossBP int64
 }
 
 // ShipmentRejected is emitted when a shipment request is refused, in the plan
