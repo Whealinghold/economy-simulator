@@ -34,7 +34,8 @@ def derive_site(name):
 
 
 for _n, _v in SITES.items():
-    assert derive_site(_n) == _v, _n
+    if derive_site(_n) != _v:
+        raise SystemExit(f"self-check failed: {_n}")
 
 
 def chain(seed, site, tick, ident, sub=None):
