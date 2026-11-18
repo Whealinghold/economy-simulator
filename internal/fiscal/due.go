@@ -101,4 +101,5 @@ func (r Rule) carryInRange(carry int64) bool {
 
 // Headroom returns how much a treasury holding bal can still take before it
 // passes maxMoney, never negative (spec-fiscal.md 5.3.2).
-func Headroom(bal, maxMoney int64) int64 { return max(0, maxMoney-bal) }
+// A negative bal or maxMoney counts as 0, so the subtraction cannot leave int64.
+func Headroom(bal, maxMoney int64) int64 { return max(0, max(0, maxMoney)-max(0, bal)) }

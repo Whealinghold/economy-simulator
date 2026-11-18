@@ -63,7 +63,7 @@ func CapPurchase(wish, cash, limit, hold, held int64) Capped {
 		c.CutCash, c.Qty = c.Qty-byCash, byCash
 	}
 	if hold > 0 {
-		if room := max(0, hold-held); c.Qty > room {
+		if room := max(0, hold-max(0, held)); c.Qty > room { // a negative held counts as 0: hold - held could leave int64
 			c.CutHold, c.Qty = c.Qty-room, room
 		}
 	}
@@ -74,8 +74,8 @@ func CapPurchase(wish, cash, limit, hold, held int64) Capped {
 // stock, held - reserve, never negative.
 func CapRelease(wish, held, reserve int64) Capped {
 	c := Capped{Qty: max(0, wish)}
-	if stock := max(0, held-reserve); c.Qty > stock {
-		c.CutStock, c.Qty = c.Qty-stock, stock
+	if stock := max(0, held) - max(0, reserve); c.Qty > max(0, stock) { // negatives count as 0: held - reserve could leave int64
+		c.CutStock, c.Qty = c.Qty-max(0, stock), max(0, stock)
 	}
 	return c
 }

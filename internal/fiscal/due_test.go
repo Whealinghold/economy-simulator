@@ -142,6 +142,8 @@ func TestHeadroom(t *testing.T) {
 		{100, 1_000, 900},
 		{1_000, 1_000, 0},
 		{1_200, 1_000, 0},
+		{math.MinInt64, math.MaxInt64, math.MaxInt64}, // a negative balance counts as 0, no wrap
+		{5, math.MinInt64, 0},                         // a negative bound leaves no room, no wrap
 	}
 	for _, tt := range tests {
 		if got := fiscal.Headroom(tt.bal, tt.max); got != tt.want {

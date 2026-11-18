@@ -118,6 +118,7 @@ func TestCapPurchase(t *testing.T) {
 		{"hold already passed", 5, 1_000, 40, 10, 12, fiscal.Capped{Qty: 0, CutHold: 5}},
 		{"limit below 1", 5, 1_000, 0, 0, 0, fiscal.Capped{Qty: 0, CutCash: 5}},
 		{"negative wish", -3, 1_000, 40, 0, 0, fiscal.Capped{}},
+		{"negative held does not wrap", 5, 1_000, 40, 10, math.MinInt64, fiscal.Capped{Qty: 5}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -143,6 +144,8 @@ func TestCapRelease(t *testing.T) {
 		{"uncapped", 5, 20, 10, fiscal.Capped{Qty: 5}},
 		{"stock cuts", 15, 20, 10, fiscal.Capped{Qty: 10, CutStock: 5}},
 		{"reserve above stock", 4, 6, 10, fiscal.Capped{Qty: 0, CutStock: 4}},
+		{"negative reserve does not wrap", 5, math.MaxInt64, -1, fiscal.Capped{Qty: 5}},
+		{"negative held does not wrap", 5, math.MinInt64, math.MaxInt64, fiscal.Capped{Qty: 0, CutStock: 5}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
