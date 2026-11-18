@@ -52,8 +52,8 @@ type expectRow struct {
 }
 
 // risk is the state of the risk module, nil when it is off (spec-risk.md 15). The
-// rows and the table are derived and never saved; the scales, the saved state, join
-// with the calls that set them.
+// rows and the table are derived and never saved; the scales are saved state, the
+// entries that differ from 10 000, ascending by key.
 type risk struct {
 	// rows is the count of route and store rows, for the construction summary.
 	rows int
@@ -65,6 +65,9 @@ type risk struct {
 	expect []expectRow
 	edges  []rsk.Edge
 	modes  []ModeID
+	// scales are the route scales that differ from 10 000, ascending by key, the
+	// saved state of the route side.
+	scales []routeScaleRec
 	// lost, accountLost, held and tripLost are the scratch of an arrival: the units
 	// lost of each line of the shipment, of the traveller's account as amounts, the
 	// account's holdings and the units lost of each of its commodities.

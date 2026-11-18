@@ -2356,3 +2356,17 @@ type RentScaled struct {
 }
 
 func (RentScaled) isEvent() {}
+
+// RouteRiskScaled is emitted once per route row whose scale a SetRouteRiskScales call
+// changes, in (From, To, Mode) order, after the whole call has been applied
+// (spec-risk.md 9.2, 14.1). It is emitted only when the risk module is on.
+type RouteRiskScaled struct {
+	Tick int64
+	// From and To are the regions of the row's edge and Mode its mode.
+	From, To RegionID
+	Mode     ModeID
+	// BeforeBP and AfterBP are the scale before and after, in basis points.
+	BeforeBP, AfterBP int64
+}
+
+func (RouteRiskScaled) isEvent() {}
