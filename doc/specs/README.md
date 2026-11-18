@@ -479,6 +479,7 @@ A Go field that only spells in Go what the file says by a key or by absence has 
 | `Bulk` | Capacity | `spec-storage.md` section 12.1 (the type is `spec-goods.md` 3.2) |
 | `Store` | FlowTarget | `spec-storage.md` sections 7.1.2, 12.3 (the type is `spec-money-supply.md` 4.1) |
 | `Employment` | Modules (module; nil = off) | `spec-employment.md` sections 3.1, 13 |
+| `Hire` | Employment (the hire form; false is the payroll form) | `spec-employment.md` sections 13, 24.3 |
 | `MaxOpen` | Employment (per region) | `spec-employment.md` section 13 |
 | `Hireable` | Role | `spec-employment.md` sections 3.1, 13 |
 | `Employer` | Role (the employer block; nil = not an employer) | `spec-employment.md` sections 3.2, 13 |
