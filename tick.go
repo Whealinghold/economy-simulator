@@ -230,10 +230,10 @@ func (w *World) positionsSettle() error {
 	return w.positionsTail()
 }
 
-// positionsTail is the last part of the straight line, from phase 5, split from
-// positions to stay within the Lizard complexity limit (N-243). The position test
-// reads it as part of the straight line, after positionsProduce and in source
-// order.
+// positionsTail is the last part of the straight line, from phase 5 to the
+// migration of P7.2, split from positions to stay within the Lizard complexity limit
+// (N-243). The position test reads it as part of the straight line, after
+// positionsSettle and in source order.
 func (w *World) positionsTail() error {
 	w.p51Window()
 	if w.info != nil {
@@ -257,6 +257,14 @@ func (w *World) positionsTail() error {
 	if w.migration != nil {
 		w.p72Migration()
 	}
+	return w.positionsClose()
+}
+
+// positionsClose is the end of the straight line, from P7.2a to the audit, split
+// from positionsTail to stay within the Lizard complexity limit when the
+// institutions module joined it (N-243, plan 3-org Phase 4). The position test reads
+// it as part of the straight line, after positionsTail and in source order.
+func (w *World) positionsClose() error {
 	if w.set != nil {
 		w.p72aSettlement()
 	}
