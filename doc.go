@@ -1638,6 +1638,36 @@
 //     Until, Seasons); not the welfare window nor the price window.
 //   - Scale (of a fiscal flow): the flow's runtime factor in basis points, set between
 //     steps through the same slot as a money flow's; it is state and is not hashed.
+//   - Risk: the optional module that gives a shipment on an edge and a store of a class
+//     a chance to lose a share of its goods; its presence in Config.Modules (Risk)
+//     switches it on (spec-risk.md). "Hazard" is not used for a row.
+//   - Risk row: a route row (RouteRisk: an edge and a mode) or a store row (StoreRisk: a
+//     region and a store class); absence is no risk.
+//   - Exposure: what a strike can reach: a cargo in a Transit account, a trip account
+//     of a self-carried trip, or a stored part of a limited account; not a household
+//     base room, money, an estate, and not POL's or POP's "exposed" household.
+//   - Strike: the event that a draw of the world is below the effective probability of
+//     a row; a strike with no loss is still a strike.
+//   - Severity: the share of each commodity a strike takes, SeverityBP of a row.
+//   - Common row, unit row: a row drawn once a tick for everything it meets, or once for
+//     each shipment or store it meets (Common is the flag).
+//   - Effective probability: the strike probability of a row times its risk scale over
+//     10 000, at most 10 000; a row at 0 takes no draw.
+//   - Loss share: the LossBP of a shipment, fixed at dispatch from the struck rows of its
+//     path and applied at its arrival; the kept share is 10 000 less it.
+//   - Stored fraction: the part, in basis points, of a limited account's load that a
+//     store of a class holds, the larger of its mass and bulk fractions.
+//   - Expected loss: the loss share of a route in the mean over its rows, read by an
+//     agent as RouteRow.LossBP and RouteLoss; never applied to the ledger.
+//   - Risk scale: a slot between ticks, from 0 to MaxShockBP, that scales the strike
+//     probability of a row and never its severity (RouteRiskScale and StoreRiskScale
+//     are the entries of a call, RouteRiskScaled and StoreRiskScaled its events); not
+//     the capacity scale of RES nor the birth scale of POP.
+//   - Total loss: a shipment whose loss share is 10 000.
+//   - Trip account: the holdings of the traveller of a self-carried trip, which a strike
+//     takes a share of at arrival, the mode's vehicle left out (ShipmentArrived
+//     carries AccountLost).
+//   - StoreLoss: the event of one agent and store class struck at P8.1a.
 //   - Infrastructure: the optional module of fixed capital; its presence in Config.Modules
 //     (Infrastructure is its configuration) switches it on (spec-infrastructure.md).
 //   - Facility: a record of fixed capital with an owner, a region, a class and a condition;

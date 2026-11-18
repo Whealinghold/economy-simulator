@@ -151,6 +151,7 @@ economy-sim/
 │   fiscal_validate.go fiscal_warnings.go fiscal_hash.go fiscal_class.go
 │   fiscal_tax.go fiscal_payout.go fiscal_duty.go fiscal_toll.go
 │   fiscal_orders.go fiscal_report.go fiscal_state.go (FIS)
+│   risk_validate.go (RSK)
 │   infrastructure_validate.go infrastructure_step.go infrastructure_calls.go
 │   infrastructure_build.go infrastructure_report.go infrastructure_state.go (CAP)
 │   institutions_validate.go institutions_warn.go institutions_round.go

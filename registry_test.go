@@ -41,7 +41,7 @@ var notBuilt = []string{
 	"Modules.Fiscal",
 	"Modules.Insurance",
 	"Modules.Policy",
-	"Modules.Risk", "Modules.Saving",
+	"Modules.Saving",
 	// Fields of FlowTarget that the targets of the stores and treasury kinds add.
 	"FlowTarget.Jurisdiction",
 	// Fields that a module appends to the core types Recipe, Region and Role.
@@ -58,9 +58,9 @@ var notBuilt = []string{
 	"Lever",
 	"Payout", "Policy", "PolicyActor", "ProjectWorth", "Purchase",
 	"Reaction",
-	"Release", "Risk", "RouteRisk",
+	"Release",
 	"Saver", "Saving", "ScheduleStep",
-	"StoreRisk", "Tax",
+	"Tax",
 	"Toll", "Underwrite",
 	"Window",
 }
@@ -76,7 +76,7 @@ var exemptFields = map[string]bool{
 	"Config.Groups": true, "Config.Modules": true,
 	// The demand module: its pointer is the switch (spec-config.md 6.2.1), and the
 	// two taste lists are containers whose fields are the rows (spec-demand.md 9).
-	"Modules.Demand": true, "Modules.External": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Modules.Migration": true, "Modules.Merchants": true, "Modules.Employment": true, "Modules.Polity": true, "Modules.Storage": true, "Modules.Settlements": true, "Modules.Credit": true, "Modules.Technology": true, "Modules.Tenure": true, "Modules.Institutions": true, "Modules.Infrastructure": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
+	"Modules.Demand": true, "Modules.External": true, "Modules.MoneySupply": true, "Modules.Estates": true, "Modules.Resources": true, "Modules.Subsistence": true, "Modules.Population": true, "Modules.Transport": true, "Modules.Information": true, "Modules.Migration": true, "Modules.Merchants": true, "Modules.Employment": true, "Modules.Polity": true, "Modules.Storage": true, "Modules.Settlements": true, "Modules.Credit": true, "Modules.Technology": true, "Modules.Tenure": true, "Modules.Institutions": true, "Modules.Risk": true, "Modules.Infrastructure": true, "Demand.Tastes": true, "Demand.RegionTastes": true,
 	"YieldProfile.HasAll": true,
 	// The Has flags of an Endowment row only spell in Go what the file says by writing the key.
 	"Endowment.HasCapacity": true, "Endowment.HasInitial": true, "Endowment.HasRegenScale": true,
@@ -334,6 +334,8 @@ var noFailingCase = map[string]string{
 	"Output.Discard":            "a bool: both values are valid",
 	"Commodity.Raw":             "a bool: both values are valid",
 	"TenureConfig.OwnUseExempt": "a bool: both values are valid",
+	"RouteRisk.Common":          "a bool: both values are valid",
+	"StoreRisk.Common":          "a bool: both values are valid",
 	"TenureTerm.Closed":         "a bool: both values are valid",
 	"Institutions.OwnUseBound":  "a bool: both values are valid",
 }
