@@ -40,18 +40,9 @@ func Positions(p Plan) (int64, bool) {
 	if p.MaxHires < 0 || p.Hired < 0 || p.KOwn < 0 || p.UpkeepCost < 0 || p.Duration < 1 {
 		return 0, false
 	}
-	n := max(p.MaxHires-p.Hired, 0)
-	for _, in := range p.Inputs {
-		if in.Stock < 0 || in.Keep < 0 || in.Qty < 1 {
-			return 0, false
-		}
-		n = min(n, max((in.Stock-in.Keep)/in.Qty-p.KOwn, 0))
-	}
-	for _, items := range p.Tools {
-		if items < 0 {
-			return 0, false
-		}
-		n = min(n, max(items-p.KOwn, 0))
+	n, ok := stockBound(p)
+	if !ok {
+		return 0, false
 	}
 	if p.Bid < 1 {
 		return 0, true
@@ -65,4 +56,23 @@ func Positions(p Plan) (int64, bool) {
 		cash = p.Money - p.UpkeepCost
 	}
 	return min(n, cash/perPosition), true
+}
+
+// stockBound returns the bound of Positions from the hiring cap, the inputs
+// and the tools; it reports false when a count is negative or a Qty is below 1.
+func stockBound(p Plan) (int64, bool) {
+	n := max(p.MaxHires-p.Hired, 0)
+	for _, in := range p.Inputs {
+		if in.Stock < 0 || in.Keep < 0 || in.Qty < 1 {
+			return 0, false
+		}
+		n = min(n, max((in.Stock-in.Keep)/in.Qty-p.KOwn, 0))
+	}
+	for _, items := range p.Tools {
+		if items < 0 {
+			return 0, false
+		}
+		n = min(n, max(items-p.KOwn, 0))
+	}
+	return n, true
 }
