@@ -163,6 +163,14 @@ type Modules struct {
 	// module has no row and does nothing). Route rows need Modules.Transport and store
 	// rows need Modules.Storage. Its hash id is 16, whatever its place in this struct.
 	Risk *Risk
+	// Infrastructure is the infrastructure module: fixed capital with a condition,
+	// held by an owner and not a good, of four kinds (site, route, ground, store),
+	// built and repaired by recipes with the clauses Needs, Builds and Repairs
+	// (spec-infrastructure.md). Nil is off; non-nil is on, even when empty (an
+	// empty module has no class and does nothing). Its hash id is 17, whatever its
+	// place in this struct.
+	Infrastructure *Infrastructure
+
 	// Institutions is the institutions module: bodies that select households, the
 	// exclusive rights that a body holds over an activity, and legal prices
 	// (spec-institutions.md). Nil is off; non-nil is on, even when empty (an empty
@@ -229,6 +237,141 @@ type BorrowTerms struct {
 	// SlackTicks is the ticks added to the horizon of the borrower's gap, 0 to
 	// MaxCreditTerm.
 	SlackTicks int64
+}
+
+// Infrastructure is the configuration of the infrastructure module
+// (spec-infrastructure.md 12.1): the facility classes and the facilities that exist
+// at tick 0. Its presence switches the module on. The module has no tunable of its
+// own and no default class: an empty Classes is legal and inert. After construction
+// the classes are in ID order and the rows by key (spec-config.md 3.4).
+type Infrastructure struct {
+	// Classes are the facility classes, at most MaxFacilityClasses, canonical by ID;
+	// the index of a class in this order is its FacilityClassID. Hash id 1.
+	Classes []FacilityClass
+	// Initial are the facilities that exist at tick 0, at most MaxInitialRows, one
+	// row per key (Region, Class, Toward, Role), canonical by that key
+	// (spec-infrastructure.md 3.4.2). Hash id 2.
+	Initial []InitialFacility
+}
+
+// FacilityClass is a kind of facility with the fields its kind uses
+// (spec-infrastructure.md 3.1.1): plain data. A field that the kind does not use
+// must be its zero value (ErrFacilityShape) and a field it requires must be set
+// (spec-infrastructure.md 3.1.2). Every number is a placeholder (N-015, N-027).
+type FacilityClass struct {
+	// ID is [a-z][a-z0-9_]* of at most MaxIDLength bytes, unique among classes. Hash
+	// id 1.
+	ID string
+	// Kind is one of the four constants "site", "route", "ground" or "store" (a
+	// closed set, not an identifier). Required. Hash id 2.
+	Kind string
+	// Durability is the condition units of a new facility, 2 to MaxDurability.
+	// Required. The durability of a class is not the durability of a commodity. Hash
+	// id 3.
+	Durability int64
+	// Decay is the units lost each tick, used or not, 0 to Durability - 1. 0 is no
+	// decay. Hash id 4.
+	Decay int64
+	// WearPerUse is the units a site loses for each execution it serves, 0 to
+	// Durability; a site only. 0 is no use wear. Hash id 5.
+	WearPerUse int64
+	// Capacity is the executions per principal and tick that a whole facility
+	// serves, 1 to MaxFacilityCapacity; a site only, required for a site. It is not
+	// the capacity of an endowment or of a store. Hash id 6.
+	Capacity int64
+	// BoostBP is the gain of a whole facility, in basis points, 1 to MaxBoostBP; a
+	// route or a ground improvement only, required for both. Hash id 7.
+	BoostBP int64
+	// Modes are the transport modes a route speeds, canonical by ID: 1 to
+	// MaxRouteModes, a route only, each a mode of the transport module. Hash id 8.
+	Modes []string
+	// Resource is the resource whose endowment a ground improvement raises; a ground
+	// only, a resource of the resources module. Hash id 9.
+	Resource string
+	// Store is the store class a store facility installs; a store only, a store class
+	// of the storage module (spec-storage.md 3.2). Hash id 10.
+	Store string
+	// Needs is the settlement flag the region's class must carry to build a facility
+	// of the class (spec-infrastructure.md 8); empty is none. It needs
+	// Modules.Settlements and a flag some class carries. It is a flag, not the list
+	// of site classes of Recipe.Needs. Hash id 11.
+	Needs string
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// InitialFacility is a number of facilities of a class in a region at construction
+// (spec-infrastructure.md 3.4.2), the form of StartStock for capital. One row per key
+// (Region, Class, Toward, Role).
+type InitialFacility struct {
+	// Region is a region of the configuration, not an outside node. Required. Hash
+	// id 1.
+	Region string
+	// Class is a facility class. Required. Hash id 2.
+	Class string
+	// Toward is the region at the other end of the edge a route speeds; empty is
+	// every edge that leaves Region. A route only. Hash id 3.
+	Toward string
+	// Role is the role whose agents hold the facilities, round robin in ascending
+	// agent ID; empty is the region's estate. A store row needs a role. Hash id 4.
+	Role string
+	// Count is the facilities of the row, 1 to MaxInitialCount. Required. Hash id 5.
+	Count int64
+}
+
+// FacilityBuild is the clause of a recipe whose completion creates facilities
+// (spec-infrastructure.md 4.1.1).
+type FacilityBuild struct {
+	// Class is the facility class the completion creates. Required. Hash id 1.
+	Class string
+	// Toward is the region at the other end of the edge a route speeds; empty is
+	// every edge that leaves the principal's region. A route class only. Hash id 2.
+	Toward string
+}
+
+// FacilityRepair is the clause of a recipe whose completion restores condition
+// (spec-infrastructure.md 4.1.1).
+type FacilityRepair struct {
+	// Class is the facility class whose facilities the principal owns and the job
+	// restores. Required. Hash id 1.
+	Class string
+	// Units is the condition units one execution restores, 1 to the Durability of
+	// the class. Required. Hash id 2.
+	Units int64
+}
+
+// canonical returns a copy of the module with the classes by ID and the initial
+// rows by key, each route's modes sorted (spec-config.md 3.4,
+// spec-infrastructure.md 12.1), nil for nil. The mode lists are copied, so the copy
+// owns them.
+func (m *Infrastructure) canonical() *Infrastructure {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Classes = sortedBy(m.Classes, func(a, b FacilityClass) int { return cmp.Compare(a.ID, b.ID) })
+	for i := range out.Classes {
+		out.Classes[i].Modes = sortedBy(out.Classes[i].Modes, cmp.Compare[string])
+	}
+	out.Initial = sortedBy(m.Initial, func(a, b InitialFacility) int {
+		return cmp.Or(cmp.Compare(a.Region, b.Region), cmp.Compare(a.Class, b.Class),
+			cmp.Compare(a.Toward, b.Toward), cmp.Compare(a.Role, b.Role))
+	})
+	return &out
+}
+
+// canonicalFacility sorts the site classes a recipe needs and copies the two
+// clauses, so a change of the consumer's Config after construction moves no recipe.
+func (r *Recipe) canonicalFacility() {
+	r.Needs = sortedBy(r.Needs, cmp.Compare[string])
+	if r.Builds != nil {
+		b := *r.Builds
+		r.Builds = &b
+	}
+	if r.Repairs != nil {
+		p := *r.Repairs
+		r.Repairs = &p
+	}
 }
 
 // Technology is the configuration of the technology module (spec-technology.md
@@ -1468,6 +1611,21 @@ type Recipe struct {
 	// needs the resources module (spec-resources.md 3.1.3). Its hash id is 9; it
 	// is written only while the module is on.
 	Draws []Draw
+	// Needs are the site classes the principal must hold a usable facility of to
+	// start the recipe, by class ID in canonical order, at most MaxRecipeNeeds, each
+	// once (spec-infrastructure.md 4.1.2 B6). It needs the infrastructure module.
+	// Its hash id is 10; it is written only while the module is on.
+	Needs []string
+	// Builds is the clause of a recipe whose completion creates facilities
+	// (spec-infrastructure.md 4.1.1). Nil is none; at most one of Builds and
+	// Repairs. It needs the infrastructure module. Its hash id is 11; it is written
+	// only while the module is on, and when non-nil even if every field is zero.
+	Builds *FacilityBuild
+	// Repairs is the clause of a recipe whose completion restores condition to the
+	// principal's facilities (spec-infrastructure.md 4.1.1). Nil is none. It needs
+	// the infrastructure module. Its hash id is 12; it is written only while the
+	// module is on, and when non-nil even if every field is zero.
+	Repairs *FacilityRepair
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string
@@ -1762,6 +1920,7 @@ func (c Config) canonical() Config {
 		r.Outputs = sortedBy(r.Outputs, func(a, b Output) int { return cmp.Compare(a.Commodity, b.Commodity) })
 		r.Requires = sortedBy(r.Requires, func(a, b Tool) int { return cmp.Compare(a.Commodity, b.Commodity) })
 		r.Draws = sortedBy(r.Draws, func(a, b Draw) int { return cmp.Compare(a.Resource, b.Resource) })
+		r.canonicalFacility()
 	}
 	out.Yields = sortedBy(c.Yields, func(a, b YieldProfile) int {
 		return cmp.Or(cmp.Compare(a.Region, b.Region), cmp.Compare(a.Recipe, b.Recipe))
@@ -1824,6 +1983,7 @@ func (c Config) canonical() Config {
 	out.Modules.Technology = c.Modules.Technology.canonical()
 	out.Modules.Tenure = c.Modules.Tenure.canonical()
 	out.Modules.Risk = c.Modules.Risk.canonical()
+	out.Modules.Infrastructure = c.Modules.Infrastructure.canonical()
 	out.Modules.Institutions = c.Modules.Institutions.canonical()
 	return out
 }

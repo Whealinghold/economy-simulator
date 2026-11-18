@@ -951,7 +951,7 @@ row.
    ended, in ascending cover ID (2f); and the `FacilityChanged` of each facility of the agent, in ascending facility ID
    (2g): `transferred` (cause `owner_removed`) for a site, route or ground facility,
    which passes to the estate of its region, and `ruined` (cause `owner_removed`) for a
-   store facility, its `StoreChanged` first (`spec-infrastructure.md` 7.1.1, AGT 3.6 step 2g); and last `AgentBankrupted`, then `EstateOpened`.
+   store facility, with no `StoreChanged` because storage's removal step emits none (`spec-infrastructure.md` 7.1.1, AGT 3.6 step 2g); and last `AgentBankrupted`, then `EstateOpened`.
    The removal of a **trainer** first ends its trainees' traineeships, and those
    events come first: trainee by trainee in ascending agent ID, each trainee's
    `RecipeAbandoned` (reason `principal_left`) and then its `TraineeshipEnded`

@@ -677,6 +677,7 @@ func buildFieldCases() []fieldCase {
 	add(creditFieldCases()...)
 	add(tenureFieldCases()...)
 	add(riskFieldCases()...)
+	add(infrastructureFieldCases()...)
 	add(institutionsFieldCases()...)
 
 	// A case is named by its field, its description and the path it breaks, so

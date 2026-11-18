@@ -130,6 +130,7 @@ func (v *validator) structural() {
 	v.validateCredit()
 	v.validateTenure()
 	v.validateRisk()
+	v.validateInfrastructure()
 	v.validateInstitutions()
 	v.overflow()
 }
@@ -395,7 +396,7 @@ func (v *validator) local() {
 		id([]string{"recipes", e.ID, "id"}, e.ID)
 		// A recipe needs a non-discard output (FR-PRO-003); a discard output is
 		// created and disposed of in one step and makes nothing.
-		kept := false
+		kept := facilityClause(&e) // a build or a repair needs no kept output (spec-infrastructure.md 4.1.2 B3)
 		for _, o := range e.Outputs {
 			kept = kept || !o.Discard
 		}
@@ -2115,6 +2116,7 @@ func warnings(c *Config) []Warning {
 	out = append(out, tenureWarnings(c, lk)...)
 	out = append(out, creditWarnings(c, lk)...)
 	out = append(out, riskWarnings(c)...)
+	out = append(out, infrastructureWarnings(c, lk)...)
 	out = append(out, institutionsWarnings(c, lk)...)
 	sortWarnings(out)
 	return out

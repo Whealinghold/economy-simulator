@@ -46,18 +46,18 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351, N-353 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
-| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358 |
+| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384 |
 | CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349 |
 | CHK | N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-368 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241 |
-| CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354 |
+| CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-397 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-397, N-381 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361 |
@@ -69,7 +69,7 @@ PR description.
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323 |
-| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366 |
+| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
@@ -81,7 +81,7 @@ PR description.
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376 |
-| SAV | N-145, N-156, N-195, N-197, N-362 |
+| SAV | N-145, N-156, N-195, N-197, N-362, N-382 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-140, N-192, N-268, N-348, N-365 |
 | SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
@@ -90,11 +90,11 @@ PR description.
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375 |
 | STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399 |
 | SUB | N-121, N-228, N-268, N-244 |
-| TEC | N-358, N-359, N-360, N-361 |
+| TEC | N-358, N-359, N-360, N-361, N-384 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374 |
-| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-383 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346 |
-| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-373 |
+| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-384, N-373 |
 
 ## Open notes
 
@@ -1405,6 +1405,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-saving-and-investment.md` (the plan and the view) and `spec-infrastructure.md` 9.1.
 - **Note:** CAP 9.1 leaves the `Trade` view without facilities; SAV's goal and planned recipe are decided in `Trade`, and the clauses go in the per-recipe group.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: no `Facilities` group in the slice view. Left open for CAP and SAV.
+- **Update (2026-11-18, plan 3-cap Phase 1):** the `Work` view carries `Facilities` (CAP builds it in PR 4); the `Trade`-view group of a `Saver` role is SAV's (N-382). Left open for SAV.
 
 ### N-197 FR-CAP-018 and CAP 4.5 carry a carve-out for a role with a `Saver` block
 
@@ -2311,6 +2312,30 @@ PR description.
 - **Raised:** 2026-11-17, CRD PR 4.
 - **Note:** `spec-checkpoint.md` 4.2 tag 3 and `spec-credit.md` 17.1 now list the two fields that `saveDirectiveCredit` writes after the directive, only with `Modules.Credit` on. Any later module that adds a field to `Directive` must add its own group the same way (written only with its module on) so the bytes of format 1 do not move.
 
+### N-381 The hire-formation check `no_facility` needs the hire form
+
+- **Areas:** AGT, EMP, CAP
+- **Raised:** 2026-11-18, plan 3-cap Phase 1, `spec-infrastructure.md` 5.1.2 and `spec-employment.md` 5.5 (edit 27 of CAP 19.2).
+- **Note:** the formation checks of a hire of a recipe that `Needs` a site (the bound `committed_c + m` on the employer's capacity, and the reason `no_facility`) have no caller until EMP builds the hire form; the payroll form hires nothing. CAP builds the per-principal counter and one method, `facilityRoom(principal, class)`, with a unit test; EMP wires it into its formation and adds the spec rows of its edit 27.
+
+### N-382 `Standing` and the `Facilities` group of the `Trade` view belong to SAV
+
+- **Areas:** AGT, SAV, CAP
+- **Raised:** 2026-11-18, plan 3-cap Phase 1, `spec-infrastructure.md` 4.2.2 and 9.1.
+- **Note:** the per-recipe field `Standing` and the `Trade`-view `Facilities` group of a `Saver` role are read only by SAV's project rule. CAP builds the `Work`-view `Facilities` and the helper `standingReason`, and no `Trade` field; SAV adds the group, the field and its owed rows.
+
+### N-383 The capacity row of the viability programme for a `Needs` recipe
+
+- **Areas:** VIA, CAP
+- **Raised:** 2026-11-18, plan 3-cap Phase 1, `spec-infrastructure.md` 13.4.
+- **Note:** CAP builds only the warm-start `ErrNotViable` for a `Needs` recipe with no facility and the informational `FacilityDecay` report. The row of the programme (a recipe is runnable in a region only where an initial facility exists, bounded by the sum of `cap` per execution) changes `internal/steady`, the exact solver, and waits for its own change with its own proof.
+
+### N-384 `positionsTail` is split once, by whoever lands first
+
+- **Areas:** CODE, WLD, LND, TEC, SAV, CAP
+- **Raised:** 2026-11-18, plan 3-cap Phase 1, `tick.go`.
+- **Note:** `positionsTail` is at the Lizard limit (CCN 10). P8.3a (LND PR 5), P8.3b (CAP) and the later P8.1a and P8.1b hooks each add a guarded call to it, so the function is split once, as `positionsFlows` was, into the part from P5 to P7.2a and a new `positionsClose` for P8.1 to P8.4, in source order. Whoever lands second rebases onto the split and does not repeat it.
+
 ### N-397 EMP's hire form must add the executor test of a right
 
 - **Areas:** EMP, ORG
@@ -2395,4 +2420,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: a420ac0f37e74d356d28e448
+NOTES-TAG: 8eb5f34b23d177fbdf377e6d
