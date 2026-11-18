@@ -151,6 +151,10 @@ func TestHired_CutStartRefundsTheUnstartedWages(t *testing.T) {
 	if got := totalMoney(t, w) + Money(escrowHeld(t, w)); got != total {
 		t.Errorf("household money plus escrow = %d, want %d", got, total)
 	}
+	// Bill 70 * 2 ticks * 2 households = 280 left the farm; 140 came back at the cut start.
+	if got := balanceOf(t, w, farm); got != 10_000-280+140 {
+		t.Errorf("farm balance = %d, want %d: the unstarted wages return to the employer", got, 10_000-280+140)
+	}
 }
 
 // TestHired_NothingStartedEndsTheHireNotStarted verifies that a hire whose job starts
@@ -173,6 +177,9 @@ func TestHired_NothingStartedEndsTheHireNotStarted(t *testing.T) {
 		Worked: 0, Paid: 0, Refunded: 210, Cause: CauseNotStarted}}
 	if !slices.Equal(log.ended, want) {
 		t.Errorf("HireEnded = %+v, want %+v (the whole escrow 210 refunded)", log.ended, want)
+	}
+	if got := balanceOf(t, w, farm); got != 10_000 {
+		t.Errorf("farm balance = %d, want 10000: the whole escrow returns to the employer", got)
 	}
 	got := []int64{boolInt(w.agents[hand].hasJob()), int64(len(w.employment.hires)), w.employment.tallyOf(0, 0).notStarted, int64(totalMoney(t, w))}
 	if want := []int64{0, 0, 1, int64(total)}; !slices.Equal(got, want) {
