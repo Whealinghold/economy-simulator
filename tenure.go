@@ -258,10 +258,20 @@ func (t *tenure) holderLive(cell int, holder AgentID) bool {
 	return t.world.liveAgent(holder)
 }
 
+// rentCounts are the counts of the tick of an endowment, none before the first tick.
+func (t *tenure) rentCounts(cell int) tenureCount {
+	if cell >= len(t.rt.counts) {
+		return tenureCount{}
+	}
+	return t.rt.counts[cell]
+}
+
 // auditTenure is the tenure part of the audit of P8.4 and of a restore (spec-land.md
-// 14.2): on every endowment the shares are 1 to 10 000, the titles are in strictly
-// ascending holder order, their sum is at most 10 000, each holder is live, and no agent
-// is above the cap of MaxHolderShareBP.
+// 14.2, FR-LND-037): on every endowment the shares are 1 to 10 000, the titles are in
+// strictly ascending holder order, their sum is at most 10 000, each holder is live, no
+// agent is above the cap of MaxHolderShareBP, and the rent paid of the tick and the rent
+// forfeited are the rent times the units charged, less the units exempt and those let to
+// their own lessor, which the transfer skips.
 func (w *World) auditTenure() error {
 	t := w.tenure
 	if t == nil {
@@ -277,6 +287,9 @@ func (w *World) auditTenure() error {
 		}
 		if sum > wholeBP {
 			return fmt.Errorf("tenure: endowment %s: the shares sum to %d, above %d", w.endowmentName(cell), sum, wholeBP)
+		}
+		if c := t.rentCounts(cell); c.paid+c.forfeited != c.due {
+			return fmt.Errorf("tenure: endowment %s: rent paid %d and forfeited %d, want the %d due (rent times the units charged)", w.endowmentName(cell), c.paid, c.forfeited, c.due)
 		}
 	}
 	return nil

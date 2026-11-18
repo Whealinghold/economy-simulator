@@ -36,7 +36,7 @@ type tenureCount struct {
 	offered, held                      int64
 	unserved, pricedOut                int64
 	tenants, lessors                   int64
-	paid, forfeited                    int64
+	paid, forfeited, due               int64
 	noTitle, rentFunds                 int64
 	cutUnits, exemptUnits              int64
 	rentInForce, postedBefore, entitle int64
@@ -463,6 +463,7 @@ func (t *tenure) payRent(c *tenureCount, x rentStart, lessor AgentID, units int6
 	if !fits {
 		invariant("the rent of a triple does not fit after the cap of the start")
 	}
+	c.due += due
 	to := t.account(lessor, t.regionOf(x.cell))
 	v, err := w.ledger.Account(to)
 	if err != nil {
