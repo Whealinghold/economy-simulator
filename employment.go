@@ -17,7 +17,7 @@ import (
 // its receipts of the tick to the households of the Hireable roles that
 // worked. It holds the module's state, its validator and, with the position,
 // its rule; the arithmetic is internal/employment, and this file converts at the
-// call (architecture.md 2.9, 2.10.1). The module has no hire, no escrow, no
+// call (architecture.md 2.9, 2.10.1). The payroll form has no hire, no escrow, no
 // per-agent state and no checkpoint section.
 //
 // The hire form (spec-employment.md 3 to 7, ADR 0011) is the same state with
