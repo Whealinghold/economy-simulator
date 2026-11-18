@@ -207,3 +207,32 @@ func TestFormation_StockCountsEarlierHiresOfTheRound(t *testing.T) {
 		t.Errorf("matched %d, positions closed no_input %d, noVacancy %d, want 2, 1 and 1", c.matched, c.refused[lrNoInput], c.noVacancy)
 	}
 }
+
+// TestAdmission_NoEndowmentRefusesTheFormation verifies check 7 of the round
+// (spec-employment.md 5.5): a vacancy whose recipe draws 3 ore an execution forms no
+// hire while the region's stock of ore is below one execution, and counts the
+// refusal as no_endowment; with a stock of 3 the same vacancy forms its hire.
+//
+// Requirement: FR-EMP-023
+func TestAdmission_NoEndowmentRefusesTheFormation(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name  string
+		ore   int64
+		hires int
+	}{{"stock below one execution", 2, 0}, {"stock of one execution", 3, 1}} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var buf bytes.Buffer
+			lg := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+			w := hireWorld(t, defaultHire(hireOpts{ore: tt.ore}), farmWants(1, 100, 10), WithLogger(lg))
+			stepN(t, w, 1)
+			if got := len(w.employment.hires); got != tt.hires {
+				t.Errorf("hires open = %d, want %d", got, tt.hires)
+			}
+			if refused := strings.Contains(buf.String(), "reason="+string(ReasonNoEndowment)); refused != (tt.hires == 0) {
+				t.Errorf("no_endowment in the Debug output = %v, want %v: %q", refused, tt.hires == 0, buf.String())
+			}
+		})
+	}
+}

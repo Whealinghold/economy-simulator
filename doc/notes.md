@@ -2537,7 +2537,7 @@ PR description.
 
 - **Areas:** EMP, RES
 - **Raised:** 2026-11-18, plan 3-emp PR 3.
-- **Note:** The labour round withdraws the own request of a matched worker. Its draws on an endowment stay in `resourcesState.reqs` with `executions` 0, and `p26Ration` skips a record of 0 executions, so no worker has two requests on one endowment (`rationRun` panics on that). Any new reader of `reqs` must skip a record of 0 executions. Not tested with the resources module on in PR 3 (no pack has a hireable role that draws); check 7 `no_endowment` of the round has no test for the same reason.
+- **Note:** The labour round withdraws the own request of a matched worker. Its draws on an endowment stay in `resourcesState.reqs` with `executions` 0, and `p26Ration` skips a record of 0 executions, so no worker has two requests on one endowment (`rationRun` panics on that). Any new reader of `reqs` must skip a record of 0 executions. The withdrawal itself is not tested with the resources module on in PR 3 (no pack has a hireable role that draws). Check 7 `no_endowment` is tested with a test-only pack (`TestAdmission_NoEndowmentRefusesTheFormation`).
 
 ### N-444 A world with a hire open cannot be checkpointed yet
 
@@ -2561,4 +2561,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: c2a7b2fe3599df530f528855
+NOTES-TAG: 4f1e6ea29b9542242672ff05

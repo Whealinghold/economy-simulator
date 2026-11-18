@@ -47,6 +47,7 @@ type hireOpts struct {
 	handRecipe   bool  // the hand has the recipe too, so it has an own job to fall back on
 	handScale    int64 // households per hand agent, 0 for the world's scale
 	off          bool  // the module is off: no block, no Hireable role
+	ore          int64 // the resources module is on, the recipe draws 3 ore an execution and the region holds ore (0: off)
 }
 
 // hireWorld is a world of one raw commodity "grain" and two roles: "farm", an
@@ -89,6 +90,13 @@ func hireWorld(t *testing.T, o hireOpts, plan func(v *AgentView) JobRequest, opt
 		cfg.Groups = append(cfg.Groups, Group{Region: r.ID, Role: "farm", Households: o.farms}, Group{Region: r.ID, Role: "hand", Households: o.hands, Scale: o.handScale})
 	}
 	cfg.Modules.Employment = &Employment{Hire: true, MaxOpen: o.maxOpen}
+	if o.ore > 0 {
+		res := DefaultResource()
+		res.ID, res.Capacity = "ore", 1_000
+		cfg.Modules.Resources = &Resources{HorizonYears: 50, Resources: []Resource{res},
+			Endowments: []Endowment{{Region: "r0", Resource: "ore", HasCapacity: true, Capacity: 1_000, HasInitial: true, Initial: o.ore}}}
+		cfg.Recipes[0].Draws = []Draw{{Resource: "ore", Quantity: 3}}
+	}
 	if o.off {
 		cfg.Modules.Employment, cfg.Roles[0].Employer, cfg.Roles[1].Hireable = nil, nil, false
 	}

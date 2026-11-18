@@ -370,7 +370,7 @@ Choices and deviations:
 
 - No refactor-first commit: `positionsProduce` measures 6 on this tree, `startJob` 8, `workAgent` 9; every hook is a call into a nil-safe method, so none gained a branch beyond one in `positionsProduce` and `startReq`.
 - `LabourRound` and P2.8b stay for PR 5; the counts it reads are kept now in `labourTally` (stamped by tick, no clearing position).
-- The checks 8 and 11 and the slots of 2, 5, 9 and 10 are not built (PR 5 and the other modules). Check 7 has no test (N-443).
+- The checks 8 and 11 and the slots of 2, 5, 9 and 10 are not built (PR 5 and the other modules). Check 7 is tested by `TestAdmission_NoEndowmentRefusesTheFormation` (a test-only pack that draws on an endowment, which no shipped pack has; the resources module on). N-443 still holds for the withdrawn request with the module on.
 - `HireEnded` has no "to the estate" field: spec 15.1 wins over the rule file (N-445). Hire ends at P2.1 and P2.7 follow the rotation order, not ascending hire ID (N-442).
 - Welfare: the wage feeds `addEarned` and `addWagePaid` at the release; the rest of PR 5's welfare rules (hired working tick as `k`, principal floor, wear) is not built.
 - Hooks outside the module files: `jobAsk.k0`, `resourcesState.withdraw` and the skip in `p26Ration`, `residueOwner` made nil-safe and universal (also read by `storage_commit.go`), `finishJob` always reads `jobAccount`, `markEscrow` in the two merchants derivations, `snapshotHireEscrow` inside `snapshotContracts` (so `snapshot.go` did not grow), the kind check of `inFlightAccount`, `auditHires` in `auditInFlight`.
