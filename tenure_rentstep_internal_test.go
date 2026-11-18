@@ -420,3 +420,32 @@ func TestRentIsOffDual_Boundaries(t *testing.T) {
 		})
 	}
 }
+
+// TestStep_ClosedEndowmentNeverMoves verifies spec-land.md 5.5.1: the posted rent of a closed
+// endowment does not move whatever the counts say, and the same counts move an open one.
+//
+// Arithmetic: planted unserved units 5 with nothing cut give the rise of 1 on an open
+// endowment, from 2 to 3; the closed one stays at 2.
+//
+// Guard: with the closure left out of the step a closed endowment, whose counts the tiers
+// keep at 0, would still pass every other test.
+//
+// Requirement: FR-LND-019
+func TestStep_ClosedEndowmentNeverMoves(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name   string
+		closed bool
+		want   int64
+	}{{"open", false, 3}, {"closed", true, 2}} {
+		t.Run(tt.name, func(t *testing.T) {
+			w := newMill(t, stepConfig(10, 5_000, tt.closed), WithSeed(1))
+			toStart(t, w)
+			w.tenure.rt.counts[0].unserved, w.tenure.rt.counts[0].cutUnits = 5, 0
+			w.p83aRent()
+			if got := w.tenure.posted[0]; got != tt.want {
+				t.Errorf("posted rent = %d after 5 units unserved, want %d", got, tt.want)
+			}
+		})
+	}
+}
