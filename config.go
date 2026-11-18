@@ -157,6 +157,12 @@ type Modules struct {
 	// nothing). It needs Modules.Resources. Its hash id is 14, whatever its place in
 	// this struct.
 	Tenure *TenureConfig
+	// Institutions is the institutions module: bodies that select households, the
+	// exclusive rights that a body holds over an activity, and legal prices
+	// (spec-institutions.md). Nil is off; non-nil is on, even when empty (an empty
+	// module has no body, right or control and does nothing). Its hash id is 21,
+	// whatever its place in this struct.
+	Institutions *Institutions
 }
 
 // Credit is the configuration of the credit module (spec-credit.md 4.1, 14). Its
@@ -1743,6 +1749,7 @@ func (c Config) canonical() Config {
 	out.Modules.Credit = c.Modules.Credit.canonical()
 	out.Modules.Technology = c.Modules.Technology.canonical()
 	out.Modules.Tenure = c.Modules.Tenure.canonical()
+	out.Modules.Institutions = c.Modules.Institutions.canonical()
 	return out
 }
 
@@ -1966,4 +1973,178 @@ type OutsideGate struct {
 	// ScaleBP multiplies both quotes of the gate, 1 to MaxGateScaleBP. Default
 	// 10 000.
 	ScaleBP int64
+}
+
+// The activities a right reserves (spec-institutions.md 5.1.2), a closed set of rule
+// constants, and the values of Right.Who for a produce right (5.3).
+const (
+	// ActivityProduce reserves the start of a recipe; its Subject is a recipe.
+	ActivityProduce = "produce"
+	// ActivitySell reserves the sale of a commodity; its Subject is a commodity.
+	ActivitySell = "sell"
+	// ActivityBuy reserves the purchase of a commodity; its Subject is a commodity.
+	ActivityBuy = "buy"
+	// ActivityTrain reserves the training for a role; its Subject is a role.
+	ActivityTrain = "train"
+	// WhoPrincipal tests the membership of the account whose inputs a job uses.
+	WhoPrincipal = "principal"
+	// WhoExecutor tests the membership of the household that works.
+	WhoExecutor = "executor"
+	// WhoBoth tests both against the same body.
+	WhoBoth = "both"
+)
+
+// Institutions is the configuration of the institutions module
+// (spec-institutions.md 9): the bodies, the rights, the price controls and the rate
+// limits. Its presence switches the module on; the zero value is the module on with
+// nothing declared, which is the world without it. After construction the lists are
+// in canonical order (spec-config.md 3.4). Its hash id is 21.
+type Institutions struct {
+	// Bodies are the bodies, at most MaxBodies, canonical by ID; the index of a body in
+	// this order is its BodyID. Its hash id is 1.
+	Bodies []Body
+	// Rights are the rights, at most MaxRights, canonical by ID; the index of a right
+	// in this order is its RightID. Its hash id is 2.
+	Rights []Right
+	// Controls are the price controls, canonical by ID. With RateLimits they are at
+	// most MaxControls; the index of a control among the controls and then the rate
+	// limits is its ControlID. Its hash id is 3.
+	Controls []Control
+	// RateLimits are the legal caps on the rate of credit, canonical by ID. Its hash
+	// id is 4.
+	RateLimits []RateLimit
+	// OwnUseBound says a produce right also binds an own-use job (spec-institutions.md
+	// 5.5.2). Its hash id is 5; false is the default.
+	OwnUseBound bool
+}
+
+// Body is a named set of households selected by role and region, with a limit on how
+// many (spec-institutions.md 3.1): plain data. It has no account, no agent ID and no
+// state of its own.
+type Body struct {
+	// ID is [a-z][a-z0-9_]* of at most MaxIDLength bytes, unique among bodies. Its hash
+	// id is 1.
+	ID string
+	// Roles are the roles whose households may be members, canonical by ID: at least
+	// one, each defined and listed once, no (role, region) in two bodies. Its hash id is 2.
+	Roles []string
+	// Regions are the regions of the scope, canonical by ID: each defined, listed once
+	// and not an outside node. With Jurisdictions the scope is the union. Its hash id is 3.
+	Regions []string
+	// Jurisdictions are the jurisdictions whose regions join the scope, canonical by
+	// ID: each defined and listed once, and the module needs Modules.Polity. Its hash id is 4.
+	Jurisdictions []string
+	// Places is the most households of the body's roles that each region of the scope
+	// may hold, 0 to MaxHouseholds; 0 is no limit. Its hash id is 5.
+	Places int64
+	// MaxTrainees is the member's limit on trainees, 0 to 100; 0 is the role's alone.
+	// Its hash id is 6.
+	MaxTrainees int64
+	// Needs is the settlement flag the class of a region must carry for the body to
+	// admit anyone there; empty is none. It needs Modules.Settlements. Its hash id is 7.
+	Needs string
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// Right reserves an activity on a subject, in a scope, to the members of a body, or to
+// nobody when Body is empty (spec-institutions.md 5.1).
+type Right struct {
+	// ID is the identity, as a body's. Its hash id is 1.
+	ID string
+	// Body is the holder, a defined body; empty is a prohibition. Its hash id is 2.
+	Body string
+	// Activity is ActivityProduce, ActivitySell, ActivityBuy or ActivityTrain. Its hash
+	// id is 3.
+	Activity string
+	// Subject is a recipe (produce), a commodity (sell, buy) or a role (train). Its hash
+	// id is 4.
+	Subject string
+	// Region is the scope key, a defined region that is not an outside node; exactly
+	// one of Region and Jurisdiction is set. Its hash id is 5.
+	Region string
+	// Jurisdiction is the scope key as a jurisdiction; it needs Modules.Polity. Its hash
+	// id is 6.
+	Jurisdiction string
+	// Who is whose membership a produce right tests: WhoPrincipal (the default, and
+	// canonical writes it for a produce right), WhoExecutor or WhoBoth. It is empty on
+	// any other activity. Its hash id is 7.
+	Who string
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// Control is a legal range for the price of a commodity: a cap, a floor or both, in
+// basis points of the commodity's effective reference price (spec-institutions.md
+// 6.1.1).
+type Control struct {
+	// ID is the identity, as a body's, one namespace with the rate limits. Its hash id
+	// is 1.
+	ID string
+	// Commodity is a defined commodity. Its hash id is 2.
+	Commodity string
+	// Region is the scope key, a defined region that is not an outside node; exactly one
+	// of Region and Jurisdiction is set. Its hash id is 3.
+	Region string
+	// Jurisdiction is the scope key as a jurisdiction; it needs Modules.Polity. Its hash
+	// id is 4.
+	Jurisdiction string
+	// CapBP is the cap in basis points of the effective reference price, 0 to
+	// MaxBasisPoints; 0 is none. Its hash id is 5.
+	CapBP int64
+	// FloorBP is the floor, 0 to CapBP when a cap is set, else 0 to MaxBasisPoints; 0 is
+	// none. Its hash id is 6.
+	FloorBP int64
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// RateLimit is a legal cap on the yearly rate of a loan: the highest effective rate at
+// which a borrower may borrow in the scope (spec-institutions.md 6.1.1). It needs
+// Modules.Credit.
+type RateLimit struct {
+	// ID is the identity, as a control's. Its hash id is 1.
+	ID string
+	// Region is the scope key, a defined region that is not an outside node; exactly one
+	// of Region and Jurisdiction is set. Its hash id is 2.
+	Region string
+	// Jurisdiction is the scope key as a jurisdiction; it needs Modules.Polity. Its hash
+	// id is 3.
+	Jurisdiction string
+	// CapBP is the yearly cap, absolute, 0 to MaxCreditRateBP; 0 is interest-free. Its
+	// hash id is 4.
+	CapBP int64
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// canonical returns a copy of the module with the bodies, rights, controls and rate
+// limits sorted by ID and the lists of a body sorted (spec-config.md 3.4,
+// spec-institutions.md 3.2.1), nil for nil. The lists are copied, so the copy owns
+// them; a produce right with no Who gets WhoPrincipal, its default, and another right
+// with WhoPrincipal gets none, so the two spellings of a default hash alike.
+func (m *Institutions) canonical() *Institutions {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	out.Bodies = sortedBy(m.Bodies, func(a, b Body) int { return cmp.Compare(a.ID, b.ID) })
+	for i := range out.Bodies {
+		b := &out.Bodies[i]
+		b.Roles = sortedBy(b.Roles, cmp.Compare[string])
+		b.Regions = sortedBy(b.Regions, cmp.Compare[string])
+		b.Jurisdictions = sortedBy(b.Jurisdictions, cmp.Compare[string])
+	}
+	out.Rights = sortedBy(m.Rights, func(a, b Right) int { return cmp.Compare(a.ID, b.ID) })
+	for i := range out.Rights {
+		switch r := &out.Rights[i]; {
+		case r.Activity == ActivityProduce && r.Who == "":
+			r.Who = WhoPrincipal
+		case r.Activity != ActivityProduce && r.Who == WhoPrincipal:
+			r.Who = ""
+		}
+	}
+	out.Controls = sortedBy(m.Controls, func(a, b Control) int { return cmp.Compare(a.ID, b.ID) })
+	out.RateLimits = sortedBy(m.RateLimits, func(a, b RateLimit) int { return cmp.Compare(a.ID, b.ID) })
+	return &out
 }

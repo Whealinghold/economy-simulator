@@ -6,6 +6,7 @@ BoundaryFlow
 ContractFormed
 ContractRound
 ContractSettled
+CreditRateScaled
 CreditRound
 CreditSettled
 EdgeStatusChanged

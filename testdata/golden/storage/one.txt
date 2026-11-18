@@ -255,4 +255,4 @@ goods refined 337
 goods seed 17544
 goods staple 28418
 goods tool_a 32
-checkpoint_digest 8bcad7830a3a808b391a66ab102f8be0cf31dff123b1b339d8f93a2f8e8cce90
+checkpoint_digest a98fd9d200eded2577c0fadb9c8bb001a80d0b340597cc7c5a75958ca83de4e6
