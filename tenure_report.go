@@ -439,3 +439,52 @@ func (t *tenure) debugCharged(cell int, rent, units int64) {
 		slog.Int(logkeys.Region, int(t.regionOf(cell))), slog.Int(logkeys.Resource, int(t.resourceOf(cell))),
 		slog.Int64(logkeys.Rent, rent), slog.Int64(logkeys.Quantity, units))
 }
+
+// rentDualTolBP is the tolerance of the warning rent_off_dual (spec-land.md 5.6.2): the
+// configured rent of an endowment whose row binds may differ from the dual by this share of
+// the dual, in basis points, before the solver reports it. It is a rule constant.
+const rentDualTolBP = 5_000
+
+// RentOffDualRow is an endowment whose configured rent is off the dual of its resource row
+// (spec-land.md 5.6.2): Rent is the configured rent and Dual the dual Rent of the report, in
+// minor units per unit drawn. It never fails validation; a pack may want a rent where the
+// row is slack (a title with rent is a distribution of income, not only a scarcity signal).
+type RentOffDualRow struct {
+	// Region and Resource name the endowment.
+	Region, Resource string
+	Rent, Dual       int64
+}
+
+// rentOffDual is the warning rent_off_dual of the solver (spec-land.md 5.6.2, 12.2) for the
+// endowment of a region and a resource whose dual is dual: it adds a row when the tenure
+// module is on, the endowment has a term or a title, and either the row binds and the
+// configured rent differs from the dual by more than rentDualTolBP of the dual, or the row
+// is slack and the configured rent is above 0. The solver does not read a title or a rent.
+func (s *viaSolve) rentOffDual(region, resource string, dual int64) {
+	m := s.m.c.Modules.Tenure
+	if m == nil {
+		return
+	}
+	var rent int64
+	tenured := slices.ContainsFunc(m.Holdings, func(h Holding) bool { return h.Region == region && h.Resource == resource })
+	for _, tm := range m.Terms {
+		if tm.Region == region && tm.Resource == resource {
+			rent, tenured = tm.Rent, true
+		}
+	}
+	if tenured && rentIsOffDual(rent, dual) {
+		s.rep.RentOffDual = append(s.rep.RentOffDual, RentOffDualRow{Region: region, Resource: resource, Rent: rent, Dual: dual})
+	}
+}
+
+// rentIsOffDual says a configured rent is off the dual: with a dual of 0 (a slack row) the
+// rent is above 0, and otherwise the difference is above rentDualTolBP of the dual. A
+// product past int64 counts as off.
+func rentIsOffDual(rent, dual int64) bool {
+	if dual == 0 {
+		return rent > 0
+	}
+	gap, ok1 := checked.Mul(max(rent, dual)-min(rent, dual), wholeBP)
+	tol, ok2 := checked.Mul(dual, rentDualTolBP)
+	return !ok1 || !ok2 || gap > tol
+}
