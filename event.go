@@ -2411,3 +2411,22 @@ type FacilityChanged struct {
 }
 
 func (FacilityChanged) isEvent() {}
+
+// FacilityLimited is the aggregate of what the facilities of one class in one region cut
+// or refused in a tick (spec-infrastructure.md 14.1), emitted at P8.3b once per region and
+// class in ascending (RegionID, class) order and never when Cut, Refused, Voided and
+// Pending are all 0. It is bounded by regions times classes and built only when an
+// observer was supplied. It is emitted only when the infrastructure module is on.
+type FacilityLimited struct {
+	Tick   int64
+	Region RegionID
+	Class  FacilityClassID
+	// Served is the executions started that used a facility of the class, Cut the
+	// executions not started for capacity though inputs and weight allowed them, Refused
+	// the starts refused whole with a reason of the limits, Voided the executions of a
+	// build or repair that did nothing at the completion, and Pending the store
+	// facilities waiting for storage to give the store.
+	Served, Cut, Refused, Voided, Pending int64
+}
+
+func (FacilityLimited) isEvent() {}

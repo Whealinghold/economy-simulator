@@ -102,7 +102,14 @@ type infrastructure struct {
 	site                      map[siteKey]int64
 	route, ground             []int64
 	regions, modes, resources int
+	// limits are the per-tick counts of FacilityLimited by (region, class), at
+	// region * classes + class, kept only under an observer and cleared at P8.6; never
+	// saved (spec-infrastructure.md 14.1).
+	limits []facilityLimit
 }
+
+// facilityLimit is the counts of one (region, class) cell for FacilityLimited.
+type facilityLimit struct{ served, cut, refused, voided, pending int64 }
 
 // newInfrastructure builds the state from a canonical configuration that passed
 // Validate, with no facility, or returns nil when the module is off. The initial
@@ -115,6 +122,7 @@ func newInfrastructure(c *Config, set *settlements) *infrastructure {
 	n := &infrastructure{
 		cls: make([]facClass, len(m.Classes)), next: 1, regions: len(c.Regions),
 		byOwner: map[AgentID][]FacilityID{}, installed: map[ownerClass]int{}, site: map[siteKey]int64{},
+		limits: make([]facilityLimit, len(c.Regions)*len(m.Classes)),
 	}
 	if c.Modules.Transport != nil {
 		n.modes = len(c.Modules.Transport.Modes)
