@@ -73,14 +73,14 @@ PR description.
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314 |
-| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349 |
+| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-377 |
 | ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
-| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376 |
+| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-377 |
 | SAV | N-145, N-156, N-195, N-197, N-362, N-382 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-140, N-192, N-268, N-348, N-365 |
@@ -2410,6 +2410,12 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-rsk D14, `spec-indicators.md` 9.1 row 25, FR-IND-059.
 - **Note:** `indicator/tally_observe.go` is near 500 lines of Go, so the `Observe` cases for the lost units, the strikes and `StoreLoss` go in `indicator/tally_loss.go`, with one dispatch line in the old file. The EMP presets 22 to 24 take their own files when their plan lands.
 
+### N-377 Candidates for the adapter change of the risk instruments
+
+- **Areas:** RSK, OBS
+- **Raised:** 2026-11-18, plan 3-rsk PR B observability review (route side; the store side lands in PR C).
+- **Note:** The three instruments of `spec-risk.md` 14.4 are deferred to a later change to `otelobserver/` (plan 3-rsk, Q5), with no core change owed: the events carry what they need. For that change: (1) `economysim.transport.cargo.lost` sums `ArrivedLine.Lost` of each line, by commodity, and each `Amount` of `ShipmentArrived.AccountLost`, by commodity. `ArrivedLine.Spoiled` already excludes the lost units (`Shipped - delivered - lost`), so `cargo.spoiled` and `economysim.transport.in_transit` (which takes `Shipped` off, lost included) need no change. (2) `economysim.risk.strikes` with `risk_kind` `route` counts `ShipmentDispatched` with `LossBP` above 0; the `store` half comes from `StoreLoss` in PR C. A strike whose cargo is all spoiled or whose shipment is held still shows in `LossBP`, so the counter is not the same as `cargo.lost` above 0. (3) A reconciliation test, not a new instrument: the sum of `cargo.lost` plus the units lost by a `StoreLoss` equals `economysim.commodity.flow` under the reason `loss`; a gap means a loss path posts to the ledger without an event. (4) Not in the rule tables and to be decided there first: a gauge of the route risk scale held from `RouteRiskScaled` (`AfterBP`), as `economysim.rent.rate` holds `RentScaled`, so a dashboard can tell a closed-by-scale route (0) from a quiet one. It needs a row in 5.3 and 5.3.1 and a new attribute set (origin, destination, mode), which is bounded by the route rows but is the first metric attribute with two regions on a risk row; take the two keys `economysim.region.from` and `economysim.region.to` of the relocation metric. Left open for the adapter change.
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2420,4 +2426,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 960c9003e7331f7df6fa52e7
+NOTES-TAG: 53853dea0d9db96e53be7b63
