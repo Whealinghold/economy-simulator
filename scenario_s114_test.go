@@ -1,6 +1,8 @@
 package economysim_test
 
 import (
+	"fmt"
+	"reflect"
 	"slices"
 	"strconv"
 	"testing"
@@ -74,5 +76,48 @@ func checkScenarioS114(t *testing.T, seed uint64, on bool, tally *creditTally, s
 	}
 	if tally.formed == 0 {
 		t.Errorf("seed %d: no loan formed in %d ticks, want the growers to borrow for their 60-tick job", seed, creditScenarioTicks)
+	}
+}
+
+// TestScenarioS114_OffIsNeutral verifies FR-CRD-001 and FR-CRD-062 end to end: pack one with
+// a credit module that carries no block against pack one without it, seeds 1 to 3, 400
+// ticks, Step loop with the observer and the audit. The module present with no role that
+// lends or borrows draws no word and moves nothing: every event after WorldCreated, every
+// sampled snapshot and the final money equal the run without it, except what the module
+// owns, the configuration hash, Snapshot.Modules, the construction line and the credit
+// warnings (the golden's own).
+//
+// Requirement: FR-CRD-001, FR-CRD-062
+//
+// Guard: a module that is on but idle must leave no trace in a run; a draw, an event or a
+// changed tie-break would move every later result of a world that merely listed the module.
+func TestScenarioS114_OffIsNeutral(t *testing.T) {
+	if testing.Short() {
+		t.Skip("end-to-end test, skipped with -short")
+	}
+	t.Parallel()
+	off := loadValidPack(t, packOne...)
+	idle := loadPackBytes(t, []byte("[modules.credit]\nmin_principal = 1\nmax_claims = 1000\n"), packOne...)
+	for _, seed := range seedList(3) {
+		t.Run("seed "+strconv.FormatUint(seed, 10), func(t *testing.T) {
+			t.Parallel()
+			spec := runSpec{Seed: seed, Ticks: goldenTicks, Drive: driveStep, Observe: true, Audit: true, Snapshots: snapSample}
+			a, b := runPack(t, off, spec), runPack(t, idle, spec)
+			if len(a.Events) != len(b.Events) {
+				t.Fatalf("seed %d: %d events with the module idle, %d without, want equal", seed, len(b.Events), len(a.Events))
+			}
+			for i := 1; i < len(a.Events); i++ { // event 0 is WorldCreated: it carries the hash
+				if x, y := fmt.Sprintf("%+v", a.Events[i]), fmt.Sprintf("%+v", b.Events[i]); x != y {
+					t.Fatalf("seed %d: event %d is %s with the module idle, %s without, want equal", seed, i, y, x)
+				}
+			}
+			for tick, sa := range a.Samples {
+				sb := b.Samples[tick]
+				sb.Modules, sb.ConfigHash = sa.Modules, sa.ConfigHash
+				if !reflect.DeepEqual(sa, sb) {
+					t.Errorf("seed %d: the snapshot after tick %d differs with the module idle", seed, tick)
+				}
+			}
+		})
 	}
 }
