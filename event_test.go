@@ -95,6 +95,7 @@ var declaredEvents = []economysim.Event{
 	economysim.SettlementHeld{},
 	economysim.TitleTransferred{},
 	economysim.RentScaled{},
+	economysim.RentPaid{},
 	economysim.FacilityChanged{},
 }
 
@@ -106,7 +107,6 @@ var notBuiltEvents = []string{
 	"StoreLoss",
 	"RouteRiskScaled", "StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound",
-	"RentPaid",
 	"FacilityLimited", "FiscalFlowApplied",
 	"TreasuryOrdered", "MembershipChanged", "RightRefused", "PriceControlled",
 	"LegalLevelSet", "RightSuspensionSet", "SavingPlanned", "PolicyDecided",

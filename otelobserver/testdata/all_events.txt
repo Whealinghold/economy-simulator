@@ -39,6 +39,7 @@ RecipeAbandoned
 RecipeExecuted
 RecipeRefused
 ReliefPaid
+RentPaid
 RentScaled
 RoleChanged
 RoomLimited

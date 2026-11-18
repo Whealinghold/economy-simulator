@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/Whealinghold/economy-sim/internal/checked"
 	tnr "github.com/Whealinghold/economy-sim/internal/tenure"
 )
 
@@ -91,6 +92,9 @@ type tenure struct {
 	noTitleRun, rentFundsRun []int64
 	// capBP is MaxHolderShareBP, the most one agent may hold; the pool is exempt.
 	capBP int64
+	// stepBP, floorBP and ceilBP are RentStepBP, RentFloorBP and RentCeilingBP, the band of
+	// the rent step (spec-land.md 5.5.1). Derived.
+	stepBP, floorBP, ceilBP int64
 	// stepping says the posted rent is state: RentStepBP is above 0, and ownUseExempt
 	// says a request for an own-use recipe pays no rent (OwnUseExempt).
 	stepping, ownUseExempt bool
@@ -109,7 +113,8 @@ func newTenure(c *Config) *tenure {
 	}
 	t := &tenure{regions: len(c.Regions), resources: len(c.Modules.Resources.Resources),
 		capBP: cmp.Or(m.MaxHolderShareBP, DefaultMaxHolderShareBP), stepping: m.RentStepBP > 0,
-		ownUseExempt: m.OwnUseExempt}
+		ownUseExempt: m.OwnUseExempt, stepBP: m.RentStepBP, floorBP: m.RentFloorBP,
+		ceilBP: cmp.Or(m.RentCeilingBP, DefaultRentCeilingBP)}
 	n := t.regions * t.resources
 	t.holds, t.base, t.hasTerm, t.closed = make([][]title, n), make([]int64, n), make([]bool, n), make([]bool, n)
 	t.posted, t.scale = make([]int64, n), make([]int64, n)
@@ -254,10 +259,20 @@ func (t *tenure) holderLive(cell int, holder AgentID) bool {
 	return t.world.liveAgent(holder)
 }
 
+// rentCounts are the counts of the tick of an endowment, none before the first tick.
+func (t *tenure) rentCounts(cell int) tenureCount {
+	if cell >= len(t.rt.counts) {
+		return tenureCount{}
+	}
+	return t.rt.counts[cell]
+}
+
 // auditTenure is the tenure part of the audit of P8.4 and of a restore (spec-land.md
-// 14.2): on every endowment the shares are 1 to 10 000, the titles are in strictly
-// ascending holder order, their sum is at most 10 000, each holder is live, and no agent
-// is above the cap of MaxHolderShareBP.
+// 14.2, FR-LND-037): on every endowment the shares are 1 to 10 000, the titles are in
+// strictly ascending holder order, their sum is at most 10 000, each holder is live, no
+// agent is above the cap of MaxHolderShareBP, and the rent paid of the tick and the rent
+// forfeited are the rent times the units charged, less the units exempt and those let to
+// their own lessor, which the transfer skips.
 func (w *World) auditTenure() error {
 	t := w.tenure
 	if t == nil {
@@ -273,6 +288,9 @@ func (w *World) auditTenure() error {
 		}
 		if sum > wholeBP {
 			return fmt.Errorf("tenure: endowment %s: the shares sum to %d, above %d", w.endowmentName(cell), sum, wholeBP)
+		}
+		if c := t.rentCounts(cell); !rentAudited(c) {
+			return fmt.Errorf("tenure: endowment %s: rent paid %d and forfeited %d, want the %d due (rent times the units charged)", w.endowmentName(cell), c.paid, c.forfeited, c.due)
 		}
 	}
 	return nil
@@ -306,4 +324,11 @@ func holdsTitle(c *Config, role string) bool {
 	return slices.ContainsFunc(c.Modules.Tenure.Holdings, func(h Holding) bool {
 		return h.Holder.Kind == HolderKindRole && h.Holder.Role == role
 	})
+}
+
+// rentAudited is the identity of FR-LND-037 for the counts of one endowment: the rent paid
+// plus the rent forfeited is the rent due. A sum past int64 is a failed audit.
+func rentAudited(c tenureCount) bool {
+	sum, ok := checked.Add(c.paid, c.forfeited)
+	return ok && sum == c.due
 }
