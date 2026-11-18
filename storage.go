@@ -69,6 +69,9 @@ type storage struct {
 	// gate says whether a class may be given in a region (spec-storage.md 3.2.3):
 	// nil is open, which it is until the settlements module sets it (D8).
 	gate func(region RegionID, class int) bool
+	// locked is the stores the last agent to join was not given because the gate was
+	// closed: the StoresLocked of its AgentSpawned.
+	locked int64
 	// facilityCount is the installed store facilities of a class an agent has (D9);
 	// nil is none, until the infrastructure module sets it.
 	facilityCount func(a *agent, class StoreClassID) int
@@ -278,12 +281,19 @@ func (s *storage) roomState(l *ledger.Ledger, a *agent) (rm ledger.Room, free ro
 // module (spec-storage.md 3.6.1): the agent is given the stores of its role's row,
 // in class order and with no event, and its account the room (the room waits for
 // the end of construction while the warm start is applied). The gate of a class's
-// Needs is the settlements module's: until it exists every class is open and no
-// store is withheld (D8).
+// Needs is the settlements module's (storeClassGate): a store whose flag the region's
+// class lacks is not given and is counted in locked (D8). The initial agents are
+// created before the classes exist, so the world takes their locked stores after the
+// classes are found (lockStores).
 func (w *World) joinedStorage(a *agent) {
 	s := w.sto
 	s.grow(a.id)
+	s.locked = 0
 	for _, c := range s.given[a.role] {
+		if s.gate != nil && !s.gate(w.regionOf(a), c) {
+			s.locked++ // the class's Needs flag is not the region's: the store is not given (3.2.3)
+			continue
+		}
 		s.give(a.id, c)
 	}
 	if s.deferred {
@@ -292,6 +302,16 @@ func (w *World) joinedStorage(a *agent) {
 	if err := s.apply(w.ledger, a); err != nil {
 		s.broke(a.id, "the room of a created agent is below its goods: "+err.Error())
 	}
+}
+
+// storesLocked is the stores the agent that just joined was not given because its
+// region's class lacks the Needs flag of their class (AgentSpawned.StoresLocked); 0
+// without the module.
+func (w *World) storesLocked() int64 {
+	if w.sto == nil {
+		return 0
+	}
+	return w.sto.locked
 }
 
 // roleChangedStorage is the step of agentRoleChanged for the module (spec-storage.md
@@ -619,11 +639,27 @@ func (s *storage) admitsStock(n NewAgent, stock []itemRow) error {
 	}
 	r := room.Pair{Mass: base.Mass, Bulk: base.Bulk}
 	for _, class := range s.given[n.Role] {
+		if s.gate != nil && !s.gate(n.Region, class) {
+			continue
+		}
 		var ok bool
 		if r, ok = addPair(r, s.classes[class]); !ok {
 			return nil // a room above int64 holds any load
 		}
 	}
+	load, ok := s.stockLoad(stock)
+	if !ok {
+		return ErrNoRoom
+	}
+	if load.Mass > r.Mass || load.Bulk > r.Bulk {
+		return ErrNoRoom
+	}
+	return nil
+}
+
+// stockLoad is the mass and bulk of the goods of a new agent; false when a product or
+// the sum overflows, which no room holds.
+func (s *storage) stockLoad(stock []itemRow) (room.Pair, bool) {
 	var load room.Pair
 	for _, it := range stock {
 		sz := s.sizes[it.commodity]
@@ -632,13 +668,10 @@ func (s *storage) admitsStock(n NewAgent, stock []itemRow) error {
 		var ok bool
 		load, ok = addPair(load, room.Pair{Mass: m, Bulk: b})
 		if !okm || !okb || !ok {
-			return ErrNoRoom
+			return load, false
 		}
 	}
-	if load.Mass > r.Mass || load.Bulk > r.Bulk {
-		return ErrNoRoom
-	}
-	return nil
+	return load, true
 }
 
 // storeClassCount is the number of store classes of the configuration, 0 with the
