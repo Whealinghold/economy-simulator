@@ -108,6 +108,11 @@ func (r *Result) reset() {
 // order they were passed in, provided the Refs are distinct. res is reused, so
 // a caller that keeps a result across rounds copies it. A nil check passes
 // every pair.
+//
+// Inputs are admitted by the root: Positions at least 0, ShareBP from 0 to
+// 10 000, Reserve at least 0, and a Check reason of ReasonNone or at least
+// ReasonCheck. The round does not re-validate them: a pair whose Wage is not
+// defined is counted in WageBelowUnit with the pairs whose wage is below 1.
 func Round(res *Result, offers []Offer, vacancies []Vacancy, lane Lane, check Check) {
 	res.reset()
 	SortOffers(offers)
@@ -138,7 +143,7 @@ func place(res *Result, o Offer, vacancies []Vacancy, lane Lane, check Check) (h
 			return false, false // the bids only fall from here
 		}
 		s := &res.Vacancies[i]
-		if s.closed || s.Left < o.Households || o.Households > s.fit {
+		if !s.admits(o.Households) {
 			continue
 		}
 		wage, ok := Wage(o.Reserve, v.Bid, v.ShareBP)
@@ -162,6 +167,12 @@ func place(res *Result, o Offer, vacancies []Vacancy, lane Lane, check Check) (h
 		fail(s, o.Households, reason, closes)
 	}
 	return false, false
+}
+
+// admits reports whether the vacancy is open and the block fits both the
+// positions left and the fit.
+func (s *VacancyResult) admits(block int64) bool {
+	return !s.closed && s.Left >= block && block <= s.fit
 }
 
 // fail applies a failed check to a vacancy: a vacancy-wide kind closes it, a
