@@ -1659,7 +1659,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 2):** read for the ledger additions; left open (not this row's). `Discard` uses only boundary accounts of the built-in group (`recipe_output` and `disposal`, created at construction in the order of `spec-ledger.md` 3.4.2); it adds no account and no module reason.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The slice has no module reason: the world creates the accounts in the order of WLD 5.2 rows 1, 4 and 6 and leaves rows 2, 3, 3a, 5 and 5a to the modules.
 - **Update (2026-11-09, plan 2-12 Phase 1):** Applied for the transport module (D444): with the module on, the boundary accounts of `haul_use` and `transit_use` are opened at construction at row 3a, goods commodity-major, in `Modules` pointer order (Demand before Transport). The note stays open for RSK's `loss`.
-- **Update (2026-11-18, plan 3-rsk Phase 1):** applied for RSK, which leaves the areas: the boundary accounts of `loss` are opened at row 3a after the credit module's reasons, goods commodity-major, in the order of the `Modules` pointers; the reason is a goods sink with code 44 in the ledger registry (`spec-ledger.md` 7.2, `spec-world.md` 5.2 row 3a).
+- **Update (2026-11-18, plan 3-rsk Phase 1):** applied for RSK, which leaves the areas: the boundary accounts of `loss` are opened at row 3a after the credit module's reasons, goods commodity-major, in the order of the `Modules` pointers; the reason is a goods sink with code 36 in the ledger registry (`spec-ledger.md` 7.2, `spec-world.md` 5.2 row 3a).
 
 ### N-227 Edits to CRD from the ledger row: `MarkOverdue` and a `Settle` of 0
 
@@ -2420,4 +2420,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 8eb5f34b23d177fbdf377e6d
+NOTES-TAG: 960c9003e7331f7df6fa52e7
