@@ -102,8 +102,12 @@ func (v *validator) hireEmployer(eb []string, r *Role) {
 // 3.2, 14.1).
 func (v *validator) hireList(p []string, r *Role) {
 	b := r.Employer
-	if len(b.Recipes) == 0 || len(r.Recipes) == 0 {
-		v.rep.add(ErrEmploymentShape, p, itoa(len(b.Recipes)), "1")
+	if len(b.Recipes) == 0 {
+		v.rep.add(ErrEmploymentShape, p, "0", "1")
+		return
+	}
+	if len(r.Recipes) == 0 {
+		v.rep.add(ErrEmploymentShape, p, "0", "role recipes")
 		return
 	}
 	seen := make(map[string]bool, len(b.Recipes))
@@ -144,14 +148,7 @@ func employmentWarnings(c *Config, lk lookup) []Warning {
 	}
 	var out []Warning
 	add := func(rule string, segs ...string) { out = append(out, Warning{Path: segs, Rule: rule}) }
-	var employers, workers []*Role
-	for i := range c.Roles {
-		if r := &c.Roles[i]; r.Employer != nil {
-			employers = append(employers, r)
-		} else if r.Hireable {
-			workers = append(workers, r)
-		}
-	}
+	employers, workers := splitHireRoles(c)
 	if len(employers) == 0 {
 		add("employment_no_employer", "modules", "employment")
 	}
@@ -168,6 +165,19 @@ func employmentWarnings(c *Config, lk lookup) []Warning {
 		out = append(out, employerWarnings(c, lk, r, workers)...)
 	}
 	return out
+}
+
+// splitHireRoles returns the roles with an employer block and the other Hireable
+// roles, each in role order.
+func splitHireRoles(c *Config) (employers, workers []*Role) {
+	for i := range c.Roles {
+		if r := &c.Roles[i]; r.Employer != nil {
+			employers = append(employers, r)
+		} else if r.Hireable {
+			workers = append(workers, r)
+		}
+	}
+	return employers, workers
 }
 
 // noEmployerInRegion is no_employer_in_region: a region with a group of a Hireable
@@ -249,6 +259,14 @@ func employerPriceWarnings(c *Config, lk lookup, r *Role, workers []*Role) []War
 		}
 		best, longest = max(best, net), max(longest, rc.Duration)
 	}
+	return append(out, wageWarnings(c, lk, r, workers, regions, best, longest)...)
+}
+
+// wageWarnings are wage_below_upkeep and payroll_exceeds_money, from the best net
+// value per tick and the longest job of the hire list.
+func wageWarnings(c *Config, lk lookup, r *Role, workers []*Role, regions []string, best, longest int64) []Warning {
+	var out []Warning
+	eb := []string{"roles", r.ID, "employer"}
 	wage, ok := payroll.Wage(0, best, r.Employer.WorkerShareBP)
 	if !ok || best < 1 {
 		return out
