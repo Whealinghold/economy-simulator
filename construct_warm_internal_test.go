@@ -353,7 +353,7 @@ func TestWarmStart_TextGuards(t *testing.T) {
 	}
 	read := regexp.MustCompile(`\b(\w+)\.WarmStart\b`)
 	allowed := func(n string) bool {
-		return slices.Contains([]string{"config.go", "hash.go", "validate.go", "welfare.go", "construct_warm.go", "external.go"}, n) || strings.HasPrefix(n, "viability")
+		return slices.Contains([]string{"config.go", "hash.go", "validate.go", "welfare.go", "construct_warm.go", "external.go", "institutions_warn.go"}, n) || strings.HasPrefix(n, "viability")
 	}
 	seen := false
 	for _, e := range entries {
@@ -368,7 +368,7 @@ func TestWarmStart_TextGuards(t *testing.T) {
 		src := string(b)
 		for _, m := range read.FindAllStringSubmatch(src, -1) {
 			if m[1] != "logkeys" && !allowed(n) {
-				t.Errorf("%s reads %s, want Config.WarmStart read only by the configuration, viability, welfare.go, construct_warm.go and external.go files", n, m[0])
+				t.Errorf("%s reads %s, want Config.WarmStart read only by the configuration, viability, welfare.go, construct_warm.go, external.go and institutions_warn.go files (the warning cap_below_seed_cost)", n, m[0])
 			}
 		}
 		if n == "construct_warm.go" && read.MatchString(src) {

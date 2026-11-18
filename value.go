@@ -142,3 +142,23 @@ func (q Quantity) Sub(o Quantity) (Quantity, bool) {
 
 // String returns the quantity as a decimal count of units.
 func (q Quantity) String() string { return strconv.FormatInt(int64(q), 10) }
+
+// BodyID is the index of a body in ascending order of its ID string in the effective
+// configuration (spec-institutions.md 3.2.1). It is not stable across
+// configurations: adding a body can renumber the others. Use the string ID to persist
+// or exchange one.
+type BodyID int
+
+// NoBody means none: a household that is a member of no body, a right with no holder.
+const NoBody BodyID = -1
+
+// RightID is the index of a right in ascending order of its ID string in the effective
+// configuration (spec-institutions.md 5.1). It is not stable across configurations;
+// use the string ID to persist or exchange one.
+type RightID int
+
+// ControlID is the index of a control or a rate limit in ascending order of its ID
+// string, the controls and the rate limits sorted together (spec-institutions.md
+// 6.1.2). It is not stable across configurations; use the string ID to persist or
+// exchange one.
+type ControlID int

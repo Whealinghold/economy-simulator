@@ -34,6 +34,10 @@ var presentationOnly = map[string]bool{
 	"StoreClass.Label":          true,
 	"SettlementClass.Label":     true,
 	"TechField.Label":           true,
+	"Body.Label":                true,
+	"Right.Label":               true,
+	"Control.Label":             true,
+	"RateLimit.Label":           true,
 	"WorldParams.DistanceLabel": true,
 }
 

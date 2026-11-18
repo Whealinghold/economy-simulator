@@ -22,6 +22,7 @@ internal/endowment 90
 internal/fiscal 90
 internal/graph 90
 internal/household 90
+internal/institution 90
 internal/ledger 90
 internal/logkeys 90
 internal/measure 90

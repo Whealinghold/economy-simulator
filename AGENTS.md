@@ -151,6 +151,8 @@ economy-sim/
 │   fiscal_validate.go fiscal_warnings.go fiscal_hash.go fiscal_class.go
 │   fiscal_tax.go fiscal_payout.go fiscal_duty.go fiscal_toll.go
 │   fiscal_orders.go fiscal_report.go fiscal_state.go (FIS)
+│   institutions_validate.go institutions_warn.go institutions_round.go
+│   institutions_rights.go institutions_legal.go institutions_report.go (ORG)
 │                           # CONTINUATION files: a concept past the Lizard limits
 │                           #   of N-243 is split; each maps to the area code of
 │                           #   its concept, and its _test.go carries that area's
