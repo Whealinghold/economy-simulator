@@ -325,7 +325,7 @@ func (l *Ledger) checkMove(m goodsMove) (f, t *account, err error) {
 
 // checkReason refuses a reason that does not fit the accounts (4.2).
 func (l *Ledger) checkReason(m goodsMove, f, t *account) error {
-	rw, ok := rowOf(m.r, true)
+	rw, ok := l.rowOf(m.r, true)
 	if !ok || m.from == m.to || !rw.fits(f.kind, t.kind) {
 		return ErrReasonMismatch
 	}
