@@ -216,6 +216,13 @@ func TestAddFacilities_Caps(t *testing.T) {
 	if _, err := w.AddFacilities(adds); !errors.Is(err, ErrFacilityCap) || len(w.infra.fac) != 0 {
 		t.Errorf("AddFacilities of %d to one owner = %v with %d facilities, want ErrFacilityCap and none", len(adds), err, len(w.infra.fac))
 	}
+	// Fix: the per-owner breach named the world total and MaxFacilities; it names the
+	// owner's count (64 held + 1 = 65 here) and MaxFacilitiesPerAgent.
+	_, err := w.AddFacilities(adds)
+	var ve *ValidationError
+	if !errors.As(err, &ve) || ve.Value != itoa(MaxFacilitiesPerAgent+1) || ve.Bound != itoa(MaxFacilitiesPerAgent) {
+		t.Errorf("AddFacilities per-owner breach = %+v, want value %d and bound %d", ve, MaxFacilitiesPerAgent+1, MaxFacilitiesPerAgent)
+	}
 	for i := range adds {
 		adds[i].Owner = 0
 	}

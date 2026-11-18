@@ -89,7 +89,8 @@ type infrastructure struct {
 	next FacilityID
 	// byOwner lists the IDs of each owner's facilities in ascending order, and
 	// installed counts the installed store facilities of an owner and class. They are
-	// lookup tables only: nothing iterates them.
+	// lookup tables only: nothing that affects results iterates them (the audit reads
+	// their keys in sorted order).
 	byOwner   map[AgentID][]FacilityID
 	installed map[ownerClass]int
 	// edge is the set of directed edges of the configuration, for the route classes.

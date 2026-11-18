@@ -127,8 +127,11 @@ func (n *infrastructure) checkAdd(i int, e *NewFacility, b *addBudget) (addPlan,
 func (n *infrastructure) checkAddCap(name string, owner AgentID, b *addBudget) error {
 	b.total++
 	b.perOwner[owner]++
-	if b.total > MaxFacilities || (!n.estateOwner(owner) && n.held(owner)+b.perOwner[owner] > MaxFacilitiesPerAgent) {
+	if b.total > MaxFacilities {
 		return argError(ErrFacilityCap, itoa(b.total), itoa(MaxFacilities), name)
+	}
+	if held := n.held(owner) + b.perOwner[owner]; !n.estateOwner(owner) && held > MaxFacilitiesPerAgent {
+		return argError(ErrFacilityCap, itoa(held), itoa(MaxFacilitiesPerAgent), name, "owner")
 	}
 	return nil
 }
