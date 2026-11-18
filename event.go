@@ -307,6 +307,13 @@ const (
 	// an internal transfer of money, agent to agent in the payroll form of the
 	// employment module (spec-employment.md 24.1.6), no faucet and no sink.
 	ReasonWagePay Reason = "wage_pay"
+	// ReasonWageEscrow is the money an employer puts into an Escrow account at the
+	// formation of a hire, and ReasonWageRefund the money the account gives back to
+	// the employer for the executions that did not run and at the end of the hire
+	// (spec-employment.md 7.1): internal transfers of money, no faucet and no sink.
+	// In the hire form wage_pay is also paid from the Escrow account.
+	ReasonWageEscrow Reason = "wage_escrow"
+	ReasonWageRefund Reason = "wage_refund"
 	// ReasonRent is the money a tenant pays a lessor for the units it drew from a let
 	// unit, and ReasonTitleSale the price of a title in a TransferTitles call
 	// (spec-land.md 5.8): internal transfers of money, agent to agent or estate, no

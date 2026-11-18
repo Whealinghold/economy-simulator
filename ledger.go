@@ -65,6 +65,8 @@ var reasonNames = [...]Reason{
 	ledger.WagePay:          ReasonWagePay,
 	ledger.Rent:             ReasonRent,
 	ledger.TitleSale:        ReasonTitleSale,
+	ledger.WageEscrow:       ReasonWageEscrow,
+	ledger.WageRefund:       ReasonWageRefund,
 }
 
 // ledgerReason returns the ledger's reason of a root Reason, and false for a
@@ -146,7 +148,7 @@ func moduleReasons(c *Config) [][]ledger.Reason {
 		m = append(m, []ledger.Reason{ledger.EscrowIn, ledger.EscrowOut, ledger.EscrowRefund})
 	}
 	if c.Modules.Employment != nil {
-		m = append(m, []ledger.Reason{ledger.WagePay})
+		m = append(m, []ledger.Reason{ledger.WagePay, ledger.WageEscrow, ledger.WageRefund})
 	}
 	if c.Modules.Credit != nil {
 		m = append(m, creditReasons())
