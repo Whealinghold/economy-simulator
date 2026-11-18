@@ -675,3 +675,19 @@ const (
 	// (the skills module's, spec-institutions.md 9).
 	MaxBodyTrainees = 100
 )
+
+// The bounds of the fiscal module (spec-fiscal.md 11.4, 14). All are placeholders
+// (N-015, N-027). The module also reuses MaxFlowAmount, MaxFlowRateBP, MaxFlowScale,
+// MaxMoney, MaxWeight, MaxQuantity and MaxPrice.
+const (
+	// MaxFiscalFlows is the most fiscal flows of all six kinds together: the step loops
+	// over the active flows and their classes each tick, so its cost is bounded by the
+	// configuration, as MaxMoneyFlows is.
+	MaxFiscalFlows = 64
+	// MaxDutyBP is the largest RateBP of a duty: the whole value of a trade at a scale
+	// of 10 000. A scale above 10 000 can lift the applied rate above it.
+	MaxDutyBP = 10_000
+	// MaxLimitBP is the largest LimitBP of a standing order: ten times the effective
+	// reference price.
+	MaxLimitBP = 100_000
+)

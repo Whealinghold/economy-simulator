@@ -532,7 +532,7 @@ func pairsLaterModules(e *encoder, m Modules) {
 	pairsLastModules(e, m)
 }
 
-// pairsLastModules writes the pairs of the modules of ids 15, 16, 17, 19, 21, 24 and 25 of
+// pairsLastModules writes the pairs of the modules of ids 15, 16, 17, 19, 20, 21, 24 and 25 of
 // Modules, after those pairsLaterModules writes (a continuation for the Lizard
 // limit).
 func pairsLastModules(e *encoder, m Modules) {
@@ -554,6 +554,11 @@ func pairsLastModules(e *encoder, m Modules) {
 	if m.Polity != nil {
 		e.id(19)
 		pairsPolity(e, *m.Polity)
+		e.end()
+	}
+	if m.Fiscal != nil {
+		e.id(20)
+		pairsFiscal(e, *m.Fiscal)
 		e.end()
 	}
 	if m.Institutions != nil {
@@ -837,12 +842,7 @@ func pairsPolity(e *encoder, p PolityConfig) {
 func pairsMoneyFlow(e *encoder, f MoneyFlow) {
 	e.text(1, f.ID)
 	e.text(2, f.Kind)
-	e.nested(3, func(e *encoder) {
-		e.text(1, f.Target.Kind)
-		e.text(2, f.Target.Region)
-		e.text(3, f.Target.Role)
-		e.text(4, f.Target.Store)
-	})
+	e.nested(3, func(e *encoder) { pairsFlowTarget(e, f.Target) })
 	e.num(4, f.Amount)
 	e.num(5, f.Level)
 	e.num(6, f.RateBP)
@@ -852,6 +852,17 @@ func pairsMoneyFlow(e *encoder, f MoneyFlow) {
 	e.num(10, f.Until)
 	e.num(11, f.Limit)
 	e.flag(12, f.NotIncome)
+}
+
+// pairsFlowTarget writes the pairs of a FlowTarget: Kind 1, Region 2, Role 3, Store 4
+// and Jurisdiction 5 (spec-config.md 8.2.2). Jurisdiction is written only when it is
+// not empty, so the hash of a money flow does not move.
+func pairsFlowTarget(e *encoder, t FlowTarget) {
+	e.text(1, t.Kind)
+	e.text(2, t.Region)
+	e.text(3, t.Role)
+	e.text(4, t.Store)
+	e.text(5, t.Jurisdiction)
 }
 
 // pairsDemand writes the pairs of a Demand: Wants 1, Tastes 2, RegionTastes 3.

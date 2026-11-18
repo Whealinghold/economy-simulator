@@ -177,6 +177,12 @@ type Modules struct {
 	// module has no body, right or control and does nothing). Its hash id is 21,
 	// whatever its place in this struct.
 	Institutions *Institutions
+	// Fiscal is the fiscal module: taxes, duties, tolls, payouts and the standing
+	// orders of a governed jurisdiction's treasury (spec-fiscal.md). Nil is off;
+	// non-nil is on, even when empty (an empty module has no flow and does nothing).
+	// It needs Modules.Polity with a governed jurisdiction. Its hash id is 20,
+	// whatever its place in this struct.
+	Fiscal *Fiscal
 }
 
 // Credit is the configuration of the credit module (spec-credit.md 4.1, 14). Its
@@ -1985,6 +1991,7 @@ func (c Config) canonical() Config {
 	out.Modules.Risk = c.Modules.Risk.canonical()
 	out.Modules.Infrastructure = c.Modules.Infrastructure.canonical()
 	out.Modules.Institutions = c.Modules.Institutions.canonical()
+	out.Modules.Fiscal = c.Modules.Fiscal.canonical(c.Calendar.Seasons)
 	return out
 }
 
@@ -2053,6 +2060,11 @@ const (
 	// TargetPool is the estate pool of a region, or of every region when the
 	// target names none. It needs the estates module.
 	TargetPool = "pool"
+	// TargetTreasury is the treasury of a governed jurisdiction below an authority:
+	// the target of a remittance (spec-fiscal.md 3.2.3). A money flow of the money
+	// supply module that names it is ErrModuleDependency until that module builds it
+	// (note N-389).
+	TargetTreasury = "treasury"
 )
 
 // MoneyFlow is one configured faucet (Kind FlowGrant) or sink (Kind FlowLevy)
@@ -2108,6 +2120,10 @@ type FlowTarget struct {
 	// Store is the store class of a stores target; empty is every class. It has a
 	// meaning only for the kind stores (spec-storage.md 7.1.2, 12.3).
 	Store string
+	// Jurisdiction is the governed jurisdiction of a treasury target, a proper
+	// descendant of the authority; empty is every one (spec-fiscal.md 3.2.3). It has a
+	// meaning only for the kind treasury of a fiscal flow. Its hash id is 5.
+	Jurisdiction string
 }
 
 // External is the external-sector module (spec-external-sector.md 3.3): the
@@ -2382,4 +2398,255 @@ func (m *Institutions) canonical() *Institutions {
 	out.Controls = sortedBy(m.Controls, func(a, b Control) int { return cmp.Compare(a.ID, b.ID) })
 	out.RateLimits = sortedBy(m.RateLimits, func(a, b RateLimit) int { return cmp.Compare(a.ID, b.ID) })
 	return &out
+}
+
+// Fiscal is the configuration of the fiscal module (spec-fiscal.md 3.1, 14): the six
+// kinds of fiscal flow of a governed jurisdiction's treasury. Its presence switches
+// the module on. After construction each list is in canonical order, by ID
+// (spec-config.md 3.4). The module has no default macro constant: it has no flow
+// unless the pack lists it (N-027).
+type Fiscal struct {
+	// Taxes are the recurring transfers from a class to a treasury.
+	Taxes []Tax
+	// Duties are the taxes on the value of trades.
+	Duties []Duty
+	// Tolls are the charges for crossing a border.
+	Tolls []Toll
+	// Payouts are the recurring transfers from a treasury to a class.
+	Payouts []Payout
+	// Purchases are the standing bids of a treasury in its seat region's market.
+	Purchases []Purchase
+	// Releases are the standing asks of a treasury in its seat region's market.
+	Releases []Release
+}
+
+// Window says when a fiscal flow acts (spec-fiscal.md 3.1.2): in tick t when t >=
+// Start, Until is 0 or t < Until, and Seasons is empty or the season of t is one of
+// them. Its hash ids are Start 1, Until 2 and Seasons 3.
+type Window struct {
+	// Start is the first tick the flow acts, 0 to math.MaxInt64 - 1.
+	Start int64
+	// Until is the first tick the flow no longer acts; 0 is never, else it is above
+	// Start.
+	Until int64
+	// Seasons are IDs of seasons of the calendar, each at most once; empty is every
+	// tick. After construction they are in the calendar's order.
+	Seasons []string
+}
+
+// Tax is a recurring transfer from a class to the treasury of its authority
+// (spec-fiscal.md 5.1): a head tax, a holding tax, a tax on a pool or a remittance.
+// Exactly one of Amount and RateBP is set.
+type Tax struct {
+	// ID names the flow and is its ledger reason; it is not a built-in reason, a money
+	// flow or the ID of another fiscal flow.
+	ID string
+	// Authority is the governed jurisdiction whose treasury is paid.
+	Authority string
+	// Target is the class that pays; a Role of "" is every role.
+	Target FlowTarget
+	// Amount is a fixed tax: minor units per household (or account) per Per, 1 to
+	// MaxFlowAmount.
+	Amount int64
+	// RateBP is a rate: basis points per Per of the balance above Exempt, 1 to
+	// MaxFlowRateBP.
+	RateBP int64
+	// Exempt is the minor units per household (or account) never collected, 0 to
+	// MaxFlowAmount.
+	Exempt int64
+	// Per is PerTick (also ""), the default, or PerYear.
+	Per string
+	// Window is when the tax acts.
+	Window Window
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// Duty is a tax on the value of the trades of the markets of its authority
+// (spec-fiscal.md 6.1): a sales tax, a purchase tax or, with Scope, a tariff.
+type Duty struct {
+	// ID names the flow and is its ledger reason.
+	ID string
+	// Authority is the governed jurisdiction whose treasury is paid.
+	Authority string
+	// Region is the market the duty acts in; empty is every region the authority
+	// covers.
+	Region string
+	// Commodity is the good taxed; empty is every commodity.
+	Commodity string
+	// Payer is DutySeller or DutyBuyer.
+	Payer string
+	// Scope is ScopeDomestic, ScopeImport, ScopeExport or ScopeAny (also "").
+	Scope string
+	// RateBP is the basis points of the value of a trade, 1 to MaxDutyBP.
+	RateBP int64
+	// Window is when the duty acts.
+	Window Window
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// Toll is a charge per carrying unit for crossing a border (spec-fiscal.md 7.1).
+type Toll struct {
+	// ID names the flow and is its ledger reason.
+	ID string
+	// Authority is the governed jurisdiction whose treasury is paid.
+	Authority string
+	// On is TollExit (the shipment leaves the authority) or TollEnter (it enters it).
+	On string
+	// Mode is the transport mode charged; empty is every mode.
+	Mode string
+	// Amount is the minor units per carrying unit per crossing, 1 to MaxFlowAmount.
+	Amount int64
+	// Window is when the toll acts.
+	Window Window
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// Payout is a recurring transfer from the treasury of its authority to a class
+// (spec-fiscal.md 8.1): a stipend, relief in kind, aid to a pool or a grant-in-aid.
+// Exactly one of Amount and Level is set.
+type Payout struct {
+	// ID names the flow and is its ledger reason.
+	ID string
+	// Authority is the governed jurisdiction whose treasury pays.
+	Authority string
+	// Target is the class that receives.
+	Target FlowTarget
+	// Commodity is the good paid in kind; empty is money.
+	Commodity string
+	// Amount is per household (or account) per Per: minor units, or units in kind, 0
+	// to MaxFlowAmount.
+	Amount int64
+	// Level tops the balance of each recipient up to this many minor units, 0 to
+	// MaxFlowAmount; money only, and not with Per year.
+	Level int64
+	// Per is PerTick (also ""), the default, or PerYear.
+	Per string
+	// NotIncome makes the payout not income for the welfare ratio; households only.
+	NotIncome bool
+	// Window is when the payout acts.
+	Window Window
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// Purchase is a standing bid of a treasury in its seat region's market
+// (spec-fiscal.md 9.1).
+type Purchase struct {
+	// ID names the flow.
+	ID string
+	// Authority is the governed jurisdiction whose treasury buys.
+	Authority string
+	// Commodity is the good bought.
+	Commodity string
+	// Quantity is the most units a tick, 1 to MaxQuantity.
+	Quantity int64
+	// LimitBP is the bid limit as basis points of the effective reference price, 1 to
+	// MaxLimitBP.
+	LimitBP int64
+	// Hold stops buying at this many units held; 0 is no cap, else Quantity to
+	// MaxQuantity.
+	Hold int64
+	// Window is when the purchase acts.
+	Window Window
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// Release is a standing ask of a treasury in its seat region's market
+// (spec-fiscal.md 9.1).
+type Release struct {
+	// ID names the flow.
+	ID string
+	// Authority is the governed jurisdiction whose treasury sells.
+	Authority string
+	// Commodity is the good sold.
+	Commodity string
+	// Quantity is the most units a tick, 1 to MaxQuantity.
+	Quantity int64
+	// LimitBP is the ask limit as basis points of the effective reference price, 1 to
+	// MaxLimitBP.
+	LimitBP int64
+	// Reserve is the units never released, 0 to MaxQuantity.
+	Reserve int64
+	// Window is when the release acts.
+	Window Window
+	// Label is presentation only: at most MaxLabelBytes bytes, not hashed.
+	Label string
+}
+
+// The closed sets of the strings of the fiscal flows (spec-fiscal.md 14).
+const (
+	// DutySeller and DutyBuyer are the two values of Duty.Payer.
+	DutySeller = "seller"
+	DutyBuyer  = "buyer"
+	// ScopeDomestic, ScopeImport, ScopeExport and ScopeAny are the values of Duty.Scope;
+	// the empty string is ScopeAny.
+	ScopeDomestic = "domestic"
+	ScopeImport   = "import"
+	ScopeExport   = "export"
+	ScopeAny      = "any"
+	// TollExit and TollEnter are the two values of Toll.On.
+	TollExit  = "exit"
+	TollEnter = "enter"
+)
+
+// canonical returns a copy of the module with each list sorted by ID, an empty Per
+// spelled PerTick and the seasons of each window in the calendar's order
+// (spec-config.md 3.4, spec-fiscal.md FR-FIS-005), nil for nil. The lists are copied,
+// so the copy owns them.
+func (m *Fiscal) canonical(calendar []Season) *Fiscal {
+	if m == nil {
+		return nil
+	}
+	index := func(season string) int {
+		if i := slices.IndexFunc(calendar, func(s Season) bool { return s.ID == season }); i >= 0 {
+			return i
+		}
+		return len(calendar)
+	}
+	window := func(w Window) Window {
+		w.Seasons = sortedBy(w.Seasons, func(a, b string) int {
+			return cmp.Or(cmp.Compare(index(a), index(b)), cmp.Compare(a, b))
+		})
+		return w
+	}
+	per := func(p string) string {
+		if p == "" {
+			return PerTick
+		}
+		return p
+	}
+	out := &Fiscal{}
+	out.Taxes = sortedBy(m.Taxes, func(a, b Tax) int { return cmp.Compare(a.ID, b.ID) })
+	for i := range out.Taxes {
+		out.Taxes[i].Per, out.Taxes[i].Window = per(out.Taxes[i].Per), window(out.Taxes[i].Window)
+	}
+	out.Duties = sortedBy(m.Duties, func(a, b Duty) int { return cmp.Compare(a.ID, b.ID) })
+	for i := range out.Duties {
+		d := &out.Duties[i]
+		d.Window = window(d.Window)
+		if d.Scope == "" {
+			d.Scope = ScopeAny
+		}
+	}
+	out.Tolls = sortedBy(m.Tolls, func(a, b Toll) int { return cmp.Compare(a.ID, b.ID) })
+	for i := range out.Tolls {
+		out.Tolls[i].Window = window(out.Tolls[i].Window)
+	}
+	out.Payouts = sortedBy(m.Payouts, func(a, b Payout) int { return cmp.Compare(a.ID, b.ID) })
+	for i := range out.Payouts {
+		out.Payouts[i].Per, out.Payouts[i].Window = per(out.Payouts[i].Per), window(out.Payouts[i].Window)
+	}
+	out.Purchases = sortedBy(m.Purchases, func(a, b Purchase) int { return cmp.Compare(a.ID, b.ID) })
+	for i := range out.Purchases {
+		out.Purchases[i].Window = window(out.Purchases[i].Window)
+	}
+	out.Releases = sortedBy(m.Releases, func(a, b Release) int { return cmp.Compare(a.ID, b.ID) })
+	for i := range out.Releases {
+		out.Releases[i].Window = window(out.Releases[i].Window)
+	}
+	return out
 }
