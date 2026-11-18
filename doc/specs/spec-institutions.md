@@ -1690,9 +1690,9 @@ architecture.md 2.6 and `AGENTS.md`.
   construction of the resolved tables, the membership test and the headroom reader. The types
   `Institutions`, `Body`, `Right`, `Control` and `RateLimit` are in `config.go`, `BodyID`, `NoBody`,
   `RightID` and `ControlID` in `value.go`, the sentinels in `errors.go`, the events and the
-  activity and `Who` constants in `event.go` (the catalogue files). The five continuation files
+  activity and `Who` constants in `event.go` (the catalogue files). The six continuation files
   of a concept past the Lizard limits of N-243 and the 500-line limit are mapped to ORG in
-  architecture.md 2.6: `institutions_validate.go` (the rules of 10.1 and the warnings of 10.2),
+  architecture.md 2.6: `institutions_validate.go` (the rules of 10.1), `institutions_warn.go` (the warnings of 10.2),
   `institutions_round.go` (the round at P1.9a and its counts), `institutions_rights.go` (the
   reads at P2.5 and P3.2 and the `RightRefused` counts), `institutions_legal.go` (the ranges, the
   clamp, the two slots and the rebuild) and `institutions_report.go` (the events of P7.2b, the

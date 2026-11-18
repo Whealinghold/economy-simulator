@@ -143,8 +143,8 @@ economy-sim/
   credit_round.go  credit_settle.go  credit_strategy.go  credit_report.go
   credit_state.go                                                     (CRD)
   polity_validate.go                                                  (POL)
-  institutions_validate.go  institutions_round.go  institutions_rights.go
-  institutions_legal.go  institutions_report.go                       (ORG)
+  institutions_validate.go  institutions_warn.go  institutions_round.go
+  institutions_rights.go  institutions_legal.go  institutions_report.go  (ORG)
 
   # Module files, one per optional module (2.10.1), named after the concept.
   demand.go  resources.go  subsistence.go  population.go  transport.go
@@ -1092,4 +1092,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: a4281d8b4d2b4d3c78abf88f
+RULE-TAG: 9fae4fd3b85f604b10bec2d6
