@@ -1,12 +1,18 @@
 package economysim
 
-import "slices"
+import (
+	"context"
+	"log/slog"
+	"slices"
 
-// This file is the construction report of the infrastructure module
-// (spec-infrastructure.md 13.2; the continuation file of infrastructure.go,
-// architecture.md 2.6): the warnings of the configuration. They never fail
-// validation, they are raised once each with a rule and a path, and none is logged
-// inside a tick (FR-CAP-040).
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
+)
+
+// This file is the report of the infrastructure module (spec-infrastructure.md 13.2 and
+// 14; the continuation file of infrastructure.go, architecture.md 2.6): the warnings of
+// the configuration, which never fail validation, are raised once each with a rule and a
+// path and none of which is logged inside a tick (FR-CAP-040); and the events, the
+// Debug lines and the snapshot rows.
 
 // facilityUsage is what the roles' recipe lists do with the classes: which are needed,
 // built and repaired by a recipe that some role lists, and which have an initial row.
@@ -193,4 +199,102 @@ func facilityGateWarnings(c *Config, m *Infrastructure) []Warning {
 		}
 	}
 	return out
+}
+
+// FacilityRow is the facilities of one class in one region at the boundary
+// (spec-infrastructure.md 14.5): one row for each (region, class) with a facility, in
+// ascending region then class. All are functions of the saved state.
+type FacilityRow struct {
+	Region RegionID
+	Class  FacilityClassID
+	// Facilities is the count of facilities, never of agents or households.
+	Facilities int64
+	// ConditionBP is the sum of Condition * 10 000 / Durability over the facilities, so
+	// the mean is it over Facilities.
+	ConditionBP int64
+	// Effect is the sum of eff for a route or ground class and of cap for a site, 0 for a
+	// store.
+	Effect int64
+	// Pending is the store facilities whose store has not been given.
+	Pending int64
+}
+
+// snapshotFacilities fills the facility rows of the snapshot, nothing with the module off.
+func (w *World) snapshotFacilities(s *Snapshot) {
+	if w.infra != nil {
+		s.Facilities = w.facilityRows()
+	}
+}
+
+// facilityRows builds the snapshot rows (14.5), a deep copy in ascending (region, class).
+func (w *World) facilityRows() []FacilityRow {
+	n := w.infra
+	nc := len(n.cls)
+	cells := make([]FacilityRow, n.regions*nc)
+	for i := range n.fac {
+		f := &n.fac[i]
+		row := &cells[int(f.region)*nc+int(f.class)]
+		row.Facilities++
+		row.ConditionBP += f.condition * wholeBP / n.cls[f.class].durability
+		row.Effect += n.eff(f)
+		if n.cls[f.class].kind == kindStore && !f.installed {
+			row.Pending++
+		}
+	}
+	var out []FacilityRow
+	for k := range cells {
+		if cells[k].Facilities > 0 {
+			cells[k].Region, cells[k].Class = RegionID(k/nc), FacilityClassID(k%nc)
+			out = append(out, cells[k])
+		}
+	}
+	return out
+}
+
+// announce emits the FacilityChanged events of the initial facilities (kind added, cause
+// initial), in ascending ID, after the last AgentSpawned (spec-infrastructure.md 3.4.3).
+// It is nil-safe and builds nothing without an observer.
+func (n *infrastructure) announce(w *World) {
+	if n == nil || !w.obs.supplied {
+		return
+	}
+	for i := range n.fac {
+		w.reportFacility(&n.fac[i], FacilityAdded, CauseInitial, 0, 0)
+	}
+}
+
+// reportFacility delivers FacilityChanged for a transition of f, after it is applied,
+// and logs the Debug line of a build, repair, install or ruin. f is the record after the
+// transition (for a ruin, a copy with condition 0), before is the condition before it and
+// goods the lots a forced removal of a store listed to the estate. The event is built only with an observer (observability-and-logging.md 4.5).
+func (w *World) reportFacility(f *facility, kind FacilityKind, cause Cause, before, goods int64) {
+	n := w.infra
+	after := f.condition // 0 for a ruin: the caller passes the record as it ends
+	if w.obs.supplied {
+		w.obs.deliver(FacilityChanged{Tick: w.Tick(), Facility: f.id, Class: f.class, Region: f.region, To: f.to,
+			Owner: f.owner, Kind: kind, Cause: cause, Before: before, After: after, Effect: n.eff(f), GoodsListed: goods})
+	}
+	ctx := context.Background()
+	if msg := facilityMessage(kind); msg != "" && w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, msg, slog.Int64(logkeys.Tick, w.Tick()),
+			slog.Int64(logkeys.Facility, int64(f.id)), slog.String(logkeys.FacilityClass, w.cfg.Modules.Infrastructure.Classes[f.class].ID),
+			slog.Int64(logkeys.Agent, int64(f.owner)), slog.Int64(logkeys.Condition, after))
+	}
+}
+
+// facilityMessage is the constant message of the Debug line of 14.3; a kind with no line
+// (a facility added is reported by its event) returns "". A function, not a package-level
+// map, so no mutable package state exists.
+func facilityMessage(k FacilityKind) string {
+	switch k {
+	case FacilityBuilt:
+		return "facility built"
+	case FacilityRepaired:
+		return "facility repaired"
+	case FacilityRuined:
+		return "facility ruined"
+	case FacilityInstalled:
+		return "facility installed"
+	}
+	return ""
 }

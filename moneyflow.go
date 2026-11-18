@@ -948,7 +948,10 @@ func (w *World) auditLaterModules() error {
 	if err := w.auditCredit(); err != nil {
 		return err
 	}
-	return w.auditTenure()
+	if err := w.auditTenure(); err != nil {
+		return err
+	}
+	return w.auditInfrastructure()
 }
 
 // dropAgent drops the carries of a removed agent (spec-money-supply.md 14).
