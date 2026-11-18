@@ -319,3 +319,25 @@ func TestRound_CheckSeesHiresFormedSoFar(t *testing.T) {
 		t.Errorf("check saw %v hires before each pair, want %v", seen, want)
 	}
 }
+
+// TestRound_BadCountsDoNoHarm verifies that an offer of fewer than 1 household
+// is left unmatched and a vacancy of fewer than 0 positions counts as 0, so the
+// round never forms an empty or negative hire.
+//
+// Requirement: FR-EMP-020
+func TestRound_BadCountsDoNoHarm(t *testing.T) {
+	t.Parallel()
+	offers := []employment.Offer{{Ref: 1, Households: 0, Reserve: 1}, {Ref: 2, Households: -3, Reserve: 2}}
+	vacancies := []employment.Vacancy{{Ref: 10, Positions: -5, Bid: 9, Duration: 1, ShareBP: 5000}}
+	var r employment.Result
+	employment.Round(&r, offers, vacancies, open, nil)
+	if len(r.Hires) != 0 {
+		t.Errorf("Round formed %v, want no hire", refs(&r))
+	}
+	if len(r.Offers) != 2 || r.Offers[0].Hired || r.Offers[1].Hired {
+		t.Errorf("offers = %+v, want two unmatched rows", r.Offers)
+	}
+	if v := r.Vacancies[0]; v.Left != 0 || v.Filled != 0 || v.Reason != employment.ReasonNone {
+		t.Errorf("vacancy = %+v, want nothing left and no reason", v)
+	}
+}

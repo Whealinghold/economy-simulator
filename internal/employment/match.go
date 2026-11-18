@@ -109,24 +109,25 @@ func (r *Result) reset() {
 // a caller that keeps a result across rounds copies it. A nil check passes
 // every pair.
 //
-// Inputs are admitted by the root: Positions at least 0, ShareBP from 0 to
-// 10 000, Reserve at least 0, and a Check reason of ReasonNone or at least
-// ReasonCheck. The round does not re-validate them: a pair whose Wage is not
-// defined is counted in WageBelowUnit with the pairs whose wage is below 1.
+// Inputs are admitted by the root: Households at least 1, Positions at least 0,
+// ShareBP from 0 to 10 000, Reserve at least 0, and a Check reason of
+// ReasonNone or at least ReasonCheck. The round does not re-validate them,
+// except that it never lets a bad count do harm: an offer of fewer than 1
+// household is left unmatched and a vacancy of fewer than 0 positions counts
+// as 0. A pair whose Wage is not defined is counted in WageBelowUnit with the
+// pairs whose wage is below 1.
 func Round(res *Result, offers []Offer, vacancies []Vacancy, lane Lane, check Check) {
 	res.reset()
 	SortOffers(offers)
 	SortVacancies(vacancies)
 	for _, v := range vacancies {
-		res.Vacancies = append(res.Vacancies, VacancyResult{Ref: v.Ref, Left: v.Positions, fit: v.Positions})
+		res.Vacancies = append(res.Vacancies, VacancyResult{Ref: v.Ref, Left: max(v.Positions, 0), fit: max(v.Positions, 0)})
 	}
 	closed := false
 	for _, o := range offers {
 		hired := false
-		if !closed {
-			var lane2 bool
-			hired, lane2 = place(res, o, vacancies, lane, check)
-			closed = lane2
+		if !closed && o.Households >= 1 { // a block below 1 would form an empty hire
+			hired, closed = place(res, o, vacancies, lane, check)
 		}
 		res.Offers = append(res.Offers, OfferResult{Ref: o.Ref, Households: o.Households, Hired: hired})
 	}
