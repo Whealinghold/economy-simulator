@@ -355,7 +355,7 @@ with the slice (`vision.md` section 4).
 | `insurance.go`, `internal/insure` | INS | CRD, RSK |
 | `fiscal.go`, `internal/fiscal` (plan 3-fis, status: plan written; PR 1 in development) | FIS | POL, MON, CLR, TRN, EXT, LED, WEL, CAL, CHK, OBS, INT, MER, STO, EST |
 | `institutions.go`, `internal/institution` (plan 3-org, status: plan written; PR A merged; PR B in development; six continuation files `institutions_validate.go`, `institutions_warn.go`, `institutions_round.go`, `institutions_rights.go`, `institutions_legal.go`, `institutions_report.go`) | ORG | POL, SKL, SET |
-| `policy.go`, `internal/policy` (`Policy`, `WithPolicy`, `DirectPolicy`) | PLC | POL, FIS, INT |
+| `policy.go`, `internal/policy` (`Policy`, `WithPolicy`, `DirectPolicy`; plan 3-plc, status: plan written; PR A in development; six continuation files `policy_validate.go`, `policy_warn.go`, `policy_view.go`, `policy_apply.go`, `policy_builtin.go`, `policy_state.go`) | PLC | POL, FIS, INT |
 | `saving.go`, `internal/saving` | SAV | CAP, WEL |
 | `technology.go`, `internal/technology` | TEC | PRO, REG, CAL (plan 3-tec; PRs A and B merged, PR C developed on `s3-tec-c`: tag 33, golden, S149 to S154; gates pending) |
 

@@ -105,7 +105,7 @@ Out of scope, with the owner:
 | 8 | Which policies ship? | Four, registered by name: `hold` (the default, returns nothing), `schedule` (a step function of the tick, data), `rule` (a bounded stepping controller on one gauge per lever, data) and `directed` (the player's mailbox) | ADR 0001 decision 3: "choose among the built-in rule shapes (fixed, proportional to a measure, threshold, scheduled)". The consumer's own is a fifth, registered with `WithPolicy` (4.5) |
 | 9 | A player as an actor? | A `directed` actor and one call, `DirectPolicy`: a directive per actor, applied at that actor's next decision tick through the same checks as any policy. A consumer with no use for a mandate or a cadence calls INT's setters instead | A game's governing player should be unable to change a key outside its jurisdiction and to change one at any tick it likes; a mandate and a cadence are what the actor adds (9.1) |
 | 10 | Who wins when two writers meet? | One **holder** per key: a key (or a key of an expanded group) belongs to at most one lever of one actor (`ErrLeverShared`). A consumer's call to a held key is legal and is a write like any: the last write wins, and the actor writes only keys it returns | One owner per fact; a loop with two controllers on one lever is the hazard of PLC-A3, and it is refused where it can be seen in the data |
-| 11 | Randomness | The built-ins take **no draw**. A consumer's `Policy` receives the world's `*rand.Rand` (architecture.md 7.7), and its words are counted in call order as D17 of the table of `spec-world.md` 7.3 | One stream, positional (WLD 7.6); a rule that draws is a consumer's |
+| 11 | Randomness | The built-ins take **no draw**. A consumer's `Policy` receives the world's `*rand.Rand` (architecture.md 7.7), and its words come from the stream keyed by (`sitePolicy`, tick, `ActorID`), D17 of the table of `spec-world.md` 7.3 (ADR 0008, N-480) | One keyed stream per due actor; a rule that draws is a consumer's |
 | 12 | State | The world keeps **none** for the built-ins except the mailbox of a `directed` actor (13). The value of a lever is the slot's own state, saved by its owner. A consumer's stateful `Policy` implements `Stateful` and is saved as a fourth kind of extension | Persistable by design (ADR 0002 decision 6, 7): a rule that steps the lever it reads needs no memory of its own |
 | 13 | Is it a faucet or a sink, or does it change the ledger? | **Neither.** It adds no reason, no account and no flow. The conservation identities hold after every write | N-021: one place for a faucet or a sink. A scale is bounded by its owner and its flow's own limit |
 | 14 | Does it add a feedback loop? | **Yes, when the policy reacts.** The `rule`, and any consumer policy that reads the view, is a controller with a gain and a delay (15, PLC-A1). The library guarantees conservation and determinism of every setting and **not** the stability of the loop it closes (N-131, STB-L121). `hold`, `schedule` and `directed` close none | `spec-stability.md` 9: a spec that adds a loop and no entry is not done. The register carries the condition and the model supports it |
@@ -310,7 +310,7 @@ bounds), which is the point of a mandate being the actor's and not the world's.
 // It returns settings of the actor's levers; it does not bid, offer, produce or
 // move money. Decide is called between the previous step and the first position
 // that reads a slot (P0.3a), on the world's goroutine, once per due actor, in
-// ascending ActorID.
+// ascending ActorID, with rng reseeded at the key (sitePolicy, tick, ActorID).
 //
 // Randomness: an implementation MUST take it from rng and MUST NOT create a
 // source, use a global one or keep rng after Decide returns (architecture.md 7.7).
@@ -418,9 +418,11 @@ stands because the caller is the consumer's code, in the consumer's own package.
 var _ Policy = HoldPolicy{}
 ```
 
-The other built-ins, `Schedule`, `Rule` and `Directed`, are values of the root package
-built from an actor's row (8), each with the same assertion. They are registered under
-their names by the world and are not options: `hold`, `schedule`, `rule` and `directed`
+The other built-ins (`schedule`, `rule` and `directed`) are values of the root package
+built from an actor's row (8), each with the same assertion, and are **not exported**: a
+consumer never builds one, and `Directed` is already the name of the agent strategy
+(plan 3-plc D3, N-481), so only `HoldPolicy` is an exported identifier. They are registered
+under their names by the world and are not options: `hold`, `schedule`, `rule` and `directed`
 are reserved names (`ErrDuplicateID` for a consumer that registers one, as `default`
 and `directed` are for a strategy, `spec-world.md` 4.3).
 
@@ -653,7 +655,7 @@ keeps what it was given (5.2.3). A policy cannot do what a consumer could not.
 
 | ID | What runs | Owner | Reads / writes | Draws | Events |
 |----|-----------|-------|----------------|-------|--------|
-| P0.3a | The policy actors, for each actor in ascending `ActorID` that is due (7.2): the view, `Decide`, the checks, the application (6.1) | PLC | reads the boundary state and the slots; writes the slot keys of the actor's levers | D17: a consumer's `Policy`'s own words, in call order; the built-ins take none | per actor: the owners' slot events (cause `policy`) in the order of 6.4.2, then `PolicyDecided` |
+| P0.3a | The policy actors, for each actor in ascending `ActorID` that is due (7.2): the view, `Decide`, the checks, the application (6.1) | PLC | reads the boundary state and the slots; writes the slot keys of the actor's levers | D17: a consumer's `Policy`'s own words, from the stream keyed by (`sitePolicy`, tick, `ActorID`); the built-ins take none | per actor: the owners' slot events (cause `policy`) in the order of 6.4.2, then `PolicyDecided` |
 
 7.1.2. **Why here.** P0.3a comes after `TickStarted` so that its events are inside the
 step's span and carry `Tick` `t`, and before P1.1, the first position, because every
@@ -719,7 +721,7 @@ or by a schedule step that starts at the tick it wants.
 
 | ID | When and where | Taken by | How many | In what order | Owner |
 |----|----------------|----------|----------|---------------|-------|
-| D17 | P0.3a, inside `Decide` | a consumer's `Policy`; **the built-ins take none** | its own | actors in ascending `ActorID`, call order | PLC 7.3 |
+| D17 | P0.3a, inside `Decide` | a consumer's `Policy`; **the built-ins take none** | its own | one keyed stream per due actor: site `sitePolicy`, the tick and the `ActorID` (ADR 0008, N-480) | PLC 7.3 |
 
 and the words of one tick (`spec-world.md` 7.3.1) gain a term, the consumer's `Policy`
 draws, beginning the tick. An actor that is not due takes none. The count is a function
@@ -841,9 +843,9 @@ a window, a distribution or a forecast is a consumer's `Policy` calling `indicat
 (4.3.3).
 
 8.3.4. **Rounding and arithmetic** (rule constants): a ratio of gauges is `rdiv` (half to
-even); the step is truncated toward zero; the product is in 128 bits with `math/bits` inside `internal/policy`,
-which imports neither `internal/measure` nor `internal/reduce` (FR-IND-001, architecture.md
-2.6) and carries its own product until N-019's shared helper is decided; no float. The gauges are computed in the order of the view
+even); the step is truncated toward zero; the product is in 128 bits through `internal/checked` (`MulDiv`, the shared helper
+that settles N-019 for this module; `MulDivHalfEven` for `rdiv`), and `internal/policy` imports neither
+`internal/measure` nor `internal/reduce` (FR-IND-001, architecture.md 2.6); no float. The gauges are computed in the order of the view
 (ascending `RegionID`, `RoleID`, `CommodityID`), so the sum is exact and independent of
 any order.
 
@@ -1447,9 +1449,10 @@ the plant's lag when the player is expected to track a measure. *Test:* PLC-S4.
 *Status:* hand.
 
 **PLC-A7. A consumer's policy that draws is not a paired neighbour (WLD-A5, L120).**
-*Kind:* bias. *Loop:* none: a consumer's `Decide` that takes words from the world's
-stream shifts every later draw, so "actor on, actor off" is not an aligned pair
-(`spec-world.md` 7.6.1). The built-ins take none, so with them a comparison is exact
+*Kind:* bias. *Loop:* none: a consumer's `Decide` draws from a stream keyed by its own
+actor, so it shifts no other site's draw (ADR 0008, N-480), but a consumer policy that draws
+only above a threshold makes its own words depend on the state, and "actor on, actor off"
+is then not an aligned pair for that actor's own draws (`spec-world.md` 7.6.1). The built-ins take none, so with them a comparison is exact
 until a lever changes a count. *Delay:* none. *Owner:* PLC 7.3. *Damper:* none by design;
 compare over seeds. *Undamped:* the shift of the stream, whole. *Condition:* a paired
 comparison of two worlds is exact only while every registered policy takes the same count of
@@ -1645,7 +1648,7 @@ observability, 090 to 093 state and determinism), and a gap is not a removed req
 | FR-PLC-050 | The actors MUST be called at P0.3a, after `TickStarted` and before P1.1, in ascending `ActorID`, and an actor that is not due MUST not be called (7.1). |
 | FR-PLC-051 | An actor MUST be due at tick `t` exactly when `(t + bucket(a, Every)) mod Every = 0` with `bucket(a, P) = (Weyl2(a) * P) >> 32` and `Weyl2(a) = (a * 0x6A09E667) mod 2^32`, `a` its `ActorID` (7.2.1). |
 | FR-PLC-052 | An actor due at tick 0 MUST act on the construction state and its settings MUST take effect in tick 0 (7.2.4). |
-| FR-PLC-053 | The built-in policies MUST take no random number; a consumer's policy's words MUST be counted in D17, actors ascending, in call order; the count in a tick MUST be a function of the configuration, the state and the registered policies, and MUST NOT depend on an observer, a logger or an idle module (7.3). |
+| FR-PLC-053 | The built-in policies MUST take no random number; a consumer's policy's words MUST come from the stream keyed once per due actor by (`sitePolicy`, tick, `ActorID`), D17, so a draw depends on its key and on no other draw; the count in a tick MUST be a function of the configuration, the state and the registered policies, and MUST NOT depend on an observer, a logger or an idle module (7.3). |
 | FR-PLC-054 | No setting of an actor MAY change a cadence, a window length, a gate probability or an `Every` (position 15). |
 | FR-PLC-055 | A run split into `Run(n)` calls, and a run checkpointed and restored at a boundary, MUST equal an uninterrupted run (7.4.1). |
 | FR-PLC-060 | `hold` MUST return no settings at any tick (8.1). |
@@ -1729,7 +1732,7 @@ architecture.md 2.6 and `AGENTS.md`.
 - `policy.go` (root): the types `PolicyConfig`, `PolicyActor`, `Lever`, `LeverKind`,
   `ScheduleStep`, `Reaction`, `Gauge`, `ActorID`, `LeverID`, `PolicyView`, `LeverView`,
   `Settings`, `LeverSetting` and `PolicyDirective`; the interface `Policy`, `HoldPolicy` and the
-  built-ins `Schedule`, `Rule` and `Directed` with their assertions; the position P0.3a; the
+  unexported built-ins `schedulePolicy`, `rulePolicy` and `directedPolicy` with their assertions; the position P0.3a; the
   event `PolicyDecided` (in `event.go`); the sentinels `ErrPolicyShape`, `ErrLeverNotInReach`,
   `ErrLeverShared`, `ErrUnknownPolicy`, `ErrUnknownActor` and `ErrUnknownLever` (in
   `errors.go`); `WithPolicy` in `option.go`; `DirectPolicy` in `integration.go`. One file per

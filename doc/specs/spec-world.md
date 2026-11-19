@@ -1135,8 +1135,9 @@ sites of the slice are:
 | `siteRiskDispatch` | D14 | `0x7E59E8F556FE1651` | `tick`, `id` = the shipment (keyed once per dispatched shipment, then one word per unit row with `P > 0` on its path, in path order) |
 | `siteRiskStoreCommon` | D15 (i) | `0x22650FB6363BD5BC` | `tick`, `id` = the region, `sub` = the store class (the store row) |
 | `siteRiskStore` | D15 (ii) | `0x85E20986FA93C736` | `tick`, `id` = the agent, `sub` = the store class (one word per store of the class, ascending) |
+| `sitePolicy` | D17 | `0x2E0AE131A3008963` | `tick`, `id` = the `ActorID` (keyed once per due actor whose policy is a consumer's; the built-ins take no word and never key; plan 3-plc D11, N-480) |
 
-The row D17 (a consumer's policy) has **no constant yet** (D12 has `siteAddAgent`, appended by the integration change;
+The row D17 (a consumer's policy) has the constant `sitePolicy` (plan 3-plc, N-480; D12 has `siteAddAgent`, appended by the integration change;
 D13, D14 and D15 have the four sites of the risk module, appended in plan 3-rsk, N-373): each other row is appended by the change that builds its module, with its name,
 its value and the `id` the owner chooses (7.3, which lists the proposals of N-214); no
 code calls into an extension, or takes a word, at a row that has no constant (the
@@ -1284,7 +1285,7 @@ open point 3 is answered for D13 (the row is its entity, `siteRiskCommon`), as f
 |----|----------------|----------|----------|---------------|--------|-------|
 | D1 | construction, after the warm start (5.7) | the world, per household agent | 2: the target ratio, then the residue | ascending agent ID | `siteConstruction`, tick 0, the agent | WEL 5.1; PRO 6.6.2 |
 | D16 | construction, step 8c (5.1.2), only when the technology module has a field with `DiscoveryBP` above 0 | **no word**: TEC derives its key from the effective seed (`spec-technology.md` 4.4.1) | 0 | | none | TEC 4.4.1 |
-| D17 | P0.3a, inside a policy actor's `Decide` | a consumer's `Policy`; the built-in policies take none | its own | due actors in ascending `ActorID`, call order | none yet: the actor | PLC 7.1.1 |
+| D17 | P0.3a, inside a policy actor's `Decide` | a consumer's `Policy`; the built-in policies take none | its own | one keyed stream per due actor, actors ascending | `sitePolicy` | PLC 7.1.1, 7.3 |
 | D2 | P1.8 | the world, per line with `WalkStepBP` above 0 | 1 | ascending (node `RegionID`, `CommodityID`) | `siteOutsideWalk`, the tick, the node, `sub` = the commodity (a line is named by two IDs, so a line added before it moves no other line's word) | EXT 5.1, 6.4 |
 | D3 | P2.5 | a consumer's `Work`; the default takes none | its own | rotation order, in call order | `siteWork`, the tick, the agent | AGT 7.1 |
 | D13 | P3.1a, with `Modules.Risk` | the world, per route row with `Common` and a loss probability above 0 | 1 | ascending (`From`, `To`, `Mode`) | `siteRiskCommon`, the tick, the `From` region, `sub` = `To * MaxModes + Mode`: one stream per row | RSK 4.2 |

@@ -50,32 +50,32 @@ PR description.
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386 |
-| CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433 |
-| CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444 |
+| CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-483 |
+| CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444, N-480 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241, N-457 |
-| CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457 |
-| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398 |
+| CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457, N-481 |
+| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398, N-484 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-444, N-445 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
-| EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361 |
+| EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361, N-485 |
 | EXT | N-108, N-112, N-113, N-214 |
-| FIS | N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437 |
+| FIS | N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-483 |
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
 | INS | N-176, N-179, N-213, N-227 |
-| INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
+| INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436 |
-| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427 |
+| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-484 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456 |
-| ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457 |
-| PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433 |
+| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-482 |
+| ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-483, N-484 |
+| PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426 |
@@ -88,13 +88,13 @@ PR description.
 | SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375 |
-| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399 |
+| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485 |
 | SUB | N-121, N-228, N-268, N-244, N-426 |
 | TEC | N-358, N-359, N-360, N-361, N-384 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346 |
-| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390 |
+| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-480 |
 
 ## Open notes
 
@@ -1539,6 +1539,7 @@ PR description.
 - **Update (2026-11-09, plan 2-15 Phase 1):** MER: `siteContract` `0xF0FF7DEE8E50504B` (the first eight bytes of SHA-256 of `economy-sim/site/siteContract`, checked) is in `spec-world.md` 7.1.4 and the D6 row of 7.3, `id` the agent and `sub` `2*i` for the `i`-th submitted offer and `2*i+1` for the `i`-th submitted take (the plan index, ADR 0008 open point 3 answered for D6); `spec-merchants.md` 9.4.2 and FR-MER-033 say the key is the first word of that stream. The constant is appended to `random.go` in Phase 6. MER leaves the areas of this note; left open for the other owners.
 - **Update (2026-11-11, plan 2-13):** `siteInform = 0x7B15D7AD592D7D8F` is appended (WLD 7.1.4, row D4); D11 (MIG) keeps no constant until plan 2-14 (see its update above).
 - **Update (2026-11-14, plan 3-tec Phase 1):** applied for TEC, which leaves the areas: `spec-technology.md` 4.4.1, 4.4.6, 6.3, 12.1, 12.2, FR-TEC-011 and FR-TEC-012 say the technology key is derived from the effective seed (the high word of the stream key of `siteTechnology`, tick 0, entity 0), takes no word and is not saved; D16 is retired; `spec-checkpoint.md` 4.2 tag 33 has no `Key`; N-202 is settled by the same rule and removed.
+- **Update (2026-11-19, plan 3-plc Phase 1):** applied for PLC (see N-480): D17 is keyed once per due actor by (`sitePolicy`, tick, `ActorID`); `spec-policy.md` 4.1, 7.3, 15 (PLC-A7) and FR-PLC-053 and `spec-world.md` 7.1.4 and 7.3 say so. The constant is appended to `random.go` in PR C. Left open for the other owners.
 - **Update (2026-11-18, plan 3-rsk Phase 1):** applied for RSK, which leaves the areas: D13, D14 and D15 have their sites and keys in `spec-world.md` 7.1.4 and 7.3 and `spec-risk.md` 3.4, 4.1, 4.2, 6.2, 11.2, 11.4, 18.1 and 18.4: `siteRiskCommon` `0x7BECBB022BE68D1A` (D13: tick, the `From` region, `sub` = `To * MaxModes + Mode`), `siteRiskDispatch` `0x7E59E8F556FE1651` (D14: tick, the shipment, one word per unit row with `P > 0` in path order), `siteRiskStoreCommon` `0x22650FB6363BD5BC` (D15 (i): tick, the region, `sub` the store class) and `siteRiskStore` `0x85E20986FA93C736` (D15 (ii): tick, the agent, `sub` the store class); the constants are the first eight bytes of SHA-256 of `economy-sim/site/` and the name, checked in `models/rsk/loss.py`; open question 9 is moot. The four constants are appended to `random.go` in PR B of plan 3-rsk (N-373). Left open for the other areas.
 
 ### N-215 The reseed rule is the identity for seed 0 and salt 0
@@ -2451,6 +2452,7 @@ PR description.
 - **Areas:** CFG, ORG, PLC, FIS
 - **Raised:** 2026-11-18, plan 3-fis PR 2 (`fiscal_validate.go`).
 - **Note:** `validateFiscal` checks that a region or a treasury is covered by an authority by building the `Polity` of the configuration (`fiscalCheck.buildPolity`: a sub-validator runs `validatePolity` and, if it finds nothing, `buildPolity` reads the canonical copy). ORG derives coverage with its own scoper (`orgScoper`) and POL with `polityCovers`. PLC, which also keys a lever by jurisdiction, will need the same answer. One shared helper in `polity_validate.go` that returns the built `Polity` or nothing would remove the third copy; it is not built here, so the PR touches no other module's file.
+- **Update (2026-11-19, plan 3-plc Phase 1):** PLC builds the helper as `soundPolity` and uses it (N-483); FIS and ORG keep their copies. Left open for them.
 
 ### N-434 `toll_no_border` reads every edge for any mode
 
@@ -2662,6 +2664,42 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-org PR C review.
 - **Note:** The root calls `clearing.AdmitClamp`; `Admit` is a wrapper kept by `spec-clearing.md` 3.2.1.1 so that a caller that reads no range is unchanged, and only tests call it. Drop it, or keep it with a test that pins it to `AdmitClamp`, when the next change touches `internal/clearing/admit.go`.
 
+### N-480 D17 is keyed once per due actor (`sitePolicy`)
+
+- **Areas:** WLD, PLC, CHK
+- **Raised:** 2026-11-19, plan 3-plc Phase 1.
+- **Note:** A consumer's `Policy` receives the world's `*rand.Rand` reseeded at the key (`sitePolicy` `0x2E0AE131A3008963`, tick, `ActorID`), once per due actor, so a draw depends on its key and on no other draw (ADR 0008). The built-ins take no word and never key. `spec-policy.md` 4.1, 7.3, FR-PLC-053 and PLC-A7 and `spec-world.md` 7.1.4 and 7.3 are restated; the constant is appended to `random.go` in plan 3-plc PR C. Closes the PLC part of N-214's list of open sites.
+
+### N-481 The built-in policies are unexported; only `HoldPolicy` is exported
+
+- **Areas:** PLC, CODE
+- **Raised:** 2026-11-19, plan 3-plc Phase 1.
+- **Note:** `Directed` is the agent strategy (`strategy.go`), so the built-in of `spec-policy.md` 4.4.1 cannot be exported under that name, and no consumer builds a built-in. Only `HoldPolicy` is exported (the default that architecture.md 4.5 asks for); `schedule`, `rule` and `directed` are unexported types registered under reserved strings. `spec-policy.md` 4.4.1 and 20 say so.
+
+### N-482 A policy actor's view needs `Region` without its guard
+
+- **Areas:** PLC, OBS
+- **Raised:** 2026-11-19, plan 3-plc Phase 1.
+- **Note:** The view's `Regions` need the body of `World.Region` without `guard()` (a call from inside a step is `ErrInStep`), so PR B splits it into the guard and `regionState`. `prepareAnchors` reads every agent (the cost note of `Region`), so a `ReadsRegions` actor costs one scan per decision; anchors are prepared once per P0.3a pass and the cost is measured, not optimised, in PR B (NFR-PLC-002).
+
+### N-483 `soundPolity` is the shared step of N-433
+
+- **Areas:** PLC, CFG, FIS, ORG
+- **Raised:** 2026-11-19, plan 3-plc Phase 1.
+- **Note:** PLC takes the shared "polity sound, then build it" step of N-433 as `soundPolity` in `polity_validate.go` and uses it for its own validator. FIS (`fiscalCheck.buildPolity`) and ORG (`orgScoper`) keep their copies until a later pure move; N-433 stays open for them.
+
+### N-484 The reserved lever kinds `rate`, `rent` and `legal` are refused
+
+- **Areas:** PLC, INT, CRD, LND, ORG
+- **Raised:** 2026-11-19, plan 3-plc Phase 1.
+- **Note:** A pack that names `rate`, `rent` or `legal` gets `ErrOutOfBounds` at `.kind` until its row is in `spec-policy.md` 6.3.1 and a case is in `policy_apply.go`; the module that integrates the slot adds the row in the same change (N-205's rule: one row per kind).
+
+### N-485 The stability of every `rule` is the consumer's and the register's
+
+- **Areas:** PLC, STY, EXP
+- **Raised:** 2026-11-19, plan 3-plc Phase 1.
+- **Note:** The library guarantees conservation and determinism of every setting a rule makes, not the stability of the loop (PLC-A1). S156 and S157 report the lever paths and assert nothing about the loop. Band values and the defaults of any lever stay with STY and CLB (N-027).
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2672,4 +2710,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: f9febf421abfd4c13223c017
+NOTES-TAG: 2d1e56608d8ed72464240219
