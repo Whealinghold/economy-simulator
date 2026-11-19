@@ -161,7 +161,7 @@ func ckBlocked(c *shipCtx) Reason {
 
 // ckTooFar is row 9: the travel time is within MaxTravelTicks.
 func ckTooFar(c *shipCtx) Reason {
-	k, ok := transit.Ticks(c.distance, c.md.Speed, c.t.factorOf(c.region, c.r.To, c.r.Mode))
+	k, ok := transit.Ticks(c.distance, c.md.Speed, c.t.effective(c.region, c.r.To, c.r.Mode))
 	if !ok || k > MaxTravelTicks {
 		return ReasonTooFar
 	}

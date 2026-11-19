@@ -298,3 +298,42 @@ func facilityMessage(k FacilityKind) string {
 	}
 	return ""
 }
+
+// cell is the index of the counters of a (region, class).
+func (n *infrastructure) cell(region RegionID, class FacilityClassID) int {
+	return int(region)*len(n.cls) + int(class)
+}
+
+// countPending counts a store facility left pending by the install step. Counters exist
+// only to build FacilityLimited, so they are kept only under an observer
+// (observability-and-logging.md 4.5).
+func (n *infrastructure) countPending(f *facility) {
+	if n.world.obs.supplied {
+		n.limits[n.cell(f.region, f.class)].pending++
+	}
+}
+
+// reportLimits is step 5 of 6.3.2: FacilityLimited for each (region, class) with a count,
+// in ascending region then class, never when all five are 0. It builds nothing without an
+// observer.
+func (n *infrastructure) reportLimits() {
+	w := n.world
+	if !w.obs.supplied {
+		return
+	}
+	nc := len(n.cls)
+	for k := range n.limits {
+		if l := n.limits[k]; l.cut+l.refused+l.voided+l.pending != 0 {
+			w.obs.deliver(FacilityLimited{Tick: w.Tick(), Region: RegionID(k / nc), Class: FacilityClassID(k % nc),
+				Served: l.served, Cut: l.cut, Refused: l.refused, Voided: l.voided, Pending: l.pending})
+		}
+	}
+}
+
+// clearTick clears the counters of the tick (P8.6). It is nil-safe: with the module off
+// it does nothing.
+func (n *infrastructure) clearTick() {
+	if n != nil {
+		clear(n.limits)
+	}
+}

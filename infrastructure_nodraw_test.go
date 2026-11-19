@@ -8,9 +8,12 @@ import (
 	economysim "github.com/Whealinghold/economy-sim"
 )
 
-// quietFacilityConfig is infrastructureConfig with no recipe that uses a class and no
-// store row, with the module on or off, so that nothing in the world reads a facility
-// and the only difference between the two worlds is the records themselves.
+// quietFacilityConfig is infrastructureConfig with no recipe that uses a class, no
+// store row and no route or ground facility, with the module on or off, so that nothing
+// in the world reads a facility and the only difference between the two worlds is the
+// records themselves. A route or a ground facility is read by the transit factor and the
+// ground clamp (P8.3b), which change results by design: infrastructure_step_e2e_test.go
+// covers them.
 func quietFacilityConfig(on bool) economysim.Config {
 	c := infrastructureConfig()
 	clause := func(id string) bool { return id == "build_mill" || id == "repair_mill" || id == "grind" }
@@ -21,13 +24,15 @@ func quietFacilityConfig(on bool) economysim.Config {
 		c.Modules.Infrastructure = nil
 		return c
 	}
-	c.Modules.Infrastructure.Initial = slices.DeleteFunc(c.Modules.Infrastructure.Initial, func(r economysim.InitialFacility) bool { return r.Class == "barn" })
+	c.Modules.Infrastructure.Initial = slices.DeleteFunc(c.Modules.Infrastructure.Initial, func(r economysim.InitialFacility) bool {
+		return r.Class == "barn" || r.Class == "drain" || r.Class == "road"
+	})
 	return c
 }
 
 // TestInfrastructure_NoDraws verifies that the module takes no random number and moves
 // no money or goods (spec-infrastructure.md 10, FR-CAP-002, FR-CAP-044): after 30 ticks
-// with initial facilities of a site, a route and a ground kind, every section of the
+// with initial facilities of a site kind, every section of the
 // checkpoint but the module's own (tag 27) equals the section of the same
 // world with the module off, byte for byte, the ledger, the agents and the seed among
 // them.
