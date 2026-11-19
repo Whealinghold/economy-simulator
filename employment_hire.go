@@ -478,7 +478,7 @@ func (w *World) endHiresOf(a *agent, cause Cause) {
 // (spec-employment.md 6.4). A weight that rises changes nothing.
 func (w *World) hiredReweighed(a *agent) {
 	h := w.employment.hireOfWorker(a.id)
-	if h == nil || a.job.executions >= h.k {
+	if h == nil || !a.hasJob() || a.job.executions >= h.k {
 		return
 	}
 	w.employment.hired[h.employer] -= h.k - a.job.executions

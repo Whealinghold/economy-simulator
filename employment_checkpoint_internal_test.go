@@ -191,6 +191,9 @@ func TestCheckpoint_EmploymentRestoreRejects(t *testing.T) {
 		{"region unknown", hireBody(1, mod(6, 9)), errBad},
 		{"wage 0", hireBody(1, mod(3, 0)), ErrCheckpointCorrupt},
 		{"wages paid not a whole number of wages", hireBody(1, mod(7, uint64(h.paid)+1)), ErrCheckpointCorrupt},
+		// One working tick is behind the hire (worked 1), so 0 is a whole number of wages but
+		// below the floor worked * wage * executions.
+		{"wages paid below the ticks worked", hireBody(1, mod(7, 0)), ErrCheckpointCorrupt},
 		{"run above the tick", hireBodyRuns(1, func(cw *codec.Writer) {
 			cw.Count(1)
 			cw.U(0)
