@@ -36,7 +36,9 @@ check the calls, the slots and the books hold: 10/10 pass
 ## S130 two+risk a surge before the volley, a patrol while it is on the road, 400 ticks seeds 1-10
 measure dispatches struck at the surge: 1=23 2=9 3=7 4=7 5=7 6=23 7=9 8=21 9=21 10=10 | median=10 n=10
 measure units lost at the arrivals: 1=137 2=54 3=42 4=41 5=41 6=138 7=55 8=125 9=125 10=59 | median=57 n=10
-check a strike made before a patrol is still taken at the arrival: 10/10 pass
+check a patrol after the dispatch gives no share and takes none that was given: 10/10 pass
+check a unit is lost only by a dispatch that was struck: 10/10 pass
+check the surge strikes at least one dispatch: 10/10 pass
 check the calls, the slots and the books hold: 10/10 pass
 
 ## S30 price-gap shipping with a transit delay (TRN-A1, A2)

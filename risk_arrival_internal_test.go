@@ -180,7 +180,7 @@ func TestArrival_HeldMoveTakesNoLossTwice(t *testing.T) {
 	}
 	account := held(t, w, shipHome, int(grainID))
 	if account < 4 || w.transport.ships[0].lines[0].Quantity != 2 {
-		t.Fatalf("the traveller holds %d grain while held, want a few to lose", account)
+		t.Fatalf("the traveller holds %d grain and the line %d while held, want at least 4 and 2", account, w.transport.ships[0].lines[0].Quantity)
 	}
 	holding = false
 	step(t, w, 1) // the retry
@@ -303,6 +303,8 @@ func TestContract_LostBorneByDeliverer(t *testing.T) {
 // Guard: tripLoss counts earmarked units in held and a refusal would panic through
 // invariant. If a reservation outlived its tick, step 0 would crash at the next
 // arrival; this test fails first, at the boundary, and names the account.
+//
+// Requirement: FR-RSK-013
 func TestArrival_NoEarmarkAtStepZero(t *testing.T) {
 	t.Parallel()
 	row := RouteRisk{From: "a_home", To: "b_far", Mode: "foot", StrikeBP: 10_000, SeverityBP: 5_000}
