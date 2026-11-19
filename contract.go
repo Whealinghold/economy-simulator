@@ -973,14 +973,14 @@ func (w *World) p33Round() {
 }
 
 // offerChecks are the checks of an offer in the order of the table of
-// spec-merchants.md 9.3 (rows 2 to 7). Rows 4 (outside_destination, plan 2-16) and
-// 5a (not_permitted, institutions) have no check yet and take their place in the
-// table when their module lands. The table is never written.
+// spec-merchants.md 9.3 (rows 2 to 7, with row 5a, not_permitted of the institutions
+// module, after row 5). The table is never written.
 var offerChecks = [...]func(w *World, a *agent, s *submittedOffer, used int) Reason{
 	ckOfferCount,   // 2
 	ckOfferMode,    // 3
 	ckOfferRegion,  // 4: unknown_region, same_region
 	ckOfferGoods,   // 5
+	ckOfferRight,   // 5a
 	ckOfferAmounts, // 6
 	ckOfferStock,   // 7
 }
@@ -1116,12 +1116,15 @@ func (w *World) admitTakes() {
 }
 
 // takeRefusal returns the reason of the first check of the take table that the
-// take fails, or "": the commodity, the amounts, a second take for the commodity,
-// a value that does not fit and a value above the available cash (rows 5, 6, 8, 9
-// and 10; row 5a is institutions').
+// take fails, or "": the commodity, the buy right of the destination, the amounts, a
+// second take for the commodity, a value that does not fit and a value above the
+// available cash (rows 5, 5a, 6, 8, 9 and 10).
 func (w *World) takeRefusal(a *agent, s *submittedTake) Reason {
 	t := &s.t
 	if r := w.goodsRefusal(a, t.Commodity); r != "" {
+		return r
+	}
+	if r := w.org.contractRefusal(a, w.regionOf(a), w.regionOf(a), actBuy, t.Commodity); r != "" {
 		return r
 	}
 	if r := amountsRefusal(int64(t.Quantity), int64(t.Limit)); r != "" {

@@ -288,6 +288,9 @@ func (w *World) admitJob(a *agent, region RegionID, req JobRequest) {
 		w.refuse(a, region, req.Recipe, reason)
 		return
 	}
+	if w.org != nil && w.refuseStart(a, a, false, region, req.Recipe) {
+		return
+	}
 	q := w.startReq(a, region, req.Recipe, req.Executions)
 	k0, reason, err := w.prod.maxExecutions(w.ledger, &q)
 	if err != nil {

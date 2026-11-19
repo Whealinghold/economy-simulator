@@ -24,14 +24,25 @@ const (
 // rightTable holds the rights as the resolver reads them. rows and ids list the rights
 // of each activity in RightID order; at is the right in force plus 1 at subject *
 // regions + region, 0 for none (the activity is open); holder is the body of each right
-// by RightID, -1 for a prohibition; suspended is the slot state, by RightID.
+// by RightID, -1 for a prohibition; suspended is the slot state, by RightID. who is the
+// Who of a produce right, by RightID. refused is the count of refusals at region *
+// rights + right, kept only when an observer was supplied and told at P7.2b.
 type rightTable struct {
 	rows      [numActivities][]institution.Row
 	ids       [numActivities][]int32
 	at        [numActivities][]int32
 	holder    []int32
 	suspended []bool
+	who       []uint8
+	refused   []int64
 }
+
+// The Who of a right as the table holds it (spec-institutions.md 5.3).
+const (
+	whoPrincipal uint8 = iota
+	whoExecutor
+	whoBoth
+)
 
 // activityOf returns the table index of an activity name of a validated right.
 func activityOf(name string) int {
@@ -91,7 +102,7 @@ func (o *institutions) resolveRights(chains [][]int32) {
 	regions := indexOf(o.c.Regions, func(r Region) string { return r.ID })
 	subjects := o.subjectIndex()
 	bodies := indexOf(m.Bodies, func(b Body) string { return b.ID })
-	t.holder = make([]int32, len(m.Rights))
+	t.holder, t.who = make([]int32, len(m.Rights)), make([]uint8, len(m.Rights))
 	if len(t.suspended) != len(m.Rights) {
 		t.suspended = make([]bool, len(m.Rights))
 	}
@@ -104,6 +115,12 @@ func (o *institutions) resolveRights(chains [][]int32) {
 		t.holder[i] = -1
 		if r.Body != "" {
 			t.holder[i] = int32(bodies[r.Body])
+		}
+		switch r.Who {
+		case WhoExecutor:
+			t.who[i] = whoExecutor
+		case WhoBoth:
+			t.who[i] = whoBoth
 		}
 		sc := o.scopeOf(r.Region, r.Jurisdiction, regions)
 		t.rows[a] = append(t.rows[a], institution.Row{Subject: int32(subjects[a][r.Subject]), Scope: sc, Suspended: t.suspended[i]})
@@ -148,4 +165,158 @@ func (o *institutions) rightIn(activity, subject int, g RegionID) (RightID, bool
 		return 0, false
 	}
 	return RightID(at[i] - 1), true
+}
+
+// outsider reports whether household a, in region own, is barred by right id: the right
+// has no holder (a prohibition), or its holder is a body a is not a member of
+// (spec-institutions.md 5.1.1, 5.4.4). Three comparisons and an array read.
+func (o *institutions) outsider(id RightID, a *agent, own RegionID) bool {
+	h := o.rights.holder[id]
+	return h < 0 || !o.isMember(int(a.id), a.role, own, int(h))
+}
+
+// barredAt returns the right that bars household a, in region own, from the activity on
+// the subject (a recipe, a commodity or a role index) in region at, and false when the
+// activity is open there or a is a member of the holder. at is the region of the right and
+// own the region of the household: they differ for a delivery contract, whose right is the
+// destination's (spec-institutions.md 5.2.1).
+func (o *institutions) barredAt(a *agent, own, at RegionID, activity, subject int) (RightID, bool) {
+	id, ok := o.rightIn(activity, subject, at)
+	if !ok || !o.outsider(id, a, own) {
+		return 0, false
+	}
+	return id, true
+}
+
+// startBarred reports whether a right bars the start of recipe by the job of executor a
+// and principal p in region g, and the right that does (spec-institutions.md 5.2, 5.3).
+// Who says whose membership is tested: the principal, the executor or both. A trainee is
+// exempt from the executor test and its principal, the trainer, is tested as for principal
+// whatever Who says (5.3.2, trainee true); an own-use recipe is exempt unless OwnUseBound is
+// set (5.5.2). The right is read at a start only (5.5.1).
+func (o *institutions) startBarred(w *World, a, p *agent, trainee bool, g RegionID, recipe RecipeID) (RightID, bool) {
+	id, ok := o.rightIn(actProduce, int(recipe), g)
+	if !ok || (!o.m.OwnUseBound && isOwn(w.roles.row(a.role), recipe)) {
+		return 0, false
+	}
+	who := o.rights.who[id]
+	if (trainee || who != whoExecutor) && o.outsider(id, p, g) {
+		return id, true
+	}
+	return id, who != whoPrincipal && !trainee && o.outsider(id, a, g)
+}
+
+// attach is the construction call that gives the module what the world holds and the
+// module does not: the counts of the refusals of the rights, which exist only when an
+// observer was supplied (observability-and-logging.md 4.5), so a world without one
+// keeps none. A nil module does nothing.
+func (o *institutions) attach(supplied bool) {
+	if o != nil && supplied {
+		o.rights.refused = make([]int64, o.nr*len(o.m.Rights))
+	}
+}
+
+// reportRights is the RightRefused events of P7.2b: one for each (region, right) with a
+// count, in ascending (RegionID, RightID) order, after the MembershipChanged events
+// (spec-institutions.md 7.3.3). The count of the activity of the right is the one that is
+// set, and the counts are cleared as they are told.
+func (o *institutions) reportRights(w *World) {
+	n := len(o.m.Rights)
+	for g := range o.nr {
+		for id := range n {
+			c := &o.rights.refused[g*n+id]
+			if *c == 0 {
+				continue
+			}
+			e := RightRefused{Tick: w.Tick(), Region: RegionID(g), Right: RightID(id)}
+			switch activityOf(o.m.Rights[id].Activity) {
+			case actProduce:
+				e.Produce = *c
+			case actSell:
+				e.Sell = *c
+			case actBuy:
+				e.Buy = *c
+			default:
+				e.Train = *c
+			}
+			*c = 0
+			w.obs.deliver(e)
+		}
+	}
+}
+
+// refuse counts one refusal of right id in region g, when an observer was supplied
+// (the counts exist only for the event of P7.2b, FR-ORG-039).
+func (o *institutions) refuse(g RegionID, id RightID) {
+	if r := o.rights.refused; r != nil {
+		r[int(g)*len(o.m.Rights)+int(id)]++
+	}
+}
+
+// refuseStart is the check of a request at P2.5 and of a trainee's request (hook H-4,
+// spec-institutions.md 5.2): it reports whether a right bars the start of recipe by a, with
+// p its principal (a itself unless a is a trainee), and, if so, counts the refusal and
+// refuses the request with ReasonNotPermitted, which logs the Debug line and counts an
+// own-use household as blocked. It runs after not_on_role and before k0 is derived.
+func (w *World) refuseStart(a, p *agent, trainee bool, g RegionID, recipe RecipeID) bool {
+	id, barred := w.org.startBarred(w, a, p, trainee, g, recipe)
+	if !barred {
+		return false
+	}
+	w.org.refuse(g, id)
+	w.refuse(a, g, recipe, ReasonNotPermitted)
+	if w.sub != nil {
+		w.sub.blockedStart(w, a, int(g)*len(w.cfg.Roles)+int(a.role), recipe, ReasonNotPermitted)
+	}
+	return true
+}
+
+// orderBarred reports whether a right bars household a, in region g, from placing the
+// order: the right of the sell activity for an ask and of the buy activity for a bid, on
+// its commodity (hook H-5, spec-institutions.md 5.2, 5.6.2). The world passes it as the
+// fact NotPermitted of the admission, so the count is made only for an order that
+// admission refuses for it (refusedOrder).
+func (o *institutions) orderBarred(a *agent, g RegionID, ord Order) bool {
+	_, barred := o.barredAt(a, g, g, orderActivity(ord.Side), int(ord.Commodity))
+	return barred
+}
+
+// refusedOrder counts the order that admission refused as not permitted, under the right
+// that barred it.
+func (o *institutions) refusedOrder(a *agent, g RegionID, ord Order) {
+	if id, barred := o.barredAt(a, g, g, orderActivity(ord.Side), int(ord.Commodity)); barred {
+		o.refuse(g, id)
+	}
+}
+
+// orderActivity is the activity a side of an order is: a bid buys and an ask sells.
+func orderActivity(s Side) int {
+	if s == Bid {
+		return actBuy
+	}
+	return actSell
+}
+
+// contractRefusal is row 5a of an offer and of a take of the contract round (hook H-7,
+// spec-merchants.md 9.3): a delivery contract is a sale for the deliverer and a purchase
+// for the payer, tested for the destination region at (spec-institutions.md 5.2.1, 6.7.1).
+// It returns ReasonNotPermitted and counts the refusal, or "" (always "" for a nil module,
+// so the row has no effect with the module off).
+func (o *institutions) contractRefusal(a *agent, own, at RegionID, activity int, c CommodityID) Reason {
+	if o == nil {
+		return ""
+	}
+	id, barred := o.barredAt(a, own, at, activity, int(c))
+	if !barred {
+		return ""
+	}
+	o.refuse(at, id)
+	return ReasonNotPermitted
+}
+
+// ckOfferRight is row 5a of an offer, a check of the table offerChecks of contract.go: the
+// deliverer's sell right on the commodity is not held, tested for the destination region
+// (spec-institutions.md 5.2.1, 6.7.1). It refuses nothing with the module off.
+func ckOfferRight(w *World, a *agent, s *submittedOffer, _ int) Reason {
+	return w.org.contractRefusal(a, w.regionOf(a), s.o.To, actSell, s.o.Commodity)
 }

@@ -200,6 +200,7 @@ func (w *World) allocate() {
 	w.tally = newEntryTally(regions)
 	w.runnable = make([][]RecipeID, regions)
 	w.markets = newMarketTable(&w.cfg, w.clr, seedPrices(&w.cfg))
+	w.org.attach(w.obs.supplied)
 	w.tk = newTickScratch(&w.cfg)
 	w.pr = newProductionTick(&w.cfg)
 	w.oc = newOutcomeTick(&w.cfg)

@@ -179,6 +179,10 @@ type orderFacts struct {
 	Limited            bool
 	FreeMass, FreeBulk int64
 	SizeMass, SizeBulk int64
+	// NotPermitted is whether a right in force bars the agent from placing the order
+	// (institutions module, spec-institutions.md 5.6.2); false for a pseudo-agent and with
+	// the module off.
+	NotPermitted bool
 }
 
 // bookEntry is one admitted order and the reservation it holds.
@@ -348,6 +352,7 @@ func (b *book) facts(l *ledger.Ledger, f orderFacts, o Order) clearing.Facts {
 		MaxPrice: MaxPrice, MaxQuantity: MaxQuantity, MaxMoney: MaxMoney,
 		Duplicate: b.duplicate(o),
 		Limited:   f.Limited && bid, FreeMass: f.FreeMass, FreeBulk: f.FreeBulk, SizeMass: f.SizeMass, SizeBulk: f.SizeBulk,
+		NotPermitted: f.NotPermitted,
 	}
 	if f.AgentKnown {
 		b.readFacts(l, f, o, &cf)
