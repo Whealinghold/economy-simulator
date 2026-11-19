@@ -325,8 +325,27 @@ func resolves(tok string, types map[string]reflect.Type, cur *reflect.Type) bool
 		return has
 	}
 	*cur = ty
-	_, has := ty.FieldByName(field)
-	return !dotted || has
+	return !dotted || hasFieldPath(ty, field)
+}
+
+// hasFieldPath reports whether the dotted path of fields exists from ty, a field written
+// with a trailing [] (Workers[]) being followed into the element of its slice.
+func hasFieldPath(ty reflect.Type, path string) bool {
+	for _, part := range strings.Split(path, ".") {
+		name, slice := strings.CutSuffix(part, "[]")
+		f, has := ty.FieldByName(name)
+		if !has {
+			return false
+		}
+		ty = f.Type
+		if slice {
+			if ty.Kind() != reflect.Slice {
+				return false
+			}
+			ty = ty.Elem()
+		}
+	}
+	return true
 }
 
 // unresolved returns the tokens of the counterpart column of a row that do not
