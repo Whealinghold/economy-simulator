@@ -256,21 +256,21 @@ func (w *World) SetTransitFactors(changes []TransitFactor) error {
 // MoneyFlowScaled, cause consumer, for each changed flow in flow ID order, and the
 // flow is skipped whole or scaled from the next P1.7.
 func (w *World) SetFlowScales(changes []FlowScale) error {
-	if err := w.enter("SetFlowScales", "money_supply", w.money != nil); err != nil {
+	if err := w.enter("SetFlowScales", "money_supply", w.money != nil || w.fiscal != nil); err != nil {
 		return err
 	}
 	keys, err := slotKeys(changes, func(i int, c FlowScale) (int64, error) {
-		at := slices.IndexFunc(w.money.flows, func(f flowState) bool { return f.flow.ID == c.Flow })
-		if at < 0 {
+		at, ok := w.flowKey(c.Flow)
+		if !ok {
 			return 0, argError(ErrUnknownFlow, c.Flow, "", entry("changes", i), "flow")
 		}
-		return int64(at), slotBP(i, c.BP, 0, MaxFlowScale, "MaxFlowScale")
+		return at, slotBP(i, c.BP, 0, MaxFlowScale, "MaxFlowScale")
 	}, "flow")
 	if err != nil {
 		return fmt.Errorf("SetFlowScales: %w", err)
 	}
 	for _, i := range inKeyOrder(keys) {
-		if err := w.setFlowScale(int(keys[i]), changes[i].BP, CauseConsumer); err != nil {
+		if err := w.setScaleOf(changes[i].Flow, changes[i].BP, CauseConsumer); err != nil {
 			invariant("a validated flow scale was refused: " + err.Error())
 		}
 	}
@@ -498,14 +498,14 @@ func (w *World) transitSlots(s *SlotState) {
 }
 
 func (w *World) flowSlots(s *SlotState) {
-	if w.money == nil {
-		return
-	}
-	for _, f := range w.money.flows {
-		if f.scale != wholeBP {
-			s.FlowScales = append(s.FlowScales, FlowScale{Flow: f.flow.ID, BP: f.scale})
+	if w.money != nil {
+		for _, f := range w.money.flows {
+			if f.scale != wholeBP {
+				s.FlowScales = append(s.FlowScales, FlowScale{Flow: f.flow.ID, BP: f.scale})
+			}
 		}
 	}
+	w.fiscalSlots(s)
 }
 
 func (w *World) populationSlots(s *SlotState) {

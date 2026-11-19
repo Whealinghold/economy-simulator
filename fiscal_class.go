@@ -1,6 +1,9 @@
 package economysim
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // This file is the part of the fiscal module that names the class a flow acts on
 // (spec-fiscal.md 3.2; a continuation file of fiscal.go, architecture.md 2.6). It
@@ -108,4 +111,111 @@ func (k *fiscalCheck) mode(f fiscalFlow, id string) {
 		}
 	}
 	k.v.rep.add(ErrUnknownMode, fiscalPath(f, "mode"), id, "")
+}
+
+// resolve builds the class of a flow's target (spec-fiscal.md 3.2): the roles and
+// regions of households and of a pool, and the payer or recipient treasuries of a
+// remittance. A name that does not resolve is a programmer error after validation.
+func (s *fiscalState) resolve(c *Config, authority JurisdictionID, t FlowTarget) fiscalTarget {
+	out := fiscalTarget{kind: t.Kind, role: -1}
+	if t.Role != "" {
+		out.role = slices.IndexFunc(c.Roles, func(r Role) bool { return r.ID == t.Role })
+	}
+	switch t.Kind {
+	case TargetTreasury:
+		out.from = s.treasuries(authority, t.Jurisdiction)
+	default:
+		out.in = s.regionsOf(c, authority, t.Region)
+	}
+	return out
+}
+
+// regionsOf is the set of regions a class is read in: the region named, or every
+// region the authority covers when none is (spec-fiscal.md 3.2.4).
+func (s *fiscalState) regionsOf(c *Config, authority JurisdictionID, region string) []bool {
+	in := make([]bool, len(c.Regions))
+	if region != "" {
+		at := slices.IndexFunc(c.Regions, func(r Region) bool { return r.ID == region })
+		if at < 0 {
+			invariant("a fiscal flow's region is not defined after validation: " + region)
+		}
+		in[at] = true
+		return in
+	}
+	for _, r := range s.pol.v.Regions(authority) {
+		in[r] = true
+	}
+	return in
+}
+
+// treasuries lists the treasuries of a class of treasuries, as indexes into
+// polity.tr in ascending JurisdictionID: the one jurisdiction named, or every
+// governed proper descendant of the authority (spec-fiscal.md 3.2.3).
+func (s *fiscalState) treasuries(authority JurisdictionID, named string) []int {
+	if named != "" {
+		j, ok := s.pol.v.Lookup(named)
+		if !ok || s.pol.byJ[j] < 0 {
+			invariant("a fiscal flow's treasury is not governed after validation: " + named)
+		}
+		return []int{int(s.pol.byJ[j])}
+	}
+	var out []int
+	for i := range s.pol.tr {
+		if s.descends(s.pol.tr[i].j, authority) {
+			out = append(out, i)
+		}
+	}
+	return out
+}
+
+// descends reports whether j is a proper descendant of a in the tree of jurisdictions.
+func (s *fiscalState) descends(j, a JurisdictionID) bool {
+	for p, ok := s.pol.v.Parent(j); ok; p, ok = s.pol.v.Parent(p) {
+		if p == a {
+			return true
+		}
+	}
+	return false
+}
+
+// gather lists the accounts a flow acts on in the tick, in ascending account ID,
+// into the scratch (spec-fiscal.md 3.2.1 to 3.2.3). Membership is read now, so a
+// household that changed role or region is in its new class (D4). Estate and
+// treasury pseudo-agents are never households; external agents are.
+func (s *fiscalState) gather(w *World, f *fiscalFlowState) {
+	s.payers = s.payers[:0]
+	switch t := &f.target; t.kind {
+	case TargetHouseholds:
+		s.gatherHouseholds(w, t)
+	case TargetPool:
+		s.gatherPools(w, t)
+	default:
+		for _, i := range t.from {
+			tr := &s.pol.tr[i]
+			s.payers = append(s.payers, fiscalPayer{account: tr.account, weight: 1, region: tr.seat, owner: tr.agent})
+		}
+	}
+}
+
+// gatherHouseholds lists the live agents of the role (any if the class names none) in
+// the regions of the class, in ascending agent ID, which is ascending account ID.
+func (s *fiscalState) gatherHouseholds(w *World, t *fiscalTarget) {
+	for i := w.firstHousehold; i < len(w.agents); i++ {
+		a := &w.agents[i]
+		if a.weight < 1 || (t.role >= 0 && int(a.role) != t.role) {
+			continue
+		}
+		if g := w.regionOf(a); t.in[g] {
+			s.payers = append(s.payers, fiscalPayer{account: a.account, weight: a.weight, region: g, owner: a.id})
+		}
+	}
+}
+
+// gatherPools lists the estate account of each region of the class, in ascending region.
+func (s *fiscalState) gatherPools(w *World, t *fiscalTarget) {
+	for g, on := range t.in {
+		if on {
+			s.payers = append(s.payers, fiscalPayer{account: w.estates.account(RegionID(g)), weight: 1, region: RegionID(g), owner: AgentID(g)})
+		}
+	}
 }

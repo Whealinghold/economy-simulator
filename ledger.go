@@ -318,13 +318,16 @@ func appendGroup(dst []BoundaryFlow, flows []ledger.Flow, tick int64, only ledge
 
 // classAndName returns the class and the root name of a faucet or a sink reason
 // of the ledger for money or goods, and false for a reason that is neither (an
-// internal one, or one with no row for the thing). A flow reason is classed by
-// the kind of its flow and named by its ID; a built-in or declared one by the
+// internal one, a fiscal flow's included, or one with no row for the thing). A
+// money flow reason is classed by the kind of its flow and named by its ID; a built-in or declared one by the
 // ledger's table and reasonName.
 func classAndName(r ledger.Reason, goods bool, mf []MoneyFlow) (ledger.Class, Reason, bool) {
 	if r >= ledger.NumReasons {
 		i := int(r - ledger.NumReasons)
-		if goods || i >= len(mf) {
+		if i >= len(mf) {
+			return 0, "", false // a fiscal flow: its reason is Internal and has no boundary row (spec-fiscal.md 3.4.1)
+		}
+		if goods {
 			panic(fmt.Sprintf("economysim: invariant violated (programmer error): boundary flow of ledger reason %d has no Reason name", r))
 		}
 		return flowClass(mf[i]), Reason(mf[i].ID), true

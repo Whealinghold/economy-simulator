@@ -37,6 +37,7 @@ var positionList = [...]position{
 	{"P1.6", "EST", line},
 	{"P1.7", "MON", line},
 	{"P1.7a", "CRD", line},
+	{"P1.7b", "FIS", line},
 	{"P1.8", "EXT", line},
 	{"P1.9", "AGT", line},
 	{"P1.9a", "ORG", line},
@@ -92,7 +93,7 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P0.3a",
-	"P1.3a", "P1.7b",
+	"P1.3a",
 	"P2.8b",
 	"P3.3c", "P3.4a", "P3.6b", "P3.6c",
 	"P4.1a",
@@ -142,6 +143,9 @@ func (w *World) positionsFlows() error {
 	w.p17Flows()
 	if w.credit != nil {
 		w.p17aSettle()
+	}
+	if w.fiscal != nil {
+		w.p17bFiscal()
 	}
 	if w.external != nil {
 		w.p18Walk()

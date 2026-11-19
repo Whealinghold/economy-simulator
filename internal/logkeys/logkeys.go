@@ -261,3 +261,10 @@ const (
 	Rights   = "rights"
 	Controls = "controls"
 )
+
+// The keys of the fiscal module (spec-fiscal.md 16.2): a jurisdiction ID string, and
+// the count of fiscal flows in the construction summary.
+const (
+	Authority   = "authority"
+	FiscalFlows = "fiscal_flows"
+)

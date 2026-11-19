@@ -2632,6 +2632,68 @@ type RouteRiskScaled struct {
 
 func (RouteRiskScaled) isEvent() {}
 
+// The kinds of a fiscal flow in FiscalFlowApplied.Kind, constants of Kind (spec-fiscal.md
+// 16.1). A purchase and a release have none: they trade under the reason trade and
+// report in TreasuryOrdered.
+const (
+	// KindTax is a tax or a remittance: a class pays the treasury of its authority.
+	KindTax Kind = "tax"
+	// KindDuty is a tax on the value of a trade.
+	KindDuty Kind = "duty"
+	// KindToll is a charge for crossing a border at dispatch.
+	KindToll Kind = "toll"
+	// KindPayout is a transfer from a treasury to a class.
+	KindPayout Kind = "payout"
+)
+
+// FiscalClass is the class of accounts that pays or receives in FiscalFlowApplied, a
+// member of a closed set (spec-fiscal.md 3.2).
+type FiscalClass string
+
+const (
+	// FiscalHouseholds is the accounts of the households of a role and region.
+	FiscalHouseholds FiscalClass = "households"
+	// FiscalPool is the estate account of a region.
+	FiscalPool FiscalClass = "pool"
+	// FiscalTreasury is the Treasury account of a governed jurisdiction.
+	FiscalTreasury FiscalClass = "treasury"
+)
+
+// FiscalFlowApplied is the aggregate of one fiscal flow in one region: emitted once
+// per flow and region per tick in which the flow was at a scale above 0 and a due
+// was computed, at P1.7b (taxes, remittances, payouts), P3.6c (tolls) or P4.1a
+// (duties), in the order of the flows and per region ascending; never when nothing
+// was due and never for a flow at scale 0 (spec-fiscal.md 16.1, FR-FIS-044). It is
+// the counter of every silent rule of the module: Due less Applied is what did not
+// move. Amounts are minor units, or units for a payout in kind.
+type FiscalFlowApplied struct {
+	Tick int64
+	// Flow is the flow's ID, which is also its ledger reason.
+	Flow string
+	// Kind is the kind of the flow and Authority the jurisdiction whose treasury is
+	// paid or pays.
+	Kind      Kind
+	Authority JurisdictionID
+	// Region is the payer's for a tax, a duty or a toll and the recipient's for a
+	// payout, and Class the class of that payer or recipient.
+	Region RegionID
+	Class  FiscalClass
+	// Commodity is the good of a payout in kind, NoCommodity for money.
+	Commodity CommodityID
+	// Due is what the rule computed and Applied what moved.
+	Due, Applied Money
+	// Parties are the payers or recipients with a due, as the sum of their weights.
+	Parties int64
+	// Short counts the payers that paid less than they were due, Cut the recipients
+	// cut by an empty treasury and Headroom the payers cut at the treasury's
+	// headroom, in the unit of Parties.
+	Short, Cut, Headroom int64
+	// Exempt counts the trades of a duty whose payer was a pseudo-agent.
+	Exempt int64
+}
+
+func (FiscalFlowApplied) isEvent() {}
+
 // StoreLoss is emitted at P8.1a once per agent and store class struck, in ascending
 // agent ID then class, after the whole position has been applied (spec-risk.md 6.4,
 // 14.1). A class is struck when at least one of the agent's stores of it is. It is
