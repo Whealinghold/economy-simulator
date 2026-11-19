@@ -262,6 +262,12 @@ func TestPacks_OnlyD1ToD5AreNotViable(t *testing.T) {
 		if strings.HasPrefix(f, "overlay/merchants") {
 			continue
 		}
+		// The risk overlays name the routes of the transport layers and the barn of the storage
+		// layers, which pack one alone lacks; the risk goldens and TestGolden_RiskProbeExercisesStrikes
+		// load and validate them over the layers they need.
+		if strings.HasPrefix(f, "overlay/risk") {
+			continue
+		}
 		// The polity overlays name the five regions of the warm five, which pack one
 		// lacks; TestScenarioS112_Neutral loads and validates them over it.
 		if strings.HasPrefix(f, "overlay/polity") {
