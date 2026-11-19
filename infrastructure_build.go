@@ -430,7 +430,11 @@ func (n *infrastructure) completeRepair(principal AgentID, region RegionID, rc *
 
 // void counts executions that did nothing at a completion (4.3.4), under an observer.
 func (n *infrastructure) void(region RegionID, class FacilityClassID, executions int64) {
-	if executions > 0 && n.world.obs.supplied {
+	if executions <= 0 {
+		return
+	}
+	n.logVoided(region, class, executions)
+	if n.world.obs.supplied {
 		n.limits[n.cell(region, class)].voided += executions
 	}
 }

@@ -278,7 +278,21 @@ func (w *World) reportFacility(f *facility, kind FacilityKind, cause Cause, befo
 	if msg := facilityMessage(kind); msg != "" && w.log.Enabled(ctx, slog.LevelDebug) {
 		w.log.LogAttrs(ctx, slog.LevelDebug, msg, slog.Int64(logkeys.Tick, w.Tick()),
 			slog.Int64(logkeys.Facility, int64(f.id)), slog.String(logkeys.FacilityClass, w.cfg.Modules.Infrastructure.Classes[f.class].ID),
-			slog.Int64(logkeys.Agent, int64(f.owner)), slog.Int64(logkeys.Condition, after))
+			slog.Int64(logkeys.Agent, int64(f.owner)), slog.Int64(logkeys.Condition, after),
+			slog.String(logkeys.Cause, string(cause)))
+	}
+}
+
+// logVoided is the Debug line of executions of a build or repair that did nothing at the
+// completion (4.3.4): the inputs are spent and nothing was made, which only FacilityLimited
+// counted, and only under an observer.
+func (n *infrastructure) logVoided(region RegionID, class FacilityClassID, executions int64) {
+	w := n.world
+	ctx := context.Background()
+	if w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "facility executions voided", slog.Int64(logkeys.Tick, w.Tick()),
+			slog.Int64(logkeys.Region, int64(region)), slog.String(logkeys.FacilityClass, w.cfg.Modules.Infrastructure.Classes[class].ID),
+			slog.Int64(logkeys.Executions, executions))
 	}
 }
 

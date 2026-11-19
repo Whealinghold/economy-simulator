@@ -197,6 +197,7 @@ constants in an internal package and reused. The standard keys are:
 | `principal`, `owed`, `arrears`, `lost` | money in minor units (`int64`): the principal of a claim (not the agent of a production job), the amount owed, the owed on overdue claims, and the amount lost |
 | `facility`, `facility_class`, `facilities`, `facility_classes` | a facility ID, a facility class ID (string), and counts of facilities and of facility classes in the construction summary |
 | `condition` | the wear of a facility, in units of its durability (`int64`) |
+| `executions` | a count of executions of a recipe (`int64`), in the `Debug` line of a facility build or repair that did nothing at its completion |
 | `rows` | a count of risk rows, in the construction summary |
 | `authority`, `fiscal_flows` | a jurisdiction ID (string) and a count of fiscal flows in the construction summary |
 | `body`, `right`, `control`, `activity` | IDs of a body, a right and a control, and the activity a right gates |
@@ -982,4 +983,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 3791f86661f6a974354ee6e9
+RULE-TAG: ee68ceb39e61d44971347dac
