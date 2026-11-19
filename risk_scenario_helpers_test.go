@@ -168,3 +168,31 @@ func riskPackName(g riskGolden) string {
 	}
 	return "one"
 }
+
+// unstruckLoss returns the first shipment that lost a unit at its arrival although it was
+// dispatched with a loss share of 0 (a scale call after the dispatch must not give a share, and a
+// share is the only way a unit is lost), and "" when there is none. It joins arrival to dispatch
+// by shipment ID, so it holds on every seed whatever a strike rounds to: a strike may take no unit
+// (a small cargo at a small share), so "struck" and "lost" are not equivalent, only "lost" implies
+// "struck".
+func unstruckLoss(events []economysim.Event) string {
+	share := map[economysim.ShipmentID]int64{}
+	for _, e := range events {
+		switch e := e.(type) {
+		case economysim.ShipmentDispatched:
+			share[e.Shipment] = e.LossBP
+		case economysim.ShipmentArrived:
+			var n int64
+			for _, l := range e.Lines {
+				n += int64(l.Lost)
+			}
+			for _, a := range e.AccountLost {
+				n += int64(a.Quantity)
+			}
+			if bp, ok := share[e.Shipment]; n > 0 && (!ok || bp == 0) {
+				return fmt.Sprintf("tick %d shipment %d lost %d units with a share of %d", e.Tick, e.Shipment, n, bp)
+			}
+		}
+	}
+	return ""
+}

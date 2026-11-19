@@ -127,8 +127,9 @@ func inWindow(ticks []int64, from, to int64) (n int64) {
 // the road, and a patrol before the volley; on the store pack a patrol at tick 100 and its end at
 // tick 200; seeds 1 to the scenario count, 400 ticks, audit on. Exact: each call emits one event
 // per row with the scale before and after, Slots holds the scales that differ from 10 000, the
-// books of the loss balance every tick, a strike made before a patrol is still taken at the arrival
-// (a shipment in flight keeps its share), no shipment dispatched while the routes are at 0 carries
+// books of the loss balance every tick, a unit is lost only by a dispatch that was struck
+// and a shipment dispatched at 0 loses none after a later call (a shipment in flight keeps its
+// share), no shipment dispatched while the routes are at 0 carries
 // a loss share and no store is struck while the stores are at 0. Recorded: the strikes made.
 //
 // Requirement: FR-RSK-028, FR-RSK-029, FR-RSK-030, FR-RSK-007, FR-RSK-022
@@ -146,7 +147,10 @@ func TestScenarioRSK5_ScriptedScales(t *testing.T) {
 		msg, struck, _ := runSeries(t, rw, two.cfg, routeSurge, goldenTicks, false)
 		checkExact(t, rep, "S130", "two", seed, "the calls, the slots and the books hold", msg == "", "%s", msg)
 		lost := rw.tally.routeLost + rw.tally.accountLost
-		checkExact(t, rep, "S130", "two", seed, "a strike made before a patrol is still taken at the arrival", (len(struck) > 0) == (lost > 0), "%d dispatches struck and %d units lost", len(struck), lost)
+		// Not "struck iff lost": a strike can take no unit (rounding), so only a loss implies a strike.
+		checkExact(t, rep, "S130", "two", seed, "a unit is lost only by a dispatch that was struck", lost == 0 || len(struck) > 0, "%d dispatches struck and %d units lost", len(struck), lost)
+		msgLoss := unstruckLoss(rw.rec.events)
+		checkExact(t, rep, "S130", "two", seed, "a patrol after the dispatch gives no share and takes none that was given", msgLoss == "", "%s", msgLoss)
 		rep.num(seed, "dispatches struck at the surge", int64(len(struck)))
 		rep.num(seed, "units lost at the arrivals", lost)
 	})
