@@ -98,29 +98,30 @@ func (w *World) p14Settle() error {
 // is ln: the units that reached the destination, delivered to the payer or diverted
 // to the estate, are paid to the deliverer, and the units spoiled are refunded to
 // the payer or, when it was removed, to the estate of the destination (9.7). The
-// shipment record has no loss yet, so Lost is 0 (the risk module is plan 2-18's).
+// risk module's units lost are refunded as the spoiled are: the deliverer bears both
+// (spec-risk.md 5.6.1), and a contract that lost units and spoiled none is short.
 func (w *World) settleArrived(ct *contract, ln ArrivedLine) error {
 	cause := CauseDelivered
 	switch {
 	case !w.liveAgent(ct.payer):
 		cause = CausePayerRemoved
-	case ln.Spoiled > 0:
+	case ln.Spoiled > 0 || ln.Lost > 0:
 		cause = CauseShort
 	}
-	return w.endContract(ct, ln.Delivered+ln.Diverted, ln.Spoiled, cause)
+	return w.endContract(ct, ln.Delivered+ln.Diverted, ln.Spoiled, ln.Lost, cause)
 }
 
 // endContract pays the deliverer price * reached out of the escrow, returns the rest
 // to the payer or the estate of the destination, releases the Escrow account and
 // reports the end of the contract. The deliverer is live: a contract ends at the
 // removal of its deliverer, before its account closes.
-func (w *World) endContract(ct *contract, reached, spoiled Quantity, cause Cause) error {
+func (w *World) endContract(ct *contract, reached, spoiled, lost Quantity, cause Cause) error {
 	escrowed := int64(ct.price) * int64(ct.qty)
 	paid := int64(0) // a removal of the deliverer refunds the whole escrow
 	if cause != CauseDelivererRemoved {
 		var ok bool
-		if paid, _, ok = merchant.Settle(int64(ct.price), int64(ct.qty), int64(reached), int64(spoiled), 0); !ok {
-			invariant("settle a contract: the units reached and spoiled do not add up to the quantity")
+		if paid, _, ok = merchant.Settle(int64(ct.price), int64(ct.qty), int64(reached), int64(spoiled), int64(lost)); !ok {
+			invariant("settle a contract: the units reached, spoiled and lost do not add up to the quantity")
 		}
 	}
 	if paid > 0 {
@@ -138,17 +139,17 @@ func (w *World) endContract(ct *contract, reached, spoiled Quantity, cause Cause
 		}
 	}
 	w.mer.free[ct.to].Put(ct.escrow)
-	w.announceSettled(ct, reached, spoiled, Money(paid), Money(escrowed-paid), cause)
+	w.announceSettled(ct, reached, spoiled, lost, Money(paid), Money(escrowed-paid), cause)
 	return nil
 }
 
 // announceSettled emits ContractSettled and writes the Debug line of the end of a
 // contract. The event's Region is the deliverer's account region at the event.
-func (w *World) announceSettled(ct *contract, reached, spoiled Quantity, paid, refunded Money, cause Cause) {
+func (w *World) announceSettled(ct *contract, reached, spoiled, lost Quantity, paid, refunded Money, cause Cause) {
 	if w.obs.supplied {
 		w.obs.deliver(ContractSettled{
 			Tick: w.Tick(), Contract: ct.id, Payer: ct.payer, Deliverer: ct.deliverer, Region: w.regionOf(&w.agents[ct.deliverer]),
-			To: ct.to, Commodity: ct.commodity, Quantity: ct.qty, Reached: reached, Spoiled: spoiled,
+			To: ct.to, Commodity: ct.commodity, Quantity: ct.qty, Reached: reached, Spoiled: spoiled, Lost: lost,
 			Paid: paid, Refunded: refunded, Cause: cause,
 		})
 	}
@@ -178,7 +179,7 @@ func (w *World) dropContracts(a *agent) error {
 			keep = append(keep, ct)
 			continue
 		}
-		if err := w.endContract(&ct, 0, 0, CauseDelivererRemoved); err != nil {
+		if err := w.endContract(&ct, 0, 0, 0, CauseDelivererRemoved); err != nil {
 			m.open = append(keep, m.open[n:]...)
 			return err
 		}

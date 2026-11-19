@@ -97,6 +97,7 @@ var declaredEvents = []economysim.Event{
 	economysim.RentScaled{},
 	economysim.RentPaid{},
 	economysim.FacilityChanged{},
+	economysim.RouteRiskScaled{},
 	economysim.MembershipChanged{},
 	economysim.RightRefused{},
 	economysim.PriceControlled{},
@@ -109,7 +110,7 @@ var declaredEvents = []economysim.Event{
 var moduleGates = []string{
 	"demand", "resources", "subsistence", "population", "transport", "information", "migration",
 	"merchant block", "merchants", "external", "employment", "storage", "credit", "technology",
-	"settlements", "tenure", "infrastructure", "institutions",
+	"settlements", "tenure", "infrastructure", "risk", "institutions",
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -118,7 +119,7 @@ var moduleGates = []string{
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
 	"StoreLoss",
-	"RouteRiskScaled", "StoreRiskScaled",
+	"StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound",
 	"FacilityLimited", "FiscalFlowApplied",
 	"TreasuryOrdered", "SavingPlanned", "PolicyDecided",
@@ -136,9 +137,7 @@ var deferredCore = map[string]string{}
 // has not appended the field to its declared event yet (D3 of the plan of
 // Stage 0). The change that appends one deletes its entry.
 var notBuiltFields = []string{
-	"ShipmentDispatched.Toll",     // fiscal module, FIS 16.1
-	"ShipmentDispatched.LossBP",   // risk module, RSK 14.1
-	"ShipmentArrived.AccountLost", // risk module, RSK 14.1
+	"ShipmentDispatched.Toll", // fiscal module, FIS 16.1
 }
 
 // eventRow is one row of the tables of spec-observability.md 4.1.

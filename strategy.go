@@ -567,6 +567,10 @@ type RouteRow struct {
 	Has         bool
 	Ticks       int64
 	HaulPerUnit int64
+	// LossBP is the expected loss of the route in basis points: the share of a cargo
+	// the risk module expects a strike to take, from the rows and the scales in force
+	// (spec-risk.md 8.1); 0 with the module off or for a route with no risk.
+	LossBP int64
 }
 
 // EndowmentView is one endowment of the agent's region as the agent sees it

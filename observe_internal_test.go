@@ -310,6 +310,11 @@ var stepSites = []site{
 			w.p31Fix()
 		}
 	})},
+	{"P3.1a", noError(func(w *World) {
+		if w.risk != nil {
+			w.p31aCommon()
+		}
+	})},
 	{"P3.2", (*World).p32Trade},
 	{"P3.3", noError(func(w *World) {
 		if w.mer != nil && w.mer.on {

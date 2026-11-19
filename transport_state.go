@@ -120,6 +120,7 @@ func (w *World) saveTransport(cw *codec.Writer) error {
 			cw.U(unsigned(ln.Commodity))
 			cw.U(unsigned(ln.Quantity))
 		}
+		w.risk.saveLoss(cw, s)
 	}
 	cw.Count(len(t.factors))
 	for _, f := range t.factors {
@@ -226,6 +227,7 @@ func (w *World) readShipment(rs *restoreCtx, r *codec.Reader) shipment {
 		prev = c
 		s.lines = append(s.lines, Line{Commodity: CommodityID(c), Quantity: Quantity(q)})
 	}
+	w.risk.readLoss(r, &s)
 	w.checkShipmentShape(r, &s)
 	return s
 }

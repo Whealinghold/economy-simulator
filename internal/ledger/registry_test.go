@@ -26,7 +26,7 @@ var byName = map[string]ledger.Reason{
 	"transit_out": ledger.TransitOut, "transit_in": ledger.TransitIn, "haul_use": ledger.HaulUse, "transit_use": ledger.TransitUse,
 	"outside_budget": ledger.OutsideBudget, "outside_unspent": ledger.OutsideUnspent, "outside_receipts": ledger.OutsideReceipts,
 	"outside_offer": ledger.OutsideOffer, "outside_unsold": ledger.OutsideUnsold, "outside_purchases": ledger.OutsidePurchases,
-	"wage_pay": ledger.WagePay, "rent": ledger.Rent, "title_sale": ledger.TitleSale,
+	"wage_pay": ledger.WagePay, "rent": ledger.Rent, "title_sale": ledger.TitleSale, "loss": ledger.Loss,
 }
 
 // notBuilt lists the reasons of the starting registry that a module owns and
@@ -36,7 +36,7 @@ var notBuilt = []string{
 	"want_consumption",
 	"escrow_in", "escrow_out", "escrow_refund", "wage_escrow",
 	"wage_refund",
-	"premium", "payout", "loss",
+	"premium", "payout",
 }
 
 // specRow is one parsed row of the registry table of spec-ledger.md 7.2.
@@ -99,7 +99,7 @@ func pairing(between string) (from, to []ledger.Kind, back bool) {
 				out = append(out, k)
 			}
 		}
-		for w, k := range map[string]ledger.Kind{"agent": ledger.KindAgent, "estate": ledger.KindEstate, "boundary": ledger.KindBoundary, "outside": ledger.KindOutside} {
+		for w, k := range map[string]ledger.Kind{"agent": ledger.KindAgent, "estate": ledger.KindEstate, "boundary": ledger.KindBoundary, "outside": ledger.KindOutside, "transit": ledger.KindTransit} {
 			if strings.Contains(s, w) {
 				out = append(out, k)
 			}

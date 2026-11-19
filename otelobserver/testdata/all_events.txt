@@ -48,6 +48,7 @@ RightRefused
 RightSuspensionSet
 RoleChanged
 RoomLimited
+RouteRiskScaled
 RumoursServed
 RunEnded
 RunStarted

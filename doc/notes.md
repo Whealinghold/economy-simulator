@@ -73,14 +73,14 @@ PR description.
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427 |
+| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377 |
 | ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
-| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385 |
+| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377 |
 | SAV | N-145, N-156, N-195, N-197, N-362, N-382 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-404, N-140, N-192, N-268, N-348, N-365 |
@@ -1654,7 +1654,7 @@ PR description.
 - **Update (2026-10-16, plan 1-5 Phase 2):** read for the ledger additions; left open (not this row's). `Discard` uses only boundary accounts of the built-in group (`recipe_output` and `disposal`, created at construction in the order of `spec-ledger.md` 3.4.2); it adds no account and no module reason.
 - **Update (2026-10-20, plan 1-11 Phase 1):** Leave open. The slice has no module reason: the world creates the accounts in the order of WLD 5.2 rows 1, 4 and 6 and leaves rows 2, 3, 3a, 5 and 5a to the modules.
 - **Update (2026-11-09, plan 2-12 Phase 1):** Applied for the transport module (D444): with the module on, the boundary accounts of `haul_use` and `transit_use` are opened at construction at row 3a, goods commodity-major, in `Modules` pointer order (Demand before Transport). The note stays open for RSK's `loss`.
-- **Update (2026-11-18, plan 3-rsk Phase 1):** applied for RSK, which leaves the areas: the boundary accounts of `loss` are opened at row 3a after the credit module's reasons, goods commodity-major, in the order of the `Modules` pointers; the reason is a goods sink with code 44 in the ledger registry (`spec-ledger.md` 7.2, `spec-world.md` 5.2 row 3a).
+- **Update (2026-11-18, plan 3-rsk Phase 1):** applied for RSK, which leaves the areas: the boundary accounts of `loss` are opened at row 3a after the credit module's reasons, goods commodity-major, in the order of the `Modules` pointers; the reason is a goods sink with code 36 in the ledger registry (`spec-ledger.md` 7.2, `spec-world.md` 5.2 row 3a).
 
 ### N-227 Edits to CRD from the ledger row: `MarkOverdue` and a `Settle` of 0
 
@@ -2560,6 +2560,12 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-emp PR 2 observability review (Q5 of the plan: defer).
 - **Note:** PR 2 is configuration only: no event, no snapshot field, no run-time log. Its nine warnings of `spec-employment.md` 14.2 go through `logWarnings` (`Warn`, the constant message "configuration warning", the keys `rule` and `path` with IDs and no indices, once per entity of the configuration at construction), so nothing is added in the core. The rows of 5.3 that exist and that the adapter PR of `otelobserver/` records, once `HireFormed`, `HireEnded` (PR 3) and `LabourRound` (PR 5) are built: `economysim.vacancy.unfilled` by employer role and reason (the first look when no hire forms, and the run-time view of what `hire_never_profitable` and `wage_below_upkeep` warn of), `economysim.labour.unmatched` (workers offered and not hired), `economysim.hire.formed` and `economysim.hire.wage` (rate of hires and the wage paid), `economysim.hire.escrow` (wages held, the part of `economysim.money.supply` under `contract`). The adapter's cardinality test takes the eleven labour reasons into `economysim.reason`. A gauge of open hires from `Hires[]` of the snapshot has no row in 5.3; the adapter PR decides whether it earns one.
 
+### N-377 Candidates for the adapter change of the risk instruments
+
+- **Areas:** RSK, OBS
+- **Raised:** 2026-11-18, plan 3-rsk PR B observability review (route side; the store side lands in PR C).
+- **Note:** The three instruments of `spec-risk.md` 14.4 are deferred to a later change to `otelobserver/` (plan 3-rsk, Q5), with no core change owed: the events carry what they need. For that change: (1) `economysim.transport.cargo.lost` sums `ArrivedLine.Lost` of each line, by commodity, and each `Amount` of `ShipmentArrived.AccountLost`, by commodity. `ArrivedLine.Spoiled` already excludes the lost units (`Shipped - delivered - lost`), so `cargo.spoiled` and `economysim.transport.in_transit` (which takes `Shipped` off, lost included) need no change. (2) `economysim.risk.strikes` with `risk_kind` `route` counts `ShipmentDispatched` with `LossBP` above 0; the `store` half comes from `StoreLoss` in PR C. A strike whose cargo is all spoiled or whose shipment is held still shows in `LossBP`, so the counter is not the same as `cargo.lost` above 0. (3) A reconciliation test, not a new instrument: the sum of `cargo.lost` plus the units lost by a `StoreLoss` equals `economysim.commodity.flow` under the reason `loss`; a gap means a loss path posts to the ledger without an event. (4) Not in the rule tables and to be decided there first: a gauge of the route risk scale held from `RouteRiskScaled` (`AfterBP`), as `economysim.rent.rate` holds `RentScaled`, so a dashboard can tell a closed-by-scale route (0) from a quiet one. It needs a row in 5.3 and 5.3.1 and a new attribute set (origin, destination, mode), which is bounded by the route rows but is the first metric attribute with two regions on a risk row; take the two keys `economysim.region.from` and `economysim.region.to` of the relocation metric. Left open for the adapter change.
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2570,4 +2576,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 4bb6895d487c43ac08a94199
+NOTES-TAG: c56dceb6f276772cf2c1afcc

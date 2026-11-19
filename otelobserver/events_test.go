@@ -82,6 +82,7 @@ var allEvents = []economysim.Event{
 	economysim.RentScaled{},
 	economysim.RentPaid{},
 	economysim.FacilityChanged{},
+	economysim.RouteRiskScaled{},
 	economysim.MembershipChanged{},
 	economysim.RightRefused{},
 	economysim.PriceControlled{},
