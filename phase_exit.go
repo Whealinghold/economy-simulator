@@ -529,6 +529,7 @@ func (w *World) changeRole(g RegionID, a *agent, d Decision, completed bool) err
 			w.deliverEnded()
 		}
 	}
+	w.facilitiesEnded(a)
 	w.logRoleChanged(a, d.Cause)
 	return nil
 }

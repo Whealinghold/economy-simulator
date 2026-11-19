@@ -119,7 +119,7 @@ func withoutFacilityEvents(events []economysim.Event) ([]economysim.Event, int) 
 // events of the two initial mills, and the same final snapshot but for the hash, the
 // names of the IDs, the module list and the facility rows, for two seeds, while its
 // configuration hash differs. The overlay's recipe is listed by no role, so no start
-// uses the mills, and nothing times them yet.
+// uses the mills; the step only decays them, which the facility rows alone show.
 //
 // Requirement: FR-CAP-001, FR-CAP-045, FR-CAP-003, FR-CAP-009
 //
