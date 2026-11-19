@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"log/slog"
+	"math"
 	"math/rand/v2"
 	"reflect"
 	"testing"
@@ -396,5 +397,52 @@ func TestCost_PolicyDueBuiltinsZeroAllocs(t *testing.T) {
 	w := newMill(t, policyMillConfig(a), WithSeed(1))
 	if got := testing.AllocsPerRun(50, w.p03aPolicy); got != 0 {
 		t.Errorf("allocs of P0.3a with a due schedule that changes nothing = %v, want 0", got)
+	}
+}
+
+// TestApply_HostileSettingsAtTheEdgesOfInt64 verifies the world side of the checks against
+// settings at the edges of int64: lever indexes below 0 and above the list, and a number of
+// MinInt64 or MaxInt64 on every kind of lever. A list of refusals leaves every slot as it was,
+// and a list of extreme numbers lands inside the bounds and the step of each lever with no
+// wrap and no panic.
+//
+// Requirement: FR-PLC-024, FR-PLC-026, FR-PLC-027, FR-PLC-028, FR-PLC-029, FR-PLC-030
+// Guard: an unchecked sum Current+MaxStep or a lever index used before its check would wrap or panic.
+func TestApply_HostileSettingsAtTheEdgesOfInt64(t *testing.T) {
+	t.Parallel()
+	w := newMill(t, policyMillConfig(crownActor("schedule", 1)), WithSeed(3))
+	p := &scriptedPolicy{}
+	w.policy.actors[0].builtin = p
+	step := func() SlotState {
+		t.Helper()
+		if err := w.Step(); err != nil {
+			t.Fatalf("Step() error = %v, want nil", err)
+		}
+		s, err := w.Slots()
+		if err != nil {
+			t.Fatalf("Slots() error = %v, want nil", err)
+		}
+		return s
+	}
+	start := step()
+	p.set = Settings{Levers: []LeverSetting{
+		{Lever: LeverID(math.MinInt), BP: math.MaxInt64}, {Lever: -1, BP: math.MinInt64},
+		{Lever: LeverID(math.MaxInt), BP: 1}, {Lever: 3, BP: 1}, {Lever: 2, BP: 1, Closed: true},
+	}}
+	if got := step(); !reflect.DeepEqual(got, start) {
+		t.Errorf("slots after a list of refusals = %+v, want %+v (unchanged)", got, start)
+	}
+	for _, c := range []struct {
+		bp         int64
+		gate, poll int64
+		road       int64
+	}{{math.MaxInt64, 20_000, 13_000, 20_000}, {math.MinInt64, 5_000, 10_000, 0}} {
+		p.set = Settings{Levers: []LeverSetting{{Lever: 0, BP: c.bp}, {Lever: 1, BP: c.bp}, {Lever: 2, BP: c.bp}}}
+		s := step()
+		gate, _ := w.geo.g.Edge(0, 1)
+		if gate.FactorBP != c.gate || w.flowScaleOf("poll") != c.poll || w.transport.factorOf(0, 1, 0) != c.road {
+			t.Errorf("BP %d: gate %d, poll %d, road %d; want %d, %d, %d (slots %+v)", c.bp, gate.FactorBP,
+				w.flowScaleOf("poll"), w.transport.factorOf(0, 1, 0), c.gate, c.poll, c.road, s)
+		}
 	}
 }
