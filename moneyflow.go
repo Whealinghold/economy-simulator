@@ -952,6 +952,11 @@ func (w *World) auditLaterModules() error {
 	if err := w.auditInfrastructure(); err != nil {
 		return err
 	}
+	if w.fiscal != nil {
+		if err := w.fiscal.audit(w); err != nil {
+			return err
+		}
+	}
 	if w.risk != nil {
 		return w.risk.audit(w)
 	}

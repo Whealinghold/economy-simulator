@@ -54,6 +54,7 @@ var checkpointSections = [...]section{
 	{tag: 26, name: "Credit", present: func(c *Config) bool { return c.Modules.Credit != nil }, save: (*World).saveCredit, load: (*World).loadCredit},
 	{tag: 27, name: "Facilities", present: func(c *Config) bool { return c.Modules.Infrastructure != nil }, save: (*World).saveFacilities, load: (*World).loadFacilities},
 	{tag: 28, name: "Risk", present: func(c *Config) bool { return c.Modules.Risk != nil }, save: (*World).saveRisk, load: (*World).loadRisk},
+	{tag: 30, name: "Fiscal", present: func(c *Config) bool { return c.Modules.Fiscal != nil }, save: (*World).saveFiscal, load: (*World).loadFiscal},
 	{tag: 33, name: "Technology", present: func(c *Config) bool { return c.Modules.Technology != nil }, save: (*World).saveTechnology, load: (*World).loadTechnology},
 	{tag: 34, name: "Extensions", save: (*World).saveExtensions, load: (*World).loadExtensions},
 }
@@ -79,7 +80,7 @@ type notBuiltSection struct {
 var notBuiltSections = [...]notBuiltSection{
 	{24, "Employment", "Employment"},
 	{29, "Insurance", "Insurance"},
-	{30, "Fiscal", "Fiscal"}, {31, "Institutions", "Institutions"}, {32, "Policy", "Policy"},
+	{31, "Institutions", "Institutions"}, {32, "Policy", "Policy"},
 }
 
 // agentTail is a block that follows the agent list of tag 3 when its module is

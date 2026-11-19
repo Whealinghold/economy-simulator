@@ -154,6 +154,7 @@ func (w *World) allocate() {
 	w.mer = newMerchants(&w.cfg, &w.roles, w.transport)
 	w.employment = newEmployment(&w.cfg)
 	w.polity = newPolity(&w.cfg)
+	w.fiscal = newFiscal(&w.cfg, w.polity)
 	w.skills = newSkills(&w.cfg)
 	w.sto = newStorage(&w.cfg, &w.roles, &w.recipes)
 	if w.sto != nil {
@@ -389,6 +390,7 @@ func modulesOn(c *Config) []string {
 		{"tenure", m.Tenure != nil},
 		{"infrastructure", m.Infrastructure != nil},
 		{"risk", m.Risk != nil},
+		{"fiscal", m.Fiscal != nil},
 	}
 	on := []string{}
 	for _, t := range table {
@@ -496,6 +498,9 @@ func (w *World) summaryLater(attrs []slog.Attr) []slog.Attr {
 	if w.polity != nil {
 		total, governed := polityTotals(&w.cfg)
 		attrs = append(attrs, slog.Int(logkeys.Jurisdictions, total), slog.Int(logkeys.Governed, governed))
+	}
+	if w.fiscal != nil {
+		attrs = append(attrs, slog.Int(logkeys.FiscalFlows, len(w.fiscal.flows)))
 	}
 	if w.credit != nil {
 		lenders, borrowers := w.creditAgents()
