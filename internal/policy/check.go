@@ -1,5 +1,7 @@
 package policy
 
+import "slices"
+
 // Outcome is the one result each entry of a returned list gets (spec-policy.md
 // 6.2.1), the first check that holds, in this order.
 type Outcome int
@@ -82,8 +84,10 @@ type Scratch struct {
 // a decision. Nothing is written: the caller applies the Applied rows. The rows
 // are in s.Results, valid until the next call.
 func Check(levers []Lever, entries []Entry, s *Scratch) Tally {
-	s.Results = append(s.Results[:0], make([]Result, len(entries))...)
-	s.seen = append(s.seen[:0], make([]bool, len(levers))...)
+	s.Results = slices.Grow(s.Results[:0], len(entries))[:len(entries)]
+	clear(s.Results)
+	s.seen = slices.Grow(s.seen[:0], len(levers))[:len(levers)]
+	clear(s.seen)
 	var t Tally
 	t.Entries = int64(len(entries))
 	for i, e := range entries {

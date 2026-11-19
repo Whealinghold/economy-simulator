@@ -44,10 +44,10 @@ func MeanRatio(rows []Ratio) (reading int64, ok bool) {
 	var acc checked.Acc
 	var total int64
 	for _, r := range rows {
-		if !acc.AddMul(r.BP, r.Households) {
+		if r.Households < 0 || !acc.AddMul(r.BP, r.Households) {
 			return 0, false
 		}
-		if total, ok = checked.Add(total, r.Households); !ok || r.Households < 0 {
+		if total, ok = checked.Add(total, r.Households); !ok {
 			return 0, false
 		}
 	}
@@ -63,6 +63,9 @@ func Price(rows []PriceRow, maxAge int64) (reading int64, ok bool) {
 	var acc checked.Acc
 	var total int64
 	for _, r := range rows {
+		if r.Age < 0 {
+			return 0, false
+		}
 		if r.Age > maxAge {
 			continue
 		}

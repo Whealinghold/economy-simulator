@@ -125,6 +125,9 @@ func TestGauge_UndefinedPrice(t *testing.T) {
 	if _, ok := policy.Price([]policy.PriceRow{{Households: 0, Price: 9}}, 3); ok {
 		t.Error("Price(zero households) is defined, want undefined")
 	}
+	if _, ok := policy.Price([]policy.PriceRow{{Households: 10, Price: 9, Age: -1}}, 3); ok {
+		t.Error("Price(negative age) is defined, want undefined")
+	}
 }
 
 // TestGauge_OverflowIsUndefined verifies that a sum that leaves its range is an
