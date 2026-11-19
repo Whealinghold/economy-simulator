@@ -117,6 +117,113 @@ func TestDrawdown_Saturates(t *testing.T) {
 	}
 }
 
+// TestDrawdown_WrappedRing checks that the ring form reads a ring whose oldest
+// record is not at slot 0: 12 pushes into a window of 5 leave start at 12 mod
+// 5 = 2, so AppendRecords must read slots 2, 3, 4, 0, 1 in that order.
+//
+// The five newest nets are -60, +20, -10, -5, +15, so the running sum is -60,
+// -40, -50, -55, -40, the peak stays at 0 and the drawdown is 60. The seven
+// dropped records (+10, -20, -30, +5, -40, +100, -50) would have given 110
+// (peak 25, then -85), so a ring that kept them, or read in slot order, fails.
+//
+// Requirement: FR-SAV-006, FR-SAV-008
+// Guard: the ring is the production input of the drawdown and wraps every
+// window after the first; a read in slot order would give a different number
+// that no test of an unwrapped ring would notice.
+func TestDrawdown_WrappedRing(t *testing.T) {
+	t.Parallel()
+	nets := []int64{10, -20, -30, 5, -40, 100, -50, -60, 20, -10, -5, 15}
+	r, err := welfare.NewRing(5, 3_650)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, n := range nets {
+		r.Push(welfare.Record{Income: n})
+	}
+	got, _ := welfare.DrawdownRing(&r, nil)
+	if got != 60 {
+		t.Errorf("DrawdownRing over a wrapped ring = %d, want 60", got)
+	}
+	kept := make([]welfare.Record, 0, 5)
+	for _, n := range nets[len(nets)-5:] {
+		kept = append(kept, welfare.Record{Income: n})
+	}
+	if want := welfare.Drawdown(kept); got != want {
+		t.Errorf("DrawdownRing = %d, Drawdown of the newest five = %d, want equal", got, want)
+	}
+}
+
+// TestDrawdown_RingAtClamp checks the drawdown of a ring whose records the
+// ring clamped to plus or minus MaxInt64 / maxWindow, the largest values the
+// production path can hand to Drawdown (N-491).
+//
+// With a window of 3 and a bound of 3 the clamp c is 3 074 457 345 618 258 602.
+// A net of -c three times is -3c = -(MaxInt64 - 1), an exact drawdown with no
+// saturation. A net of -2c twice is -4c, below MinInt64, so the sum and the
+// drawdown saturate at MaxInt64.
+//
+// Requirement: FR-SAV-006, FR-SAV-043
+func TestDrawdown_RingAtClamp(t *testing.T) {
+	t.Parallel()
+	const c = math.MaxInt64 / 3
+	tests := []struct {
+		name string
+		rec  welfare.Record
+		n    int
+		want int64
+	}{
+		{"three nets of minus c is exact", welfare.Record{Income: math.MinInt64}, 3, 3 * c},
+		{"two nets of minus 2c saturate", welfare.Record{Income: math.MinInt64, Cost: math.MaxInt64}, 2, math.MaxInt64},
+		{"nets of plus 2c never fall", welfare.Record{Income: math.MaxInt64, Cost: math.MinInt64}, 3, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			r, err := welfare.NewRing(3, 3)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for i := 0; i < tt.n; i++ {
+				if !r.Push(tt.rec) {
+					t.Fatalf("Push(%+v) clamped = false, want true", tt.rec)
+				}
+			}
+			if got, _ := welfare.DrawdownRing(&r, nil); got != tt.want {
+				t.Errorf("DrawdownRing(%d clamped records of %+v) = %d, want %d", tt.n, tt.rec, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestDrawdown_Boundaries checks the smallest and largest valid inputs: one
+// record, a fall of exactly MaxInt64 (no saturation), and a net of MinInt64,
+// whose fall of 2^63 does not fit and saturates.
+//
+// Requirement: FR-SAV-006, FR-SAV-043
+func TestDrawdown_Boundaries(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		recs []welfare.Record
+		want int64
+	}{
+		{"one rising record", []welfare.Record{{Income: 7}}, 0},
+		{"one falling record", []welfare.Record{{Cost: 7}}, 7},
+		{"fall of exactly MaxInt64", []welfare.Record{{Cost: math.MaxInt64}}, math.MaxInt64},
+		{"net MinInt64 saturates", []welfare.Record{{Income: math.MinInt64}}, math.MaxInt64},
+		// Running sum 5 then -5: the peak is 5, so the fall is 5 - (-5) = 10.
+		{"fall is measured from the peak", []welfare.Record{{Income: 5}, {Cost: 10}}, 10},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := welfare.Drawdown(tt.recs); got != tt.want {
+				t.Errorf("Drawdown(%+v) = %d, want %d", tt.recs, got, tt.want)
+			}
+		})
+	}
+}
+
 // FuzzDrawdown checks that the drawdown is never negative, never panics, and
 // equals the exact big-integer drawdown while no sum leaves int64.
 //
