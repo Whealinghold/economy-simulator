@@ -49,7 +49,7 @@ PR description.
 | AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
-| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-387, N-388, N-438 |
+| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-388, N-438 |
 | CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433 |
 | CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
@@ -73,7 +73,7 @@ PR description.
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-455, N-456, N-387 |
+| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-455, N-456 |
 | ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
@@ -2341,12 +2341,6 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-cap PR 2 (observability review), plan Q3.
 - **Note:** CAP defers its five instruments to one adapter PR after Stage 3 (plan 3-cap Q3; `FacilityChanged` is in the adapter's `ignoredEvents` until then). The catalogue rows (`observability-and-logging.md` 5.3, 5.3.1) and the derivation test (`TestFacility_MetricsDerivable`, PR 4) exist, so the adapter PR needs only the code. It must: (1) feed `economysim.facility.count` from `FacilityChanged` (+1 `added` and `built`, -1 `ruined`) and seed it from the `Facilities` rows of the `WorldRestored` snapshot; (2) feed `limited` and `refused` from `FacilityLimited` (PR 3); (3) feed the gauges `pending` and `condition` from `RecordSnapshot` rows; (4) intern `Names.FacilityClasses` and add the attribute values `economysim.facility_class` and `economysim.facility_limit` (`cut`, `voided`); (5) take `FacilityChanged` and `FacilityLimited` out of `ignoredEvents`. One more candidate, not in the catalogue: a counter `economysim.facility.ruined` by `economysim.cause` (`decay`, `use`, `owner_removed`; closed set, bounded). `count` alone cannot say why capital fell, and a ruin by use against one by decay points at different faults. The adapter PR decides it with the catalogue edit; no core change is needed.
 
-### N-387 The cause of `FacilityChanged` kind `installed` is `recipe` in code, and 14.1 has no entry for it
-
-- **Areas:** CAP, OBS
-- **Raised:** 2026-11-19, plan 3-cap PR 3 (Phase 6), `spec-infrastructure.md` 14.1, `infrastructure_step.go`.
-- **Note:** the cause list of 14.1 has no entry for the install of a pending store facility at P8.3b. The code uses `recipe` (the facility was made by a build) for every install, also for an initial store row that was pending at construction. Open for the owner: either add `facility` to the cause list of 14.1 (the constant exists) and change the code and the golden rendering of the module in the same change, or keep `recipe` and say so in 14.1. Until then a reader of `FacilityChanged` cannot tell an install after a build from one of an initial row except by the `Kind` and the tick.
-
 ### N-388 Storage's `ended` list exists only under an observer
 
 - **Areas:** CAP, STO
@@ -2663,4 +2657,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: b51eac3b6ed7bce8bf5a9de6
+NOTES-TAG: db82a90232cd36229a85f903

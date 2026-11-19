@@ -569,7 +569,8 @@ const (
 	// CauseRemoval is the cause of a TitleTransferred that moves the titles of a
 	// removed agent to the pool of each endowment's region (spec-land.md 6.4.1).
 	CauseRemoval Cause = "removal"
-	// CauseRecipe is a FacilityChanged built or repaired at the completion of a job
+	// CauseRecipe is a FacilityChanged built or repaired at the completion of a job, and
+	// every installed one, also an initial store row pending at construction
 	// (spec-infrastructure.md 14.1).
 	CauseRecipe Cause = "recipe"
 	// CauseInitial is a FacilityChanged added at construction from an initial row.

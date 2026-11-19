@@ -1350,7 +1350,10 @@ map or a pointer, and both are built only when an observer was supplied
 | `WorldCreated` (the names table gains) | construction | | the `FacilityClassID`s with their strings (`spec-observability.md` 3.2.4) |
 
 The **causes** of `FacilityChanged` are constants of the root package (`event.go`):
-`recipe` (a `built` or `repaired` at a completion), `initial` (3.4.3), `consumer` (a
+`recipe` (a `built` or `repaired` at a completion, and every `installed`: the install of
+a pending store facility at P8.3b, also an initial store row that was pending at
+construction, carries `recipe` too, so no cause names a retry; owner decision, N-387),
+`initial` (3.4.3), `consumer` (a
 call), `decay`, `use` (6.2.1), `role_changed`, `owner_removed` (7.1, 5.4.3).
 `FacilityLimited` is **bounded by the configuration** (regions times classes), not by
 agents or executions: it is an aggregate of the kind of `WantShortfall`.
