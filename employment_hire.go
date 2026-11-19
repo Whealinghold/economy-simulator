@@ -2,11 +2,14 @@ package economysim
 
 import (
 	"cmp"
+	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	payroll "github.com/Whealinghold/economy-sim/internal/employment"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 	"github.com/Whealinghold/economy-sim/internal/transit"
 )
 
@@ -488,6 +491,12 @@ func (w *World) hiredReweighed(a *agent) {
 	}
 	w.employment.hired[h.employer] -= h.k - a.job.executions
 	h.k = a.job.executions
+	// No event reports a fall of a hire: HireEnded.Households is the only trace, and
+	// it differs from HireFormed.Households without this line saying why.
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "hire reweighed",
+			slog.Int64(logkeys.Agent, int64(a.id)), slog.Int64(logkeys.Households, h.k))
+	}
 }
 
 // fillHireState sets the employment group of the state of agent a: the employer of

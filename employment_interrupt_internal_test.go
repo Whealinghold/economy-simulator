@@ -1,9 +1,12 @@
 package economysim
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -176,6 +179,39 @@ func TestInterrupt_WorkerWeightFalls_NotAbandoned_RemainderRefundedAtEnd(t *test
 		Households: 1, Worked: 3, Paid: 280, Refunded: 140, Cause: CauseCompleted}
 	if len(log.ended) != 1 || log.ended[0] != want {
 		t.Errorf("HireEnded = %+v, want %+v", log.ended, want)
+	}
+}
+
+// TestInterrupt_WorkerWeightFalls_DebugLine verifies that the fall of a hired worker's
+// weight, which has no event, leaves one Debug line naming the worker and the
+// executions the hire now holds, and that no line is written at a level above Debug.
+//
+// Requirement: FR-EMP-033, NFR-OBS-001
+func TestInterrupt_WorkerWeightFalls_DebugLine(t *testing.T) {
+	t.Parallel()
+	plan := func(v *AgentView) JobRequest {
+		if v.Role == 0 {
+			return JobRequest{NoJob: true, Hire: HireRequest{Recipe: 0, Positions: 2, Bid: 100}}
+		}
+		return JobRequest{NoJob: true, Offer: LabourOffer{Households: 2, Reserve: 40}}
+	}
+	for _, tc := range []struct {
+		level slog.Level
+		want  bool
+	}{{slog.LevelDebug, true}, {slog.LevelInfo, false}} {
+		var buf bytes.Buffer
+		lg := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: tc.level}))
+		w := hireWorld(t, defaultHire(hireOpts{hands: 2, handScale: 2, handRecipe: true}), plan, WithLogger(lg))
+		stepN(t, w, 1)
+		hand := slotsOf(w, "hand")[0]
+		buf.Reset()
+		if err := w.execReduce(0, &w.agents[hand], Decision{Kind: DecideReduce, Agent: AgentID(hand), Households: 1, Cause: CauseStarved}); err != nil {
+			t.Fatalf("execReduce() = %v, want nil", err)
+		}
+		line := fmt.Sprintf("msg=\"hire reweighed\" agent=%d households=1", hand)
+		if got := strings.Contains(buf.String(), line); got != tc.want {
+			t.Errorf("level %v: log has %q = %t, want %t; log:\n%s", tc.level, line, got, tc.want, buf.String())
+		}
 	}
 }
 
