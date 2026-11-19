@@ -57,7 +57,9 @@ func (w *World) flowApplied(f *fiscalFlowState, tick int64, region RegionID, a f
 	}
 	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
 		w.log.LogAttrs(ctx, slog.LevelDebug, "fiscal flow applied", slog.String(logkeys.Flow, f.id),
-			slog.Int64(logkeys.Region, int64(region)), slog.Int64(logkeys.Due, a.due), slog.Int64(logkeys.Applied, a.applied))
+			slog.Int64(logkeys.Region, int64(region)), slog.Int64(logkeys.Commodity, int64(commodity)),
+			slog.Int64(logkeys.Due, a.due), slog.Int64(logkeys.Applied, a.applied),
+			slog.Int64(logkeys.Cut, a.cut), slog.Int64(logkeys.Headroom, a.headrm))
 	}
 }
 
