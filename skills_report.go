@@ -107,7 +107,7 @@ func (w *World) skillsRoleRows(rows []RoleRow, g RegionID) {
 		slots := w.trainersOf(g, RoleID(r))
 		s.open = s.open[:0]
 		for _, t := range slots {
-			s.open = append(s.open, skill.Trainer{Held: t.held, Max: t.max})
+			s.open = append(s.open, skill.Trainer{Held: t.held, Max: w.org.trainerMax(&w.agents[t.id], g, w.cfg.Roles[r].MaxTrainees)})
 		}
 		rows[r].Places, rows[r].Trainers = skill.Open(s.open), int64(len(slots))
 		rows[r].Queue = int64(len(s.queue[s.cell(g, RoleID(r))]))

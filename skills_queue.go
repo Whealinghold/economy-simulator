@@ -101,12 +101,11 @@ func (w *World) traineeshipCompleted(a *agent, g RegionID, to RoleID) {
 	}
 }
 
-// trainerSlot is a candidate trainer of a role in a region: its ID, the trainees it
-// holds and the most it may hold, in ascending ID order. The most is the role's
-// MaxTrainees, or the least of it and its body's for a member (spec-institutions.md 5.7.3).
+// trainerSlot is a candidate trainer of a role in a region: its ID and the
+// trainees it holds, in ascending ID order.
 type trainerSlot struct {
-	id        AgentID
-	held, max int64
+	id   AgentID
+	held int64
 }
 
 // canTrain reports whether agent a may be the trainer of a place of its role: a
@@ -133,18 +132,19 @@ func (w *World) trainersOf(g RegionID, r RoleID) []trainerSlot {
 	s.slots = s.slots[:0]
 	for i := w.firstHousehold; i < len(w.agents); i++ {
 		if a := &w.agents[i]; a.weight >= 1 && a.role == r && w.regionOf(a) == g && w.canTrain(a) {
-			s.slots = append(s.slots, trainerSlot{id: a.id, held: s.held(a.id), max: w.org.trainerMax(a, g, w.cfg.Roles[r].MaxTrainees)})
+			s.slots = append(s.slots, trainerSlot{id: a.id, held: s.held(a.id)})
 		}
 	}
 	return s.slots
 }
 
 // freest returns the index of the trainer with the fewest trainees, the lower ID
-// first, and false when every trainer holds its most.
-func freest(trainers []trainerSlot) (int, bool) {
-	best := -1
+// first, and false when every trainer holds its most: the role's MaxTrainees, or the
+// least of it and its body's for a member (spec-institutions.md 5.7.3).
+func (w *World) freest(trainers []trainerSlot, g RegionID, r RoleID) (int, bool) {
+	best, roleMax := -1, w.cfg.Roles[r].MaxTrainees
 	for i, t := range trainers {
-		if t.held < t.max && (best < 0 || t.held < trainers[best].held) {
+		if t.held < w.org.trainerMax(&w.agents[t.id], g, roleMax) && (best < 0 || t.held < trainers[best].held) {
 			best = i
 		}
 	}
@@ -195,7 +195,7 @@ func (w *World) fillPlaces(g RegionID, r RoleID) (placeStop, AgentID) {
 	s, cell := w.skills, w.skills.cell(g, r)
 	trainers, gain := w.trainersOf(g, r), w.newGainer(g, r)
 	for i := 0; i < len(s.queue[cell]); {
-		at, free := freest(trainers)
+		at, free := w.freest(trainers, g, r)
 		if !free {
 			return placeNone, s.queue[cell][i].agent
 		}
