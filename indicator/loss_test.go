@@ -264,3 +264,21 @@ func mustTable(t *testing.T, regions, commodities int) indicator.Prices {
 	}
 	return p
 }
+
+// TestDeliveredPrice_AccountLostOnlyRowIsNoLane verifies that a commodity that the
+// traveller's own account lost at an arrival, and that no line of the shipment
+// carried, gets no lane of the delivered price: it never moved on the lane.
+//
+// Fix: plan 3-rsk final review. The AccountLost row of such a commodity has Shipped 0,
+// and DeliveredPrice added a lane, with the origin's price, for every row of the lane.
+func TestDeliveredPrice_AccountLostOnlyRowIsNoLane(t *testing.T) {
+	t.Parallel()
+	w := lossWindow(t,
+		economysim.ShipmentDispatched{Tick: 10, Region: alpha, To: beta, Units: 10, Lines: []economysim.Amount{{Commodity: grain, Quantity: 10}}},
+		economysim.ShipmentArrived{Tick: 10, Region: alpha, To: beta, Lines: []economysim.ArrivedLine{{Commodity: grain, Shipped: 10, Delivered: 10}},
+			AccountLost: []economysim.Amount{{Commodity: loaf, Quantity: 1}}})
+	got, err := indicator.DeliveredPrice(w, nil, valleyTable(t, w, alphaP, betaP))
+	if err != nil || len(got.Lanes) != 1 || got.Lanes[0].Commodity != grain {
+		t.Errorf("DeliveredPrice().Lanes = %+v, %v, want the one lane of grain (loaf only left the account)", got.Lanes, err)
+	}
+}
