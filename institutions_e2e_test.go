@@ -200,3 +200,35 @@ func TestEndToEnd_InstitutionsOffLeavesNoTrace(t *testing.T) {
 		}
 	}
 }
+
+// Example_institutionsLegalPrice shows what a consumer reads from a world with a body, a
+// right and a legal price: the households the body leaves outside are refused what its
+// right reserves, and the cap lowers the orders above it.
+func Example_institutionsLegalPrice() {
+	cfg := institutionsConfig()
+	cfg.Modules.Institutions.Bodies[0].Places = 40
+	cfg.Modules.Institutions.Controls[0].CapBP, cfg.Modules.Institutions.Controls[0].FloorBP = 8_000, 0
+	var refused, lowered int64
+	obs := economysim.ObserverFunc(func(e economysim.Event) {
+		switch e := e.(type) {
+		case economysim.RightRefused:
+			refused += e.Produce + e.Sell + e.Buy
+		case economysim.PriceControlled:
+			lowered += e.Bids
+		}
+	})
+	w, err := economysim.NewWorld(cfg, economysim.WithSeed(1), economysim.WithObserver(obs))
+	if err != nil {
+		panic(err)
+	}
+	for range 40 {
+		if err := w.Step(); err != nil {
+			panic(err)
+		}
+	}
+	fmt.Println("refused to outsiders:", refused > 0)
+	fmt.Println("orders lowered to the cap:", lowered > 0)
+	// Output:
+	// refused to outsiders: true
+	// orders lowered to the cap: true
+}
