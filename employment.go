@@ -74,6 +74,11 @@ type employment struct {
 	res   payroll.Result
 	cur   *labourLane
 	tally []labourTally
+	// unmatchedRun and unfilledRun are the runs of ticks of the two Warn lines of
+	// spec-employment.md 15.2.2 by region * roles + role. They are diagnostic: they
+	// affect no result and are saved (tag 24) so that a resumed run logs as the
+	// original did. The lines that keep them are the aggregate's (a later PR).
+	unmatchedRun, unfilledRun []int64
 }
 
 // payrollTally is the PayrollPaid of one role in the region being paid, and
