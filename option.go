@@ -27,6 +27,7 @@ type options struct {
 	clearings         registry[Clearing]
 	strategies        registry[Strategy]
 	spawners          registry[Spawner]
+	policies          registry[Policy]
 }
 
 // defaultOptions returns the options of a world built with no option: the
@@ -173,6 +174,7 @@ type registrations struct {
 	clearings  registry[Clearing]
 	strategies registry[Strategy]
 	spawners   registry[Spawner]
+	policies   registry[Policy]
 }
 
 // averageName is the name of the built-in clearing, AverageClearing.
@@ -282,4 +284,16 @@ func resolveSpawner(o *options, name string, path []string) (Spawner, error) {
 		return s, nil
 	}
 	return nil, &ValidationError{Path: path, Rule: ErrUnknownSpawner, Value: name}
+}
+
+// WithPolicy registers p under name, so that PolicyActor.Policy may name it
+// (spec-policy.md 4.5). It is additive. A name that is not an ID is ErrInvalidID, a
+// name given twice or one of the reserved names "hold", "schedule", "rule" and
+// "directed" is ErrDuplicateID and a nil p is ErrNilExtension, checked in that order.
+// The name is part of the configuration hash and the code behind it is not. A typed nil
+// held in a non-nil Policy is not detected.
+func WithPolicy(name string, p Policy) Option {
+	return func(o *options) error {
+		return o.policies.add(name, p, p == nil, policyHold, policySchedule, policyRule, policyDirected)
+	}
 }

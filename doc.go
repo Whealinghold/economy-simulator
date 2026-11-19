@@ -1827,6 +1827,13 @@
 //     leaves the lever alone because the reading is in the band.
 //   - Reaction, schedule step, cycle: a rule's row for one lever (Reaction), one step of a
 //     fixed schedule (ScheduleStep) and the length in ticks after which a schedule repeats.
+//   - Policy, HoldPolicy, PolicyView, LeverView, Settings, LeverSetting: the extension a policy
+//     actor's decision calls (Policy, one method, registered by WithPolicy), the default that
+//     returns nothing (HoldPolicy), the plain-data view it reads (PolicyView and, for each
+//     lever, LeverView) and what it returns (Settings, a list of LeverSetting). The built-ins
+//     schedule, rule and directed are not exported values.
+//   - PolicyDecided, CausePolicy: the event of one decision of an actor with any entry or reaction
+//     held, and the cause "policy" that the owners' slot events carry for a write of an actor.
 //   - Cover, policy, kind: the insurance module and the act of buying and selling single-event
 //     protection, and the record of one cover formed (a "cover policy" where it could be
 //     taken for a policy actor's Policy). A policy is of the route kind (one shipment) or the

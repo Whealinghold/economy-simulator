@@ -182,6 +182,7 @@ func (w *World) allocate() {
 	w.outside = outsideMarks(&w.cfg)
 	w.org = newInstitutions(&w.cfg, w.polity, w.set, w.outside)
 	w.tec = newTechnology(&w.cfg, w.outside, &w.geo, w.rnd.seed)
+	w.policy = newPolicy(&w.cfg, w.polity, w.geo.g, w.reg.policies, w.outside)
 	w.firstHousehold = regions + w.external.counterpartyCount() + w.polity.treasuryCount()
 	if w.external != nil {
 		w.external.assignAgents(regions)
@@ -399,6 +400,7 @@ func modulesOn(c *Config) []string {
 		{"risk", m.Risk != nil},
 		{"fiscal", m.Fiscal != nil},
 		{"institutions", m.Institutions != nil},
+		{"policy", m.Policy != nil},
 	}
 	on := []string{}
 	for _, t := range table {
@@ -520,5 +522,5 @@ func (w *World) summaryLater(attrs []slog.Attr) []slog.Attr {
 	if w.infra != nil {
 		attrs = append(attrs, slog.Int(logkeys.FacilityClasses, len(w.infra.cls)), slog.Int(logkeys.Facilities, len(w.infra.fac)))
 	}
-	return w.orgSummary(attrs)
+	return w.policySummary(w.orgSummary(attrs))
 }
