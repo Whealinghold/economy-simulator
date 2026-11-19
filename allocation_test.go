@@ -51,6 +51,20 @@ const tenureStepAllocBaseline = 72
 // (NFR-CRD-001, TestCredit_AllocsPerRun). Raising it is a reviewed change (rule 8.2).
 const creditStepAllocBaseline = 94
 
+// riskStepAllocBaseline and riskStoreStepAllocBaseline are the same measure for the risk module alone
+// on: pack two with its trade and transport overlays and overlay/risk.toml (a unit row and a common
+// row each way, so P3.1a takes its words every tick), and pack one with overlay/storage.toml and
+// overlay/risk-store.toml (a unit row on the barn, so P8.1a takes a word for each barn that holds goods).
+// NFR-RSK-001 asks no more than the module off: each is the figure of the same layers without the
+// risk overlay (rows "two+transport" and "one+storage"). Measured under -race at 50 ticks, seed 1:
+// 64 and 64 on pack two, 70 and 70 on pack one, so the module adds nothing to a step. Raising
+// one is a reviewed change (rule 8.2).
+const (
+	riskStepAllocBaseline      = 64
+	riskStoreStepAllocBaseline = 70
+	twoTransportStepAllocBase  = 64
+)
+
 // TestStep_AllocationsStayAtTheBaseline checks that a full Step of pack one
 // allocates no more than the baseline. Not parallel: testing.AllocsPerRun
 // panics in a parallel test. Allocation counts differ under -race, so the test
@@ -77,7 +91,10 @@ func TestStep_AllocationsStayAtTheBaseline(t *testing.T) {
 		{"one+storage", packOneStorage, storageStepAllocBaseline, false}, // NFR-STO-002: the off world's figure, see the constant
 		{"one+credit", packOneCredit, creditStepAllocBaseline, false},    // NFR-CRD-001: the settlement and the round work in scratch
 		{"one+resources+tenure", append(slices.Clone(packOneResources), "overlay/tenure.toml"), tenureStepAllocBaseline, false},
-		{"one+external", packExternal(), stepAllocBaseline, false}, // NFR-EXT-001: no more than the off world (36 measured)
+		{"two+transport", packTwoTransport, twoTransportStepAllocBase, false},
+		{"two+transport+risk", packTwoRisk, riskStepAllocBaseline, false},               // NFR-RSK-001: P3.1a and the dispatch work in scratch
+		{"one+storage+risk-store", packOneRiskStore, riskStoreStepAllocBaseline, false}, // NFR-RSK-001: P8.1a works in scratch
+		{"one+external", packExternal(), stepAllocBaseline, false},                      // NFR-EXT-001: no more than the off world (36 measured)
 	} {
 		cfg := loadValidPack(t, row.layers...)
 		w, err := economysim.NewWorld(cfg, economysim.WithSeed(1))
