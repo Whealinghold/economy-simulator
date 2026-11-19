@@ -1,6 +1,7 @@
 package saving_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/ordering"
@@ -151,5 +152,22 @@ func TestBounds_EveryProductInside128Bits(t *testing.T) {
 	b := saving.Candidate{Benefit: maxMoney - 2, Cost: maxMoney - 1, ID: 2}
 	if !saving.Better(a, b) {
 		t.Error("cross-multiplication at the bound must order the two")
+	}
+}
+
+// TestLowered_BandIsClamped checks that a band outside [0, 10 000] neither
+// raises the hurdle nor lowers it below 0.
+//
+// Requirement: FR-SAV-016
+func TestLowered_BandIsClamped(t *testing.T) {
+	t.Parallel()
+	if got := saving.Lowered(15_000, -5_000); got != 15_000 {
+		t.Errorf("negative band: Lowered = %d, want 15000", got)
+	}
+	if got := saving.Lowered(15_000, 20_000); got != 0 {
+		t.Errorf("band above 10000: Lowered = %d, want 0", got)
+	}
+	if got := saving.Lowered(15_000, math.MinInt64); got != 15_000 {
+		t.Errorf("MinInt64 band: Lowered = %d, want 15000", got)
 	}
 }

@@ -16,9 +16,11 @@ func Committed(held, inputs int64) bool {
 }
 
 // Lowered returns the hurdle of a committed household, hurdle * (10 000 -
-// band) / 10 000 (spec 5.5.3).
+// band) / 10 000 (spec 5.5.3). The band is held in [0, 10 000]: a band outside
+// it would raise the hurdle or flip its sign.
 func Lowered(hurdle, band int64) int64 {
-	return satMulDiv(nonneg(hurdle), nonneg(scale-band), scale)
+	band = min(nonneg(band), scale)
+	return satMulDiv(nonneg(hurdle), scale-band, scale)
 }
 
 // Passes reports whether a project passes the test of spec 5.5.1

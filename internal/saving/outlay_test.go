@@ -261,3 +261,17 @@ func TestServiceTime_NegativePaybackIsZero(t *testing.T) {
 		}
 	}
 }
+
+// TestFunded_NegativeMoneySaturatesDown checks that an invalid balance at the
+// bottom of int64 cannot wrap up into a funded household.
+//
+// Requirement: FR-SAV-019
+func TestFunded_NegativeMoneySaturatesDown(t *testing.T) {
+	t.Parallel()
+	if saving.Funded(math.MinInt64, math.MinInt64, 0, 0) {
+		t.Error("Funded with money at MinInt64 and held at MinInt64 = true, want false")
+	}
+	if saving.Funded(math.MinInt64, 10, 100, 0) {
+		t.Error("Funded with money at MinInt64 = true, want false")
+	}
+}
