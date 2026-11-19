@@ -293,12 +293,12 @@ func (w *World) storeClassGate() func(RegionID, int) bool {
 	return func(g RegionID, class int) bool { return flags[class] < 0 || w.regionHas(g, flags[class]) }
 }
 
-// wireSeams fills the seams of the modules built before this one, once the classes
-// of the regions exist: the gate of the store classes, and the slot of the headroom
-// of a completion (hook H-10). The stores of the initial agents a class lacks are not
-// given, and each such agent's AgentSpawned says how many (spec-storage.md 3.2.3).
-func (b *builder) wireSeams() {
-	w := b.w
+// wireSlots fills the slots of the modules built before this one: the headroom of a
+// completion (hook H-10) and the gate of the store classes (spec-storage.md 3.2.3). A
+// restore calls it too, after allocation, so a restored world holds the slots the
+// uninterrupted one holds (N-462); construction calls it after the initial agents, which the
+// gate would otherwise refuse before lockStores counts them. It does nothing without the module.
+func (w *World) wireSlots() {
 	if w.set == nil {
 		return
 	}
@@ -307,6 +307,15 @@ func (b *builder) wireSeams() {
 	}
 	if w.sto != nil {
 		w.sto.gate = w.storeClassGate()
+	}
+}
+
+// wireSeams takes from the initial agents the stores a class lacks, once the classes of
+// the regions exist: the stores of the initial agents a class lacks are not given, and
+// each such agent's AgentSpawned says how many (spec-storage.md 3.2.3), after wireSlots.
+func (b *builder) wireSeams() {
+	b.w.wireSlots()
+	if b.w.set != nil && b.w.sto != nil {
 		b.lockStores()
 	}
 }
