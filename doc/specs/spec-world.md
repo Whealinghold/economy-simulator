@@ -1370,6 +1370,7 @@ own: it is kept because a site that is not called takes no `Seed` and no word. A
 that adds a **creation** word adds it to D1's table for every agent whatever its switches
 (5.7.2), so that the words of an agent's creation stream do not depend on the modules
 that are on. There is no module-level word: D16 takes none (7.3).
+A saver's target above the reserve and a planned project change the budgets and the intents the world considers, so a module that takes no word can still change the **count** of the words the market and the production sites take once a household's target exceeds its reserve; a paired comparison across the saving module's parameters is exact only until then (`spec-saving-and-investment.md` 9.2, N-124).
 
 7.4.3. **A draw that might be skipped is taken anyway** inside one stream, when
 skipping would make a later word of that stream depend on an outcome: the default

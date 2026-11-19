@@ -242,6 +242,9 @@ func (c *cardChecker) check(e economysim.Event) {
 		c.member("TitleTransferred", e.Tick, "Cause", string(e.Cause))
 	case economysim.FacilityChanged:
 		c.facility(e)
+	case economysim.FacilityLimited:
+		c.region("FacilityLimited", e.Tick, e.Region)
+		c.id("FacilityLimited", e.Tick, "Class", int(e.Class), len(c.names.FacilityClasses))
 	case economysim.RentScaled:
 		c.region("RentScaled", e.Tick, e.Region)
 		c.id("RentScaled", e.Tick, "Resource", int(e.Resource), len(c.names.Resources))

@@ -1827,4 +1827,63 @@
 //     leaves the lever alone because the reading is in the band.
 //   - Reaction, schedule step, cycle: a rule's row for one lever (Reaction), one step of a
 //     fixed schedule (ScheduleStep) and the length in ticks after which a schedule repeats.
+//   - Cover, policy, kind: the insurance module and the act of buying and selling single-event
+//     protection, and the record of one cover formed (a "cover policy" where it could be
+//     taken for a policy actor's Policy). A policy is of the route kind (one shipment) or the
+//     store kind (the goods an agent holds, for one tick). The log key is cover_policy.
+//   - Underwriter, insured: the two parties of a policy, agents whose roles carry an
+//     Underwrite block or an Insure block (UnderwriteTerms, InsureTerms, CoverTerms). The
+//     word insurer is not used.
+//   - Premium (of a cover), sum insured, maximum payout, cover share, loading, store rate: the
+//     money the insured pays at formation, the value of the goods covered, the most the
+//     policy pays, the share of a loss the underwriter bears (a coinsurance, in basis
+//     points), the underwriter's price over the expected payout, and its price of a store
+//     policy as a share of the sum.
+//   - Capacity, open liability: of an underwriter, what its cap allows it to stand behind
+//     and the sum of the maximum payouts of its open policies.
+//   - Unit value, value cap, loss value, due: a unit of a commodity valued at its published
+//     price capped at a multiple of its reference price; that multiple; the value of the
+//     units a loss took at those unit values; and what the policy owes for it, the cover
+//     share of the loss value cut at the maximum payout.
+//   - Payout, payout claim, shortfall: the money paid under a policy, the ledger claim
+//     (origin payout) the underwriter owes for the part its pot could not pay, and that part.
+//   - Cover round, lane request: the pass at P3.3c that admits, orders, matches and forms
+//     policies (its lane is a region, not a transport lane); a request for one lane of a
+//     trip (LaneCover), beside a request for a store (StoreCover) and an offer to
+//     underwrite (CoverOffer).
+//   - CoverView, CoverPolicyRow, InsuranceTotals, Insurance: the view group of a strategy,
+//     the snapshot rows of the open policies and of the totals, and the module's
+//     configuration.
+//   - CoverFormed, CoverEnded, CoverRound, CoverSettled: the events of a policy formed, of a
+//     policy ended, of the cover round and of the settlement of a position.
+//   - Saving, Saver, ProjectWorth: the optional module of saving and investment, the block of a
+//     role whose households save for a purpose and invest, and the row that states what a whole
+//     facility of a class is worth to the role per tick (spec-saving-and-investment.md 3.2).
+//     The word investment means a build or a repair only. SavingView is the group of the view
+//     that carries the block, the drawdown, the facilities and the classes; SavingState is the
+//     result of the query Saving; SavingTargetResult and ProjectChoice are the results of the
+//     two pure rules SavingTarget and ChooseProject; SavingBar names the four bars (no return,
+//     standing, unreachable, survival); SavingPlanned is the event of the counts.
+//   - Savings target, floor of the target, goal: S* is the floor plus the goal and replaces
+//     the reserve in the excess of the spend cap and nowhere else. The floor of the target
+//     is the larger of the reserve and the precaution buffer (it is not the work floor, the
+//     cost floor or the subsistence floor), and the goal of a household is the money set
+//     aside for its chosen project (it is not a want or a target ratio).
+//   - Precaution buffer, drawdown: the share of the deepest fall of a household's own
+//     cumulative income less cost over its welfare window, capped in ticks of upkeep cost;
+//     the drawdown is that fall and is a pure function of the ring.
+//   - Project, margin test, benefit and cost of a project: a recipe of the role's list with a
+//     Builds or Repairs clause; the test that passes it when its benefit over its cost clears
+//     the hurdle; the benefit is the gain of the facility over the ticks it serves and the
+//     cost is the inputs plus the job the household gives up (the benefit of a project is not
+//     the benefit of a trade or a title).
+//   - Job value, hurdle, spread, payback horizon, commit band: the best job a household can run
+//     with and without the capacity of a class; the return a project must give per unit of
+//     its cost, the fixed per-agent spread added to it by the agent's Weyl value, the ticks a
+//     facility's service is counted over, and the fall of the hurdle for a household that
+//     already holds half of the inputs.
+//   - Outlay, funded, worth: the money a household needs in hand to buy a project and eat
+//     through it; a household that holds the outlay and the floor; the pack's value of a
+//     whole facility of a class that the rule cannot compute (the row ProjectWorth).
+//   - Idle money: the money a household holds above its savings target, the measure of a hoard.
 package economysim

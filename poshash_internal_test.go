@@ -422,6 +422,9 @@ func demandOn(w *World) bool { return w.demand != nil }
 // subsistenceOn is the guard of the rows of the subsistence module (plan 2-10).
 func subsistenceOn(w *World) bool { return w.sub != nil }
 
+// infraOn is the guard of the row of the infrastructure module.
+func infraOn(w *World) bool { return w.infra != nil }
+
 // resourcesOn is the guard of the rows of the resources module (D177).
 func resourcesOn(w *World) bool { return w.res != nil }
 
@@ -567,6 +570,7 @@ var replayRows = []replayRow{
 	{id: "P8.2", run: noErr((*World).p82Flows)},
 	{id: "P8.3", run: noErr((*World).p83Regen), on: resourcesOn},
 	{id: "P8.3a", run: noErr((*World).p83aRent), on: tenureOn},
+	{id: "P8.3b", run: noErr((*World).p83bFacilities), on: infraOn},
 	{id: "P8.3c", run: noErr((*World).p83cTechnology), on: techOn},
 }
 

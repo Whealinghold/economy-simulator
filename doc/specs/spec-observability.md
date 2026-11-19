@@ -1234,10 +1234,12 @@ in the snapshot because REG and TRN asked, and they are the same rows as in
 | `Claims` | by claim ID | `Claim`, `Origin`+ (`loan`, `payout`), `Creditor` (an `AgentID`, or the estate's agent ID, which is its `RegionID`), `Debtor`, `Region` (the debtor's), `Principal`, `Interest`, `PrincipalOwed`, `InterestOwed`, `RateBP`, `Formed`, `Due`, `Overdue` | CRD 16.4, INS 15.4 | F |
 | `Credit` | one value | `Lent`, `Repaid`, `InterestPaid`, `InterestFixed`, `LostPrincipal`, `LostInterest`, `Awarded`+ (the payout claims awarded by INS, whose `Short` is read from it) | CRD 16.4, INS 15.4 | F |
 | `Policies` | by cover policy ID | `Policy`, `Insured`, `Underwriter`, `Region`, `Shipment`, `Sum`, `MaxPayout`, `CoverBP`, `Premium`, `Formed` (route covers only; a store cover opens and ends inside one tick) | INS 15.4 | F |
-| `Insurance` | one value | `Formed`, `Premiums`, `Due`, `Paid`, `Dropped`, `Cut` (`Short` is `Credit.Awarded`, read, not saved twice) | INS 15.4 | F |
+| `Insurance` | one value | `Formed`, `Premiums`, `Due`, `Paid`, `Short` (the value of `Credit.Awarded`, read, not saved twice), `Dropped`, `Cut` | INS 15.4 | F |
 
 Each is bounded by what is in flight, and so by `MaxOpen`, `MaxClaims`, `MaxPolicies`,
-the shipments in flight, the hires and the agents (5.6). `Claims` of origin `payout`
+the shipments in flight, the hires and the agents (5.6). The row types of the insurance
+module are `CoverPolicyRow` (`Policies`) and `InsuranceTotals` (`Insurance`), and its
+group of `AgentState` is `Cover` (plan 3-ins E9). `Claims` of origin `payout`
 are the insurance claims; the credit instruments count `loan` only (6.2.1).
 
 #### 5.3.9 The outside

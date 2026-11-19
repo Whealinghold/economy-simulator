@@ -576,7 +576,8 @@ const (
 	// CauseRemoval is the cause of a TitleTransferred that moves the titles of a
 	// removed agent to the pool of each endowment's region (spec-land.md 6.4.1).
 	CauseRemoval Cause = "removal"
-	// CauseRecipe is a FacilityChanged built or repaired at the completion of a job
+	// CauseRecipe is a FacilityChanged built or repaired at the completion of a job, and
+	// every installed one, also an initial store row pending at construction
 	// (spec-infrastructure.md 14.1).
 	CauseRecipe Cause = "recipe"
 	// CauseInitial is a FacilityChanged added at construction from an initial row.
@@ -2621,6 +2622,25 @@ type FacilityChanged struct {
 }
 
 func (FacilityChanged) isEvent() {}
+
+// FacilityLimited is the aggregate of what the facilities of one class in one region cut
+// or refused in a tick (spec-infrastructure.md 14.1), emitted at P8.3b once per region and
+// class in ascending (RegionID, class) order and never when Cut, Refused, Voided and
+// Pending are all 0. It is bounded by regions times classes and built only when an
+// observer was supplied. It is emitted only when the infrastructure module is on.
+type FacilityLimited struct {
+	Tick   int64
+	Region RegionID
+	Class  FacilityClassID
+	// Served is the executions started that used a facility of the class, Cut the
+	// executions not started for capacity though inputs and weight allowed them, Refused
+	// the starts refused whole with a reason of the limits, Voided the executions of a
+	// build or repair that did nothing at the completion, and Pending the store
+	// facilities waiting for storage to give the store.
+	Served, Cut, Refused, Voided, Pending int64
+}
+
+func (FacilityLimited) isEvent() {}
 
 // RouteRiskScaled is emitted once per route row whose scale a SetRouteRiskScales call
 // changes, in (From, To, Mode) order, after the whole call has been applied

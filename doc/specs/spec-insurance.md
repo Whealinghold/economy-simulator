@@ -630,8 +630,11 @@ a new position of phase 8 after P8.1a (RSK's store strikes) and before P8.2 (the
 flow totals). Both run only with the module on.
 
 8.1.2. **Why P1.3a.** After the arrival, because the loss is applied there and its
-amounts are in the scratch of the arrival (6.1.2, 20: an edit to TRN keeps them
-whether or not an observer was supplied); before P1.4 so that the payout is in
+amounts are in the per-tick list of the arrivals that RSK's `risk_loss.go` keeps
+(6.1.2, 20.2: one row for each shipment that arrived in the tick, kept whether or not an
+observer was supplied and only while this module is on; the scratch of the single last
+arrival would not do, because P1.3a runs after all of P1.3; a held arrival has no row
+and its policy stays open until the arrival completes; N-470); before P1.4 so that the payout is in
 the shipper's balance at the contract's settlement, which reads no balance and so
 makes no difference to a result: the order is a rule, not a choice of result. The
 payout moves before the welfare record of its tick is pushed (P6.3), so it enters that
@@ -1300,7 +1303,9 @@ claim (`spec-credit.md` 16.3).
 
 Deep copies, bounded by `MaxPolicies` (architecture.md 12.4,
 `spec-observability.md` 5.6), cost class F. `Policies` is a sixth in-flight set
-besides `Shipments`, `Away`, `Journeys`, `Contracts` and `Claims`. Names are OBS's:
+besides `Shipments`, `Away`, `Journeys`, `Contracts` and `Claims`. Names are OBS's; the
+row types are `CoverPolicyRow` (for `Policies`) and `InsuranceTotals` (for `Insurance`),
+and the group of `AgentState` is `Cover` (plan 3-ins E9):
 
 | Slice or field | Row | Fields | Source |
 |----------------|-----|--------|--------|
@@ -1396,9 +1401,12 @@ block.
 
 ### 16.6 Format version
 
-The claim record and the module's section change shape with the module on, so the
-format version changes with the first release that has the module (`spec-checkpoint.md`
-9.3), and a fixture of it joins `testdata/checkpoints/`.
+The claim record and the module's section change shape only with the module on: tag 29
+is written only while `Modules.Insurance` is non-nil and the claim's `Origin` is written
+into format 1 (`spec-checkpoint.md` 9.3). The format version is **not bumped**: nothing
+has been released, and the fixture of the all-modules-on world (`spec-checkpoint.md`
+9.2.1 item 3) is made once at the close of the stage, so no fixture is added for this
+module alone; its restore test builds its world from its overlay (plan 3-ins D15, E5).
 
 ## 17. Entries for the stability register
 
@@ -1694,7 +1702,7 @@ No open note is tagged `INS`. The notes tagged `ALL` and the others read are:
 |------|---------|------|
 | `spec-world.md` | 6.3, 6.5, 6.8, 6.10, 6.11 | rows P1.3a (after P1.3, before P1.4), P3.3c (after P3.3b, before P3.4) and P8.1b (after P8.1a, before P8.2); the event order of 12.1.1; 7.5 lists "the cover round's order and the settlement's remainders" among what does not draw; 11.1 the cost rows; **6.8, row P6.3**: "a flow of the insurance result that moves after P6.3 (P7.1, P8.1b) is added to the record of its tick by amending it" |
 | `spec-agents.md` | 3.6, 6.3, 6.4.1, 13, 14 | removal step **2f** (after CRD's 2d and 2e); the plan fields `Cover`, `Store`, `Offer`; the view group `Cover`; the errors and the `Debug` refusals; the welfare record's `N_t` is WEL's |
-| `spec-risk.md` | 5, 10.2, 10.3 | P1.3 keeps, for each arrived shipment, the lost units by commodity (lines and account) in scratch **whether or not an observer was supplied**, and P8.1a the lost units of each struck agent; the row INS of 10.3 says "used"; 10.2.1's list of reads is the one this spec uses |
+| `spec-risk.md` | 5, 10.2, 10.3 | P1.3 keeps, for **each** arrived shipment of the tick, the lost units by commodity (lines and account) in a per-tick list **whether or not an observer was supplied** (applied in plan 3-ins Phase 1: `spec-risk.md` 10.2.1), and P8.1a the lost units of each struck agent; the row INS of 10.3 says "used"; 10.2.1's list of reads is the one this spec uses |
 | `spec-transport.md` | 5.7, 9.2 | the arrival's scratch above; nothing else: no step of dispatch is added (5.1.2 here) |
 | `spec-credit.md` | 3.1, 3.2, 3.3.2, 3.6, 6.4 step 1, 11.1, 13.2, 16.1.3, 16.3, 16.3.1, 16.4, 17 | the operation `Obligate` and the field `Origin` (3.1, 3.2); the total `Awarded` and the identity of 3.6 item 1 (3.3.2, 3.6); `MaxClaims` counts payout claims (6.4 step 1); the principal paid on a payout claim is income and cost (11.1); `ForgiveClaims` ends loans only (13.2); **16.1.3**: a payout claim is added to an observer's open claims by `CoverEnded.Short` with its `Claim`, and it ends in a `LoanEnded` of origin `payout`; its payments are INS's `CoverSettled` of stage `claim`; **16.3**: the credit instruments count origin `loan` only (`CreditSettled` counts loans only), and the claims outstanding are INS's `economysim.insurance.claims`; **16.4**: the `Credit` row gains `Awarded` and the `Claims` row `Origin`; `LoanEnded` carries `Origin`; the ledger section saves both (17). The pass of P1.7a and the waterfall of 8 and 9 need no edit: they pay a claim of either origin (8.4.1) |
 | `spec-ledger.md` | 7.2, 10 | the reasons `premium` and `payout` (internal, money); the operation `Obligate`; "claims" are of two origins |
@@ -1800,7 +1808,7 @@ invariants. A gap is a number not yet used, not a missing requirement.
 | FR-INS-061 | The default insured MUST request a lane only when `MinLossBP` is above 0 and its expected loss is at least `MinLossBP` and the cargo's value at least `RuinShareBP` of its money, and a store cover only with `StoreShareBP` above 0 and a store owned (10.2). |
 | FR-INS-062 | The default underwriter MUST offer `ShareBP` of `max(0, CapBP * max(0, Money - Bids) / 10 000 - Open)`, with `Bids` the reserved cash of its plan, and nothing below `MinSum` or while it owes a payout claim (10.3). |
 | FR-INS-063 | `DefaultCover` and `DefaultOffer` MUST be exported functions of the view (10.4). |
-| FR-INS-064 | With the module on `G_t`, and so `income_t`, MUST include `N_t`, the payouts, the premiums and the principal of payout claims received less the premiums, payouts and principal of payout claims paid (an underwriter's premiums received are in `N_t` and in no other term), and `N_t` MUST be excluded from the observed wage, and a flow that moves after P6.3 (P7.1, P8.1b) MUST be added to the record of the same tick already pushed, by amending it, with no state of its own (11.1, 11.1.3). |
+| FR-INS-064 | With the module on `G_t`, and so `income_t`, MUST include `N_t`, the payouts, the premiums and the principal of payout claims received less the premiums, payouts and principal of payout claims paid (an underwriter's premiums received are in `N_t` and in no other term), each added through `addUnearned` as one signed amount, and `N_t` MUST be excluded from the observed wage, and a flow that moves after P6.3 (P7.1, P8.1b) MUST be added to the record of the same tick already pushed, by amending it, with no state of its own (11.1, 11.1.3). |
 | FR-INS-070 | `CoverFormed`, `CoverEnded`, `CoverRound` and `CoverSettled` MUST be emitted with the fields, positions and order of 15.1 and 12.1.1, and none MUST contain a map, a pointer or a wall-clock time. |
 | FR-INS-071 | A store policy that ends `no_loss` MUST NOT emit `CoverEnded` and MUST be counted in `CoverSettled.Ended` (15.1.1). |
 | FR-INS-072 | `CoverRound` MUST be emitted per region and tick in which a request or an offer was submitted and never when all its counts are 0, and `CoverSettled` per region and position in which a policy was settled and never when all are 0 (15.1.1). |
