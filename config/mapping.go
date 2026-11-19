@@ -370,6 +370,10 @@ func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Fiscal = l.fiscal(fs)
 		fs.finish()
 	}
+	if ps := m.sub("policy"); ps != nil {
+		cfg.Modules.Policy = l.policy(ps)
+		ps.finish()
+	}
 }
 
 // fiscal reads [modules.fiscal] (spec-config.md 6.2, spec-fiscal.md 3.1, 18): a flow of
