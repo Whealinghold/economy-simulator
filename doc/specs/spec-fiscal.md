@@ -703,8 +703,10 @@ first" would give 1 000 to five of them and none to the rest).
 that was cut is not owed the difference (the carry advances by the due). It does not
 reserve anything for a later tick. After a cut the treasury holds 0 of the resource: it
 spent all it had, which is the rule of a budget with no reserve, and a pack that wants a
-reserve writes a smaller `Amount` and lets the balance build (open question 9). A **headroom** cut at a recipient (its balance would pass `MaxMoney`) is
-applied after the pro rata: the unapplied part stays in the treasury.
+reserve writes a smaller `Amount` and lets the balance build (open question 9). A **headroom** cut at a recipient (its balance would pass `MaxMoney`, or, for an
+in-kind payout to a household whose role has stores, the units its free store room
+cannot hold) is applied after the pro rata: the unapplied part stays in the treasury and
+is counted in `Headroom`, not in `Cut`.
 
 8.4.4. **Cost.** The cut costs `O(n log n)` for `n` recipients and only in a tick in
 which the treasury is short; with enough money, `O(n)`. The sort is the only one in the
@@ -1216,11 +1218,12 @@ seated in another region.
 Nothing at `Info`, `Warn` or `Error` from a step. At construction, `Info` once, in the
 existing "world created" line: the attribute `fiscal_flows` (the count) joins the
 summary and `fiscal` joins the `modules` list; the `Warn`s of 15.2 with `rule` and
-`path`. At `Debug`, guarded by `Enabled`: "fiscal flow applied" (`flow`, `region`, `due`,
-`applied`) and "treasury ordered" (`authority`, `region`). Constant lowercase messages,
+`path`. At `Debug`, guarded by `Enabled`: "fiscal flow applied" (`flow`, `region`, `commodity`, `due`,
+`applied`, `cut`, `headroom`) and "treasury ordered" (`authority`, `region`). Constant lowercase messages,
 typed attributes (observability-and-logging.md 3.3). **New log keys** for 3.3.2:
-`authority` (a jurisdiction ID string) and `fiscal_flows` (a count, in the construction
-summary); `flow`, `due`, `applied`, `region`, `rule` and `path` exist.
+`authority` (a jurisdiction ID string), `fiscal_flows` (a count, in the construction
+summary), and `cut` and `headroom` (household counts of the "fiscal flow applied" line);
+`flow`, `due`, `applied`, `commodity`, `region`, `rule` and `path` exist.
 
 ### 16.3 Snapshot
 

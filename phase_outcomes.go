@@ -295,6 +295,9 @@ func (w *World) shortRows(cell int) []ShortRow {
 // ring holds a field at the clamp (pattern A, FR-WEL-042).
 func (w *World) p63Welfare() {
 	w.valuePrices()
+	if w.fiscal != nil {
+		w.priceFiscalReceipts() // the goods of a payout, a household's unearned income (spec-fiscal.md 12.3)
+	}
 	if w.sub != nil {
 		w.sub.priceReceipts(w)
 	}
