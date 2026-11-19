@@ -1,16 +1,20 @@
 package clearing
 
-import "github.com/Whealinghold/economy-sim/internal/checked"
+import (
+	"github.com/Whealinghold/economy-sim/internal/checked"
+	"github.com/Whealinghold/economy-sim/internal/institution"
+)
 
 // Code is a small integer the root maps to a rejection reason (Admit) or to
 // the failure of a list (Check). Zero means admitted or valid.
 type Code uint8
 
 // Admission codes, numbered in the order of the table of CLR 3.2, then the rows of
-// the modules in the order they were built. The row of not_permitted (after
-// NotTradable) and the legal clamp of 3.2.1 (between ReceiptLimit and
-// InsufficientFunds) have their positions marked in Admit and no code yet;
-// no_room of the storage module is the last row, after InsufficientStock.
+// the modules in the order they were built, each appended. The row of not_permitted
+// (the institutions module) is the last code, NotPermitted, but its place in the order
+// of the checks is after NotTradable; the legal clamp of 3.2.1 is no row and has no
+// code: it replaces the limit between ReceiptLimit and InsufficientFunds. no_room of
+// the storage module is the code before NotPermitted, after InsufficientStock.
 //
 // Overflow is the product of limit and quantity not fitting int64. HoldingLimit
 // and ReceiptLimit are the two settlement bounds of CLR 3.2.2 (a bid that would
@@ -32,6 +36,7 @@ const (
 	InsufficientFunds
 	InsufficientStock
 	NoRoom
+	NotPermitted
 )
 
 // Facts is what the root resolved for one order. The bounds are passed in so
@@ -57,31 +62,61 @@ type Facts struct {
 	Limited            bool
 	FreeMass, FreeBulk int64
 	SizeMass, SizeBulk int64
+	// NotPermitted says a right in force bars the agent from this activity on the
+	// commodity (institutions module, spec-institutions.md 5.6.2). It stays false for a
+	// pseudo-agent and with the module off.
+	NotPermitted bool
+	// Cap and Floor are the legal range of the market in minor units, 0 for none
+	// (spec-institutions.md 6.3.1). A bid above Cap is admitted at Cap and an ask below
+	// Floor at Floor. They stay 0 with the module off.
+	Cap, Floor int64
 }
 
 // Admit returns the code of the first failing row of CLR 3.2, in the order of
 // the table, or Admitted. Nothing wraps: the product and every sum use checked
-// arithmetic or the subtraction form.
+// arithmetic or the subtraction form. It is AdmitClamp without the price it admits.
 func Admit(f Facts) Code {
+	c, _, _ := AdmitClamp(f)
+	return c
+}
+
+// AdmitClamp is Admit with the legal clamp of spec-institutions.md 6.3.1. It returns the
+// code of the first failing row, the limit price the order is admitted with and whether
+// the clamp replaced it. The clamp sits after the overflow row and the two settlement
+// bounds and before the funds row, so an order the earlier rows refuse is not rescued by
+// it and the funds are tested at the replaced limit. The price is f.Price for a refused
+// order and for an order inside the range, and changed is true only for an admitted
+// order whose limit was replaced. NotPermitted is tested right after NotTradable.
+func AdmitClamp(f Facts) (code Code, price int64, changed bool) {
 	if c := identityRow(f); c != Admitted {
-		return c
+		return c, f.Price, false
 	}
-	// Position of not_permitted (institutions module): no code yet.
+	if f.NotPermitted {
+		return NotPermitted, f.Price, false
+	}
 	if c := limitsRow(f); c != Admitted {
-		return c
+		return c, f.Price, false
 	}
-	product, ok := checked.Mul(f.Price, f.Qty)
-	if !ok {
-		return Overflow
+	if _, ok := checked.Mul(f.Price, f.Qty); !ok {
+		return Overflow, f.Price, false
 	}
 	if c := headroomRow(f); c != Admitted {
-		return c
+		return c, f.Price, false
 	}
-	// Position of the legal clamp (3.2.1, institutions module): no code yet.
+	price, changed = institution.Clamp(f.Price, f.Bid, f.Cap, f.Floor)
+	// The replaced limit is at most the original for a bid and the cap is at most MaxPrice
+	// (the floor too), so the product fits whenever the first one did.
+	product, ok := checked.Mul(price, f.Qty)
+	if !ok {
+		return Overflow, f.Price, false
+	}
 	if c := fundsRow(f, product); c != Admitted {
-		return c
+		return c, f.Price, false
 	}
-	return roomRow(f)
+	if c := roomRow(f); c != Admitted {
+		return c, f.Price, false
+	}
+	return Admitted, price, changed
 }
 
 // roomRow is the no_room row of CLR 3.2 (spec-storage.md 5.2.1, FR-STO-008): a bid

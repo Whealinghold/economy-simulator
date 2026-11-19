@@ -72,7 +72,7 @@ func (AverageClearing) Clear(bids, asks []Order, rng *rand.Rand) []Trade {
 
 // codeReasons maps the admission codes of internal/clearing to the rejection
 // reasons of event.go, indexed by code (spec-clearing.md 3.2). It is never
-// mutated. The rows of the modules (not_permitted) are added with their codes.
+// mutated. The row of a module is added with its code, at the end.
 var codeReasons = [...]Reason{
 	clearing.UnknownAgent:      ReasonUnknownAgent,
 	clearing.SideNotAllowed:    ReasonSideNotAllowed,
@@ -87,6 +87,7 @@ var codeReasons = [...]Reason{
 	clearing.InsufficientFunds: ReasonInsufficientFunds,
 	clearing.InsufficientStock: ReasonInsufficientStock,
 	clearing.NoRoom:            ReasonNoRoom,
+	clearing.NotPermitted:      ReasonNotPermitted,
 }
 
 // reasonOfCode returns the Reason of a rejection code, and false for Admitted
