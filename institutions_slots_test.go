@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"errors"
+	"math"
 	"reflect"
 	"slices"
 	"testing"
@@ -48,6 +49,14 @@ func TestSetLegalLevels_ErrorOrder(t *testing.T) {
 		{"cap above the bound", []economysim.LegalLevel{{Control: 0, CapBP: economysim.MaxBasisPoints + 1}}, economysim.ErrOutOfBounds, []string{"changes[0]", "cap_bp"}},
 		{"floor above the cap", []economysim.LegalLevel{{Control: 0, CapBP: 8_000, FloorBP: 9_000}}, economysim.ErrOutOfBounds, []string{"changes[0]", "cap_bp"}},
 		{"negative cap", []economysim.LegalLevel{{Control: 0, CapBP: -1}}, economysim.ErrOutOfBounds, []string{"changes[0]", "cap_bp"}},
+		{"negative floor", []economysim.LegalLevel{{Control: 0, CapBP: 0, FloorBP: -1}}, economysim.ErrOutOfBounds, []string{"changes[0]", "cap_bp"}},
+		{"smallest cap", []economysim.LegalLevel{{Control: 0, CapBP: math.MinInt64}}, economysim.ErrOutOfBounds, []string{"changes[0]", "cap_bp"}},
+		{"largest cap", []economysim.LegalLevel{{Control: 0, CapBP: math.MaxInt64}}, economysim.ErrOutOfBounds, []string{"changes[0]", "cap_bp"}},
+		{"largest floor with no cap", []economysim.LegalLevel{{Control: 0, FloorBP: math.MaxInt64}}, economysim.ErrOutOfBounds, []string{"changes[0]", "cap_bp"}},
+		{"smallest rate cap", []economysim.LegalLevel{{Control: 1, CapBP: math.MinInt64}}, economysim.ErrOutOfBounds, []string{"changes[0]", "cap_bp"}},
+		{"largest rate cap", []economysim.LegalLevel{{Control: 1, CapBP: math.MaxInt64}}, economysim.ErrOutOfBounds, []string{"changes[0]", "cap_bp"}},
+		{"negative floor on a rate limit", []economysim.LegalLevel{{Control: 1, CapBP: 600, FloorBP: math.MinInt64}}, economysim.ErrOutOfBounds, []string{"changes[0]", "floor_bp"}},
+		{"smallest control", []economysim.LegalLevel{{Control: math.MinInt32}}, economysim.ErrUnknownControl, []string{"changes[0]", "control"}},
 		{"floor on a rate limit", []economysim.LegalLevel{{Control: 1, CapBP: 600, FloorBP: 1}}, economysim.ErrOutOfBounds, []string{"changes[0]", "floor_bp"}},
 		{"rate cap above the bound", []economysim.LegalLevel{{Control: 1, CapBP: economysim.MaxCreditRateBP + 1}}, economysim.ErrOutOfBounds, []string{"changes[0]", "cap_bp"}},
 		{"the first failure decides", []economysim.LegalLevel{ok, {Control: 9}, {Control: 1, CapBP: -5}}, economysim.ErrUnknownControl, []string{"changes[1]", "control"}},
@@ -85,6 +94,8 @@ func TestSetRightSuspensions_ErrorOrder(t *testing.T) {
 	}{
 		{"unknown right above the list", []economysim.RightSuspension{{Right: 2, Suspended: true}}, economysim.ErrUnknownRight, []string{"changes[0]", "right"}},
 		{"unknown right below zero", []economysim.RightSuspension{{Right: 0, Suspended: true}, {Right: -1}}, economysim.ErrUnknownRight, []string{"changes[1]", "right"}},
+		{"smallest right", []economysim.RightSuspension{{Right: math.MinInt32}}, economysim.ErrUnknownRight, []string{"changes[0]", "right"}},
+		{"largest right", []economysim.RightSuspension{{Right: math.MaxInt32}}, economysim.ErrUnknownRight, []string{"changes[0]", "right"}},
 		{"a repeated key", []economysim.RightSuspension{{Right: 1, Suspended: true}, {Right: 1}}, economysim.ErrDuplicateID, []string{"changes[1]", "right"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
