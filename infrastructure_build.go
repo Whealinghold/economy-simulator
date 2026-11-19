@@ -1,10 +1,13 @@
 package economysim
 
 import (
+	"context"
+	"log/slog"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	fcy "github.com/Whealinghold/economy-sim/internal/facility"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 	"github.com/Whealinghold/economy-sim/internal/production"
 )
 
@@ -84,7 +87,7 @@ func (n *infrastructure) request(q *startReq) {
 	region, rc := q.region, &n.rec[q.recipe]
 	q.fac = facilityCaps{wantCut: n.world.obs.supplied} // a request read twice keeps nothing of the first
 	for i, c := range rc.needs {
-		q.fac.needs[i] = max(n.site[siteKey{q.principal, region, c}]-n.used[ownerClass{q.principal, c}], 0)
+		q.fac.needs[i] = n.facilityRoom(q.principal, region, c)
 	}
 	q.fac.nNeeds = len(rc.needs)
 	if rc.build >= 0 {
@@ -264,12 +267,26 @@ func (n *infrastructure) started(region RegionID, q *startReq, k, cut int64) {
 // refused counts a start refused whole for a reason of 4.2.2 under an observer (14.1):
 // Refused by one, and Cut by the executions the capacity took off when the reason is
 // no_facility. It is nil-safe and ignores every other reason.
-func (n *infrastructure) refused(principal AgentID, region RegionID, recipe RecipeID, reason Reason, free int64) {
-	if n == nil || !n.world.obs.supplied {
+func (n *infrastructure) refused(agent, principal AgentID, region RegionID, recipe RecipeID, reason Reason, free int64) {
+	if n == nil {
+		return
+	}
+	w := n.world
+	ctx := context.Background()
+	debug := w.log.Enabled(ctx, slog.LevelDebug)
+	if !debug && !w.obs.supplied {
 		return
 	}
 	class, ok := n.refusalClass(principal, region, recipe, reason)
 	if !ok {
+		return
+	}
+	if debug {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "facility start refused", slog.Int64(logkeys.Tick, w.Tick()),
+			slog.Int64(logkeys.Agent, int64(agent)), slog.Int64(logkeys.Recipe, int64(recipe)),
+			slog.String(logkeys.Reason, string(reason)))
+	}
+	if !w.obs.supplied {
 		return
 	}
 	l := &n.limits[n.cell(region, class)]
@@ -339,9 +356,9 @@ func (n *infrastructure) wear(owner AgentID, region RegionID, class FacilityClas
 }
 
 // facilityRoom is the executions of the class that the principal's facilities in the region
-// can still serve this tick: the capacity of the table less the running count (5.1.2). The hire
-// formation of the employment module calls it (spec-employment.md 5.5; N-381); nothing in this
-// tree does yet.
+// can still serve this tick: the capacity of the table less the running count (5.1.2). The
+// start request and the refusal class read it; the hire formation of the employment module
+// will too (spec-employment.md 5.5; N-381).
 func (n *infrastructure) facilityRoom(principal AgentID, region RegionID, class FacilityClassID) int64 {
 	return max(n.site[siteKey{principal, region, class}]-n.used[ownerClass{principal, class}], 0)
 }

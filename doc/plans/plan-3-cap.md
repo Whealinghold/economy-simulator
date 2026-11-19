@@ -400,7 +400,7 @@ Tests, by layer (all in the root package; `internal/facility` is unchanged by th
 
 ## PR 4 result (Phases 8 and 9)
 
-Built on `phase-3` at 55d0f6b (branch `s3-cap-4`): the clauses at work (the limits of a start, the use wear of a site, the completion of a build and a repair), the six reasons, the view, the warm-start check and the metrics proof. `golden/off/`, `golden/all/`, the pinned hash and `testdata/checkpoints/` are untouched; the only spec, rule file or note edited is `doc/notes.md` (N-520 to N-524 and an update of N-386).
+Built on `phase-3` at 55d0f6b (branch `s3-cap-4`): the clauses at work (the limits of a start, the use wear of a site, the completion of a build and a repair), the six reasons, the view, the warm-start check and the metrics proof. `golden/off/`, `golden/all/`, the pinned hash and `testdata/checkpoints/` are untouched; the documents edited are `doc/notes.md` (N-520 to N-524 and an update of N-386), `doc/specs/spec-infrastructure.md` (14.3: the `cause` attribute of the facility lines and the Debug line "facility executions voided") and `doc/rules/observability-and-logging.md` (the key `executions`, with a fresh RULE-TAG).
 
 Decisions taken from the plan's recommendations, and where the tree differed from the plan:
 

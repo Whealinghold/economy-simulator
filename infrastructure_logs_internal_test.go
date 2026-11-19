@@ -81,3 +81,46 @@ func TestFacility_RuinLineCarriesTheCause(t *testing.T) {
 		t.Errorf("cause of the ruin line = %q, want %q", got, CauseDecay)
 	}
 }
+
+// TestStart_RefusalIsLoggedWithoutAnObserver verifies that a build refused whole for the
+// owner's cap writes the Debug line "facility start refused" with the tick, the agent, the
+// recipe and the reason, though no observer is supplied and so Refused is not counted.
+//
+// Arithmetic: the miller owns MaxFacilitiesPerAgent mills, so the room is 0 and the build is
+// refused facility_cap (as TestStart_Limits_Order); it holds grain, so no_input does not come
+// first.
+//
+// Guard: without the line a run with only a logger cannot tell why a build never started.
+//
+// Requirement: FR-CAP-012, FR-CAP-039
+func TestStart_RefusalIsLoggedWithoutAnObserver(t *testing.T) {
+	t.Parallel()
+	var recs []slog.Record
+	s := &bldScript{}
+	c := bldConfig(func(c *Config) { c.Roles[1].StartStock = []Item{{Commodity: "grain", Quantity: 10}} })
+	w := newMill(t, c, WithSeed(facSeed), WithStrategy("script", s), WithLogger(slog.New(mkLogs{&recs})))
+	m := bldMiller(w, 0)
+	bldAdd(t, w, clsMill, m, MaxFacilitiesPerAgent)
+	bldAsk(t, w, s, "zz_build", 5)
+	facStep(t, w)
+	var found int
+	for _, r := range recs {
+		if r.Message != "facility start refused" {
+			continue
+		}
+		found++
+		a := logAttrs(r)
+		if got := Reason(a[logkeys.Reason].String()); got != ReasonFacilityCap {
+			t.Errorf("refusal line %q = %q, want %q", logkeys.Reason, got, ReasonFacilityCap)
+		}
+		if got := AgentID(a[logkeys.Agent].Int64()); got != m {
+			t.Errorf("refusal line %q = %d, want the miller %d", logkeys.Agent, got, m)
+		}
+		if r.Level != slog.LevelDebug {
+			t.Errorf("refusal line level = %v, want Debug", r.Level)
+		}
+	}
+	if found < 1 {
+		t.Errorf("lines %q = %d, want at least 1 (seed %d)", "facility start refused", found, facSeed)
+	}
+}

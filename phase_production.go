@@ -353,7 +353,7 @@ func (w *World) refuseFor(principal AgentID, a *agent, region RegionID, recipe R
 
 // refuseCut is refuseFor with the executions the capacity took off the refused request.
 func (w *World) refuseCut(principal AgentID, a *agent, region RegionID, recipe RecipeID, reason Reason, cut int64) {
-	w.infra.refused(principal, region, recipe, reason, cut)
+	w.infra.refused(a.id, principal, region, recipe, reason, cut)
 	if w.sto != nil {
 		w.sto.refusedStart(w.cellOf(region, a), reason)
 		if reason == ReasonNoRoom {
