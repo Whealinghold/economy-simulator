@@ -175,7 +175,7 @@ func newFiscal(c *Config, p *polity) *fiscalState {
 		f := s.add(c, fkPayout, i, o.ID, o.Authority, o.Window)
 		f.period = flowPeriod(c, o.Per)
 		f.target = s.resolve(c, f.authority, o.Target)
-		f.resource = slices.IndexFunc(c.Commodities, func(x Commodity) bool { return x.ID == o.Commodity })
+		f.resource = payoutResource(c, o)
 	}
 	for i, o := range m.Purchases {
 		s.add(c, fkPurchase, i, o.ID, o.Authority, o.Window)
@@ -186,6 +186,20 @@ func newFiscal(c *Config, p *polity) *fiscalState {
 	s.numberReasons(money)
 	s.agg = make([]fiscalAgg, len(s.flows)*s.regions)
 	return s
+}
+
+// payoutResource is the index of the commodity a payout gives, or -1 for money. A name
+// that is not defined is a violated invariant: the validator rejects it, and -1 would
+// pay money in its place.
+func payoutResource(c *Config, o Payout) int {
+	if o.Commodity == "" {
+		return -1
+	}
+	i := slices.IndexFunc(c.Commodities, func(x Commodity) bool { return x.ID == o.Commodity })
+	if i < 0 {
+		invariant("a payout names a commodity that is not defined: " + o.ID)
+	}
+	return i
 }
 
 // add appends the flow of a kind and index to the table and returns it, resolved
