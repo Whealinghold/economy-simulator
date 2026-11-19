@@ -1,6 +1,44 @@
 # Recorded outcomes of the Stage 1 scenarios (plan 1-12 D181), written with -update.
 # Read by the reviewer of STY 8.4; no test compares it.
 
+## S126 two the module on with every scale at 0 against the module off, 400 ticks seeds 1-10
+measure events: 1=403871 2=419121 3=412711 4=407280 5=429673 6=426168 7=410641 8=409797 9=424447 10=425812 | median=415916 n=10
+check events equal the module-off run: 10/10 pass
+check snapshot equals the module-off run: 10/10 pass
+
+## S127 two the books of the loss every tick, 400 ticks seeds 1-10
+measure shipments struck: 1=6 2=1 3=6 4=4 5=1 6=21 7=4 8=16 9=5 10=5 | median=5 n=10
+measure units lost from cargo and trip accounts: 1=35 2=7 3=36 4=23 5=6 6=126 7=25 8=95 9=30 10=30 | median=30 n=10
+measure units lost from stores: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check the loss boundary equals the events and every line adds up, every tick: 10/10 pass
+
+## S128 two+merchants+risk the merchant blind the expected loss, 400 ticks seeds 1-10
+measure brokers removed: 1=8 2=8 3=8 4=8 5=8 6=8 7=8 8=8 9=8 10=8 | median=8 n=10
+measure shipments dispatched: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure shipments struck: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure units delivered: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure units wasted (spoiled, diverted, lost): 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check the loss boundary equals the events every tick: 10/10 pass
+
+## S128 two+merchants+risk the merchant reading the expected loss, 400 ticks seeds 1-10
+measure brokers removed: 1=8 2=8 3=8 4=8 5=8 6=8 7=8 8=8 9=8 10=8 | median=8 n=10
+measure shipments dispatched: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure shipments struck: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure units delivered: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure units wasted (spoiled, diverted, lost): 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check the loss boundary equals the events every tick: 10/10 pass
+
+## S130 two+risk a patrol before the volley, 400 ticks seeds 1-10
+measure shipments dispatched: 1=24 2=24 3=24 4=24 5=24 6=24 7=24 8=24 9=24 10=24 | median=24 n=10
+check no dispatch carries a loss share while the routes are at 0: 10/10 pass
+check the calls, the slots and the books hold: 10/10 pass
+
+## S130 two+risk a surge before the volley, a patrol while it is on the road, 400 ticks seeds 1-10
+measure dispatches struck at the surge: 1=23 2=9 3=7 4=7 5=7 6=23 7=9 8=21 9=21 10=10 | median=10 n=10
+measure units lost at the arrivals: 1=137 2=54 3=42 4=41 5=41 6=138 7=55 8=125 9=125 10=59 | median=57 n=10
+check a strike made before a patrol is still taken at the arrival: 10/10 pass
+check the calls, the slots and the books hold: 10/10 pass
+
 ## S30 price-gap shipping with a transit delay (TRN-A1, A2)
 measure s30.k1.blind.arrived: 1=12 2=12 3=18 4=22 5=10 6=10 7=16 8=17 9=10 10=20 | median=14 n=10
 measure s30.k1.blind.delivered: 1=12 2=12 3=15 4=22 5=8 6=10 7=16 8=17 9=10 10=20 | median=14 n=10
