@@ -15,6 +15,7 @@ EndowmentChanged
 EntryLimited
 EstateOpened
 FacilityChanged
+FiscalFlowApplied
 LoanEnded
 LoanFormed
 LoanPassed

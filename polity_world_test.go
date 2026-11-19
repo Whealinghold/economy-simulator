@@ -352,7 +352,7 @@ func TestPolity_NoRegionFieldRead(t *testing.T) {
 	// The fiscal module names the authority of a flow, the jurisdictions of a treasury target and their
 	// coverage (spec-fiscal.md 3.2, 15.1; plan 3-fis PR 2): its validator, class rules and warnings. They read
 	// the tree of the polity and no region tunable of a jurisdiction; the files of its steps are added here.
-	readers := append([]string{"fiscal_validate.go", "fiscal_class.go", "fiscal_warnings.go"}, institutionsFiles...)
+	readers := append([]string{"fiscal.go", "fiscal_validate.go", "fiscal_class.go", "fiscal_warnings.go"}, institutionsFiles...)
 	files, err := filepath.Glob("*.go")
 	if err != nil {
 		t.Fatal(err)
