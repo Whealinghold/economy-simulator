@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/ledger"
@@ -162,6 +163,37 @@ func TestEvent_PriceControlledCounts(t *testing.T) {
 	w.p72bInstitutions()
 	if got := of[PriceControlled](rec); len(got) != 1 {
 		t.Errorf("PriceControlled after a second P7.2b = %d events, want still 1: the counts are cleared when told", len(got))
+	}
+}
+
+// TestEvent_PriceControlledOrder verifies the order of the events of P7.2b: regions in
+// ascending order, whatever the order in which the clamps happened and whatever the order of
+// the control IDs (spec-institutions.md 7.3.3), and one event for each control of a region.
+//
+// Arithmetic: the controls are zeta in b and alpha in c, so alpha is ControlID 0 and zeta 1
+// (IDs sort bytewise). A bid of 1 unit at 200 is lowered in c first and then in b; the events
+// are still region b (control 1) and then region c (control 0).
+//
+// Requirement: FR-ORG-041, FR-ORG-040
+func TestEvent_PriceControlledOrder(t *testing.T) {
+	t.Parallel()
+	c := orgToy()
+	c.Modules.Institutions.Controls = []Control{
+		{ID: "zeta", Commodity: "grain", Region: "b", CapBP: 12_000},
+		{ID: "alpha", Commodity: "grain", Region: "c", CapBP: 12_000},
+	}
+	w, rec := orgWorld(t, c)
+	bid := Intent{Commodity: 0, Side: Bid, Quantity: 1, Limit: 200}
+	w.submit(&w.agents[orgAgents(w, orgC, orgSmith)[0]], orgC, bid)
+	w.submit(&w.agents[orgAgents(w, orgB, orgSmith)[0]], orgB, bid)
+	w.p72bInstitutions()
+	got := of[PriceControlled](rec)
+	want := []PriceControlled{
+		{Tick: w.Tick(), Region: orgB, Control: 1, Commodity: 0, Bids: 1, Units: 1},
+		{Tick: w.Tick(), Region: orgC, Control: 0, Commodity: 0, Bids: 1, Units: 1},
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("PriceControlled = %+v, want %+v", got, want)
 	}
 }
 
