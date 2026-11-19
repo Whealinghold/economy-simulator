@@ -13,9 +13,9 @@ import (
 // 7), EMP: the hire record, the Escrow account of a hire, the release of the wage
 // a working tick at a time, the cut of a start, the end of a hire and the audit.
 // The labour round that forms a hire is employment_round.go and the reports are
-// employment_report.go. Interruptions (a removal, a role change, a move, a fall of
-// the worker's weight), the checkpoint section and the snapshot rows are later
-// PRs of the plan; a hire ends here by its completion or because nothing started.
+// employment_report.go. The interruptions of spec-employment.md 6.4 (a removal, a
+// role change, a move of the worker) and the open_hire refusal are the second half
+// of this file; the checkpoint section is in employment_report.go.
 
 // hireRole is the employer block of a role, resolved: the hire list in ascending
 // RecipeID, the establishment, the worker's share and the hired yield factor.
@@ -374,4 +374,79 @@ func (w *World) jobFault(h *hireRec, left int64) string {
 		return fmt.Sprintf("its worker's job has %d ticks left, the hire has %d unpaid", job.remaining, left)
 	}
 	return ""
+}
+
+// openHire is the name of the region_bound refusal of the module (spec-regions.md
+// 6.5.2, spec-employment.md 6.5.1). Its instance key is the hire ID.
+const openHire = "open_hire"
+
+// holds reports whether the agent is the employer of an open hire that skip does not
+// name by instance (spec-employment.md 6.5.1). A worker is never held: its job is
+// abandoned when its account changes region and the hire ends with it.
+func (e *employment) holds(a *agent, skip []string) bool {
+	if e.hiredBy(a.id) == 0 {
+		return false
+	}
+	for i := range e.hires {
+		if h := &e.hires[i]; h.employer == a.id && !skipHas(skip, openHire, int64(h.id)) {
+			return true
+		}
+	}
+	return false
+}
+
+// dropHires is step 2c of a removal (spec-agents.md 3.6, spec-employment.md 6.5.2),
+// after the titles and before the creditors' waterfall: the hire of the agent as a
+// worker ends first (worker_left; its job was abandoned at step 1), then each hire
+// of the agent as an employer in ascending hire ID. It is a no-op with the hire form
+// off and draws nothing.
+func (w *World) dropHires(a *agent) {
+	w.endHireOfWorker(a, CauseWorkerLeft)
+	w.endHiresOf(a, CauseEmployerLeft)
+}
+
+// endHireOfWorker ends the hire of the agent as a worker with the cause, the
+// remainder of the escrow back to the employer. The worker's job is the caller's:
+// it was abandoned before this call, in the order of spec-employment.md 6.5.2.
+func (w *World) endHireOfWorker(a *agent, cause Cause) {
+	if h := w.employment.hireOfWorker(a.id); h != nil {
+		w.endHire(h, cause)
+	}
+}
+
+// endHiresOf ends every hire of the agent as an employer, in ascending hire ID: the
+// worker's job is abandoned with principal_left, the remainder of the escrow returns
+// to the employer's own account (so that a creditor's waterfall sees it) and the
+// hire ends with the cause (spec-employment.md 6.4).
+func (w *World) endHiresOf(a *agent, cause Cause) {
+	e := w.employment
+	if !e.isHire() || e.hiredBy(a.id) == 0 {
+		return
+	}
+	for i := 0; i < len(e.hires); {
+		h := &e.hires[i]
+		if h.employer != a.id {
+			i++
+			continue
+		}
+		if wk := &w.agents[h.worker]; wk.hasJob() {
+			w.abandonJob(wk, h.region, ReasonPrincipalLeft)
+		}
+		w.endHire(h, cause) // the record leaves the list: index i now holds the next hire
+	}
+}
+
+// hiredReweighed follows a fall of the weight of the worker a, whose job was just
+// re-weighed (spec-production.md 5.4): the executions of the hire become those of the
+// job, so the executions the employer holds open, the wages still owed and the
+// Households of HireEnded are those of the job, and a restore may read them from it.
+// The job is not abandoned and the remainder of the escrow returns with the end
+// (spec-employment.md 6.4). A weight that rises changes nothing.
+func (w *World) hiredReweighed(a *agent) {
+	h := w.employment.hireOfWorker(a.id)
+	if h == nil || a.job.executions >= h.k {
+		return
+	}
+	w.employment.hired[h.employer] -= h.k - a.job.executions
+	h.k = a.job.executions
 }

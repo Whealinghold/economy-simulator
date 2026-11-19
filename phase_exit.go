@@ -421,6 +421,7 @@ func (w *World) execReduce(g RegionID, a *agent, d Decision) error {
 		return err
 	}
 	a.job.reweigh(to)
+	w.hiredReweighed(a) // nil-safe: the executions of a hire follow the job
 	a.weight = to
 	if w.sto != nil {
 		w.weightChangedStorage(a)
@@ -495,9 +496,11 @@ func (w *World) execSwitch(g RegionID, a *agent, d Decision) error {
 // RoleChanged it causes (spec-observability.md 4.4.8).
 func (w *World) changeRole(g RegionID, a *agent, d Decision, completed bool) error {
 	from, to := a.role, d.Role
+	w.endHiresOf(a, CauseEmployerRole) // nil-safe: the hires of an employer end before its own job (spec-employment.md 6.5.2)
 	if a.hasJob() {
 		w.abandonJob(a, g, ReasonRoleChanged)
 	}
+	w.endHireOfWorker(a, CauseWorkerRole) // nil-safe: the worker's hire ends after the job it paid for
 	if completed {
 		w.traineeshipCompleted(a, g, to)
 	}
