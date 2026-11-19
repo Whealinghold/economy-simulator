@@ -1144,13 +1144,13 @@ configuration):
 |------|-----------|------|------------|--------|
 | `economysim.policy.decisions` | Counter | `{decision}` | `economysim.actor` | `PolicyDecided` (one per event) |
 | `economysim.policy.entries` | Counter | `{entry}` | `economysim.actor`, `economysim.entry_outcome` | `PolicyDecided` (`Applied`, `Unchanged`, `NotHeld`, `Duplicate`, `NoClose`) |
-| `economysim.policy.cut` | Counter | `{entry}` | `economysim.actor`, `economysim.cut` | `PolicyDecided` (`Clamped`, `Stepped`) |
-| `economysim.policy.held` | Counter | `{reaction}` | `economysim.actor`, `economysim.hold` | `PolicyDecided` (`InBand`, `NoReading`) |
+| `economysim.policy.cut` | Counter | `{entry}` | `economysim.actor`, `economysim.policy_cut` | `PolicyDecided` (`Clamped`, `Stepped`) |
+| `economysim.policy.held` | Counter | `{reaction}` | `economysim.actor`, `economysim.policy_hold` | `PolicyDecided` (`InBand`, `NoReading`) |
 
 12.4.2. **New attributes** (closed sets, so bounded): `economysim.actor` (the actors of
 the configuration), `economysim.entry_outcome` (`applied`, `unchanged`, `not_held`,
-`duplicate`, `no_close`), `economysim.cut` (`clamped`, `stepped`) and `economysim.hold`
-(`in_band`, `no_reading`). For the first consumer's size (one actor) the instruments are
+`duplicate`, `no_close`), `economysim.policy_cut` (`clamped`, `stepped`) and
+`economysim.policy_hold` (`in_band`, `no_reading`), the names of the rule tables 5.3 and 5.4.1. For the first consumer's size (one actor) the instruments are
 1, 5, 2 and 2 series; an actor adds that many.
 
 ### 12.5 What an observer can rebuild
