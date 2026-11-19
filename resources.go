@@ -154,6 +154,10 @@ type resourcesState struct {
 	seasonBP     [][]int64
 	regenRow     []int64
 	ticksPerYear int64
+	// facilityBP is the capacity gain of the ground facilities of each endowment in basis
+	// points, by cell: the table of the infrastructure module, shared and rebuilt by it, nil
+	// while no ground class exists (spec-infrastructure.md 5.3, 6.4). Derived, never saved.
+	facilityBP []int64
 	// stock is the units in each endowment, carry the remainder of its regeneration
 	// in units of 1/D, exhaustedRun the consecutive ticks with units short, and
 	// capScale and regenScale the scales of its shock slots in basis points, 10 000
@@ -307,14 +311,23 @@ func (r *resourcesState) start(cell int, res *Resource, row *Endowment) {
 	r.stock[cell] = min(initial, r.effectiveCapacity(cell))
 }
 
-// effectiveCapacity is the capacity of an endowment after its capacity scale
-// (spec-resources.md 3.4); the facility layer is 0 while no module adds one.
+// effectiveCapacity is the capacity of an endowment after its capacity scale and the
+// capacity layer of its ground facilities (spec-resources.md 3.4).
 func (r *resourcesState) effectiveCapacity(cell int) int64 {
-	c, ok := endowment.EffectiveCapacity(r.capacity[cell], r.capScale[cell], 0, MaxEndowment)
+	c, ok := endowment.EffectiveCapacity(r.capacity[cell], r.capScale[cell], r.groundBP(cell), MaxEndowment)
 	if !ok {
 		invariant("the effective capacity of an endowment does not fit after validation")
 	}
 	return c
+}
+
+// groundBP is the capacity gain of the ground facilities of an endowment, 0 without the
+// module's table.
+func (r *resourcesState) groundBP(cell int) int64 {
+	if r.facilityBP == nil {
+		return 0
+	}
+	return r.facilityBP[cell]
 }
 
 // abundanceOf is the abundance factor of an endowment holding stock units.

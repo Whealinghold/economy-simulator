@@ -50,10 +50,12 @@ var checkpointSections = [...]section{
 	{tag: 21, name: "Merchants", present: func(c *Config) bool { return c.Modules.Merchants != nil }, save: (*World).saveMerchants, load: (*World).loadMerchants},
 	{tag: 22, name: "Integration", present: func(c *Config) bool { return c.Modules.Information != nil }, save: (*World).saveRumours, load: (*World).loadRumours},
 	{tag: 23, name: "Settlements", present: func(c *Config) bool { return c.Modules.Settlements != nil }, save: (*World).saveSettlements, load: (*World).loadSettlements},
+	{tag: 24, name: "Employment", present: func(c *Config) bool { return c.Modules.Employment != nil && c.Modules.Employment.Hire }, save: (*World).saveEmployment, load: (*World).loadEmployment},
 	{tag: 25, name: "Tenure", present: func(c *Config) bool { return c.Modules.Tenure != nil }, save: (*World).saveTenure, load: (*World).loadTenure},
 	{tag: 26, name: "Credit", present: func(c *Config) bool { return c.Modules.Credit != nil }, save: (*World).saveCredit, load: (*World).loadCredit},
 	{tag: 27, name: "Facilities", present: func(c *Config) bool { return c.Modules.Infrastructure != nil }, save: (*World).saveFacilities, load: (*World).loadFacilities},
 	{tag: 28, name: "Risk", present: func(c *Config) bool { return c.Modules.Risk != nil }, save: (*World).saveRisk, load: (*World).loadRisk},
+	{tag: 30, name: "Fiscal", present: func(c *Config) bool { return c.Modules.Fiscal != nil }, save: (*World).saveFiscal, load: (*World).loadFiscal},
 	{tag: 31, name: "Institutions", present: func(c *Config) bool { return c.Modules.Institutions != nil }, save: (*World).saveInstitutions, load: (*World).loadInstitutions},
 	{tag: 33, name: "Technology", present: func(c *Config) bool { return c.Modules.Technology != nil }, save: (*World).saveTechnology, load: (*World).loadTechnology},
 	{tag: 34, name: "Extensions", save: (*World).saveExtensions, load: (*World).loadExtensions},
@@ -78,9 +80,8 @@ type notBuiltSection struct {
 // append. The test fails on a listed tag that has a row in checkpointSections and
 // on a tag of the spec that is neither built nor listed.
 var notBuiltSections = [...]notBuiltSection{
-	{24, "Employment", "Employment"},
 	{29, "Insurance", "Insurance"},
-	{30, "Fiscal", "Fiscal"}, {32, "Policy", "Policy"},
+	{32, "Policy", "Policy"},
 }
 
 // agentTail is a block that follows the agent list of tag 3 when its module is

@@ -877,6 +877,11 @@ func (w *World) auditInFlight() error {
 			return err
 		}
 	}
+	if w.employment.isHire() {
+		if err := w.auditHires(); err != nil {
+			return err
+		}
+	}
 	if w.mer != nil && w.mer.on {
 		return w.auditContracts()
 	}
@@ -951,6 +956,11 @@ func (w *World) auditLaterModules() error {
 	}
 	if err := w.auditInfrastructure(); err != nil {
 		return err
+	}
+	if w.fiscal != nil {
+		if err := w.fiscal.audit(w); err != nil {
+			return err
+		}
 	}
 	if w.risk != nil {
 		return w.risk.audit(w)

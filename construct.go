@@ -154,6 +154,7 @@ func (w *World) allocate() {
 	w.mer = newMerchants(&w.cfg, &w.roles, w.transport)
 	w.employment = newEmployment(&w.cfg)
 	w.polity = newPolity(&w.cfg)
+	w.fiscal = newFiscal(&w.cfg, w.polity)
 	w.skills = newSkills(&w.cfg)
 	w.sto = newStorage(&w.cfg, &w.roles, &w.recipes)
 	if w.sto != nil {
@@ -171,6 +172,7 @@ func (w *World) allocate() {
 		if w.sto != nil {
 			w.sto.facilityCount = w.infra.installedOf // the seam of RemoveStore (spec-storage.md 3.6.2)
 		}
+		w.infra.wire(w)
 	}
 	w.registerBounds()
 	if w.cfg.Modules.Estates != nil {
@@ -200,6 +202,10 @@ func (w *World) allocate() {
 	w.tally = newEntryTally(regions)
 	w.runnable = make([][]RecipeID, regions)
 	w.markets = newMarketTable(&w.cfg, w.clr, seedPrices(&w.cfg))
+	w.org.attach(&w.markets, w.obs.supplied)
+	if w.org != nil && w.credit != nil {
+		w.credit.rateCap = w.org.rateLimit // the seam of the rate limit (spec-credit.md 5.2.3)
+	}
 	w.tk = newTickScratch(&w.cfg)
 	w.pr = newProductionTick(&w.cfg)
 	w.oc = newOutcomeTick(&w.cfg)
@@ -223,6 +229,9 @@ func (w *World) registerBounds() {
 	}
 	if w.sto != nil {
 		w.bounds.add(hasStoreName, w.sto.holds)
+	}
+	if w.employment.isHire() {
+		w.bounds.add(openHire, w.employment.holds)
 	}
 }
 
@@ -391,6 +400,7 @@ func modulesOn(c *Config) []string {
 		{"tenure", m.Tenure != nil},
 		{"infrastructure", m.Infrastructure != nil},
 		{"risk", m.Risk != nil},
+		{"fiscal", m.Fiscal != nil},
 		{"institutions", m.Institutions != nil},
 	}
 	on := []string{}
@@ -499,6 +509,9 @@ func (w *World) summaryLater(attrs []slog.Attr) []slog.Attr {
 	if w.polity != nil {
 		total, governed := polityTotals(&w.cfg)
 		attrs = append(attrs, slog.Int(logkeys.Jurisdictions, total), slog.Int(logkeys.Governed, governed))
+	}
+	if w.fiscal != nil {
+		attrs = append(attrs, slog.Int(logkeys.FiscalFlows, len(w.fiscal.flows)))
 	}
 	if w.credit != nil {
 		lenders, borrowers := w.creditAgents()

@@ -81,6 +81,15 @@ func (w *World) recordDraws(a *agent, principal AgentID, region RegionID, recipe
 	return first, len(r.reqs) - first
 }
 
+// withdraw takes back the n requests from index first: the labour round withdraws
+// the request of a worker it hired for another job (spec-employment.md 4.1.1). A
+// request of 0 executions is not rationed and no start reads its grant.
+func (r *resourcesState) withdraw(first, n int) {
+	for i := first; i < first+n; i++ {
+		r.reqs[i].executions = 0
+	}
+}
+
 // p26Ration is P2.6: for each endowment some request draws on, in order, the
 // requests are rationed against the snapshot of the stock by the rule of
 // spec-resources.md 5.3 (internal/endowment), each in agent-ID order and keyed by
@@ -97,7 +106,9 @@ func (w *World) p26Ration() {
 	}
 	r.order = r.order[:0]
 	for i := range r.reqs {
-		r.order = append(r.order, i)
+		if r.reqs[i].executions > 0 { // a withdrawn request (withdraw) is not rationed
+			r.order = append(r.order, i)
+		}
 	}
 	// The order is total: an agent makes at most one request on an endowment.
 	slices.SortFunc(r.order, func(a, b int) int {

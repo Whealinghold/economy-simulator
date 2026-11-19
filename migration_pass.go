@@ -422,6 +422,7 @@ func (w *World) depart(a *agent, e *evalRec, to RegionID, k int64) {
 	if jobAbandoned {
 		w.abandonJob(a, e.region, ReasonRegionChanged)
 	}
+	w.endHireOfWorker(a, CauseWorkerMoved) // nil-safe: a worker's hire ends with the job it paid for
 	if w.sub != nil {
 		w.sub.drop(a.id)
 	}

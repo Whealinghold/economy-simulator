@@ -128,6 +128,10 @@ var skipFields = []string{
 	// viewCtx.refs is World.refs again, assembled with the rest of the view context
 	// at the start of P2.5 and P3.2 (market.go refreshViewCtx).
 	"viewCtx.refs",
+	// The institutions module's counts of the refusals of a right and of the clamps of a
+	// legal price are allocated only when an observer is attached, cleared as P7.2b tells
+	// them, and not saved; order is the scratch of the events of one region.
+	"rightTable.refused", "legalTable.tally", "legalTable.rateTally", "legalTable.order",
 }
 
 // maxWalkDepth bounds the nesting of the walk; a deeper value is an error.
@@ -418,6 +422,9 @@ func demandOn(w *World) bool { return w.demand != nil }
 // subsistenceOn is the guard of the rows of the subsistence module (plan 2-10).
 func subsistenceOn(w *World) bool { return w.sub != nil }
 
+// infraOn is the guard of the row of the infrastructure module.
+func infraOn(w *World) bool { return w.infra != nil }
+
 // resourcesOn is the guard of the rows of the resources module (D177).
 func resourcesOn(w *World) bool { return w.res != nil }
 
@@ -483,6 +490,10 @@ func reliefOn(w *World) bool { return w.relief != nil }
 // module off has no pass, and the replay leaves the row out.
 func employmentOn(w *World) bool { return w.employment != nil }
 
+// hireOn is the guard of the row of the labour round: only a world in the hire form
+// has the round, so the position hashes of the payroll form do not move.
+func hireOn(w *World) bool { return w.employment.isHire() }
+
 // skillsOn is the guard of the row of the teaching step: a world with no role that
 // trains has no state, and the replay leaves the row out.
 func skillsOn(w *World) bool { return w.skills != nil }
@@ -490,6 +501,10 @@ func skillsOn(w *World) bool { return w.skills != nil }
 // creditOn is the guard of the rows of the credit module (P1.7a, plan 3-crd): an off
 // world records no line for them.
 func creditOn(w *World) bool { return w.credit != nil }
+
+// fiscalOn is the guard of the rows of the fiscal module (P1.7b, plan 3-fis): an off
+// world records no line for them.
+func fiscalOn(w *World) bool { return w.fiscal != nil }
 
 // noErr adapts a position method with no error result.
 func noErr(f func(*World)) func(*World) error {
@@ -511,6 +526,7 @@ var replayRows = []replayRow{
 	{id: "P1.6", run: (*World).p16Relief, on: reliefOn},
 	{id: "P1.7", run: noErr((*World).p17Flows), on: moneyOn},
 	{id: "P1.7a", run: noErr((*World).p17aSettle), on: creditOn},
+	{id: "P1.7b", run: noErr((*World).p17bFiscal), on: fiscalOn},
 	{id: "P1.8", run: noErr((*World).p18Walk), on: externalOn},
 	{id: "P1.9", run: noErr((*World).p19Directives), on: externalAgentOn},
 	{id: "P1.9a", run: noErr((*World).p19aMembership), on: institutionsOn},
@@ -519,6 +535,7 @@ var replayRows = []replayRow{
 	{id: "P2.3", run: noErr((*World).p23Snapshot), on: resourcesOn},
 	{id: "P2.4", run: noErr((*World).p24OwnUse), on: subsistenceOn},
 	{id: "P2.5", run: (*World).p25Work},
+	{id: "P2.5a", run: noErr((*World).p25aLabour), on: hireOn},
 	{id: "P2.6", run: noErr((*World).p26Ration), on: resourcesOn},
 	{id: "P2.7", run: (*World).p27Start},
 	{id: "P2.8", run: noErr((*World).p28OwnUse), on: subsistenceOn},
@@ -553,6 +570,7 @@ var replayRows = []replayRow{
 	{id: "P8.2", run: noErr((*World).p82Flows)},
 	{id: "P8.3", run: noErr((*World).p83Regen), on: resourcesOn},
 	{id: "P8.3a", run: noErr((*World).p83aRent), on: tenureOn},
+	{id: "P8.3b", run: noErr((*World).p83bFacilities), on: infraOn},
 	{id: "P8.3c", run: noErr((*World).p83cTechnology), on: techOn},
 }
 

@@ -296,10 +296,7 @@ func (s *storage) recipeInputs(recipe RecipeID) []room.Item {
 func (s *storage) recipeOutputs(q *startReq) []room.Output {
 	s.out = s.out[:0]
 	row := s.recipes.row(q.recipe)
-	owner := q.exec // a trainee's job takes its trainer's residues
-	if s.world.skills != nil {
-		owner = s.world.residueOwner(q.exec)
-	}
+	owner := s.world.residueOwner(q.exec) // a trainee's or a hired job takes its principal's residues
 	off, _ := residueOffset(s.roles.row(owner.role).jobs, s.recipes, q.recipe)
 	for i, o := range row.outputs {
 		var residue int64

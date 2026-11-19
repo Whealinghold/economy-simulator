@@ -183,6 +183,13 @@ type Modules struct {
 	// It needs Modules.Polity with a governed jurisdiction. Its hash id is 20,
 	// whatever its place in this struct.
 	Fiscal *Fiscal
+	// Policy is the policy module: policy actors, each attached to one jurisdiction,
+	// that set the value of their levers (a flow's scale, an edge's factor, a transit
+	// factor) on their own cadence (spec-policy.md). Nil is off; non-nil is on, even
+	// when empty (an empty module has no actor and does nothing). It needs
+	// Modules.Polity with at least one jurisdiction. Its hash id is 22, whatever its
+	// place in this struct.
+	Policy *PolicyConfig
 }
 
 // Credit is the configuration of the credit module (spec-credit.md 4.1, 14). Its
@@ -2037,6 +2044,7 @@ func (c Config) canonical() Config {
 	out.Modules.Infrastructure = c.Modules.Infrastructure.canonical()
 	out.Modules.Institutions = c.Modules.Institutions.canonical()
 	out.Modules.Fiscal = c.Modules.Fiscal.canonical(c.Calendar.Seasons)
+	out.Modules.Policy = c.Modules.Policy.canonical()
 	out.Modules.Employment = c.Modules.Employment.canonical()
 	return out
 }
@@ -2693,6 +2701,169 @@ func (m *Fiscal) canonical(calendar []Season) *Fiscal {
 	out.Releases = sortedBy(m.Releases, func(a, b Release) int { return cmp.Compare(a.ID, b.ID) })
 	for i := range out.Releases {
 		out.Releases[i].Window = window(out.Releases[i].Window)
+	}
+	return out
+}
+
+// PolicyConfig is the configuration of the policy module (spec-policy.md 3.1.2, 10).
+// Its presence switches the module on. The type is called PolicyConfig because Policy
+// is the interface of the extension point (architecture.md 4.3); the scope Policy of
+// the parameter-owner table resolves to this type. The module has no default: a
+// mandate, a cadence, a target and a gain are choices of a setting, so the zero
+// value is a module that is on with no actor.
+type PolicyConfig struct {
+	// Actors are the policy actors, by ID in canonical order, at most MaxActors.
+	Actors []PolicyActor
+}
+
+// PolicyActor is a policy actor: one policy attached to one jurisdiction
+// (spec-policy.md 3.1.2, 3.2).
+type PolicyActor struct {
+	// ID identifies the actor; [a-z][a-z0-9_]*, unique among actors. Its index in
+	// ascending order is its ActorID.
+	ID string
+	// Jurisdiction is the jurisdiction the actor is attached to; at most one actor
+	// each.
+	Jurisdiction string
+	// Policy is a registered name: "hold", "schedule", "rule", "directed", or a
+	// consumer's.
+	Policy string
+	// Every is the ticks between decisions, 1 to MaxPolicyEvery. Required.
+	Every int64
+	// ReadsRegions makes the view carry the RegionState of the covered regions.
+	ReadsRegions bool
+	// Levers are the levers the actor holds, by ID in canonical order, at most
+	// MaxLevers.
+	Levers []Lever
+	// Schedule are the steps of a "schedule" policy, by (Lever, At) in canonical
+	// order, at most MaxScheduleSteps. Only with that policy.
+	Schedule []ScheduleStep
+	// Cycle is the length of a repeating schedule in ticks: 0 for none, else 1 to
+	// MaxPolicyCycle. Only with the "schedule" policy.
+	Cycle int64
+	// Rules are the reactions of a "rule" policy, by Lever in canonical order, one per
+	// lever. Only with that policy.
+	Rules []Reaction
+	// Label is a display name. It is presentation only: it changes no result and is
+	// not hashed.
+	Label string
+}
+
+// LeverKind is the kind of a lever: the slot its key belongs to (spec-policy.md
+// 6.3). The set is closed; a reserved kind is refused until its row is added.
+type LeverKind string
+
+// The kinds of lever that are offered (spec-policy.md 6.3.1).
+const (
+	// LeverFlow holds the scale of a money flow or a fiscal flow.
+	LeverFlow LeverKind = "flow"
+	// LeverEdge holds the length factor, and the closed flag, of an edge or of the
+	// group of edges that Against expands to.
+	LeverEdge LeverKind = "edge"
+	// LeverTransit holds the transit factor of an (origin, destination, mode).
+	LeverTransit LeverKind = "transit"
+)
+
+// Lever is a handle on one slot key, or on the group of keys that Against expands to
+// (spec-policy.md 3.4). Its value is a number of basis points.
+type Lever struct {
+	// ID identifies the lever within the actor; [a-z][a-z0-9_]*, unique. Its index in
+	// ascending order is its LeverID.
+	ID string
+	// Kind is LeverFlow, LeverEdge or LeverTransit.
+	Kind LeverKind
+	// Flow is the flow ID of kind flow: a money flow or a fiscal flow.
+	Flow string
+	// From is the origin region of kind edge (with To) or transit.
+	From string
+	// To is the destination region of kind edge (with From) or transit.
+	To string
+	// Mode is the transport mode ID of kind transit.
+	Mode string
+	// Against is, for kind edge and instead of From and To, a jurisdiction ID: the
+	// lever holds every edge between the actor's jurisdiction and it, in both
+	// directions (spec-policy.md 3.4.3).
+	Against string
+	// Min is the lowest value the actor may set, inside the slot's bound.
+	Min int64
+	// Max is the highest value the actor may set, inside the slot's bound.
+	Max int64
+	// MaxStep is the largest change of the value in one decision; 0 is no limit.
+	MaxStep int64
+	// MayClose lets the actor set Closed on a lever of kind edge.
+	MayClose bool
+}
+
+// ScheduleStep is one step of a fixed schedule (spec-policy.md 8.2).
+type ScheduleStep struct {
+	// Lever is the ID of a lever of the actor.
+	Lever string
+	// At is the tick from which the value holds, 0 to MaxScheduleTick.
+	At int64
+	// BP is the value the lever is set to.
+	BP int64
+	// Closed sets the closed flag of a lever of kind edge with MayClose.
+	Closed bool
+}
+
+// Gauge is the name of a reading a rule takes (spec-policy.md 8.3.2). The set is
+// closed.
+type Gauge string
+
+// The gauges (spec-policy.md 8.3.2).
+const (
+	// GaugeTreasury is the balance of the actor's treasury, in minor units.
+	GaugeTreasury Gauge = "treasury"
+	// GaugeUnfedShare is the share of households that went unfed in the covered
+	// regions, in basis points.
+	GaugeUnfedShare Gauge = "unfed_share"
+	// GaugeMeanRatio is the household-weighted mean welfare ratio of the covered
+	// regions, in basis points.
+	GaugeMeanRatio Gauge = "mean_ratio"
+	// GaugePrice is the household-weighted price of a commodity in the covered
+	// regions, in minor units.
+	GaugePrice Gauge = "price"
+)
+
+// Reaction is one reactive rule on one lever (spec-policy.md 8.3).
+type Reaction struct {
+	// Lever is the ID of a lever of the actor; at most one reaction each.
+	Lever string
+	// Gauge is the reading.
+	Gauge Gauge
+	// Commodity is the commodity of a price gauge; empty otherwise.
+	Commodity string
+	// MaxAge is the oldest price age that counts, in ticks, 0 to MaxPolicyEvery, for a
+	// price gauge; 0 otherwise.
+	MaxAge int64
+	// Target is the reading at which the rule rests, 0 to MaxMoney.
+	Target int64
+	// Deadband is the half-width of the rest band, 0 to MaxMoney.
+	Deadband int64
+	// Span is the error that moves the lever by Move, 1 to MaxMoney.
+	Span int64
+	// Move is the basis points of lever value per Span of error, 0 to MaxMoveBP.
+	Move int64
+	// Raise makes the lever rise when the reading is above Target; false makes it fall.
+	Raise bool
+}
+
+// canonical returns a copy of the module with the actors sorted by ID, and in each
+// actor the levers by ID, the steps by (Lever, At) and the reactions by Lever
+// (spec-policy.md 3.1.2, FR-PLC-003), nil for nil. The lists are copied, so the copy
+// owns them.
+func (m *PolicyConfig) canonical() *PolicyConfig {
+	if m == nil {
+		return nil
+	}
+	out := &PolicyConfig{Actors: sortedBy(m.Actors, func(a, b PolicyActor) int { return cmp.Compare(a.ID, b.ID) })}
+	for i := range out.Actors {
+		a := &out.Actors[i]
+		a.Levers = sortedBy(a.Levers, func(x, y Lever) int { return cmp.Compare(x.ID, y.ID) })
+		a.Schedule = sortedBy(a.Schedule, func(x, y ScheduleStep) int {
+			return cmp.Or(cmp.Compare(x.Lever, y.Lever), cmp.Compare(x.At, y.At))
+		})
+		a.Rules = sortedBy(a.Rules, func(x, y Reaction) int { return cmp.Compare(x.Lever, y.Lever) })
 	}
 	return out
 }

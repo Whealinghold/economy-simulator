@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"cmp"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/institution"
@@ -28,6 +29,18 @@ type legalTable struct {
 	control            []int32
 	rate               []int64
 	rateAt             []int32
+	// tally is the clamps of the tick by (region, commodity) cell and rateTally those of the
+	// rate limit by region, kept only when an observer was supplied and told at P7.2b
+	// (spec-institutions.md 11.1). order is the scratch of the events of one region.
+	tally     []institution.Tally
+	rateTally []institution.Tally
+	order     []controlRef
+}
+
+// controlRef names a tally of one region by its control, for the order of the events.
+type controlRef struct {
+	control int32
+	cell    int32 // the (region, commodity) cell, -1 for the region's rate limit
 }
 
 // resolve derives every table from the configuration, the suspensions and the levels
@@ -137,4 +150,107 @@ func (o *institutions) rangeOf(g RegionID, k CommodityID) (capPrice, floorPrice 
 		return 0, 0, 0, false
 	}
 	return l.capPrice[cell], l.floorPrice[cell], ControlID(l.control[cell] - 1), true
+}
+
+// rangeAt returns the cap and the floor in minor units of commodity k in region g, 0 for
+// none: what a book reads at each admission. It is an array read.
+func (o *institutions) rangeAt(g RegionID, k CommodityID) (capPrice, floorPrice int64) {
+	cell := int(g)*len(o.c.Commodities) + int(k)
+	return o.legal.capPrice[cell], o.legal.floorPrice[cell]
+}
+
+// attachBooks gives every book of the markets the module, so that each admission reads the
+// legal range of its market (hook H-5), and the counts of the clamps when an observer was
+// supplied (observability-and-logging.md 4.5).
+func (o *institutions) attachBooks(m *marketTable, supplied bool) {
+	for _, b := range m.books {
+		b.org = o
+	}
+	if supplied {
+		o.legal.tally = make([]institution.Tally, o.nr*len(o.c.Commodities))
+		o.legal.rateTally = make([]institution.Tally, o.nr)
+	}
+}
+
+// noteClamp counts one order of qty units in region g, on the bid side or the ask side,
+// whose limit the range replaced. A nil module and a world with no observer count
+// nothing.
+func (o *institutions) noteClamp(g RegionID, k CommodityID, bid bool, qty int64) {
+	if o != nil && o.legal.tally != nil {
+		o.legal.tally[int(g)*len(o.c.Commodities)+int(k)].Add(bid, true, qty)
+	}
+}
+
+// clampLimit returns the limit price an order of the side for commodity k in region g is
+// admitted with under the legal range, and whether the range replaced it (hook H-7, the
+// clamp of the contract round, spec-institutions.md 6.7.1). A nil module changes nothing.
+func (o *institutions) clampLimit(g RegionID, k CommodityID, bid bool, limit Price) (Price, bool) {
+	if o == nil {
+		return limit, false
+	}
+	capPrice, floorPrice := o.rangeAt(g, k)
+	p, changed := institution.Clamp(int64(limit), bid, capPrice, floorPrice)
+	return Price(p), changed
+}
+
+// clampOffer admits a delivery offer with its ask limit raised to the floor in force for its
+// commodity in the destination region, and counts the clamp (spec-institutions.md 6.7.1).
+func (o *institutions) clampOffer(d *DeliveryOffer) {
+	if p, changed := o.clampLimit(d.To, d.Commodity, false, d.Limit); changed {
+		d.Limit = p
+		o.noteClamp(d.To, d.Commodity, false, int64(d.Quantity))
+	}
+}
+
+// rateLimit is the rate seam of the credit module (hook H-8, spec-institutions.md 6.6): the
+// limit a request of a borrower in region g is admitted with, which is the cap in force
+// when the request's own is above it, and whether it was lowered. A rate limit bounds what
+// a borrower accepts, never what a lender posts.
+func (o *institutions) rateLimit(g RegionID, limit int64) (int64, bool) {
+	if o.legal.rateAt[g] == 0 || limit <= o.legal.rate[g] {
+		return limit, false
+	}
+	if o.legal.rateTally != nil {
+		o.legal.rateTally[g].Add(true, true, 0)
+	}
+	return o.legal.rate[g], true
+}
+
+// reportControls is the PriceControlled events of P7.2b: for each region in ascending
+// order, one event for each control with a clamp, in ascending ControlID, after the
+// RightRefused events (spec-institutions.md 7.3.3). The tallies are cleared as they are
+// told.
+func (o *institutions) reportControls(w *World) {
+	l := &o.legal
+	nc := len(o.c.Commodities)
+	for g := range o.nr {
+		l.order = l.order[:0]
+		for k := range nc {
+			if l.tally[g*nc+k] != (institution.Tally{}) {
+				l.order = append(l.order, controlRef{control: l.control[g*nc+k] - 1, cell: int32(g*nc + k)})
+			}
+		}
+		if l.rateTally[g] != (institution.Tally{}) {
+			l.order = append(l.order, controlRef{control: l.rateAt[g] - 1, cell: -1})
+		}
+		slices.SortFunc(l.order, func(a, b controlRef) int {
+			return cmp.Or(cmp.Compare(a.control, b.control), cmp.Compare(a.cell, b.cell))
+		})
+		for _, r := range l.order {
+			w.obs.deliver(o.controlEvent(w.Tick(), RegionID(g), r))
+		}
+	}
+}
+
+// controlEvent builds the event of one control of a region and clears its tally.
+func (o *institutions) controlEvent(tick int64, g RegionID, r controlRef) PriceControlled {
+	l := &o.legal
+	t := &l.rateTally[g]
+	k := NoCommodity
+	if r.cell >= 0 {
+		t, k = &l.tally[r.cell], CommodityID(int(r.cell)-int(g)*len(o.c.Commodities))
+	}
+	e := PriceControlled{Tick: tick, Region: g, Control: ControlID(r.control), Commodity: k, Bids: t.Lowered, Asks: t.Raised, Units: t.Units}
+	*t = institution.Tally{}
+	return e
 }

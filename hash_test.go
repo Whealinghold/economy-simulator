@@ -45,6 +45,7 @@ var presentationOnly = map[string]bool{
 	"Payout.Label":              true,
 	"Purchase.Label":            true,
 	"Release.Label":             true,
+	"PolicyActor.Label":         true,
 	"WorldParams.DistanceLabel": true,
 }
 

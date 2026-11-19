@@ -352,11 +352,11 @@ with the slice (`vision.md` section 4).
 | `credit.go`, `internal/credit` | CRD | LED, MON, EST, WEL |
 | `risk.go`, `internal/risk` (and the `Losses` preset of `indicator/`, FR-IND-059, built here; plan 3-rsk, status: plan written; PR A in development) | RSK | TRN, STO |
 | `infrastructure.go`, `internal/facility` | CAP | PRO, RES, TRN, STO, SET |
-| `insurance.go`, `internal/insure` | INS | CRD, RSK |
+| `insurance.go`, `internal/insure` (plan 3-ins, status: plan written; PR A in development; five continuation files `insurance_validate.go`, `insurance_round.go`, `insurance_settle.go`, `insurance_strategy.go`, `insurance_report.go`) | INS | CRD, RSK |
 | `fiscal.go`, `internal/fiscal` (plan 3-fis, status: plan written; PR 1 in development) | FIS | POL, MON, CLR, TRN, EXT, LED, WEL, CAL, CHK, OBS, INT, MER, STO, EST |
 | `institutions.go`, `internal/institution` (plan 3-org, status: plan written; PR A merged; PR B in development; six continuation files `institutions_validate.go`, `institutions_warn.go`, `institutions_round.go`, `institutions_rights.go`, `institutions_legal.go`, `institutions_report.go`) | ORG | POL, SKL, SET |
-| `policy.go`, `internal/policy` (`Policy`, `WithPolicy`, `DirectPolicy`) | PLC | POL, FIS, INT |
-| `saving.go`, `internal/saving` | SAV | CAP, WEL |
+| `policy.go`, `internal/policy` (`Policy`, `WithPolicy`, `DirectPolicy`; plan 3-plc, status: plan written; PR A in development; seven continuation files `policy_validate.go`, `policy_reach.go`, `policy_warn.go`, `policy_view.go`, `policy_apply.go`, `policy_builtin.go`, `policy_state.go`) | PLC | POL, FIS, INT |
+| `saving.go`, `internal/saving` (plan 3-sav, status: plan written; PR 1 in development; four continuation files `saving_validate.go`, `saving_view.go`, `saving_strategy.go`, `saving_report.go`) | SAV | CAP, WEL |
 | `technology.go`, `internal/technology` | TEC | PRO, REG, CAL (plan 3-tec; PRs A and B merged, PR C developed on `s3-tec-c`: tag 33, golden, S149 to S154; gates pending) |
 
 Each ships as a stage 2 module does. The checkpoint tag of each is appended

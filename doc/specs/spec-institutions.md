@@ -521,7 +521,8 @@ checked by the world beside `not_tradable`) and nothing else: a place that is no
 
 5.6.3. **Counting (N-045, FR-STB-013).** Every refusal is counted per (region, right) and
 activity, and told once a tick by `RightRefused` (11.1). An order refusal is also an
-`OrderRejected` (per order, as any); a start refusal is a `Debug` line, guarded, per start; a
+`OrderRejected` (per order, as any); a start refusal is a `Debug` line, guarded, per start, and `Produce` counts requests, not
+households; a
 closed place is counted and logged at `Debug` ("place not open", 11.2). **One count of `Train`
 is one place:** at P7.1(a) step (2) of an entry step, with a `train` right in force on the role,
 `f` is the free places (under the role's own `MaxTrainees`) of the households of the role that
@@ -673,7 +674,9 @@ The admitted order carries the replaced limit: the **reservation** is `limit * q
 it (3.3 there), `OrderPlaced` shows it, `Clearing` receives it, the world's validity check
 of trades (`spec-clearing.md` 8.2) compares with it, and the household's `Outcome` carries it
 as the order's limit. The count of the replaced orders is kept per (region, control), told
-once a tick by `PriceControlled` (11.1).
+once a tick by `PriceControlled` (11.1). **An order is counted only once it is admitted:** an
+order refused after the clamp (for funds, stock or room) is an `OrderRejected` and adds no
+count; likewise for a contract's take and a loan request.
 
 6.3.2. **Why one side is enough.** The price of a trade lies between the ask's limit and
 the bid's limit, inclusive (`spec-clearing.md` 5.1, 5.2: the midpoint rounded half to even

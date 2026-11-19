@@ -97,7 +97,11 @@ var declaredEvents = []economysim.Event{
 	economysim.RentScaled{},
 	economysim.RentPaid{},
 	economysim.FacilityChanged{},
+	economysim.FacilityLimited{},
+	economysim.HireFormed{},
+	economysim.HireEnded{},
 	economysim.RouteRiskScaled{},
+	economysim.FiscalFlowApplied{},
 	economysim.StoreLoss{},
 	economysim.StoreRiskScaled{},
 	economysim.MembershipChanged{},
@@ -112,7 +116,7 @@ var declaredEvents = []economysim.Event{
 var moduleGates = []string{
 	"demand", "resources", "subsistence", "population", "transport", "information", "migration",
 	"merchant block", "merchants", "external", "employment", "storage", "credit", "technology",
-	"settlements", "tenure", "infrastructure", "risk", "institutions",
+	"settlements", "tenure", "infrastructure", "risk", "fiscal", "institutions",
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -120,8 +124,7 @@ var moduleGates = []string{
 // regions, checkpoint and skill stages. The change that
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
-	"HireFormed", "HireEnded", "LabourRound",
-	"FacilityLimited", "FiscalFlowApplied",
+	"LabourRound",
 	"TreasuryOrdered", "SavingPlanned", "PolicyDecided",
 	"CoverFormed", "CoverEnded", "CoverRound", "CoverSettled",
 }
@@ -772,6 +775,7 @@ func TestConstants_Values(t *testing.T) {
 	}
 	owner[string(economysim.ReasonNoEndowment)] = "doc/specs/spec-resources.md"
 	owner[string(economysim.ReasonNoTitle)] = "doc/specs/spec-land.md"
+	owner[string(economysim.ReasonNotPermitted)] = "doc/specs/spec-institutions.md"
 	owner[string(economysim.ReasonRentFunds)] = "doc/specs/spec-land.md"
 	for _, r := range agentReasons {
 		owner[string(r.got)] = "doc/specs/spec-agents.md"
@@ -815,7 +819,7 @@ func TestConstants_Values(t *testing.T) {
 	}
 	// Every rejection reason of the table of spec-clearing.md 3.2 is a
 	// constant, or is named here as built with its module.
-	deferredReasons := []string{"not_permitted", "no_room"}
+	deferredReasons := []string{"no_room"}
 	clearing := specText["doc/specs/spec-clearing.md"]
 	from := strings.Index(clearing, "### 3.2 Validation")
 	to := strings.Index(clearing, "Checks run in the order of the table")
@@ -877,7 +881,7 @@ func TestConstants_Values(t *testing.T) {
 	}
 	// A row marked no that a module has built is a constant of the root: the module's
 	// change names it here and the constant is checked below (no_endowment: RES 5.3).
-	builtByModule := []economysim.Reason{economysim.ReasonNoEndowment, economysim.ReasonNoTitle, economysim.ReasonRentFunds}
+	builtByModule := []economysim.Reason{economysim.ReasonNoEndowment, economysim.ReasonNoTitle, economysim.ReasonRentFunds, economysim.ReasonNotPermitted}
 	for _, d := range deferredProduction {
 		_, declared := owner[d]
 		if built := slices.Contains(builtByModule, economysim.Reason(d)); declared != built {

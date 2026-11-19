@@ -269,6 +269,11 @@ var stepSites = []site{
 			w.p17aSettle()
 		}
 	})},
+	{"P1.7b", noError(func(w *World) {
+		if w.fiscal != nil {
+			w.p17bFiscal()
+		}
+	})},
 	{"P1.8", noError(func(w *World) {
 		if w.external != nil {
 			w.p18Walk()
@@ -297,6 +302,11 @@ var stepSites = []site{
 		}
 	})},
 	{"P2.5", (*World).p25Work},
+	{"P2.5a", noError(func(w *World) {
+		if w.employment != nil {
+			w.p25aLabour()
+		}
+	})},
 	{"P2.6", noError((*World).p26Ration)},
 	{"P2.7", (*World).p27Start},
 	{"P2.8", noError(func(w *World) {
@@ -397,6 +407,11 @@ var stepSites = []site{
 	{"P8.3a", noError(func(w *World) {
 		if w.tenure != nil {
 			w.p83aRent()
+		}
+	})},
+	{"P8.3b", noError(func(w *World) {
+		if w.infra != nil {
+			w.p83bFacilities()
 		}
 	})},
 	{"P8.3c", noError(func(w *World) {

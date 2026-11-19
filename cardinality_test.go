@@ -131,6 +131,7 @@ func (c *cardChecker) jurisdictions(ev string, tick int64, rows []economysim.Jur
 // check applies the closed-set checks of OBS 6.2.1 to one event.
 func (c *cardChecker) check(e economysim.Event) {
 	c.checkStorage(e)
+	c.checkFiscal(e)
 	switch e := e.(type) {
 	case economysim.WorldCreated:
 		c.jurisdictions("WorldCreated", e.Tick, e.Jurisdictions)
@@ -241,6 +242,9 @@ func (c *cardChecker) check(e economysim.Event) {
 		c.member("TitleTransferred", e.Tick, "Cause", string(e.Cause))
 	case economysim.FacilityChanged:
 		c.facility(e)
+	case economysim.FacilityLimited:
+		c.region("FacilityLimited", e.Tick, e.Region)
+		c.id("FacilityLimited", e.Tick, "Class", int(e.Class), len(c.names.FacilityClasses))
 	case economysim.RentScaled:
 		c.region("RentScaled", e.Tick, e.Region)
 		c.id("RentScaled", e.Tick, "Resource", int(e.Resource), len(c.names.Resources))
@@ -529,6 +533,17 @@ func TestCardinality_StorageAttributesTakeConfiguredValues(t *testing.T) {
 	}
 	if limited == 0 || c.seen["Region"] == 0 {
 		t.Errorf("%d RoomLimited events and %d region values checked, want some: the run exercised nothing", limited, c.seen["Region"])
+	}
+}
+
+// checkFiscal applies the closed-set checks to FiscalFlowApplied: its region, its
+// authority (a jurisdiction of the configuration), its kind and its class.
+func (c *cardChecker) checkFiscal(e economysim.Event) {
+	if e, ok := e.(economysim.FiscalFlowApplied); ok {
+		c.region("FiscalFlowApplied", e.Tick, e.Region)
+		c.id("FiscalFlowApplied", e.Tick, "Jurisdiction", int(e.Authority), len(c.names.Jurisdictions))
+		c.member("FiscalFlowApplied", e.Tick, "Kind", string(e.Kind))
+		c.member("FiscalFlowApplied", e.Tick, "FiscalClass", string(e.Class))
 	}
 }
 

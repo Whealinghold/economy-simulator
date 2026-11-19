@@ -133,6 +133,7 @@ func (v *validator) structural() {
 	v.validateInfrastructure()
 	v.validateInstitutions()
 	v.validateFiscal()
+	v.validatePolicy()
 	v.overflow()
 }
 
@@ -1508,7 +1509,7 @@ func (v *validator) yieldMax(entry map[string]int64, rc *Recipe) int64 {
 	if !rc.Sited {
 		top = max(top, wholeBP)
 	}
-	return v.withTech(rc.ID, top*MaxYieldBP/wholeBP)
+	return v.withHire(rc.ID, v.withTech(rc.ID, top*MaxYieldBP/wholeBP))
 }
 
 // overflow is phase 5: the derived products of spec-config.md 4.2 that the
@@ -2120,6 +2121,7 @@ func warnings(c *Config) []Warning {
 	out = append(out, infrastructureWarnings(c, lk)...)
 	out = append(out, institutionsWarnings(c, lk)...)
 	out = append(out, fiscalWarnings(c, lk)...)
+	out = append(out, policyWarnings(c, lk)...)
 	out = append(out, employmentWarnings(c, lk)...)
 	sortWarnings(out)
 	return out

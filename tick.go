@@ -37,6 +37,7 @@ var positionList = [...]position{
 	{"P1.6", "EST", line},
 	{"P1.7", "MON", line},
 	{"P1.7a", "CRD", line},
+	{"P1.7b", "FIS", line},
 	{"P1.8", "EXT", line},
 	{"P1.9", "AGT", line},
 	{"P1.9a", "ORG", line},
@@ -45,6 +46,7 @@ var positionList = [...]position{
 	{"P2.3", "RES", line},
 	{"P2.4", "SUB", line},
 	{"P2.5", "AGT", line},
+	{"P2.5a", "EMP", line},
 	{"P2.6", "RES", line},
 	{"P2.7", "PRO", line},
 	{"P2.8", "SUB", line},
@@ -79,6 +81,7 @@ var positionList = [...]position{
 	{"P8.2", "LED", line},
 	{"P8.3", "RES", line},
 	{"P8.3a", "LND", line},
+	{"P8.3b", "CAP", line},
 	{"P8.3c", "TEC", line},
 	{"P8.4", "LED", line},
 	{"P8.5", "OBS", bracket}, // TickEnded, in endStep
@@ -91,11 +94,11 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P0.3a",
-	"P1.3a", "P1.7b",
-	"P2.5a", "P2.8b",
+	"P1.3a",
+	"P2.8b",
 	"P3.3c", "P3.4a", "P3.6b", "P3.6c",
 	"P4.1a",
-	"P8.1b", "P8.3b",
+	"P8.1b",
 }
 
 // positions is the straight line of a step: one call for each position of
@@ -142,6 +145,9 @@ func (w *World) positionsFlows() error {
 	if w.credit != nil {
 		w.p17aSettle()
 	}
+	if w.fiscal != nil {
+		w.p17bFiscal()
+	}
 	if w.external != nil {
 		w.p18Walk()
 	}
@@ -169,6 +175,9 @@ func (w *World) positionsProduce() error {
 	}
 	if err := w.p25Work(); err != nil {
 		return err
+	}
+	if w.employment != nil {
+		w.p25aLabour()
 	}
 	w.p26Ration()
 	if err := w.p27Start(); err != nil {
@@ -317,6 +326,9 @@ func (w *World) positionsEnd() error {
 func (w *World) positionsClose() error {
 	if w.tenure != nil {
 		w.p83aRent()
+	}
+	if w.infra != nil {
+		w.p83bFacilities()
 	}
 	if w.tec != nil {
 		w.p83cTechnology()
