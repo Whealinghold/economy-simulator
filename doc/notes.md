@@ -50,7 +50,7 @@ PR description.
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386 |
-| CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433 |
+| CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-461 |
 | CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241 |
@@ -78,9 +78,9 @@ PR description.
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
-| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380 |
+| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-458, N-459, N-460, N-461 |
 | SAV | N-145, N-156, N-195, N-197, N-362, N-382 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-404, N-140, N-192, N-268, N-348, N-365 |
@@ -88,10 +88,10 @@ PR description.
 | SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375 |
-| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399 |
+| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-458 |
 | SUB | N-121, N-228, N-268, N-244, N-426 |
 | TEC | N-358, N-359, N-360, N-361, N-384 |
-| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434 |
+| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434, N-459 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346 |
 | WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390 |
@@ -2609,6 +2609,30 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-rsk PR C, `spec-indicators.md` 9.1 row 25, 20.
 - **Note:** `Losses` tallies a strike with `StrikeTally`, apart from `LossTally`, because a strike that takes no unit has no commodity. The route `Struck` count is by origin, at dispatch. `indicator/` has no registry of presets, so row 25 is declared by its type and constructor, as `PriceIndex` is. The sentence of `spec-indicators.md` 20 that said the code does not declare the presets is changed for row 25. Rows 22 to 24 are still undeclared. Left open for EMP.
 
+### N-458 S128 is empty on every merchants pack, so the merchant reading of `LossBP` is unmeasured
+
+- **Areas:** RSK, STY
+- **Raised:** 2026-11-19, plan 3-rsk PR D (S128), `spec-risk.md` RSK-A1, A4, A5.
+- **Note:** The warm and cold merchants packs dispatch no shipment in 400 ticks, so the arm that reads `LossBP` and the arm that does not (`blindMerchant`) both report 0 shipments and 8 brokers removed. The books and the composition are exact; the comparison is empty. RSK-A1, A4 and A5 stay unmeasured until a pack lives. Left open for STY.
+
+### N-459 The shipper of the transport goldens sends once
+
+- **Areas:** RSK, TRN
+- **Raised:** 2026-11-19, plan 3-rsk PR D (S130), `spec-risk.md` 6.2.
+- **Note:** `shipperPackOn` sends one volley of 24 shipments at tick 1, and the pack then collapses (N-352), so a series of route scales over time has no dispatch to act on in the middle of a run. S130 is scripted around the volley. A test of scales over time on routes needs a pack that lives or a shipper with its own supply.
+
+### N-460 `overlay/risk.toml` carries no store row, and the reference-chain spec says it does
+
+- **Areas:** RSK, REF
+- **Raised:** 2026-11-19, plan 3-rsk PR D, `spec-reference-chain.md` 4.5.
+- **Note:** The spec says `risk.toml` holds route rows and one store row. A store row needs the storage module, which pack two with transport does not load, so the store row is in `overlay/risk-store.toml` (pack one). Settle it: change 4.5 to follow the two overlays, or add a three-module overlay that carries both.
+
+### N-461 A common and a unit row of one store class cannot share a file
+
+- **Areas:** RSK, CFG
+- **Raised:** 2026-11-19, plan 3-rsk PR D (S129), `spec-risk.md` 6.3.
+- **Note:** A (region, class) key has one row, so the common variant of the barn of pack one cannot sit beside its unit row in one overlay. S129 builds the common variant in Go. Nothing is owed unless a golden needs both.
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2619,4 +2643,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 1e897f8fed50eae0fdd6300b
+NOTES-TAG: 28e105736e10071e72a0cc54
