@@ -2504,6 +2504,46 @@ type RouteRiskScaled struct {
 
 func (RouteRiskScaled) isEvent() {}
 
+// StoreLoss is emitted at P8.1a once per agent and store class struck, in ascending
+// agent ID then class, after the whole position has been applied (spec-risk.md 6.4,
+// 14.1). A class is struck when at least one of the agent's stores of it is. It is
+// emitted only when the risk module is on, and with no loss when every product
+// rounded to 0.
+type StoreLoss struct {
+	Tick int64
+	// Agent is the owner and Region its region.
+	Agent  AgentID
+	Region RegionID
+	// Class is the store class struck and Stores the stores of the class struck, at
+	// least 1.
+	Class  StoreClassID
+	Stores int64
+	// Common says the row of the class in the region is common.
+	Common bool
+	// ShareBP is the share of the account's goods the class took, in basis points,
+	// after the cap of 10 000.
+	ShareBP int64
+	// Lost is the units lost by commodity, in commodity order; empty when every
+	// product rounded to 0.
+	Lost []Amount
+}
+
+func (StoreLoss) isEvent() {}
+
+// StoreRiskScaled is emitted once per store row whose scale a SetStoreRiskScales call
+// changes, in (Region, Class) order, after the whole call has been applied
+// (spec-risk.md 9.2, 14.1). It is emitted only when the risk module is on.
+type StoreRiskScaled struct {
+	Tick int64
+	// Region and Class are the key of the row.
+	Region RegionID
+	Class  StoreClassID
+	// BeforeBP and AfterBP are the scale before and after, in basis points.
+	BeforeBP, AfterBP int64
+}
+
+func (StoreRiskScaled) isEvent() {}
+
 // MembershipChanged is emitted once per region and body per tick at P7.2b, in (Region,
 // Body) ascending order, after SettlementClassChanged, when any household was admitted,
 // lapsed, skipped, barred, left waiting or held; never otherwise (spec-institutions.md

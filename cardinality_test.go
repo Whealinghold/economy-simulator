@@ -257,6 +257,12 @@ func (c *cardChecker) check(e economysim.Event) {
 		c.region("RouteRiskScaled", e.Tick, e.From)
 		c.region("RouteRiskScaled", e.Tick, e.To)
 		c.id("RouteRiskScaled", e.Tick, "Mode", int(e.Mode), len(c.names.Modes))
+	case economysim.StoreRiskScaled:
+		c.region("StoreRiskScaled", e.Tick, e.Region)
+		c.id("StoreRiskScaled", e.Tick, "Class", int(e.Class), len(c.names.StoreClasses))
+	case economysim.StoreLoss:
+		c.region("StoreLoss", e.Tick, e.Region)
+		c.id("StoreLoss", e.Tick, "Class", int(e.Class), len(c.names.StoreClasses))
 	}
 }
 
@@ -479,6 +485,8 @@ func TestCardChecker_FlagsOutOfRangeAndOutsideSet(t *testing.T) {
 		{"rent scale resource out of range", economysim.RentScaled{Resource: 1}, true},
 		{"route risk scale mode out of range", economysim.RouteRiskScaled{Mode: 1}, true},
 		{"route risk scale region out of range", economysim.RouteRiskScaled{To: 1}, true},
+		{"store risk scale class out of range", economysim.StoreRiskScaled{Class: 1}, true},
+		{"store loss class out of range", economysim.StoreLoss{Class: 1}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

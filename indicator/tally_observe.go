@@ -77,6 +77,8 @@ func (t *Tally) foldTransport(e economysim.Event) bool {
 	switch e := e.(type) {
 	case economysim.ShipmentDispatched:
 		t.shipmentDispatched(e)
+	case economysim.StoreLoss:
+		t.storeLoss(e)
 	case economysim.ShipmentArrived:
 		t.shipmentArrived(e)
 	case economysim.ContractFormed:
@@ -423,7 +425,7 @@ func dispatchKey(r DispatchTally, k DispatchTally) int {
 }
 
 func (t *Tally) shipmentDispatched(e economysim.ShipmentDispatched) {
-	if !t.known(len(e.Lines), func(i int) economysim.CommodityID { return e.Lines[i].Commodity }) || !t.nonneg(e.HaulUnits) {
+	if !t.known(len(e.Lines), func(i int) economysim.CommodityID { return e.Lines[i].Commodity }) || !t.nonneg(e.HaulUnits, e.LossBP) {
 		return
 	}
 	for _, l := range e.Lines {
@@ -444,7 +446,7 @@ func (t *Tally) shipmentDispatched(e economysim.ShipmentDispatched) {
 	for _, l := range e.Lines {
 		t.add(&d.Units, int64(l.Quantity))
 	}
-	// Struck stays 0 until the risk module appends the loss to the event.
+	t.dispatchStruck(d, e)
 }
 
 func arrivalKey(r ArrivalTally, k ArrivalTally) int {
@@ -452,12 +454,11 @@ func arrivalKey(r ArrivalTally, k ArrivalTally) int {
 }
 
 func (t *Tally) shipmentArrived(e economysim.ShipmentArrived) {
-	if !t.known(len(e.Lines), func(i int) economysim.CommodityID { return e.Lines[i].Commodity }) {
+	if !t.arrivalKnown(e) {
 		return
 	}
-	// Lost and AccountLost stay 0 until the risk module appends them to ArrivedLine.
 	for _, l := range e.Lines {
-		if !t.nonneg(int64(l.Shipped), int64(l.Delivered), int64(l.Diverted), int64(l.Spoiled)) {
+		if !t.nonneg(int64(l.Shipped), int64(l.Delivered), int64(l.Diverted), int64(l.Spoiled), int64(l.Lost)) {
 			return
 		}
 	}
@@ -474,7 +475,9 @@ func (t *Tally) shipmentArrived(e economysim.ShipmentArrived) {
 		t.add(&a.Delivered, int64(l.Delivered))
 		t.add(&a.Diverted, int64(l.Diverted))
 		t.add(&a.Spoiled, int64(l.Spoiled))
+		t.add(&a.Lost, int64(l.Lost))
 	}
+	t.accountLost(e)
 }
 
 func settlementKey(r SettlementTally, k SettlementTally) int {
