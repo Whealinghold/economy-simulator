@@ -156,6 +156,33 @@ func (o *institutions) eligibleBody(role RoleID, g RegionID) BodyID {
 	return BodyID(o.bodyOf[int(g)*o.nroles+int(role)])
 }
 
+// Membership is the membership group of an AgentState (spec-institutions.md 4.4.1,
+// spec-integration.md 4.7.2): Member is true only for a household that is a member of a
+// body at the boundary, and Body is the BodyID of that body. The zero value is no
+// membership, so a world with the module off renders as it did before the module existed
+// (architecture.md 2.10.5; the spec's NoBody is Member false).
+type Membership struct {
+	Member bool
+	Body   BodyID
+}
+
+// fillMembership is the filler of AgentState.Membership (hook H-11): the body the household
+// is a member of as isMember tests it, read at the boundary. A world with the module off
+// and an agent that is no household in a region leave the zero value.
+func (w *World) fillMembership(st *AgentState, a *agent) {
+	o := w.org
+	if o == nil {
+		return
+	}
+	g, ok := w.householdRegion(a)
+	if !ok {
+		return
+	}
+	if b := o.eligibleBody(a.role, g); b >= 0 && o.isMember(int(a.id), a.role, g, int(b)) {
+		st.Membership = Membership{Member: true, Body: b}
+	}
+}
+
 // satAdd64 adds two non-negative counts of households, saturating at the largest
 // int64 so that a count never wraps (architecture.md 3.5).
 func satAdd64(a, b int64) int64 {

@@ -772,6 +772,10 @@ type AgentState struct {
 	// at most MaxFacilitiesPerAgent; empty while the infrastructure module is off
 	// (spec-infrastructure.md 11.4).
 	Facilities []FacilityState
+
+	// Membership is the membership group of the institutions module: the zero value, no
+	// membership, while the module is off (spec-integration.md 4.7.2).
+	Membership Membership
 }
 
 // HoldingState is a commodity an agent holds: its units and the units of them that
@@ -839,6 +843,7 @@ func (w *World) Agent(id AgentID) (AgentState, error) {
 	w.fillModuleGroups(&st, a)
 	w.fillCreditState(&st, a)
 	w.fillFacilityState(&st, a)
+	w.fillMembership(&st, a)
 	return st, nil
 }
 

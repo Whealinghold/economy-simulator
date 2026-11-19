@@ -1795,6 +1795,8 @@
 //   - Need: the settlement flag a region's class must carry for a body to admit anyone there.
 //   - LegalLevel, RightSuspension: the entries of the two slots, SetLegalLevels and
 //     SetRightSuspensions, that set the cap and floor of a control and suspend a right.
+//   - Membership: the group of an AgentState that says whether the household is a member of a
+//     body and of which.
 //   - BodyRow, LegalRow: the snapshot rows of a body in a region and of a changed legal level.
 //   - MembershipChanged, RightRefused, PriceControlled, LegalLevelSet, RightSuspensionSet: the
 //     events of the membership round, of the refusals of a right, of the clamps of a control

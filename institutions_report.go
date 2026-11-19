@@ -250,15 +250,23 @@ func (o *institutions) readLevels(r *codec.Reader) {
 }
 
 // levelsFit reports whether the levels of control k are in bound and differ from the
-// configured ones: a control has a cap and a floor of at most MaxBasisPoints with the
-// floor at most the cap when a cap is set, a rate limit a cap of at most MaxCreditRateBP
-// and no floor.
+// configured ones: what a checkpoint holds for a level it saves (spec-institutions.md 12.3).
 func (o *institutions) levelsFit(k int, capBP, floorBP uint64) bool {
 	l := &o.legal
 	if int64(capBP) == l.baseCap[k] && int64(floorBP) == l.baseFloor[k] {
 		return false
 	}
-	if l.isRate[k] {
+	return o.levelsInBound(k, int64(capBP), int64(floorBP))
+}
+
+// levelsInBound reports whether the levels of control k are in bound: a control has a cap
+// and a floor of at most MaxBasisPoints with the floor at most the cap when a cap is set, a
+// rate limit a cap of at most MaxCreditRateBP and no floor (spec-institutions.md 7.1).
+func (o *institutions) levelsInBound(k int, capBP, floorBP int64) bool {
+	if capBP < 0 || floorBP < 0 {
+		return false
+	}
+	if o.legal.isRate[k] {
 		return floorBP == 0 && capBP <= MaxCreditRateBP
 	}
 	return capBP <= MaxBasisPoints && floorBP <= MaxBasisPoints && (capBP == 0 || floorBP <= capBP)
