@@ -27,6 +27,7 @@ var byName = map[string]ledger.Reason{
 	"outside_budget": ledger.OutsideBudget, "outside_unspent": ledger.OutsideUnspent, "outside_receipts": ledger.OutsideReceipts,
 	"outside_offer": ledger.OutsideOffer, "outside_unsold": ledger.OutsideUnsold, "outside_purchases": ledger.OutsidePurchases,
 	"wage_pay": ledger.WagePay, "rent": ledger.Rent, "title_sale": ledger.TitleSale, "loss": ledger.Loss,
+	"wage_escrow": ledger.WageEscrow, "wage_refund": ledger.WageRefund,
 }
 
 // notBuilt lists the reasons of the starting registry that a module owns and
@@ -34,8 +35,7 @@ var byName = map[string]ledger.Reason{
 // 9.7. A module's change deletes its entries.
 var notBuilt = []string{
 	"want_consumption",
-	"escrow_in", "escrow_out", "escrow_refund", "wage_escrow",
-	"wage_refund",
+	"escrow_in", "escrow_out", "escrow_refund",
 	"premium", "payout",
 }
 
@@ -167,6 +167,9 @@ func TestRegistry_AgreesWithSpec(t *testing.T) {
 			built[name] = true
 			if name == "births" || name == "transit_out" || name == "transit_in" {
 				continue // checked against FR-LED-055 below: the cell has two clauses
+			}
+			if name == "wage_pay" || name == "wage_escrow" || name == "wage_refund" {
+				continue // checked by TestWagePay_* and TestWageEscrowAndRefund_*: the cell names a party in brackets or two pairings
 			}
 			from, to, back := pairing(row.between)
 			from, to = withTreasury(name, row.between, from, to)
@@ -449,13 +452,14 @@ func TestEscrowReasons_Pairings(t *testing.T) {
 	}
 }
 
-// TestWagePay_AgentToAgentMoneyOnly verifies the registry row of wage_pay in the
-// payroll form of the employment module (spec-employment.md 24.1.6): an internal
-// transfer of money between two Agent accounts, no faucet, no sink, no goods, no
-// boundary account and no other pairing.
+// TestWagePay_AgentToAgentOrEscrowToAgentMoneyOnly verifies the registry row of
+// wage_pay: an internal transfer of money between two Agent accounts in the
+// payroll form (spec-employment.md 24.1.6) and from an Escrow account to an Agent
+// account in the hire form (7.1), no faucet, no sink, no goods, no boundary
+// account and no other pairing.
 //
-// Requirement: FR-EMP-072
-func TestWagePay_AgentToAgentMoneyOnly(t *testing.T) {
+// Requirement: FR-EMP-072, FR-EMP-039
+func TestWagePay_AgentToAgentOrEscrowToAgentMoneyOnly(t *testing.T) {
 	t.Parallel()
 	if class, ok := ledger.ClassOf(ledger.WagePay, false); !ok || class != ledger.Internal {
 		t.Errorf("ClassOf(wage_pay, money) = %v, %v, want an internal row", class, ok)
@@ -465,7 +469,7 @@ func TestWagePay_AgentToAgentMoneyOnly(t *testing.T) {
 	}
 	for a := ledger.KindAgent; a <= ledger.KindBoundary; a++ {
 		for b := ledger.KindAgent; b <= ledger.KindBoundary; b++ {
-			want := a == ledger.KindAgent && b == ledger.KindAgent
+			want := (a == ledger.KindAgent || a == ledger.KindEscrow) && b == ledger.KindAgent
 			if got := ledger.Allowed(ledger.WagePay, false, a, b); got != want {
 				t.Errorf("Allowed(wage_pay, money, %d, %d) = %v, want %v", a, b, got, want)
 			}
@@ -508,4 +512,38 @@ func rentPairAllowed(r ledger.Reason, a, b ledger.Kind) bool {
 		return holder(a) && holder(b)
 	}
 	return a == ledger.KindAgent && holder(b)
+}
+
+// TestWageEscrowAndRefund_AgentEscrowMoneyOnly verifies the registry rows of
+// wage_escrow (agent to escrow) and wage_refund (escrow to agent) of the hire form
+// of the employment module (spec-employment.md 7.1): internal transfers of money,
+// no faucet, no sink, no goods and no other pairing.
+//
+// Requirement: FR-EMP-039, FR-LED-060
+func TestWageEscrowAndRefund_AgentEscrowMoneyOnly(t *testing.T) {
+	t.Parallel()
+	rows := []struct {
+		name     string
+		reason   ledger.Reason
+		from, to ledger.Kind
+	}{
+		{"wage_escrow", ledger.WageEscrow, ledger.KindAgent, ledger.KindEscrow},
+		{"wage_refund", ledger.WageRefund, ledger.KindEscrow, ledger.KindAgent},
+	}
+	for _, rw := range rows {
+		if class, ok := ledger.ClassOf(rw.reason, false); !ok || class != ledger.Internal {
+			t.Errorf("ClassOf(%s, money) = %v, %v, want an internal row", rw.name, class, ok)
+		}
+		if _, ok := ledger.ClassOf(rw.reason, true); ok {
+			t.Errorf("ClassOf(%s, goods) has a row, want money only", rw.name)
+		}
+		for a := ledger.KindAgent; a <= ledger.KindBoundary; a++ {
+			for b := ledger.KindAgent; b <= ledger.KindBoundary; b++ {
+				want := a == rw.from && b == rw.to
+				if got := ledger.Allowed(rw.reason, false, a, b); got != want {
+					t.Errorf("Allowed(%s, money, %d, %d) = %v, want %v", rw.name, a, b, got, want)
+				}
+			}
+		}
+	}
 }

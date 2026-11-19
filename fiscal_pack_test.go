@@ -58,19 +58,19 @@ func fiscalPackConfig(t *testing.T, off bool) economysim.Config {
 	return cfg
 }
 
-// TestFiscal_PackModuleOnChangesNothingYet verifies, on files alone (testing.md 6.4), that
-// the warm five with the governed polity and the fiscal overlay builds, runs 30 audited
-// steps and ends in the state of the same pack with the module off, and that the
-// configuration hash tells the two apart. The ledger declares the module's reasons and
-// no step uses them, so any difference in the snapshot is a leak of the module into the
-// run (FR-FIS-001: off leaves no trace; here the reverse, on does nothing yet).
+// TestFiscal_PackTaxFillsTheTreasury verifies, on files alone (testing.md 6.4), that the
+// warm five with the governed polity and the fiscal overlay builds and runs 30 audited
+// steps, that the head tax on the cooks of the seat region moves money into the root's
+// treasury (so the treasury ends above its start money and above the same pack with the
+// module off), and that the configuration hash tells the two apart. The payout, the duty
+// and the standing orders of the overlay are not built yet and change nothing.
 //
-// Requirement: FR-FIS-001, FR-FIS-002, FR-FIS-005
+// Requirement: FR-FIS-001, FR-FIS-002, FR-FIS-005, FR-FIS-021
 //
-// Guard: the module is configuration only in this change. A later change that adds a
-// step moves this test on purpose; one that moves it by accident has shifted an agent
-// ID or drawn a word of the stream.
-func TestFiscal_PackModuleOnChangesNothingYet(t *testing.T) {
+// Guard: the audit runs every tick, so a tax that created or destroyed money, overdrew a
+// payer or left a carry on the wrong account fails here; a module that did nothing would
+// leave the treasury at its start money.
+func TestFiscal_PackTaxFillsTheTreasury(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
 		t.Skip("integration test, skipped with -short")
@@ -82,17 +82,18 @@ func TestFiscal_PackModuleOnChangesNothingYet(t *testing.T) {
 	}
 	ron := runPack(t, on, runSpec{Seed: seed, Ticks: ticks, Audit: true, Drive: driveStep, Snapshots: snapNone})
 	roff := runPack(t, off, runSpec{Seed: seed, Ticks: ticks, Audit: true, Drive: driveStep, Snapshots: snapNone})
-	// The snapshot carries the configuration hash, which differs by design.
-	ron.Final.ConfigHash, roff.Final.ConfigHash = [32]byte{}, [32]byte{}
-	if !reflect.DeepEqual(ron.Final, roff.Final) {
-		t.Errorf("final snapshot after %d ticks (seed %d) with the module on differs from the module off, want equal", ticks, seed)
+	if len(ron.Final.Jurisdictions) == 0 || len(roff.Final.Jurisdictions) != len(ron.Final.Jurisdictions) {
+		t.Fatalf("treasury rows with the module on = %d, off = %d, want the same non-zero count", len(ron.Final.Jurisdictions), len(roff.Final.Jurisdictions))
+	}
+	if got, base := ron.Final.Jurisdictions[0].Money, roff.Final.Jurisdictions[0].Money; got <= base {
+		t.Errorf("treasury money after %d ticks (seed %d) with the module on = %d, off = %d, want above: the head tax pays into it", ticks, seed, got, base)
 	}
 }
 
 // TestFiscal_PackCheckpointRoundTrip verifies that a world of the pack with the module
 // on, checkpointed after 10 steps and restored under the same configuration, steps on
 // to the same snapshot as the world that was not interrupted, so the module's ledger
-// reasons survive a save by position and the restore needs no section of the module.
+// reasons survive a save by position and its section (tag 30) carries the tax's state.
 //
 // Requirement: FR-FIS-002, FR-CHK-001
 //

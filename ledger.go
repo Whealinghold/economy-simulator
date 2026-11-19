@@ -66,6 +66,8 @@ var reasonNames = [...]Reason{
 	ledger.Rent:             ReasonRent,
 	ledger.TitleSale:        ReasonTitleSale,
 	ledger.Loss:             ReasonLoss,
+	ledger.WageEscrow:       ReasonWageEscrow,
+	ledger.WageRefund:       ReasonWageRefund,
 }
 
 // ledgerReason returns the ledger's reason of a root Reason, and false for a
@@ -148,7 +150,7 @@ func moduleReasons(c *Config) [][]ledger.Reason {
 		m = append(m, []ledger.Reason{ledger.EscrowIn, ledger.EscrowOut, ledger.EscrowRefund})
 	}
 	if c.Modules.Employment != nil {
-		m = append(m, []ledger.Reason{ledger.WagePay})
+		m = append(m, employmentReasons(c.Modules.Employment.Hire)...)
 	}
 	if c.Modules.Credit != nil {
 		m = append(m, creditReasons())
@@ -158,6 +160,17 @@ func moduleReasons(c *Config) [][]ledger.Reason {
 	}
 	if c.Modules.Risk != nil {
 		m = append(m, riskReasons())
+	}
+	return m
+}
+
+// employmentReasons returns the employment module's reason lists: the wage row,
+// and in the hire form the escrow rows too, which are the hire form's only (the
+// payroll form's ledger layout stays as it was).
+func employmentReasons(hire bool) [][]ledger.Reason {
+	m := [][]ledger.Reason{{ledger.WagePay}}
+	if hire {
+		m = append(m, []ledger.Reason{ledger.WageEscrow, ledger.WageRefund})
 	}
 	return m
 }
@@ -305,13 +318,16 @@ func appendGroup(dst []BoundaryFlow, flows []ledger.Flow, tick int64, only ledge
 
 // classAndName returns the class and the root name of a faucet or a sink reason
 // of the ledger for money or goods, and false for a reason that is neither (an
-// internal one, or one with no row for the thing). A flow reason is classed by
-// the kind of its flow and named by its ID; a built-in or declared one by the
+// internal one, a fiscal flow's included, or one with no row for the thing). A
+// money flow reason is classed by the kind of its flow and named by its ID; a built-in or declared one by the
 // ledger's table and reasonName.
 func classAndName(r ledger.Reason, goods bool, mf []MoneyFlow) (ledger.Class, Reason, bool) {
 	if r >= ledger.NumReasons {
 		i := int(r - ledger.NumReasons)
-		if goods || i >= len(mf) {
+		if i >= len(mf) {
+			return 0, "", false // a fiscal flow: its reason is Internal and has no boundary row (spec-fiscal.md 3.4.1)
+		}
+		if goods {
 			panic(fmt.Sprintf("economysim: invariant violated (programmer error): boundary flow of ledger reason %d has no Reason name", r))
 		}
 		return flowClass(mf[i]), Reason(mf[i].ID), true

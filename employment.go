@@ -9,6 +9,7 @@ import (
 	payroll "github.com/Whealinghold/economy-sim/internal/employment"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
+	"github.com/Whealinghold/economy-sim/internal/transit"
 )
 
 // This file is the employment module in its payroll form (spec-employment.md 24,
@@ -16,8 +17,14 @@ import (
 // its receipts of the tick to the households of the Hireable roles that
 // worked. It holds the module's state, its validator and, with the position,
 // its rule; the arithmetic is internal/employment, and this file converts at the
-// call (architecture.md 2.9, 2.10.1). The module has no hire, no escrow, no
+// call (architecture.md 2.9, 2.10.1). The payroll form has no hire, no escrow, no
 // per-agent state and no checkpoint section.
+//
+// The hire form (spec-employment.md 3 to 7, ADR 0011) is the same state with
+// Employment.Hire set: the labour round of employment_round.go, the hire records
+// of employment_hire.go and the reports of employment_report.go. The two forms
+// never run together (spec-employment.md 24.3, one form per world), so P4.1b
+// does not run in the hire form.
 
 // employment is the state of the module: the roles it reads, by RoleID. It is
 // derived from the configuration and saved nowhere (spec-employment.md 24.1.7).
@@ -39,6 +46,34 @@ type employment struct {
 	rows    []payroll.Transfer
 	// byRole is the tally of the region being paid, by RoleID.
 	byRole []payrollTally
+
+	// The hire form. hire says the world is in it and maxOpen is the most hires
+	// open at once in a region; roles is the employer block of each role,
+	// resolved, by RoleID.
+	hire    bool
+	maxOpen int64
+	roles   []hireRole
+	// next is the ID of the next hire, and hires are the hires in progress in
+	// ascending ID (state: employment_hire.go). workerOf is, by agent ID, the
+	// hire of the agent as a worker plus 1 (0 for none) and hired the executions
+	// the agent has open as an employer, and open is the hires in progress by
+	// region. free is the Escrow accounts no hire or contract uses when the
+	// merchants module is off, by region (the merchants module's list is the
+	// shared one when it is on).
+	next     HireID
+	hires    []hireRec
+	workerOf []HireID
+	hired    []int64
+	open     []int64
+	free     []transit.Free
+	// The scratch of the labour round, rebuilt every tick and saved nowhere: the
+	// requests Work returned, the admitted offers and vacancies by region, the
+	// matching result and the counts of the tick by region (employment_round.go).
+	reqs  []labourReq
+	lanes []labourLane
+	res   payroll.Result
+	cur   *labourLane
+	tally []labourTally
 }
 
 // payrollTally is the PayrollPaid of one role in the region being paid, and
@@ -66,6 +101,9 @@ func newEmployment(c *Config) *employment {
 			e.payrollBP[i], e.payer[i] = b.PayrollBP, true
 		}
 	}
+	if c.Modules.Employment.Hire {
+		e.initHire(c)
+	}
 	return e
 }
 
@@ -81,6 +119,9 @@ func (e *employment) isPayer(role RoleID) bool { return e != nil && e.payer[role
 // only on a refusal the budget guarantees cannot happen, or on an overflow.
 func (w *World) p41bPayroll() error {
 	e := w.employment
+	if e.hire {
+		return nil // the hire form pays through the escrow of each hire, not by the payroll rule
+	}
 	e.collect(w)
 	for g := range w.cfg.Regions {
 		if len(e.payers[g]) == 0 {
@@ -215,4 +256,13 @@ func (w *World) payrollReport(g RegionID) {
 		ev.Tick, ev.Region, ev.Role, ev.Cut = w.Tick(), g, RoleID(role), ev.Due-ev.Paid
 		w.obs.deliver(ev)
 	}
+}
+
+// committedK0 is the k0 a request keeps for the labour round to count as committed
+// (spec-employment.md 5.5, check 6): k0 in the hire form, 0 without it (the payroll form's state hash does not move).
+func (w *World) committedK0(k0 int64) int64 {
+	if !w.employment.isHire() {
+		return 0
+	}
+	return k0
 }

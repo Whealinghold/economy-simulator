@@ -24,6 +24,7 @@ internal/fiscal 90
 internal/graph 90
 internal/household 90
 internal/institution 90
+internal/insure 90
 internal/ledger 90
 internal/logkeys 90
 internal/measure 90
@@ -39,6 +40,7 @@ internal/population 90
 internal/production 90
 internal/reduce 90
 internal/risk 90
+internal/saving 90
 internal/room 90
 internal/rumour 90
 internal/settlement 90

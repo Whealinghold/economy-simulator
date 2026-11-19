@@ -97,7 +97,10 @@ var declaredEvents = []economysim.Event{
 	economysim.RentScaled{},
 	economysim.RentPaid{},
 	economysim.FacilityChanged{},
+	economysim.HireFormed{},
+	economysim.HireEnded{},
 	economysim.RouteRiskScaled{},
+	economysim.FiscalFlowApplied{},
 	economysim.StoreLoss{},
 	economysim.StoreRiskScaled{},
 	economysim.MembershipChanged{},
@@ -112,7 +115,7 @@ var declaredEvents = []economysim.Event{
 var moduleGates = []string{
 	"demand", "resources", "subsistence", "population", "transport", "information", "migration",
 	"merchant block", "merchants", "external", "employment", "storage", "credit", "technology",
-	"settlements", "tenure", "infrastructure", "risk", "institutions",
+	"settlements", "tenure", "infrastructure", "risk", "fiscal", "institutions",
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -120,8 +123,8 @@ var moduleGates = []string{
 // regions, checkpoint and skill stages. The change that
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
-	"HireFormed", "HireEnded", "LabourRound",
-	"FacilityLimited", "FiscalFlowApplied",
+	"LabourRound",
+	"FacilityLimited",
 	"TreasuryOrdered", "SavingPlanned", "PolicyDecided",
 	"CoverFormed", "CoverEnded", "CoverRound", "CoverSettled",
 }

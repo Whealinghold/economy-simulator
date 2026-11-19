@@ -29,7 +29,11 @@ type workCell struct {
 type jobAsk struct {
 	recipe  RecipeID
 	maximum int64
-	set     bool
+	// k0 is the executions the request could start when it was admitted: the
+	// employment module counts it as committed to the principal's stock. It is 0
+	// outside the hire form, so the state hash of a world without it does not move.
+	k0  int64
+	set bool
 	// first and draws locate the records of the request on the endowments its
 	// recipe draws on (resources.go): draws is 0 for a recipe with no draw or while
 	// the module is off.
@@ -123,6 +127,7 @@ func (w *World) p21Complete() {
 			}
 			done, working := a.job.advance()
 			w.welfare.markWorking(int(a.id), working, w.sub.ownJob(w, a))
+			w.releaseWage(a)
 			if done {
 				w.finishJob(a, RegionID(g))
 			}
@@ -134,11 +139,7 @@ func (w *World) p21Complete() {
 // the output, RecipeExecuted is delivered under the flag and the overflow Warn
 // is considered.
 func (w *World) finishJob(a *agent, region RegionID) {
-	account := a.account
-	if w.skills != nil {
-		account = w.jobAccount(a) // a trainee's output goes to its trainer
-	}
-	c := w.prod.complete(w.ledger, &a.job, account, MaxQuantity)
+	c := w.prod.complete(w.ledger, &a.job, w.jobAccount(a), MaxQuantity) // a trainee's or a hired output goes to its principal
 	if w.sto != nil {
 		w.syncJob(a)
 	}
@@ -152,6 +153,7 @@ func (w *World) finishJob(a *agent, region RegionID) {
 		w.tec.count(region, c.recipe, c.executions)
 	}
 	w.warnOverflow(&c)
+	w.hiredCompleted(a)
 }
 
 // warnOverflow logs the Warn "recipe output disposed" (spec-production.md
@@ -237,7 +239,9 @@ func (w *World) workAgent(a *agent, region RegionID) error {
 	if workDraws(s) {
 		w.rnd.keyed(siteWork, w.Tick(), int64(a.id))
 	}
-	if req := s.Work(v, w.rnd.rnd); !req.NoJob {
+	req := s.Work(v, w.rnd.rnd)
+	w.noteLabour(a, region, &req)
+	if !req.NoJob {
 		w.admitJob(a, region, req)
 	}
 	return nil
@@ -303,7 +307,7 @@ func (w *World) admitJob(a *agent, region RegionID, req JobRequest) {
 		w.refuse(a, region, req.Recipe, reason)
 		return
 	}
-	ask := jobAsk{recipe: req.Recipe, maximum: req.Executions, set: true}
+	ask := jobAsk{recipe: req.Recipe, maximum: req.Executions, k0: w.committedK0(k0), set: true}
 	ask.first, ask.draws = w.recordDraws(a, q.principal, region, req.Recipe, k0)
 	w.pr.asks[a.id] = ask
 }
@@ -324,6 +328,9 @@ func (w *World) startReq(a *agent, region RegionID, recipe RecipeID, maximum int
 		maximum: maximum, effective: e, hasProfile: has, exec: a}
 	if w.skills != nil {
 		w.traineeRequest(&q, a, region)
+	}
+	if w.employment != nil {
+		w.hiredRequest(&q, a, region)
 	}
 	return q
 }
@@ -401,10 +408,7 @@ func (w *World) p27Start() error {
 
 // startJob starts the job of an admitted request.
 func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
-	owner := a // the agent whose residues the job carries: the principal's
-	if w.skills != nil {
-		owner = w.residueOwner(a)
-	}
+	owner := w.residueOwner(a) // the agent whose residues the job carries: the principal's
 	row := w.roles.row(owner.role)
 	off, _ := residueOffset(row.jobs, &w.recipes, ask.recipe)
 	q := w.startReq(a, region, ask.recipe, ask.maximum)
@@ -426,6 +430,7 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 		if w.tenure != nil {
 			w.tenure.refused(res.reason)
 		}
+		w.hiredNotStarted(a)
 		w.refuse(a, region, ask.recipe, res.reason)
 		if w.sub != nil {
 			w.sub.blockedStart(w, a, int(region)*len(w.cfg.Roles)+int(a.role), ask.recipe, res.reason)
@@ -433,7 +438,10 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 		return nil
 	}
 	w.noteStarted(a, region, ask, &q, res)
-	if done, _ := a.job.advance(); done {
+	w.hiredStart(a, res.k)
+	done, _ := a.job.advance()
+	w.releaseWage(a)
+	if done {
 		w.finishJob(a, region)
 	}
 	return nil
