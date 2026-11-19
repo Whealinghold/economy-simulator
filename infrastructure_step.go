@@ -158,6 +158,9 @@ func (n *infrastructure) wire(w *World) {
 		w.transport.layer = n.layer
 	}
 	if w.res != nil && n.ground != nil {
+		if len(n.ground) != len(w.res.stock) {
+			invariant("the ground table of the infrastructure module does not match the endowments")
+		}
 		w.res.facilityBP = n.ground
 	}
 }

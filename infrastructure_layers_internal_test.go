@@ -3,6 +3,7 @@ package economysim
 import (
 	"bytes"
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -374,5 +375,24 @@ func TestInfrastructure_LayerAllocsPerRun(t *testing.T) {
 	facRoad(t, w, regHome, regFar)
 	if got := testing.AllocsPerRun(50, func() { w.Travel(regHome, regFar, modeFoot) }); got != 0 {
 		t.Errorf("allocations of Travel with a route facility = %v, want 0", got)
+	}
+}
+
+// TestWire_GroundTableSizeMismatchIsAnInvariant verifies that wiring a ground table whose
+// length differs from the endowments of the resources module stops at once with an
+// invariant message, instead of letting clampGround or effectiveCapacity index past the
+// end of one of the two tables.
+//
+// Guard: both tables are sized region * resources at construction, so a mismatch is a
+// programmer error. Without the check it would surface as an index panic inside P8.3b or
+// a capacity read, far from the cause.
+func TestWire_GroundTableSizeMismatchIsAnInvariant(t *testing.T) {
+	t.Parallel()
+	w := facWorld(t, nil)
+	n := w.infra
+	n.ground = n.ground[:len(n.ground)-1]
+	msg := invariantMessage(func() { n.wire(w) })
+	if !strings.Contains(msg, "does not match the endowments") {
+		t.Errorf("wire with a short ground table: message = %q, want the invariant naming the mismatch", msg)
 	}
 }
