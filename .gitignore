@@ -1,3 +1,6 @@
 .gomu_history.json
 coverage.out
 go.work.sum
+/examples/colony/colony
+/examples/inspector/inspector
+/examples/realm/realm
