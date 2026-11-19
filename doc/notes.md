@@ -62,14 +62,14 @@ PR description.
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361 |
 | EXT | N-108, N-112, N-113, N-214 |
-| FIS | N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-475 |
+| FIS | N-504, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-475 |
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
 | INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-496 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436, N-471 |
-| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475 |
+| LND | N-504, N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
@@ -2489,7 +2489,7 @@ PR description.
 
 - **Areas:** OBS, FIS
 - **Raised:** 2026-11-18, plan 3-fis PR 2 observability review, plan Q3.
-- **Note:** `observability-and-logging.md` 5.3 and 5.3.1 already list `economysim.fiscal.collected`, `.paid`, `.in_kind`, `.unapplied` and `.order.cut` (attribute `economysim.clamp`: `cash`, `hold`, `stock`), fed by `FiscalFlowApplied` and `TreasuryOrdered`. Plan 3-fis Q3 defers them, as SKL Q7 and CRD Q3 did: PR 2 builds no event and no snapshot field, so nothing feeds them yet, and the core module records no metric (rule 5). The adapter PR after FIS PR 6 adds the five instruments, the cardinality test over the flow IDs, regions and authorities, the `economysim.clamp` series count for the reference chain (5.4.2), and takes `FiscalFlowApplied` and `TreasuryOrdered` out of `ignoredEvents`. The ten construction warnings of `fiscal_warnings.go` need no metric: they are fixed by the configuration and read through `Config.Warnings` (counterpart rule of 8.1). Candidate for the same adapter PR, found in the PR 3 observability review: one more instrument, `economysim.fiscal.limited` (Counter, `{household}`, attributes `economysim.reason` (the fiscal flow ID) and `economysim.fiscal_limit` with the closed set `short`, `headroom`, `cut`), fed by `FiscalFlowApplied` (`Short`, `Headroom`, `Cut`). Why: `economysim.fiscal.unapplied` says how much money did not move but not why. Payers too poor to pay (`short`) and a treasury at `MaxMoney` (`headroom`) or empty (`cut`, from PR 4) have different fixes, as for `economysim.money.flow.limited`. The adapter PR adds the row to 5.3, 5.3.1 and the closed set to 5.4.1 (`economysim.fiscal_limit`), and states the series count for the reference chain (5.4.2). Declined on purpose: a metric for `Parties` (the event carries it; no use apart from the share of the limited counts, so add it only if that share is wanted), `Exempt` (PR 5, duties), and attributes for class, authority or region (the flow ID fixes class and authority; region is not needed by any of the five). `TestFiscal_EventsRebuildTheCollection` proves `collected` and `unapplied` derivable from the events.
+- **Note:** `observability-and-logging.md` 5.3 and 5.3.1 already list `economysim.fiscal.collected`, `.paid`, `.in_kind`, `.unapplied` and `.order.cut` (attribute `economysim.clamp`: `cash`, `hold`, `stock`), fed by `FiscalFlowApplied` and `TreasuryOrdered`. Plan 3-fis Q3 defers them, as SKL Q7 and CRD Q3 did: PR 2 builds no event and no snapshot field, so nothing feeds them yet, and the core module records no metric (rule 5). The adapter PR after FIS PR 6 adds the five instruments, the cardinality test over the flow IDs, regions and authorities, the `economysim.clamp` series count for the reference chain (5.4.2), and takes `FiscalFlowApplied` and `TreasuryOrdered` out of `ignoredEvents`. The ten construction warnings of `fiscal_warnings.go` need no metric: they are fixed by the configuration and read through `Config.Warnings` (counterpart rule of 8.1). Candidate for the same adapter PR, found in the PR 3 observability review: one more instrument, `economysim.fiscal.limited` (Counter, `{household}`, attributes `economysim.reason` (the fiscal flow ID) and `economysim.fiscal_limit` with the closed set `short`, `headroom`, `cut`), fed by `FiscalFlowApplied` (`Short`, `Headroom`, `Cut`). Why: `economysim.fiscal.unapplied` says how much money did not move but not why. Payers too poor to pay (`short`) and a recipient or a treasury with no room (`headroom`: a balance at `MaxMoney` or, from PR 4, a household's full store, N-504) or a short treasury (`cut`, from PR 4: the pro rata cut of a payout) have different fixes, as for `economysim.money.flow.limited`. The adapter PR adds the row to 5.3, 5.3.1 and the closed set to 5.4.1 (`economysim.fiscal_limit`), and states the series count for the reference chain (5.4.2). Declined on purpose: a metric for `Parties` (the event carries it; no use apart from the share of the limited counts, so add it only if that share is wanted), `Exempt` (PR 5, duties), and attributes for class, authority or region (the flow ID fixes class and authority; region is not needed by any of the five). PR 4 review: the payout counts (`Cut`, `Headroom`) are already on `FiscalFlowApplied`, so no new event field and no new instrument beyond `fiscal.limited`; `economysim.fiscal.in_kind` is fed by `Commodity` and `Applied` of an in-kind payout. `TestFiscal_EventsRebuildTheCollection` proves `collected` and `unapplied` derivable from the events.
 
 ### N-470 The arrival's lost units are a per-tick list kept by RSK's file
 
@@ -2773,6 +2773,12 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-config.md` 8.2.2.
 - **Note:** The hash ids of the `Role` fields are 28 for `Cover` (insurance) and 29 for `Saver`, reserved in one edit so that the order in which the two modules are built cannot make them collide. INS takes 28 when it is built. Left open for INS.
 
+### N-504 An in-kind payout to a store-limited household stops at its free store room
+
+- **Areas:** FIS, LND
+- **Raised:** 2026-11-19, plan 3-fis PR 4 observability review.
+- **Note:** `spec-fiscal.md` 8.2 and 8.4.3 named only the `MaxMoney` headroom as a cut at a recipient. The code (`fiscal_payout.go`, `room`) also caps an in-kind payout at the units the free store room of a household with a room limit can hold (mass and bulk, `spec-storage.md` 4.1.3), because the ledger would refuse the credit with `ErrNoRoom`. The unpaid remainder stays in the treasury and is counted in `FiscalFlowApplied.Headroom` (not `Cut`, which is the pro rata cut of a short treasury); 8.4.3 now says so. The owner accepted this on 2026-11-19. Still open: no rule makes the recipient or the pack see that a payout was refused for room, other than that count; if a pack wants the payout to wait, that is a new rule, not this note.
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2783,4 +2789,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 5191ef9152625ac117f8b5e9
+NOTES-TAG: a58ac94b021c76e19e6f1de0

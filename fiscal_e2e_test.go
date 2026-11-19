@@ -3,6 +3,7 @@ package economysim_test
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"reflect"
 	"slices"
 	"testing"
@@ -71,23 +72,47 @@ func stepBoth(t *testing.T, n int, ws ...*economysim.World) {
 	}
 }
 
+// flowFaults returns what is wrong with the tax events of evs (in order) and with the
+// payout events, one message each.
+func flowFaults(evs, payouts []economysim.FiscalFlowApplied) []string {
+	var out []string
+	last := int64(-1)
+	for _, e := range evs {
+		if e.Kind != economysim.KindTax {
+			continue
+		}
+		if fault := taxEventFault(e, last); fault != "" {
+			out = append(out, fmt.Sprintf("event %+v: %s", e, fault))
+		}
+		last = e.Tick
+	}
+	for _, e := range payouts {
+		if e.Flow != "alms" || e.Applied < 0 || e.Applied > e.Due {
+			out = append(out, fmt.Sprintf("payout event %+v, want the flow alms and 0 <= Applied <= Due", e))
+		}
+	}
+	return out
+}
+
 // TestFiscal_PackTaxIsCollectedAndRemitted verifies, end to end on the governed warm
-// five with the fiscal file layer, that the head tax is reported and that what is
-// reported is what happened: every FiscalFlowApplied is a tax of the flow "poll" of
-// the root, in ascending tick order and at most once per tick, with Applied no more
-// than Due, Due less Applied no more than what the payers fell short, and the sum of
-// Applied over the run is exactly the rise of the root's treasury (no other flow of
-// the overlay is built, so nothing else moves it). The audit, on every tick, is what
-// proves money is conserved: a tax moves money between sectors and mints none.
+// five with the fiscal file layer, that the head tax and the payout are reported and
+// that what is reported is what happened: every tax event is of the flow "poll" of the
+// root, in ascending tick order and at most once per tick, with Applied no more than
+// Due and Due less Applied no more than what the payers fell short; every payout event
+// is of the flow "alms" with Applied no more than Due; and the root's treasury ends at
+// exactly its start money plus the taxes applied less the payouts applied (the other
+// flows of the overlay are not built, so nothing else moves it). The audit, on every
+// tick, is what proves money is conserved: a tax or a payout moves money between
+// sectors and mints none.
 //
-// Arithmetic: the treasury starts at s0 and ends at s0 + sum(Applied); the test
-// compares integers with no tolerance (testing.md 6.3).
+// Arithmetic: the treasury starts at s0 and ends at s0 + sum(tax Applied) - sum(payout
+// Applied); the test compares integers with no tolerance (testing.md 6.3).
 //
-// Requirement: FR-FIS-002, FR-FIS-021, FR-FIS-024, FR-FIS-044
+// Requirement: FR-FIS-002, FR-FIS-021, FR-FIS-024, FR-FIS-039, FR-FIS-044
 //
-// Guard: a tax collected without its event, or an event reporting money that did not
-// move, leaves the observer's rebuild of the treasury wrong and passes every unit test
-// of the step on its own.
+// Guard: a flow collected or paid without its event, or an event reporting money that
+// did not move, leaves the observer's rebuild of the treasury wrong and passes every
+// unit test of the step on its own.
 func TestFiscal_PackTaxIsCollectedAndRemitted(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -95,24 +120,19 @@ func TestFiscal_PackTaxIsCollectedAndRemitted(t *testing.T) {
 	}
 	const seed, ticks = 1, 30
 	w, evs, start := fiscalEvents(t, fiscalPackConfig(t, false), seed, ticks)
-	if len(evs) == 0 {
-		t.Fatalf("FiscalFlowApplied events over %d ticks (seed %d) = 0, want at least one", ticks, seed)
+	taxed, paid, payouts := fiscalFlowSums(evs)
+	if taxed <= 0 || len(payouts) == 0 {
+		t.Fatalf("taxes applied = %d and payout events = %d over %d ticks (seed %d), want both positive", taxed, len(payouts), ticks, seed)
 	}
-	var sum economysim.Money
-	last := int64(-1)
-	for _, e := range evs {
-		if fault := taxEventFault(e, last); fault != "" {
-			t.Errorf("event %+v (seed %d): %s", e, seed, fault)
-		}
-		last = e.Tick
-		sum += e.Applied
+	for _, fault := range flowFaults(evs, payouts) {
+		t.Errorf("%s (seed %d)", fault, seed)
 	}
 	snap, err := w.Snapshot()
 	if err != nil {
 		t.Fatalf("Snapshot() error = %v, want nil", err)
 	}
-	if got := snap.Jurisdictions[0].Money - start; got != sum || sum <= 0 {
-		t.Errorf("treasury rise over %d ticks (seed %d) = %d, sum of Applied = %d, want equal and positive", ticks, seed, got, sum)
+	if got, want := snap.Jurisdictions[0].Money, start+taxed-paid; got != want {
+		t.Errorf("treasury after %d ticks (seed %d) = %d, want %d = start %d + taxed %d - paid %d", ticks, seed, got, want, start, taxed, paid)
 	}
 }
 
