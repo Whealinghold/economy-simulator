@@ -429,6 +429,22 @@ func (s *productionScratch) limitList(l *ledger.Ledger, q *startReq) error {
 		code = limitNoSite
 	}
 	s.limits = append(s.limits, production.Limit{Cap: yieldCap, Reason: code})
+	if err := s.appendToolLimits(l, q, row); err != nil {
+		return err
+	}
+	if err := s.appendInputLimits(l, q, row); err != nil {
+		return err
+	}
+	if q.capped {
+		s.limits = append(s.limits, production.Limit{Cap: q.drawCap, Reason: limitNoEndowment})
+		s.limits = appendTenureLimits(s.limits, q)
+	}
+	return nil
+}
+
+// appendToolLimits appends one limit per tool, in the order of the recipe. A commodity
+// that is both a tool and an input gets the defensive cap of 4.2.3.
+func (s *productionScratch) appendToolLimits(l *ledger.Ledger, q *startReq, row *recipeRow) error {
 	for _, t := range row.tools {
 		held, reserved, err := l.Holding(q.account, int(t.commodity))
 		if err != nil {
@@ -442,16 +458,17 @@ func (s *productionScratch) limitList(l *ledger.Ledger, q *startReq) error {
 		}
 		s.limits = append(s.limits, production.Limit{Cap: c, Reason: limitNoTool})
 	}
+	return nil
+}
+
+// appendInputLimits appends one limit per input, in the order of the recipe.
+func (s *productionScratch) appendInputLimits(l *ledger.Ledger, q *startReq, row *recipeRow) error {
 	for _, in := range row.inputs {
 		held, reserved, err := l.Holding(q.account, int(in.commodity))
 		if err != nil {
 			return fmt.Errorf("read input stock of recipe %d: %w", q.recipe, err)
 		}
 		s.limits = append(s.limits, production.Limit{Cap: production.Cap(held-reserved, int64(in.quantity)), Reason: limitNoInput})
-	}
-	if q.capped {
-		s.limits = append(s.limits, production.Limit{Cap: q.drawCap, Reason: limitNoEndowment})
-		s.limits = appendTenureLimits(s.limits, q)
 	}
 	return nil
 }
