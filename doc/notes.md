@@ -73,8 +73,8 @@ PR description.
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-455, N-456 |
-| ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457 |
+| OBS | N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-455, N-456 |
+| ORG | N-400, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-463, N-464, N-465 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454 |
@@ -84,8 +84,8 @@ PR description.
 | SAV | N-145, N-156, N-195, N-197, N-362, N-382 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-404, N-140, N-192, N-268, N-348, N-365 |
-| SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
-| SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
+| SKL | N-464, N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
+| SPN | N-463, N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375 |
 | STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399 |
@@ -2391,12 +2391,6 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-org PR A review, `spec-institutions.md` 10.1.
 - **Note:** `Institutions.canonical` hashes `Roles`, `Regions` and `Jurisdictions` of a body in the order given, so two configurations that list the same set in another order, or twice, hash differently and resolve the same tables. The spec is silent on a repeated entry. The CFG owner decides between rejecting a duplicate (a sentinel and a row of 10.1), sorting the lists in `canonical`, or leaving it. Nothing in ORG depends on the answer.
 
-### N-401 ORG: the tests that plant state are replaced by the call's tests in PR D
-
-- **Areas:** ORG
-- **Raised:** 2026-11-18, plan 3-org PR B.
-- **Note:** PR B builds the resolved rights and ranges, the levels in force and the suspensions, and saves them in tag 31, but nothing sets a level or a suspension before PR D. `MembershipChanged.Held` is 0 until PR D. Until then `orgTablesToy` and the levels test plant the state in the module's fields. PR D replaces them with tests of `SetLegalLevels` and `SetRightSuspended` and of the held completion, and removes the planting.
-
 ### N-402 CHK: `hashWorld` of a restored world differs from the uninterrupted one
 
 - **Areas:** CHK, CODE
@@ -2634,6 +2628,24 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-org PR C review.
 - **Note:** The root calls `clearing.AdmitClamp`; `Admit` is a wrapper kept by `spec-clearing.md` 3.2.1.1 so that a caller that reads no range is unchanged, and only tests call it. Drop it, or keep it with a test that pins it to `AdmitClamp`, when the next change touches `internal/clearing/admit.go`.
 
+### N-463 ORG, SPN: a body shared by several roles of a region is bounded per role in one entry step
+
+- **Areas:** ORG, SPN
+- **Raised:** 2026-11-19, plan 3-org PR D, `spec-institutions.md` 3.4.2.
+- **Note:** The headroom of a body is the places less the households of all the body's roles in the region. The spawner holds its room per role (`RoleView.Headroom`, `s.room[r]`, `spec-spawner.md` 6.3.1: "a body's places add a second source to the same count and no field"), so two entrants into two roles of one body each see the whole headroom in one entry step and can together exceed the places. `spec-institutions.md` 3.4.2 already says the limit is not enforced on what is there and nothing is removed (SET R3), and the next step's view counts the households, so the overshoot lasts one step. A body over a single role (every example of the spec) is exact. Decision of plan 3-org PR D: documented, not fixed. The spawner owner either shares the room of the roles of a body (a group field on `RoleView` and in `occupation.Limits`, which 6.3.1 says the view does not have) or keeps the overshoot and says so in 3.4.2.
+
+### N-464 ORG, SKL: the expected wait counts the body's trainee limit only where a train right is in force
+
+- **Areas:** ORG, SKL
+- **Raised:** 2026-11-19, plan 3-org PR D, `spec-institutions.md` 5.7.2 and 5.7.3.
+- **Note:** `n_max = Trainers * MaxTrainees` of the spawner's view takes one `MaxTrainees` for a role. With a `train` right in force every trainer is a member, so `RoleView.MaxTrainees` is the least of the role's and the body's, which is exact. Without the right, a member holds the least and a non-member the role's, and one number cannot say both: the view keeps the role's. The snapshot's `Places` is exact for each trainer. A role of a body with a `MaxTrainees` and no train right overstates the places in the applicant's expected wait by the difference.
+
+### N-465 ORG, OBS: `Held` and `Train` count each tick, and `Held` only where a body's own places are short
+
+- **Areas:** ORG, OBS
+- **Raised:** 2026-11-19, plan 3-org PR D.
+- **Note:** `MembershipChanged.Held` counts a held trainee in every tick it stays held (the event says "held at P7.1(a) this tick"), and only when the body's headroom is below the trainee's weight: a completion held by the class limit alone is not a body's. `RightRefused.Train` is `min(f, a)` per (region, right) per tick, so a queue that waits for a closed craft is counted again every tick, as `Produce` counts requests (N-455). Both are pressure, not distinct households, and both exist only under an observer (N-456). The adapter that records them says so in its description.
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2644,4 +2656,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 79d27093077dd5dc614e264f
+NOTES-TAG: ac83571aa029db1d689d5a7b

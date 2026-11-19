@@ -506,7 +506,7 @@ Deviations and choices the plan left open:
 - The view's `MaxTrainees` is the least of the role's and the body's only where a `train` right is in force (every trainer is then a member); the snapshot's `Places` is exact for each trainer (N-464).
 - The count of households of a body is ORG's own scan, once for each (tick, region), kept exact by `noteRoleMove`, so a pack with ORG and no SET still has a body limit (Question 10); `completeReady` therefore has a second one-line call beside SET's.
 - `Held` is counted only under an observer and only where the body's own places are what is short (N-465). `Outcome` of `internal/institution` gains `Held`.
-- A restored world has no slot of the settlements module (`wireSeams` runs only in `construct`; N-462). ORG wires its own slot in `allocate`, which both paths run, and again after `wireSeams`, which would replace it. The SET gap itself is not fixed here.
+- A restored world had no slot of the settlements module (`wireSeams` ran only in `construct`; N-462). Fixed after the supervisor's ruling: `wireSlots` (`settlements.go`) is called by construction and by `RestoreWorld`, and `TestRestore_SettlementsSlotsAreWired` fails without it. N-462 is therefore not a note.
 - The spawner's room is per role, so a body shared by several roles can be overshot in one entry step (N-463).
 - Not written: `TestPremium_CheckDReportedNotAsserted` (no premium check exists in the code to report; spec 5.7.5 is a row owed to SKL) and a separate spawner-level `TestEntryLimited_RoleCeilingIncludesBody` (the spawner reads the same `Headroom` and `NoLimit`; `TestRoleView_BodyHeadroom` and `TestPopulation_BirthsCappedByBody` pin the fields it reads). `TestCompletion_HeldWithoutHeadroom` is SKL's name, so ORG's tests are `TestOrgCompletion_*`.
 - The two tests of PR B that planted a level and a suspension now call the slots (N-401).
@@ -515,8 +515,7 @@ Tests by layer: unit (`internal/institution`: `Outcome.Held` is a field of the s
 
 Left for the supervisor (nothing in `doc/notes.md` or a spec was edited, since that needs the whole file read and a fresh tag):
 
-- Settle N-401 (applied) and add four notes, numbers N-462 to N-465:
-  - N-462 (SET, SKL, STO, CHK): `wireSeams` runs only in `construct`, so a restored world has no `skills.headroom` and no `sto.gate` of the settlements module; move the assignments where both paths run, and add a fork test.
+- Settle N-401 (applied) and add three notes, numbers N-463 to N-465 (N-462 was fixed in code, see above, and its number stays unused):
   - N-463 (ORG, SPN): the spawner's room is per role, so a body shared by several roles can be overshot in one entry step.
   - N-464 (ORG, SKL): the expected wait counts the body's trainee limit only where a `train` right is in force.
   - N-465 (ORG, OBS): `Held` and `Train` count each tick, `Held` only where the body's own places are short; both pressure, not households, and only under an observer.
