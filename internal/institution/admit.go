@@ -2,7 +2,10 @@ package institution
 
 import (
 	"cmp"
+	"math"
 	"slices"
+
+	"github.com/Whealinghold/economy-sim/internal/checked"
 )
 
 // Lapsed says why a membership ended at a round (spec-institutions.md 4.2.1).
@@ -67,9 +70,9 @@ type Outcome struct {
 func (o *Outcome) Lapsed(k Lapsed, w int64) {
 	switch k {
 	case LapsedList:
-		o.LapsedList += w
+		o.LapsedList = satAdd(o.LapsedList, w)
 	case LapsedScope:
-		o.LapsedScope += w
+		o.LapsedScope = satAdd(o.LapsedScope, w)
 	}
 }
 
@@ -96,7 +99,7 @@ func Admit(dst []int32, cands []Candidate, free int64, limited, barred bool) ([]
 	slices.SortFunc(cands, byOrder)
 	if barred {
 		for _, c := range cands {
-			out.Barred += max(c.Weight, 0) // a cohort of no household is no candidate
+			out.Barred = satAdd(out.Barred, max(c.Weight, 0)) // a cohort of no household is no candidate
 		}
 		out.Waiting = out.Barred
 		return dst, out
@@ -106,12 +109,12 @@ func Admit(dst []int32, cands []Candidate, free int64, limited, barred bool) ([]
 			continue // a cohort of no household is no candidate (Headroom and Tally clamp likewise)
 		}
 		if limited && c.Weight > free {
-			out.Skipped += c.Weight
-			out.Waiting += c.Weight
+			out.Skipped = satAdd(out.Skipped, c.Weight)
+			out.Waiting = satAdd(out.Waiting, c.Weight)
 			continue
 		}
 		free -= c.Weight
-		out.Admitted += c.Weight
+		out.Admitted = satAdd(out.Admitted, c.Weight)
 		dst = append(dst, c.ID)
 	}
 	return dst, out
@@ -120,4 +123,13 @@ func Admit(dst []int32, cands []Candidate, free int64, limited, barred bool) ([]
 // byOrder is the total order of admission: Since, then Key, then ID.
 func byOrder(a, b Candidate) int {
 	return cmp.Or(cmp.Compare(a.Since, b.Since), cmp.Compare(a.Key, b.Key), cmp.Compare(a.ID, b.ID))
+}
+
+// satAdd adds two non-negative counts of households, saturating at the largest int64 so
+// that a count of a cell never wraps (architecture.md 3.5).
+func satAdd(a, b int64) int64 {
+	if v, ok := checked.Add(a, b); ok {
+		return v
+	}
+	return math.MaxInt64
 }

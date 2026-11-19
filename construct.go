@@ -179,6 +179,7 @@ func (w *World) allocate() {
 	}
 	w.external = newExternal(&w.cfg)
 	w.outside = outsideMarks(&w.cfg)
+	w.org = newInstitutions(&w.cfg, w.polity, w.set, w.outside)
 	w.tec = newTechnology(&w.cfg, w.outside, &w.geo, w.rnd.seed)
 	w.firstHousehold = regions + w.external.counterpartyCount() + w.polity.treasuryCount()
 	if w.external != nil {
@@ -200,6 +201,10 @@ func (w *World) allocate() {
 	w.tally = newEntryTally(regions)
 	w.runnable = make([][]RecipeID, regions)
 	w.markets = newMarketTable(&w.cfg, w.clr, seedPrices(&w.cfg))
+	w.org.attach(&w.markets, w.obs.supplied)
+	if w.org != nil && w.credit != nil {
+		w.credit.rateCap = w.org.rateLimit // the seam of the rate limit (spec-credit.md 5.2.3)
+	}
 	w.tk = newTickScratch(&w.cfg)
 	w.pr = newProductionTick(&w.cfg)
 	w.oc = newOutcomeTick(&w.cfg)
@@ -367,6 +372,7 @@ func namesOf(c *Config) Names {
 	n.TechFields = techNames(c)
 	n.SettlementClasses = settlementNames(c)
 	n.FacilityClasses = facilityClassNames(c)
+	n.Bodies, n.Rights, n.Controls = orgNames(c)
 	return n
 }
 
@@ -391,6 +397,7 @@ func modulesOn(c *Config) []string {
 		{"infrastructure", m.Infrastructure != nil},
 		{"risk", m.Risk != nil},
 		{"fiscal", m.Fiscal != nil},
+		{"institutions", m.Institutions != nil},
 	}
 	on := []string{}
 	for _, t := range table {
@@ -512,5 +519,5 @@ func (w *World) summaryLater(attrs []slog.Attr) []slog.Attr {
 	if w.infra != nil {
 		attrs = append(attrs, slog.Int(logkeys.FacilityClasses, len(w.infra.cls)), slog.Int(logkeys.Facilities, len(w.infra.fac)))
 	}
-	return attrs
+	return w.orgSummary(attrs)
 }

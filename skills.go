@@ -282,6 +282,9 @@ func (w *World) skillsWork(a *agent, region RegionID) bool {
 		if !w.cfg.Recipes[rid].TraineeEligible {
 			continue
 		}
+		if w.org != nil && w.refuseStart(a, &w.agents[trainer], true, region, rid) {
+			continue // a right bars the trainer's account, the principal of the job
+		}
 		q := w.startReq(a, region, rid, a.weight)
 		k0, _, err := w.prod.maxExecutions(w.ledger, &q)
 		if err != nil {

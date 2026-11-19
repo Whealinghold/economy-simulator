@@ -424,6 +424,12 @@ const (
 	// priced out of the let tier or its let executions were cut for rent (tenure
 	// module, spec-land.md 4.5.1, 5.4).
 	ReasonRentFunds Reason = "rent_funds"
+	// ReasonNotPermitted is a start or an order that a right in force bars the agent
+	// from: the right of the activity on the recipe or the commodity belongs to the
+	// members of a body the agent is not a member of, or to nobody (institutions module,
+	// spec-institutions.md 5.6). It is also a rejection reason of an order and of an offer
+	// or a take of the contract round.
+	ReasonNotPermitted Reason = "not_permitted"
 )
 
 // The reasons of the "work declined" Debug line that no start refusal covers
@@ -628,6 +634,10 @@ type Names struct {
 	// FacilityClasses holds the string ID of each FacilityClassID; nil when the
 	// infrastructure module is off.
 	FacilityClasses []string
+	// Bodies, Rights and Controls hold the string ID of each BodyID, RightID and
+	// ControlID (the controls and the rate limits sorted together); nil when the
+	// institutions module is off.
+	Bodies, Rights, Controls []string
 }
 
 // Amount is a quantity of one commodity.
@@ -2561,3 +2571,132 @@ type FiscalFlowApplied struct {
 }
 
 func (FiscalFlowApplied) isEvent() {}
+
+// StoreLoss is emitted at P8.1a once per agent and store class struck, in ascending
+// agent ID then class, after the whole position has been applied (spec-risk.md 6.4,
+// 14.1). A class is struck when at least one of the agent's stores of it is. It is
+// emitted only when the risk module is on, and with no loss when every product
+// rounded to 0.
+type StoreLoss struct {
+	Tick int64
+	// Agent is the owner and Region its region.
+	Agent  AgentID
+	Region RegionID
+	// Class is the store class struck and Stores the stores of the class struck, at
+	// least 1.
+	Class  StoreClassID
+	Stores int64
+	// Common says the row of the class in the region is common.
+	Common bool
+	// ShareBP is the share of the account's goods the class took, in basis points,
+	// after the cap of 10 000.
+	ShareBP int64
+	// Lost is the units lost by commodity, in commodity order; empty when every
+	// product rounded to 0.
+	Lost []Amount
+}
+
+func (StoreLoss) isEvent() {}
+
+// StoreRiskScaled is emitted once per store row whose scale a SetStoreRiskScales call
+// changes, in (Region, Class) order, after the whole call has been applied
+// (spec-risk.md 9.2, 14.1). It is emitted only when the risk module is on.
+type StoreRiskScaled struct {
+	Tick int64
+	// Region and Class are the key of the row.
+	Region RegionID
+	Class  StoreClassID
+	// BeforeBP and AfterBP are the scale before and after, in basis points.
+	BeforeBP, AfterBP int64
+}
+
+func (StoreRiskScaled) isEvent() {}
+
+// MembershipChanged is emitted once per region and body per tick at P7.2b, in (Region,
+// Body) ascending order, after SettlementClassChanged, when any household was admitted,
+// lapsed, skipped, barred, left waiting or held; never otherwise (spec-institutions.md
+// 11.1, 7.3.3). It is an aggregate, bounded by the regions and bodies of the
+// configuration, and is emitted only with the institutions module on. Every count is
+// households (the sum of weights), and is the result of the round of P1.9a.
+type MembershipChanged struct {
+	Tick int64
+	// Region and Body name the pair of the scope.
+	Region RegionID
+	Body   BodyID
+	// Members is the households that are members after the round, Places the body's
+	// places (0 for no limit) and Eligible the households of the body's roles in the
+	// region, members or not.
+	Members, Places, Eligible int64
+	// Admitted is the households admitted. LapsedRole and LapsedRegion are the households
+	// whose membership lapsed because the role left the body's list, or because the
+	// household left the scope or moved.
+	Admitted, LapsedRole, LapsedRegion int64
+	// Skipped is the households that did not fit when their turn came, Barred the
+	// eligible non-members of a region whose class lacks the body's need, and Waiting the
+	// eligible non-members left.
+	Skipped, Barred, Waiting int64
+	// Held is the completions of a traineeship held at P7.1(a) this tick for want of
+	// headroom (spec-institutions.md 4.5.2).
+	Held int64
+}
+
+func (MembershipChanged) isEvent() {}
+
+// RightRefused is emitted once per region and right per tick at P7.2b, in (Region,
+// Right) ascending order, when any count is non-zero (spec-institutions.md 11.1). It is
+// an aggregate and is emitted only with the institutions module on.
+type RightRefused struct {
+	Tick int64
+	// Region and Right name the pair.
+	Region RegionID
+	Right  RightID
+	// Produce is the starts refused, Sell and Buy the orders refused, and Train the
+	// places not open to a non-member trainer.
+	Produce, Sell, Buy, Train int64
+}
+
+func (RightRefused) isEvent() {}
+
+// PriceControlled is emitted once per region and control per tick at P7.2b, in
+// (Region, Control) ascending order, when any order was lowered to a cap or raised to
+// a floor (spec-institutions.md 11.1). It is an aggregate and is emitted only with the
+// institutions module on.
+type PriceControlled struct {
+	Tick int64
+	// Region and Control name the pair.
+	Region  RegionID
+	Control ControlID
+	// Commodity is the commodity of the control, NoCommodity for a rate limit.
+	Commodity CommodityID
+	// Bids is the orders or requests lowered to a cap, Asks the orders raised to a floor
+	// and Units the units of the clamped orders (0 for a rate limit).
+	Bids, Asks, Units int64
+}
+
+func (PriceControlled) isEvent() {}
+
+// LegalLevelSet is emitted once per control whose level a SetLegalLevels call changes,
+// in ascending Control order, after the whole call has been applied (spec-institutions.md
+// 7.1, 11.1). It is emitted only with the institutions module on.
+type LegalLevelSet struct {
+	Tick int64
+	// Control is the control or rate limit.
+	Control ControlID
+	// CapBefore and CapAfter, FloorBefore and FloorAfter are the levels before and
+	// after, in basis points (a rate limit has no floor).
+	CapBefore, CapAfter, FloorBefore, FloorAfter int64
+}
+
+func (LegalLevelSet) isEvent() {}
+
+// RightSuspensionSet is emitted once per right whose suspension a SetRightSuspensions
+// call changes, in ascending Right order, after the whole call has been applied
+// (spec-institutions.md 7.1, 11.1). It is emitted only with the institutions module on.
+type RightSuspensionSet struct {
+	Tick int64
+	// Right is the right and Suspended whether it is suspended after the call.
+	Right     RightID
+	Suspended bool
+}
+
+func (RightSuspensionSet) isEvent() {}

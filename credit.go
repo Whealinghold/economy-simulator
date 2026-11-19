@@ -44,9 +44,11 @@ type credit struct {
 	valuedAt int64
 	round    roundScratch
 	// rateCap is the rate limit in force in a region, or nil when no module supplies
-	// one (spec-credit.md 5.2.3, FR-CRD-028): the ORG seam. It reports the cap and
-	// whether the region has one.
-	rateCap func(RegionID) (int64, bool)
+	// one (spec-credit.md 5.2.3, FR-CRD-028): the ORG seam. It takes the region of the
+	// borrower and the limit of the request and returns the limit the request is admitted
+	// with and whether it was lowered to the cap, so the module that sets it can count the
+	// replacement and the round's own count of it does not have to outlive the round.
+	rateCap func(g RegionID, limit int64) (replaced int64, lowered bool)
 }
 
 // newCredit builds the state of the module for a canonical configuration, or nil

@@ -99,6 +99,21 @@ var declaredEvents = []economysim.Event{
 	economysim.FacilityChanged{},
 	economysim.RouteRiskScaled{},
 	economysim.FiscalFlowApplied{},
+	economysim.StoreLoss{},
+	economysim.StoreRiskScaled{},
+	economysim.MembershipChanged{},
+	economysim.RightRefused{},
+	economysim.PriceControlled{},
+	economysim.LegalLevelSet{},
+	economysim.RightSuspensionSet{},
+}
+
+// moduleGates are the gates of 4.1 (besides core and the two prefixes) whose events are
+// declared with their module.
+var moduleGates = []string{
+	"demand", "resources", "subsistence", "population", "transport", "information", "migration",
+	"merchant block", "merchants", "external", "employment", "storage", "credit", "technology",
+	"settlements", "tenure", "infrastructure", "risk", "fiscal", "institutions",
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -106,12 +121,9 @@ var declaredEvents = []economysim.Event{
 // regions, checkpoint and skill stages. The change that
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
-	"StoreLoss",
-	"StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound",
 	"FacilityLimited",
-	"TreasuryOrdered", "MembershipChanged", "RightRefused", "PriceControlled",
-	"LegalLevelSet", "RightSuspensionSet", "SavingPlanned", "PolicyDecided",
+	"TreasuryOrdered", "SavingPlanned", "PolicyDecided",
 	"CoverFormed", "CoverEnded", "CoverRound", "CoverSettled",
 }
 
@@ -464,7 +476,7 @@ func TestEvents_CatalogueStaged(t *testing.T) {
 			t.Errorf("declared event %s is not a row of 4.1", n)
 			continue
 		}
-		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && row.gate != "resources" && row.gate != "subsistence" && row.gate != "population" && row.gate != "transport" && row.gate != "information" && row.gate != "migration" && row.gate != "merchant block" && row.gate != "merchants" && row.gate != "external" && row.gate != "employment" && row.gate != "storage" && row.gate != "credit" && row.gate != "technology" && row.gate != "settlements" && row.gate != "tenure" && row.gate != "infrastructure" && row.gate != "risk" && row.gate != "fiscal" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
+		if !strings.HasPrefix(row.gate, "core") && !slices.Contains(moduleGates, row.gate) && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
 			t.Errorf("declared event %s has gate %q in 4.1, want core: a module's event is declared with its module", n, row.gate)
 		}
 		if !rules[n] {
@@ -761,6 +773,7 @@ func TestConstants_Values(t *testing.T) {
 	}
 	owner[string(economysim.ReasonNoEndowment)] = "doc/specs/spec-resources.md"
 	owner[string(economysim.ReasonNoTitle)] = "doc/specs/spec-land.md"
+	owner[string(economysim.ReasonNotPermitted)] = "doc/specs/spec-institutions.md"
 	owner[string(economysim.ReasonRentFunds)] = "doc/specs/spec-land.md"
 	for _, r := range agentReasons {
 		owner[string(r.got)] = "doc/specs/spec-agents.md"
@@ -804,7 +817,7 @@ func TestConstants_Values(t *testing.T) {
 	}
 	// Every rejection reason of the table of spec-clearing.md 3.2 is a
 	// constant, or is named here as built with its module.
-	deferredReasons := []string{"not_permitted", "no_room"}
+	deferredReasons := []string{"no_room"}
 	clearing := specText["doc/specs/spec-clearing.md"]
 	from := strings.Index(clearing, "### 3.2 Validation")
 	to := strings.Index(clearing, "Checks run in the order of the table")
@@ -866,7 +879,7 @@ func TestConstants_Values(t *testing.T) {
 	}
 	// A row marked no that a module has built is a constant of the root: the module's
 	// change names it here and the constant is checked below (no_endowment: RES 5.3).
-	builtByModule := []economysim.Reason{economysim.ReasonNoEndowment, economysim.ReasonNoTitle, economysim.ReasonRentFunds}
+	builtByModule := []economysim.Reason{economysim.ReasonNoEndowment, economysim.ReasonNoTitle, economysim.ReasonRentFunds, economysim.ReasonNotPermitted}
 	for _, d := range deferredProduction {
 		_, declared := owner[d]
 		if built := slices.Contains(builtByModule, economysim.Reason(d)); declared != built {

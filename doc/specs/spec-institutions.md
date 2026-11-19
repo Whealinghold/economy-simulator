@@ -248,7 +248,7 @@ follows (nothing is renumbered).
 
 | ID | What runs | Owner | Reads / writes | Draws | Events |
 |----|-----------|-------|----------------|-------|--------|
-| P1.9a | The membership round, with `Modules.Institutions` present and at least one body, for each body in ascending `BodyID`: the lapse pass over every household (4.2), then, for each region of its scope in ascending `RegionID`, admission (4.3). Scratch counts are kept for P7.2b | ORG 4 | reads the role, region, weight, `RoleSince` and the membership field of every household agent, the class flags (SET); writes the membership field | none | none (the counts are told at P7.2b) |
+| P1.9a | The membership round, with `Modules.Institutions` present and at least one body, first the lapse pass of every body in ascending `BodyID` over every household (4.2), then, for each body in ascending `BodyID` and each region of its scope in ascending `RegionID`, admission (4.3). Scratch counts are kept for P7.2b | ORG 4 | reads the role, region, weight, `RoleSince` and the membership field of every household agent, the class flags (SET); writes the membership field | none | none (the counts are told at P7.2b) |
 
 4.1.2. **Why at the start of the tick.** Membership is read from P2.5 (a `Work` request) and
 P3.2 (an order), so the round must come before them; and it must come after the arrivals of
@@ -274,7 +274,9 @@ not on the list and `LapsedRegion` if its region is not in the scope) or if its 
 at P7.1 and a relocation at P1.3, P1.5 or a call, so the lapse is seen at the next round;
 **between the event and the round the field is stale, and every read tests eligibility and the
 region as well as the field** (4.4), so a stale field is never a membership. A household that
-lapsed and is eligible in its new region is a candidate there in the same round (4.3).
+lapsed and is eligible in its new region is a candidate there in the same round (4.3): every lapse of the
+round runs before any admission (4.1.1), so the result does not depend on whether the body it
+lapsed from comes before or after the body it is a candidate for (FR-ORG-019).
 
 4.2.2. A removal clears the field with the agent (the estate takes the goods, `spec-agents.md`
 3.6), and no lapse is counted: the removal event accompanies it (`AgentBankrupted`). A change of
@@ -519,7 +521,8 @@ checked by the world beside `not_tradable`) and nothing else: a place that is no
 
 5.6.3. **Counting (N-045, FR-STB-013).** Every refusal is counted per (region, right) and
 activity, and told once a tick by `RightRefused` (11.1). An order refusal is also an
-`OrderRejected` (per order, as any); a start refusal is a `Debug` line, guarded, per start; a
+`OrderRejected` (per order, as any); a start refusal is a `Debug` line, guarded, per start, and `Produce` counts requests, not
+households; a
 closed place is counted and logged at `Debug` ("place not open", 11.2). **One count of `Train`
 is one place:** at P7.1(a) step (2) of an entry step, with a `train` right in force on the role,
 `f` is the free places (under the role's own `MaxTrainees`) of the households of the role that
@@ -671,7 +674,9 @@ The admitted order carries the replaced limit: the **reservation** is `limit * q
 it (3.3 there), `OrderPlaced` shows it, `Clearing` receives it, the world's validity check
 of trades (`spec-clearing.md` 8.2) compares with it, and the household's `Outcome` carries it
 as the order's limit. The count of the replaced orders is kept per (region, control), told
-once a tick by `PriceControlled` (11.1).
+once a tick by `PriceControlled` (11.1). **An order is counted only once it is admitted:** an
+order refused after the clamp (for funds, stock or room) is an `OrderRejected` and adds no
+count; likewise for a contract's take and a loan request.
 
 6.3.2. **Why one side is enough.** The price of a trade lies between the ask's limit and
 the bid's limit, inclusive (`spec-clearing.md` 5.1, 5.2: the midpoint rounded half to even
@@ -982,7 +987,7 @@ The rest are the world's (`MaxBasisPoints`, `MaxHouseholds`, `MaxCreditRateBP`,
 `MaxLabelBytes`).
 
 **Rule constants** (beside their code, architecture.md 9.6): the four activities and the three
-values of `Who` (5.1.2); the order of the membership round (lapse, then admit by seniority,
+values of `Who` (5.1.2); the order of the membership round (every lapse, then admit by seniority,
 then the key, then the agent ID, 4.3); the rounding of a cap and a floor (6.2.1); the order of
 the clamp in admission (6.3.1); the reason `not_permitted`; the position of the round (P1.9a).
 

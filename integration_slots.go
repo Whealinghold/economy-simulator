@@ -453,6 +453,9 @@ type SlotState struct {
 	// RouteRiskScales are the route scales of the risk module that differ from 10 000,
 	// in (From, To, Mode) order.
 	RouteRiskScales []RouteRiskScale
+	// StoreRiskScales are the store scales of the risk module that differ from 10 000,
+	// in (Region, Class) order.
+	StoreRiskScales []StoreRiskScale
 }
 
 // Slots returns a deep copy of the slots that hold a value other than their default

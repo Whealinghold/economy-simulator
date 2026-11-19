@@ -50,11 +50,11 @@ PR description.
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386 |
-| CFG | N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433 |
-| CHK | N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435 |
+| CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433 |
+| CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
-| CLR | N-113, N-137, N-241 |
-| CODE | N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427 |
+| CLR | N-113, N-137, N-241, N-457 |
+| CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425 |
@@ -64,7 +64,7 @@ PR description.
 | EXT | N-108, N-112, N-113, N-214 |
 | FIS | N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437 |
 | GDS | N-039 |
-| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376 |
+| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
@@ -73,17 +73,17 @@ PR description.
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437 |
-| ORG | N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433 |
+| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-455, N-456 |
+| ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
-| PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358 |
+| PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
-| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377 |
+| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380 |
 | SAV | N-145, N-156, N-195, N-197, N-362, N-382 |
 | SCL | N-030, N-198, N-222, N-300 |
-| SET | N-140, N-192, N-268, N-348, N-365 |
+| SET | N-404, N-140, N-192, N-268, N-348, N-365 |
 | SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
 | SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
@@ -1739,6 +1739,7 @@ PR description.
 - **Update (2026-11-11, plan 2-11, plan 2-14 audit):** POP keeps the death carry in the module's slice (plan 2-11 D423). The frozen own-use flag of an agent on a journey now has a behavioural test, `TestJourney_SkippedByOwnUseFlagStep` (FR-SUB-010); plan 2-24 need not build it. Left open.
 - **Update (2026-11-13, plan 3-skl Phase 1):** read: the traineeship state is in the module's slices (`w.skills`), the agent type gets no field. Left open as a standing rule.
 - **Update (2026-11-18, plan 3-org Phase 1):** applied for ORG: the membership is a pair of slices of the module (`member`, `memberRegion`, indexed by agent slot) saved in the agent tail of tag 3; the agent type gets no field. Removed with the code (plan 3-org PR B).
+- **Update (2026-11-18, plan 3-org PR B):** built: the membership is `member` and `memberRegion` in `institutions.go`, saved in the agent record of tag 3 by `institutions_report.go` and read back by the restore; `agent.go` gained no field. Kept open as the standing rule for the modules still to come (the earlier line said to remove it with the code; it is not removed because it binds each module's PR).
 
 ### N-245 A tunable a module's default rule reads joins the view's Tunables group
 
@@ -2037,6 +2038,7 @@ PR description.
 - **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form emits `PayrollPaid`, not `LabourRound`, so presets 22 to 25 stay with the hire form and Stage 3. Left open.
 - **Update (2026-11-18, plan 3-emp Phase 1):** read: the three presets of the hire form (`Unemployment`, `WageBill`, `Employment`) are built in PR 6 of plan 3-emp, with the `LabourRound` case of `indicator/tally_observe.go`; `Losses` stays with RSK and STO. Left open.
 - **Update (2026-11-18, plan 3-rsk Phase 1):** the `Losses` leg (row 25, FR-IND-059) is built in plan 3-rsk PR C, in new files of `indicator/` (N-376); the EMP leg (rows 22 to 24) stays. Left open.
+- **Update (2026-11-19, plan 3-rsk PR C):** the `Losses` leg is built (`indicator/loss.go`, `indicator/tally_loss.go`, FR-IND-059); rows 22 to 24 stay with EMP. Left open (see N-380).
 
 ### N-328 `internal/measure` imports `internal/checked`
 
@@ -2383,6 +2385,43 @@ PR description.
 - **Raised:** 2026-11-18, `doc/plans/plan-3-org.md` E5, `spec-institutions.md` 14.3 and 17.
 - **Note:** ORG-S5 (S141) said the inert overlay (bodies declared, `Places` 0) equals the world without the module except four outputs, but with a declared body every region of its scope emits `MembershipChanged` (the first round admits every eligible household) and `Snapshot.Bodies` has rows. Settled in the spec: S141 excludes the module's own events and snapshot rows as SET-S4 does, and FR-ORG-001's strict form is tested on the module present and empty. The test of S141 (plan 3-org Phase 10) reads the corrected text.
 
+### N-400 ORG: the configuration hash does not dedupe the lists of a body
+
+- **Areas:** ORG, CFG
+- **Raised:** 2026-11-18, plan 3-org PR A review, `spec-institutions.md` 10.1.
+- **Note:** `Institutions.canonical` hashes `Roles`, `Regions` and `Jurisdictions` of a body in the order given, so two configurations that list the same set in another order, or twice, hash differently and resolve the same tables. The spec is silent on a repeated entry. The CFG owner decides between rejecting a duplicate (a sentinel and a row of 10.1), sorting the lists in `canonical`, or leaving it. Nothing in ORG depends on the answer.
+
+### N-401 ORG: the tests that plant state are replaced by the call's tests in PR D
+
+- **Areas:** ORG
+- **Raised:** 2026-11-18, plan 3-org PR B.
+- **Note:** PR B builds the resolved rights and ranges, the levels in force and the suspensions, and saves them in tag 31, but nothing sets a level or a suspension before PR D. `MembershipChanged.Held` is 0 until PR D. Until then `orgTablesToy` and the levels test plant the state in the module's fields. PR D replaces them with tests of `SetLegalLevels` and `SetRightSuspended` and of the held completion, and removes the planting.
+
+### N-402 CHK: `hashWorld` of a restored world differs from the uninterrupted one
+
+- **Areas:** CHK, CODE
+- **Raised:** 2026-11-18, plan 3-org PR B; reproduced on `origin/phase-3` at `e4459da`, with no ORG code.
+- **Note:** in an internal test, `w := newMill(t, millConfig(2, 10))`, three steps, `Checkpoint`, `RestoreWorld` with the same configuration: `hashWorld(w) != hashWorld(restored)` at the restore and after three more steps on both, with every module off. The fork tests compare events, snapshots, checkpoint bytes and logs, and those agree, so the difference is in state the walk of `hashWorld` reaches that the checkpoint does not save (a cache, a scratch slice, a nil or empty slice, a pointer value), not in the model. Not ORG's. The CHK owner finds which field, and either saves it, leaves it out of the walk with a reason, or documents that the hash is not a restore invariant.
+
+### N-403 ORG: mutation testing is owed
+
+- **Areas:** ORG, CODE
+- **Raised:** 2026-11-18, plan 3-org PR B.
+- **Note:** `gomu` has not run on `institutions*.go` or on `internal/institution` (testing.md 9.4: Docker only, `--cpus` and `--memory` capped, `GOMAXPROCS` to match). It runs once PR C and PR D have landed, so one run covers the whole module.
+
+### N-404 ORG: the allow-lists of two guard tests name the ORG files
+
+- **Areas:** ORG, SET
+- **Raised:** 2026-11-18, plan 3-org PR B.
+- **Note:** `TestReaders_StaticCheck` lets `institutions_round.go` read the flag with `regionHas` (SET's hook H6, `spec-institutions.md` 3.5.2), and `TestPolity_NoRegionFieldRead` lists the other ORG files among those that may name a jurisdiction (POL's rule). PR C and PR D add files that read the same things: each adds its file to the same two lists, and does not widen a list to a pattern.
+
+### N-405 ORG, OBS: what the `otelobserver` change for the institutions metrics builds
+
+- **Areas:** ORG, OBS
+- **Raised:** 2026-11-18, observability review of plan 3-org PR B (instruments deferred by plan question 8).
+- **Note:** the adapter change (`otelobserver/`, no core change) builds, in this order: (1) `economysim.body.waiting`, a gauge from `Bodies[].Eligible - Members` per body and region: the only metric that shows a body with a queue, the counterpart of the `Warn` "body has waiting households", which fires on the tenth tick of a run and at every tenth after, so a short queue leaves no trace in logs; (2) `economysim.body.members`, a gauge from `Bodies[].Members`, so a drop to 0 (all lapsed) is seen next to `body.waiting`; (3) `economysim.membership.lapsed` is NOT proposed: `MembershipChanged.LapsedRole`, `LapsedRegion`, `Skipped` and `Barred` are cumulative per tick and bounded, so add them as attributes of one counter only if a dashboard needs the cause, and not before; (4) `economysim.right.refusals` and `economysim.control.clamped` from `RightRefused` and `PriceControlled`, which PR C and PR D emit, so they are built after those events exist. Fold the rows once with `TestEvents_MetricsDerivable` as the check, and remove the five entries of `ignoredEvents` in the same change. Series: bodies times regions for the two gauges (bounded by the configuration).
+- **Update (2026-11-19, plan 3-org PR C observability review):** the two counters of (4) are derivable from the events as built (`TestEvents_RightRefusalsMatchRejectedOrders` shows the order counts agree), and the adapter change must keep five facts, each a reading rule and not a new instrument: (a) a refused order is counted twice on purpose, by `economysim.right.refusals` (activity `sell` or `buy`) and by `economysim.market.orders.rejected` (reason `not_permitted`), so a panel must not add them; an offer or a take refused for a right is also in `economysim.contract.refused` for the same reason; (b) a start refused for a right is counted only by `economysim.right.refusals` (activity `produce` or `train`), never by `economysim.recipe.refused` or `economysim.production.halted` (`refusalColumn` returns -1), so a "why did production not start" panel adds `right.refusals` to `recipe.refused`; (c) a rate limit is a `PriceControlled` with `Commodity` `NoCommodity`, `Asks` 0 and `Units` 0, so `economysim.control.clamped` counts it as `side` `bid` (a borrower's request lowered), and a control of a rate limit never has `side` `ask`; (d) `PriceControlled.Units` is not fed to any instrument: the volume that a cap or a floor touched is not proposed (the order count and `MarketCleared` unmatched units are the shortage signal) and is added only if a dashboard needs it, as `economysim.control.units` with the same attributes (no new series); (e) the `Debug` lines of a start refused and an order rejected exist (reason `not_permitted`) and no `Debug` line is written for a clamped limit, because `PriceControlled` per (region, control) and the clamped limit on `OrderPlaced` tell it.
+
 ### N-424 The default strategy never asks a closed endowment
 
 - **Areas:** LND, EMP, AGT
@@ -2550,8 +2589,50 @@ PR description.
 ### N-377 Candidates for the adapter change of the risk instruments
 
 - **Areas:** RSK, OBS
-- **Raised:** 2026-11-18, plan 3-rsk PR B observability review (route side; the store side lands in PR C).
-- **Note:** The three instruments of `spec-risk.md` 14.4 are deferred to a later change to `otelobserver/` (plan 3-rsk, Q5), with no core change owed: the events carry what they need. For that change: (1) `economysim.transport.cargo.lost` sums `ArrivedLine.Lost` of each line, by commodity, and each `Amount` of `ShipmentArrived.AccountLost`, by commodity. `ArrivedLine.Spoiled` already excludes the lost units (`Shipped - delivered - lost`), so `cargo.spoiled` and `economysim.transport.in_transit` (which takes `Shipped` off, lost included) need no change. (2) `economysim.risk.strikes` with `risk_kind` `route` counts `ShipmentDispatched` with `LossBP` above 0; the `store` half comes from `StoreLoss` in PR C. A strike whose cargo is all spoiled or whose shipment is held still shows in `LossBP`, so the counter is not the same as `cargo.lost` above 0. (3) A reconciliation test, not a new instrument: the sum of `cargo.lost` plus the units lost by a `StoreLoss` equals `economysim.commodity.flow` under the reason `loss`; a gap means a loss path posts to the ledger without an event. (4) Not in the rule tables and to be decided there first: a gauge of the route risk scale held from `RouteRiskScaled` (`AfterBP`), as `economysim.rent.rate` holds `RentScaled`, so a dashboard can tell a closed-by-scale route (0) from a quiet one. It needs a row in 5.3 and 5.3.1 and a new attribute set (origin, destination, mode), which is bounded by the route rows but is the first metric attribute with two regions on a risk row; take the two keys `economysim.region.from` and `economysim.region.to` of the relocation metric. Left open for the adapter change.
+- **Raised:** 2026-11-18, plan 3-rsk PR B observability review (route side); 2026-11-19, PR C observability review (store side, items 5 and 6).
+- **Note:** The three instruments of `spec-risk.md` 14.4 are deferred to a later change to `otelobserver/` (plan 3-rsk, Q5), with no core change owed: the events carry what they need. For that change: (1) `economysim.transport.cargo.lost` sums `ArrivedLine.Lost` of each line, by commodity, and each `Amount` of `ShipmentArrived.AccountLost`, by commodity. `ArrivedLine.Spoiled` already excludes the lost units (`Shipped - delivered - lost`), so `cargo.spoiled` and `economysim.transport.in_transit` (which takes `Shipped` off, lost included) need no change. (2) `economysim.risk.strikes` with `risk_kind` `route` counts `ShipmentDispatched` with `LossBP` above 0; the `store` half comes from `StoreLoss` in PR C. A strike whose cargo is all spoiled or whose shipment is held still shows in `LossBP`, so the counter is not the same as `cargo.lost` above 0. (3) A reconciliation test, not a new instrument: the sum of `cargo.lost` plus the units lost by a `StoreLoss` equals `economysim.commodity.flow` under the reason `loss`; a gap means a loss path posts to the ledger without an event. (4) Not in the rule tables and to be decided there first: a gauge of the route risk scale held from `RouteRiskScaled` (`AfterBP`), as `economysim.rent.rate` holds `RentScaled`, so a dashboard can tell a closed-by-scale route (0) from a quiet one. It needs a row in 5.3 and 5.3.1 and a new attribute set (origin, destination, mode), which is bounded by the route rows but is the first metric attribute with two regions on a risk row; take the two keys `economysim.region.from` and `economysim.region.to` of the relocation metric. (5) PR C, the store side (`StoreLoss`, one event per agent and store class struck, P8.1a): `economysim.risk.strikes` with `risk_kind` `store` adds `StoreLoss.Stores` (stores struck), not 1 per event, as row 5.3.1 says. `economysim.store.lost` sums `StoreLoss.Lost` by commodity, with `economysim.store_class` from `Class`; a strike that takes no unit has `Lost` empty and still counts in `strikes`, so the two are not the same count. The attribute set is bounded (store classes and commodities of the configuration) and needs no agent ID. (6) Two candidates not in the rule tables, to decide there first: a gauge of the store risk scale from `StoreRiskScaled.AfterBP` by `economysim.region` and `economysim.store_class` (the store twin of the route gauge in (4): a class closed by scale reads 0), and a split of `strikes` by `StoreLoss.Common` (a common strike hits every store of a region and class at once, so `Stores` jumps; a two-value attribute would tell a correlated hit from many idiosyncratic ones). Neither is owed by the core. Left open for the adapter change.
+
+### N-378 The spec of the store loss starts from the units that can move
+
+- **Areas:** RSK
+- **Raised:** 2026-11-19, plan 3-rsk PR C, `spec-risk.md` 6.3.2.
+- **Note:** The spec says `q0_c` is the quantity of the commodity at the start of P8.1a. The code uses the quantity held minus the units earmarked, because an earmarked unit cannot move and `Move` would refuse it. State this in 6.3.2 the next time RSK's spec is changed, or reject it with a reason if an earmarked unit should be struck.
+
+### N-379 The cap of 10 000 on a store-class share cannot bind in a real world
+
+- **Areas:** RSK
+- **Raised:** 2026-11-19, plan 3-rsk PR C, `spec-risk.md` 6.3.
+- **Note:** The share of a store class is the sum of per-store fractions, which is at most the stored load over the load of the class, so at most 1 per dimension. The cap can bind only through the larger-of-two-dimensions rule or through rounding. The code keeps the cap as the rule and tests it in `internal/risk`, not at the root. When RSK's spec is next changed, say that the cap is a guard, or drop the example that suggests it can bind.
+
+### N-380 The `Losses` preset keeps strikes apart from lost units
+
+- **Areas:** IND, RSK
+- **Raised:** 2026-11-19, plan 3-rsk PR C, `spec-indicators.md` 9.1 row 25, 20.
+- **Note:** `Losses` tallies a strike with `StrikeTally`, apart from `LossTally`, because a strike that takes no unit has no commodity. The route `Struck` count is by origin, at dispatch. `indicator/` has no registry of presets, so row 25 is declared by its type and constructor, as `PriceIndex` is. The sentence of `spec-indicators.md` 20 that said the code does not declare the presets is changed for row 25. Rows 22 to 24 are still undeclared. Left open for EMP.
+
+### N-454 A trainee's job is read against a `produce` right at `skillsWork`
+
+- **Areas:** ORG, PRO
+- **Raised:** 2026-11-19, plan 3-org PR C (Phase 6 and 7).
+- **Note:** A trainee's request does not pass `admitJob`, so `skillsWork` makes one guarded call to the right of `produce`: the trainer is tested as for `principal` whatever `Who` says, and the trainee is exempt from the executor test (`spec-institutions.md` 5.3.2). `spec-production.md` 4.2 ("tested as the executor is") reads differently for a trainee. The code follows 5.3.2; the next change to `spec-production.md` 4.2 says so. The own-use exemption of such a start takes the executor's role, and the spec is silent on it: settle it in 5.3 when the own-use rule is next written.
+
+### N-455 `RightRefused.Produce` counts each considered request, each tick
+
+- **Areas:** ORG, OBS
+- **Raised:** 2026-11-19, plan 3-org PR C review.
+- **Note:** `refuseStart` runs for every recipe a household considers, before the `k0 < 1` check, so a barred recipe is counted on every tick it is considered, not once per household or per decision. The count is of requests (`spec-institutions.md` 5.6.3, decided by the owner), so it measures pressure, not distinct households. The adapter that records `economysim.right.refusals` is to name it so in its description, and a consumer must not read it as a number of households. Moving the call after the `k0` check would change the count, not the hash.
+
+### N-456 The counts of a clamp and of a refusal exist only under an observer
+
+- **Areas:** ORG, OBS
+- **Raised:** 2026-11-19, plan 3-org PR C.
+- **Note:** `RightRefused` and `PriceControlled` are told at P7.2b from counts kept only when an observer is present (scratch, never hashed, never read by a rule). A test that wants the counts needs an observer; a rule must never branch on them. A change that makes any rule read a count breaks the rule that observability is optional (`doc/rules/observability-and-logging.md`).
+
+### N-457 `clearing.Admit` has only test callers
+
+- **Areas:** CLR, CODE
+- **Raised:** 2026-11-19, plan 3-org PR C review.
+- **Note:** The root calls `clearing.AdmitClamp`; `Admit` is a wrapper kept by `spec-clearing.md` 3.2.1.1 so that a caller that reads no range is unchanged, and only tests call it. Drop it, or keep it with a test that pins it to `AdmitClamp`, when the next change touches `internal/clearing/admit.go`.
 
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
@@ -2563,4 +2644,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: fbbf67303675633b18431106
+NOTES-TAG: 8ecdeb856747f48b93a56d15

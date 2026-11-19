@@ -2117,8 +2117,9 @@ FR-IND-056 to FR-IND-059 (rows 22 to 25 of 9.1) are built with the modules
 that make their inputs: 056 to 058 with EMP (`LabourRound`) and 059 with RSK
 and STO (`StoreLoss`, the `Lost` fields and the reason `loss`), each in the plan
 of that module, which adds the `Observe` case, the tally rows, the preset and
-its tests (plan 2-18 D560). Until then they have no test and the code does not
-declare the presets.
+its tests (plan 2-18 D560). Row 25 (`Losses`, FR-IND-059) is built (plan 3-rsk
+PR C). Until then rows 22 to 24 have no test and the code does not declare their
+presets.
 
 ### Functional
 

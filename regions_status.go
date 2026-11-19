@@ -207,3 +207,62 @@ func (w *World) readEdgeStatus(r *codec.Reader, prev EdgeID) (EdgeID, edgeState)
 	}
 	return e.ID, s
 }
+
+// Region returns the state of region g at the tick boundary: the rows of a
+// Snapshot that have the region (spec-integration.md 6.5). It returns ErrInStep
+// from inside a step, ErrWorldFailed on a failed world and ErrUnknownRegion. It
+// scans the agents of the region only, but derives the cost anchors of the
+// boundary as Snapshot does, which reads every agent (shortcut: the anchors are
+// not saved; keep them in the saved state to make this O(region)). It draws no
+// random number and changes no saved state.
+func (w *World) Region(g RegionID) (RegionState, error) {
+	if err := w.guard(); err != nil {
+		return RegionState{}, fmt.Errorf("Region: %w", err)
+	}
+	if g < 0 || int(g) >= len(w.cfg.Regions) {
+		return RegionState{}, fmt.Errorf("Region: region %d: %w", g, ErrUnknownRegion)
+	}
+	if _, err := w.prepareAnchors(); err != nil {
+		return RegionState{}, fmt.Errorf("Region: %w", err)
+	}
+	nr, nc, n := len(w.cfg.Roles), len(w.cfg.Commodities), len(w.cfg.Regions)
+	s := Snapshot{Regions: make([]RegionRow, n), Roles: make([]RoleRow, n*nr), Markets: make([]MarketRow, n*nc)}
+	acc := newSnapAcc(nc, len(w.cfg.Recipes))
+	// Excluded from coverage (testing.md 9.5): as in Snapshot, a ledger refusal of
+	// the world's own accounts that a valid configuration cannot cause.
+	if err := w.snapRegion(&s, g, &acc, w.makesTable()); err != nil {
+		return RegionState{}, fmt.Errorf("Region: region %d: %w", g, err)
+	}
+	w.snapshotMigration(&s)
+	w.snapshotContracts(&s)
+	if err := w.snapshotTreasuries(&s); err != nil {
+		return RegionState{}, fmt.Errorf("Region: region %d: %w", g, err)
+	}
+	out := RegionState{Region: s.Regions[g], Jobs: s.Jobs}
+	if !w.isOutsideNode(g) {
+		out.Roles = slices.Clone(s.Roles[int(g)*nr : (int(g)+1)*nr])
+		out.Markets = slices.Clone(s.Markets[int(g)*nc : (int(g)+1)*nc])
+	}
+	out.Endowments = w.regionEndowments(g)
+	out.Shipments = slices.DeleteFunc(w.snapshotShipments(), func(r ShipmentRow) bool { return r.Region != g && r.To != g })
+	out.Journeys = slices.DeleteFunc(s.Journeys, func(r JourneyRow) bool { return r.From != g && r.To != g })
+	return out, nil
+}
+
+// regionEndowments returns the endowment rows of region g, by resource; nil with
+// the resources module off.
+func (w *World) regionEndowments(g RegionID) []EndowmentRow {
+	r := w.res
+	if r == nil {
+		return nil
+	}
+	rows := make([]EndowmentRow, r.resources)
+	for res := range rows {
+		cell := r.cellOf(g, ResourceID(res))
+		rows[res] = r.row(cell)
+		if w.tenure != nil {
+			w.tenure.fillRow(&rows[res], cell)
+		}
+	}
+	return rows
+}

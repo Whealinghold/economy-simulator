@@ -75,7 +75,7 @@ func TestCredit_RateCapReplaced(t *testing.T) {
 	s.plan[hMillB] = asks(CreditRequest{Principal: 1_000, Term: 30, MaxRateBP: 400})
 	s.plan[yMillA] = asks(CreditRequest{Principal: 1_000, Term: 30, MaxRateBP: 1_500})
 	w, rec, _ := loanWorld(t, s)
-	w.credit.rateCap = func(g RegionID) (int64, bool) { return 500, g == 0 }
+	w.credit.rateCap = func(g RegionID, limit int64) (int64, bool) { return 500, g == 0 && limit > 500 }
 	rd := &w.credit.round
 	rd.reqs = []subRequest{
 		{hMillA, CreditRequest{Principal: 1_000, Term: 30, MaxRateBP: 1_500}},

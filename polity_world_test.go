@@ -348,7 +348,8 @@ func TestPolity_NewPolity(t *testing.T) {
 // changing the hash of any region.
 func TestPolity_NoRegionFieldRead(t *testing.T) {
 	t.Parallel()
-	institutionsFiles := []string{"institutions_validate.go", "institutions_warn.go"}
+	institutionsFiles := []string{"institutions.go", "institutions_validate.go", "institutions_warn.go", "institutions_round.go",
+		"institutions_rights.go", "institutions_legal.go", "institutions_report.go"}
 	// The fiscal module names the authority of a flow, the jurisdictions of a treasury target and their
 	// coverage (spec-fiscal.md 3.2, 15.1; plan 3-fis PR 2): its validator, class rules and warnings. They read
 	// the tree of the polity and no region tunable of a jurisdiction; the files of its steps are added here.

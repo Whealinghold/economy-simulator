@@ -45,7 +45,9 @@ func TestCheckpoint_RiskRoundTrip(t *testing.T) {
 	if err := w.SetRouteRiskScales([]RouteRiskScale{{From: regFar, To: regIsle, Mode: modeCoach, BP: 30_000}}); err != nil {
 		t.Fatalf("SetRouteRiskScales error = %v, want nil", err)
 	}
-	w.risk.storeScales = []storeScaleRec{{region: regHome, class: 0, bp: 2_500}, {region: regFar, class: 1, bp: 0}}
+	if err := w.SetStoreRiskScales([]StoreRiskScale{{Region: regHome, Class: 0, BP: 2_500}, {Region: regFar, Class: 1, BP: 0}}); err != nil {
+		t.Fatalf("SetStoreRiskScales error = %v, want nil", err)
+	}
 	grain := commodityOf(t, w, "grain")
 	give(t, w, shipHome, grain, 8)
 	id, reason := ask(w, shipHome, 0, ShipmentRequest{Mode: modeCoach, To: regFar, Consignee: shipFar, Lines: []Line{{Commodity: grain, Quantity: 8}}})
@@ -88,6 +90,9 @@ func requireSameRiskState(t *testing.T, w, r *World) {
 	}
 	if a, b := w.risk.find(regFar, regIsle, modeCoach).p, r.risk.find(regFar, regIsle, modeCoach).p; a != b || a != 3_000 {
 		t.Errorf("probability of the scaled row = %d restored, %d original, want 3000 (1 000 * 30 000)", b, a)
+	}
+	if a, b := r.risk.findStore(regHome, 0).p, r.risk.findStore(regFar, 1).p; a != 125 || b != 0 {
+		t.Errorf("restored store probabilities = %d and %d, want 125 (500 * 2 500) and 0", a, b)
 	}
 	if a, b := errVal(w.Checkpoint()), errVal(r.Checkpoint()); !bytes.Equal(errVal(a.MarshalBinary()), errVal(b.MarshalBinary())) {
 		t.Error("the restored world writes other bytes")

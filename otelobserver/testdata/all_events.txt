@@ -16,10 +16,12 @@ EntryLimited
 EstateOpened
 FacilityChanged
 FiscalFlowApplied
+LegalLevelSet
 LoanEnded
 LoanFormed
 LoanPassed
 MarketCleared
+MembershipChanged
 MerchantsPlanned
 MigrationReviewed
 MigrationStarted
@@ -35,6 +37,7 @@ OwnUseChanged
 PayrollPaid
 PopulationChanged
 PopulationScaled
+PriceControlled
 ProductionHalted
 RecipeAbandoned
 RecipeExecuted
@@ -42,6 +45,8 @@ RecipeRefused
 ReliefPaid
 RentPaid
 RentScaled
+RightRefused
+RightSuspensionSet
 RoleChanged
 RoomLimited
 RouteRiskScaled
@@ -54,6 +59,8 @@ ShipmentArrived
 ShipmentDispatched
 ShipmentRejected
 StoreChanged
+StoreLoss
+StoreRiskScaled
 TechnologyAdjusted
 TechnologyAdvanced
 TickEnded

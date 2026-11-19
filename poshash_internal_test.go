@@ -128,6 +128,10 @@ var skipFields = []string{
 	// viewCtx.refs is World.refs again, assembled with the rest of the view context
 	// at the start of P2.5 and P3.2 (market.go refreshViewCtx).
 	"viewCtx.refs",
+	// The institutions module's counts of the refusals of a right and of the clamps of a
+	// legal price are allocated only when an observer is attached, cleared as P7.2b tells
+	// them, and not saved; order is the scratch of the events of one region.
+	"rightTable.refused", "legalTable.tally", "legalTable.rateTally", "legalTable.order",
 }
 
 // maxWalkDepth bounds the nesting of the walk; a deeper value is an error.
@@ -458,11 +462,14 @@ func merchantRolesOn(w *World) bool { return w.mer != nil && w.mer.roles > 0 }
 // plan 2-14): an off world records no line for them.
 func migrationOn(w *World) bool { return w.migration != nil }
 
-// riskOn is the guard of the row of the risk module (P3.1a).
+// riskOn is the guard of the rows of the risk module (P3.1a and P8.1a).
 func riskOn(w *World) bool { return w.risk != nil }
 
 // settlementsOn is the guard of the row of the settlements module (P7.2a).
 func settlementsOn(w *World) bool { return w.set != nil }
+
+// institutionsOn is the guard of the rows of the institutions module (P1.9a, P7.2b).
+func institutionsOn(w *World) bool { return w.org != nil }
 
 // externalOn is the guard of the rows of the external module (P1.8, P3.5 and P4.2,
 // plan 2-16): an off world records no line for them.
@@ -515,6 +522,7 @@ var replayRows = []replayRow{
 	{id: "P1.7b", run: noErr((*World).p17bFiscal), on: fiscalOn},
 	{id: "P1.8", run: noErr((*World).p18Walk), on: externalOn},
 	{id: "P1.9", run: noErr((*World).p19Directives), on: externalAgentOn},
+	{id: "P1.9a", run: noErr((*World).p19aMembership), on: institutionsOn},
 	{id: "P2.1", run: noErr((*World).p21Complete)},
 	{id: "P2.2", run: noErr((*World).p22Teaching), on: skillsOn},
 	{id: "P2.3", run: noErr((*World).p23Snapshot), on: resourcesOn},
@@ -548,7 +556,9 @@ var replayRows = []replayRow{
 	{id: "P7.1", run: (*World).p71Entry},
 	{id: "P7.2", run: noErr((*World).p72Migration), on: migrationOn},
 	{id: "P7.2a", run: noErr((*World).p72aSettlement), on: settlementsOn},
+	{id: "P7.2b", run: noErr((*World).p72bInstitutions), on: institutionsOn},
 	{id: "P8.1", run: (*World).p81Age},
+	{id: "P8.1a", run: noErr((*World).p81aStores), on: riskOn},
 	{id: "P8.2", run: noErr((*World).p82Flows)},
 	{id: "P8.3", run: noErr((*World).p83Regen), on: resourcesOn},
 	{id: "P8.3a", run: noErr((*World).p83aRent), on: tenureOn},

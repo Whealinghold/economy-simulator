@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"log/slog"
-	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
@@ -23,6 +22,16 @@ func (w *World) logRouteStruck(s *shipment, shareBP int64) {
 		w.log.LogAttrs(ctx, slog.LevelDebug, "route struck",
 			slog.Int64(logkeys.Tick, w.Tick()), slog.Int64(logkeys.Shipment, int64(s.id)), slog.Int64(logkeys.Mode, int64(s.mode)),
 			slog.Int64(logkeys.Region, int64(s.from)), slog.Int64(logkeys.Dest, int64(s.to)), slog.Int64(logkeys.Share, shareBP))
+	}
+}
+
+// logStoreStruck writes the Debug line of a store class struck (spec-risk.md 14.3),
+// guarded by Enabled.
+func (w *World) logStoreStruck(st *storeStrike) {
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "store struck",
+			slog.Int64(logkeys.Tick, w.Tick()), slog.Int64(logkeys.Agent, int64(st.agent)),
+			slog.String(logkeys.StoreClass, w.cfg.Modules.Storage.Classes[st.class].ID), slog.Int64(logkeys.Share, st.share))
 	}
 }
 
@@ -102,13 +111,13 @@ func (r *risk) loadStoreScales(w *World, cr *codec.Reader) {
 			cr.Failf("store risk scale %d of (%d, %d) is the default, which is not saved", i, s.region, s.class)
 		case i > 0 && compareStoreKey(prev, s) >= 0:
 			cr.Failf("store risk scale %d is not above the one before it", i)
-		case !slices.ContainsFunc(r.stores, func(k storeScaleRec) bool { return compareStoreKey(k, s) == 0 }):
+		case r.findStore(s.region, s.class) == nil:
 			cr.Failf("store risk scale %d names (%d, %d), which is no store row", i, s.region, s.class)
 		}
 		if cr.Err() != nil {
 			return
 		}
-		r.storeScales = append(r.storeScales, s)
+		r.setStoreScale(s, s.bp)
 		prev = s
 	}
 }

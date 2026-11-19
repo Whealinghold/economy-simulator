@@ -32,7 +32,7 @@ func TestRefusalTally_EdgeCells(t *testing.T) {
 	}{
 		{"first index past the counters", 2, ReasonNotOnRole, "invariant"},
 		{"far past the counters", 9, ReasonNotOnRole, "invariant"},
-		{"uncounted reason", 0, Reason("not_permitted"), "not_permitted, which the first slice does not count"},
+		{"uncounted reason", 0, Reason("no_facility"), "no_facility, which the first slice does not count"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -115,5 +115,20 @@ func TestUnitCost_PastTheRow(t *testing.T) {
 		if got := r.s.unitCost(c.g, c.c); got != 0 {
 			t.Errorf("unitCost(%d, %d) = %d, want 0", c.g, c.c, got)
 		}
+	}
+}
+
+// TestRefusalTally_NotPermittedIsCountedByRightRefused verifies that a start refused for
+// not_permitted adds nothing to the tally of RecipeRefused and does not panic: the
+// institutions module counts it in RightRefused, as the tenure module counts no_title and
+// rent_funds in RentPaid (spec-institutions.md 5.6.3).
+//
+// Requirement: FR-ORG-020, FR-PRO-052
+func TestRefusalTally_NotPermittedIsCountedByRightRefused(t *testing.T) {
+	t.Parallel()
+	got, want := newRefusalTally(2, 2), newRefusalTally(2, 2)
+	got.add(1, 1, ReasonNotPermitted, 3)
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("add(1, 1, not_permitted, 3) changed the tally, want it unchanged")
 	}
 }
