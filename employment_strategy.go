@@ -138,9 +138,10 @@ func (v *AgentView) hirePick() (idx int, net int64, ok bool) {
 
 // hireBid is the bid of a vacancy for the recipe at index idx with net value net per
 // execution: floor(net / Duration), the most a tick of a hired household is worth
-// (4.3.3), cut to MaxPrice. It is below 1 for a recipe that is worth nothing.
+// (4.3.3), cut to MaxPrice. It is below 1 for a recipe that is worth nothing. A Duration
+// below 1 (a hand-built view; Validate rules it out) counts as 1, so it cannot divide by 0.
 func (v *AgentView) hireBid(idx int, net int64) int64 {
-	return min(max(net, 0)/v.Recipes[idx].Duration, MaxPrice)
+	return min(max(net, 0)/max(v.Recipes[idx].Duration, 1), MaxPrice)
 }
 
 // defaultHire is the employer's vacancies of 4.3.3: the best recipe of the hire list
