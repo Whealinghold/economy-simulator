@@ -653,9 +653,9 @@ keeps what it was given (5.2.3). A policy cannot do what a consumer could not.
 7.1.1. A new position **P0.3a** in the entry table of `spec-world.md` 6.2, after
 `TickStarted` (P0.3):
 
-| ID | What runs | Owner | Reads / writes | Draws | Events |
-|----|-----------|-------|----------------|-------|--------|
-| P0.3a | The policy actors, for each actor in ascending `ActorID` that is due (7.2): the view, `Decide`, the checks, the application (6.1) | PLC | reads the boundary state and the slots; writes the slot keys of the actor's levers | D17: a consumer's `Policy`'s own words, from the stream keyed by (`sitePolicy`, tick, `ActorID`); the built-ins take none | per actor: the owners' slot events (cause `policy`) in the order of 6.4.2, then `PolicyDecided` |
+| ID    | What runs                                                                                                                         | Owner | Reads / writes                                                                     | Draws                                                                                                                     | Events                                                                                          |
+|-------|-----------------------------------------------------------------------------------------------------------------------------------|-------|------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|
+| P0.3a | The policy actors, for each actor in ascending `ActorID` that is due (7.2): the view, `Decide`, the checks, the application (6.1) | PLC   | reads the boundary state and the slots; writes the slot keys of the actor's levers | D17: a consumer's `Policy`'s own words, from the stream keyed by (`sitePolicy`, tick, `ActorID`); the built-ins take none | per actor: the owners' slot events (cause `policy`) in the order of 6.4.2, then `PolicyDecided` |
 
 7.1.2. **Why here.** P0.3a comes after `TickStarted` so that its events are inside the
 step's span and carry `Tick` `t`, and before P1.1, the first position, because every
@@ -719,9 +719,9 @@ or by a schedule step that starts at the tick it wants.
 
 7.3.1. The row of the table of draws (`spec-world.md` 7.3) is
 
-| ID | When and where | Taken by | How many | In what order | Owner |
-|----|----------------|----------|----------|---------------|-------|
-| D17 | P0.3a, inside `Decide` | a consumer's `Policy`; **the built-ins take none** | its own | one keyed stream per due actor: site `sitePolicy`, the tick and the `ActorID` (ADR 0008, N-480) | PLC 7.3 |
+| ID  | When and where         | Taken by                                           | How many | In what order                                                                                   | Owner   |
+|-----|------------------------|----------------------------------------------------|----------|-------------------------------------------------------------------------------------------------|---------|
+| D17 | P0.3a, inside `Decide` | a consumer's `Policy`; **the built-ins take none** | its own  | one keyed stream per due actor: site `sitePolicy`, the tick and the `ActorID` (ADR 0008, N-480) | PLC 7.3 |
 
 and the words of one tick (`spec-world.md` 7.3.1) gain a term, the consumer's `Policy`
 draws, beginning the tick. An actor that is not due takes none. The count is a function
