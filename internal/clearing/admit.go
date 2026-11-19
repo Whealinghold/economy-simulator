@@ -104,8 +104,8 @@ func AdmitClamp(f Facts) (code Code, price int64, changed bool) {
 		return c, f.Price, false
 	}
 	price, changed = institution.Clamp(f.Price, f.Bid, f.Cap, f.Floor)
-	// The replaced limit is at most the original for a bid and the cap is at most MaxPrice
-	// (the floor too), so the product fits whenever the first one did.
+	// A raised ask makes the product larger than the one tested above, so it is checked
+	// again; a lowered bid cannot overflow it.
 	product, ok := checked.Mul(price, f.Qty)
 	if !ok {
 		return Overflow, f.Price, false
