@@ -28,8 +28,13 @@ func (b blindMerchant) Trade(v *economysim.AgentView, rng *rand.Rand, p *economy
 var packMerchantsRisk = append(slices.Clone(packMerchantsWarm("two")), "overlay/risk.toml")
 
 // brokersRemoved counts the AgentBankrupted of the role named id among events.
-func brokersRemoved(cfg economysim.Config, id string, events []economysim.Event) (n int64) {
-	role := economysim.RoleID(slices.IndexFunc(cfg.Roles, func(r economysim.Role) bool { return r.ID == id }))
+func brokersRemoved(t *testing.T, cfg economysim.Config, id string, events []economysim.Event) (n int64) {
+	t.Helper()
+	i := slices.IndexFunc(cfg.Roles, func(r economysim.Role) bool { return r.ID == id })
+	if i < 0 {
+		t.Fatalf("role %q is not in the configuration", id)
+	}
+	role := economysim.RoleID(i)
 	for _, e := range events {
 		if b, ok := e.(economysim.AgentBankrupted); ok && b.Role == role {
 			n++
@@ -71,7 +76,7 @@ func TestScenarioRSK3_MerchantLaneReadsLoss(t *testing.T) {
 			rep.num(seed, "shipments struck", rw.tally.struck)
 			rep.num(seed, "units delivered", rw.tally.landed)
 			rep.num(seed, "units wasted (spoiled, diverted, lost)", rw.tally.wasted)
-			rep.num(seed, "brokers removed", brokersRemoved(cfg, "broker", rw.rec.events))
+			rep.num(seed, "brokers removed", brokersRemoved(t, cfg, "broker", rw.rec.events))
 		})
 	}
 }
