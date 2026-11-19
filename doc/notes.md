@@ -64,7 +64,7 @@ PR description.
 | EXT | N-108, N-112, N-113, N-214 |
 | FIS | N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437 |
 | GDS | N-039 |
-| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376 |
+| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
@@ -80,7 +80,7 @@ PR description.
 | PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
-| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377 |
+| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380 |
 | SAV | N-145, N-156, N-195, N-197, N-362, N-382 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-404, N-140, N-192, N-268, N-348, N-365 |
@@ -2038,6 +2038,7 @@ PR description.
 - **Update (2026-11-12, plan 2-28 Phase 1):** the payroll form emits `PayrollPaid`, not `LabourRound`, so presets 22 to 25 stay with the hire form and Stage 3. Left open.
 - **Update (2026-11-18, plan 3-emp Phase 1):** read: the three presets of the hire form (`Unemployment`, `WageBill`, `Employment`) are built in PR 6 of plan 3-emp, with the `LabourRound` case of `indicator/tally_observe.go`; `Losses` stays with RSK and STO. Left open.
 - **Update (2026-11-18, plan 3-rsk Phase 1):** the `Losses` leg (row 25, FR-IND-059) is built in plan 3-rsk PR C, in new files of `indicator/` (N-376); the EMP leg (rows 22 to 24) stays. Left open.
+- **Update (2026-11-19, plan 3-rsk PR C):** the `Losses` leg is built (`indicator/loss.go`, `indicator/tally_loss.go`, FR-IND-059); rows 22 to 24 stay with EMP. Left open (see N-380).
 
 ### N-328 `internal/measure` imports `internal/checked`
 
@@ -2588,8 +2589,26 @@ PR description.
 ### N-377 Candidates for the adapter change of the risk instruments
 
 - **Areas:** RSK, OBS
-- **Raised:** 2026-11-18, plan 3-rsk PR B observability review (route side; the store side lands in PR C).
-- **Note:** The three instruments of `spec-risk.md` 14.4 are deferred to a later change to `otelobserver/` (plan 3-rsk, Q5), with no core change owed: the events carry what they need. For that change: (1) `economysim.transport.cargo.lost` sums `ArrivedLine.Lost` of each line, by commodity, and each `Amount` of `ShipmentArrived.AccountLost`, by commodity. `ArrivedLine.Spoiled` already excludes the lost units (`Shipped - delivered - lost`), so `cargo.spoiled` and `economysim.transport.in_transit` (which takes `Shipped` off, lost included) need no change. (2) `economysim.risk.strikes` with `risk_kind` `route` counts `ShipmentDispatched` with `LossBP` above 0; the `store` half comes from `StoreLoss` in PR C. A strike whose cargo is all spoiled or whose shipment is held still shows in `LossBP`, so the counter is not the same as `cargo.lost` above 0. (3) A reconciliation test, not a new instrument: the sum of `cargo.lost` plus the units lost by a `StoreLoss` equals `economysim.commodity.flow` under the reason `loss`; a gap means a loss path posts to the ledger without an event. (4) Not in the rule tables and to be decided there first: a gauge of the route risk scale held from `RouteRiskScaled` (`AfterBP`), as `economysim.rent.rate` holds `RentScaled`, so a dashboard can tell a closed-by-scale route (0) from a quiet one. It needs a row in 5.3 and 5.3.1 and a new attribute set (origin, destination, mode), which is bounded by the route rows but is the first metric attribute with two regions on a risk row; take the two keys `economysim.region.from` and `economysim.region.to` of the relocation metric. Left open for the adapter change.
+- **Raised:** 2026-11-18, plan 3-rsk PR B observability review (route side); 2026-11-19, PR C observability review (store side, items 5 and 6).
+- **Note:** The three instruments of `spec-risk.md` 14.4 are deferred to a later change to `otelobserver/` (plan 3-rsk, Q5), with no core change owed: the events carry what they need. For that change: (1) `economysim.transport.cargo.lost` sums `ArrivedLine.Lost` of each line, by commodity, and each `Amount` of `ShipmentArrived.AccountLost`, by commodity. `ArrivedLine.Spoiled` already excludes the lost units (`Shipped - delivered - lost`), so `cargo.spoiled` and `economysim.transport.in_transit` (which takes `Shipped` off, lost included) need no change. (2) `economysim.risk.strikes` with `risk_kind` `route` counts `ShipmentDispatched` with `LossBP` above 0; the `store` half comes from `StoreLoss` in PR C. A strike whose cargo is all spoiled or whose shipment is held still shows in `LossBP`, so the counter is not the same as `cargo.lost` above 0. (3) A reconciliation test, not a new instrument: the sum of `cargo.lost` plus the units lost by a `StoreLoss` equals `economysim.commodity.flow` under the reason `loss`; a gap means a loss path posts to the ledger without an event. (4) Not in the rule tables and to be decided there first: a gauge of the route risk scale held from `RouteRiskScaled` (`AfterBP`), as `economysim.rent.rate` holds `RentScaled`, so a dashboard can tell a closed-by-scale route (0) from a quiet one. It needs a row in 5.3 and 5.3.1 and a new attribute set (origin, destination, mode), which is bounded by the route rows but is the first metric attribute with two regions on a risk row; take the two keys `economysim.region.from` and `economysim.region.to` of the relocation metric. (5) PR C, the store side (`StoreLoss`, one event per agent and store class struck, P8.1a): `economysim.risk.strikes` with `risk_kind` `store` adds `StoreLoss.Stores` (stores struck), not 1 per event, as row 5.3.1 says. `economysim.store.lost` sums `StoreLoss.Lost` by commodity, with `economysim.store_class` from `Class`; a strike that takes no unit has `Lost` empty and still counts in `strikes`, so the two are not the same count. The attribute set is bounded (store classes and commodities of the configuration) and needs no agent ID. (6) Two candidates not in the rule tables, to decide there first: a gauge of the store risk scale from `StoreRiskScaled.AfterBP` by `economysim.region` and `economysim.store_class` (the store twin of the route gauge in (4): a class closed by scale reads 0), and a split of `strikes` by `StoreLoss.Common` (a common strike hits every store of a region and class at once, so `Stores` jumps; a two-value attribute would tell a correlated hit from many idiosyncratic ones). Neither is owed by the core. Left open for the adapter change.
+
+### N-378 The spec of the store loss starts from the units that can move
+
+- **Areas:** RSK
+- **Raised:** 2026-11-19, plan 3-rsk PR C, `spec-risk.md` 6.3.2.
+- **Note:** The spec says `q0_c` is the quantity of the commodity at the start of P8.1a. The code uses the quantity held minus the units earmarked, because an earmarked unit cannot move and `Move` would refuse it. State this in 6.3.2 the next time RSK's spec is changed, or reject it with a reason if an earmarked unit should be struck.
+
+### N-379 The cap of 10 000 on a store-class share cannot bind in a real world
+
+- **Areas:** RSK
+- **Raised:** 2026-11-19, plan 3-rsk PR C, `spec-risk.md` 6.3.
+- **Note:** The share of a store class is the sum of per-store fractions, which is at most the stored load over the load of the class, so at most 1 per dimension. The cap can bind only through the larger-of-two-dimensions rule or through rounding. The code keeps the cap as the rule and tests it in `internal/risk`, not at the root. When RSK's spec is next changed, say that the cap is a guard, or drop the example that suggests it can bind.
+
+### N-380 The `Losses` preset keeps strikes apart from lost units
+
+- **Areas:** IND, RSK
+- **Raised:** 2026-11-19, plan 3-rsk PR C, `spec-indicators.md` 9.1 row 25, 20.
+- **Note:** `Losses` tallies a strike with `StrikeTally`, apart from `LossTally`, because a strike that takes no unit has no commodity. The route `Struck` count is by origin, at dispatch. `indicator/` has no registry of presets, so row 25 is declared by its type and constructor, as `PriceIndex` is. The sentence of `spec-indicators.md` 20 that said the code does not declare the presets is changed for row 25. Rows 22 to 24 are still undeclared. Left open for EMP.
 
 ### N-454 A trainee's job is read against a `produce` right at `skillsWork`
 
@@ -2625,4 +2644,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 81814d77c63d5c89148928a1
+NOTES-TAG: 79d27093077dd5dc614e264f

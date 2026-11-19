@@ -159,7 +159,7 @@ func DeliveredPrice(w Window, haul []economysim.CommodityID, p Prices) (Delivere
 			return DeliveredResult{}, err
 		}
 		for _, a := range w.Arrivals {
-			if a.Origin != d.Origin || a.Destination != d.Destination {
+			if a.Origin != d.Origin || a.Destination != d.Destination || a.Shipped == 0 { // Shipped 0: a row of the traveller's account loss only (FR-IND-059)
 				continue
 			}
 			l := lane

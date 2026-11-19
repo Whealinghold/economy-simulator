@@ -69,18 +69,38 @@ type risk struct {
 	// scales are the route scales that differ from 10 000, ascending by key, the
 	// saved state of the route side.
 	scales []routeScaleRec
-	// stores are the keys of the store rows as (region, class) indices, and
+	// stores are the store rows in canonical order (Region, Class as indices), and
 	// storeScales the store scales that differ from 10 000, ascending by key: the
-	// saved state of the store side, which a restore keeps and validates.
-	stores      []storeScaleRec
+	// saved state of the store side. strikes and amounts are the scratch of P8.1a: the
+	// strikes decided, and the units lost by the classes applied, which a strike
+	// indexes by range (risk_loss.go).
+	stores      []storeRow
 	storeScales []storeScaleRec
+	strikes     []storeStrike
+	amounts     []Amount
 	// lost, accountLost, held and tripLost are the scratch of an arrival: the units
 	// lost of each line of the shipment, of the traveller's account as amounts, the
-	// account's holdings and the units lost of each of its commodities.
+	// account's holdings and the units lost of each of its commodities. held and tripLost are also
+	// the units not earmarked and the units taken of each commodity at P8.1a
+	// (risk_loss.go).
 	lost        []int64
 	accountLost []Amount
 	held        []int64
 	tripLost    []int64
+}
+
+// storeRow is one store row resolved to indices (spec-risk.md 3.2.2), as routeRow is:
+// the key, the two numbers and the flag, the scale of its slot, the effective
+// probability the scale gives and, for a common row, the outcome P8.1a drew.
+type storeRow struct {
+	region     RegionID
+	class      StoreClassID
+	strikeBP   int64
+	severityBP int64
+	common     bool
+	scale      int64
+	p          int64
+	struck     bool
 }
 
 // storeScaleRec is a store key and, in the saved list, its scale: the region and the
@@ -120,14 +140,15 @@ func newRisk(c *Config, g Graph) *risk {
 		rr.p = effectiveP(rr.strikeBP, rr.scale)
 		r.routes = append(r.routes, rr)
 	}
-	r.stores = storeKeys(c, region)
+	r.stores = storeRows(c, region)
 	r.rebuild(g, len(c.Regions))
 	return r
 }
 
-// storeKeys resolves the store rows of the canonical configuration to (region, class)
-// indices, in the order of the rows; the scale of each is 0 in the key list and unused.
-func storeKeys(c *Config, region map[string]RegionID) []storeScaleRec {
+// storeRows resolves the store rows of the canonical configuration to indices at the
+// neutral scale, in the order of the rows, which is (Region, Class) order because the
+// regions and the store classes are in ID order.
+func storeRows(c *Config, region map[string]RegionID) []storeRow {
 	m := c.Modules.Risk
 	if len(m.Stores) == 0 || c.Modules.Storage == nil {
 		return nil
@@ -136,11 +157,15 @@ func storeKeys(c *Config, region map[string]RegionID) []storeScaleRec {
 	for i := range c.Modules.Storage.Classes {
 		class[c.Modules.Storage.Classes[i].ID] = StoreClassID(i)
 	}
-	keys := make([]storeScaleRec, 0, len(m.Stores))
+	rows := make([]storeRow, 0, len(m.Stores))
 	for i := range m.Stores {
-		keys = append(keys, storeScaleRec{region: region[m.Stores[i].Region], class: class[m.Stores[i].Class]})
+		row := &m.Stores[i]
+		rows = append(rows, storeRow{
+			region: region[row.Region], class: class[row.Class], strikeBP: row.StrikeBP, severityBP: row.SeverityBP,
+			common: row.Common, scale: wholeBP, p: effectiveP(row.StrikeBP, wholeBP),
+		})
 	}
-	return keys
+	return rows
 }
 
 // effectiveP is the effective probability of a row, P = min(10 000, rhe(StrikeBP *
@@ -163,6 +188,18 @@ func (r *risk) find(a, b RegionID, m ModeID) *routeRow {
 		return nil
 	}
 	return &r.routes[i]
+}
+
+// findStore returns the store row of a region and a class, or nil. It allocates
+// nothing.
+func (r *risk) findStore(region RegionID, class StoreClassID) *storeRow {
+	i, ok := slices.BinarySearchFunc(r.stores, storeScaleRec{region: region, class: class}, func(row storeRow, k storeScaleRec) int {
+		return cmp.Or(cmp.Compare(row.region, k.region), cmp.Compare(row.class, k.class))
+	})
+	if !ok {
+		return nil
+	}
+	return &r.stores[i]
 }
 
 // p31aCommon is P3.1a (spec-risk.md 4.2): one word, the first of the stream keyed
