@@ -1,6 +1,7 @@
 package saving_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/saving"
@@ -220,5 +221,18 @@ func TestPrecaution_ShareCapAndZero(t *testing.T) {
 	}
 	if got := saving.Floor(300, 100); got != 300 {
 		t.Errorf("the reserve is the floor of the buffer: %d, want 300", got)
+	}
+}
+
+// TestToolBuy_SaturatesOnExtremeStock verifies that m - stock saturates instead
+// of wrapping, so a stock at the negative extreme cannot understate the outlay.
+//
+// Guard: a wrapped difference is negative, nonneg turns it into 0, and the
+// household would look funded for a tool it cannot pay for.
+func TestToolBuy_SaturatesOnExtremeStock(t *testing.T) {
+	t.Parallel()
+	got := saving.ToolBuy(2, []int64{math.MinInt64}, []int64{1})
+	if got != math.MaxInt64 {
+		t.Errorf("ToolBuy(2, [MinInt64], [1]) = %d, want %d", got, int64(math.MaxInt64))
 	}
 }

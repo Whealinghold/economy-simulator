@@ -6,7 +6,7 @@ func ToolBuy(m int64, stock, centre []int64) int64 {
 	n := min(len(stock), len(centre))
 	var sum int64
 	for i := 0; i < n; i++ {
-		sum = satAdd(sum, satMul(nonneg(m-stock[i]), nonneg(centre[i])))
+		sum = satAdd(sum, satMul(nonneg(satSub(m, stock[i])), nonneg(centre[i])))
 	}
 	return sum
 }

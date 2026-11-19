@@ -24,9 +24,6 @@ func Drawdown(recs []Record) int64 {
 			worst = d
 		}
 	}
-	if worst < 0 {
-		return 0
-	}
 	return worst
 }
 

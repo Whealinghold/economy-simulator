@@ -19,7 +19,8 @@ func nonneg(v int64) int64 {
 }
 
 // satAdd returns a + b, or MaxInt64 on overflow. Every caller adds a
-// non-negative term, so an overflow is always upward.
+// non-negative term (a balance is never negative), so an overflow is always
+// upward.
 func satAdd(a, b int64) int64 {
 	if s, ok := checked.Add(a, b); ok {
 		return s
