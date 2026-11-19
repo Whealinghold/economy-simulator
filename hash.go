@@ -555,9 +555,9 @@ func pairsEmployer(e *encoder, b Employer) {
 	e.num(5, b.HireYieldBP)
 }
 
-// pairsLastModules writes the pairs of the modules of ids 15, 16, 17, 19, 20, 21, 24 and 25 of
-// Modules, after those pairsLaterModules writes (a continuation for the Lizard
-// limit).
+// pairsLastModules writes the pairs of the modules of ids 15, 16 and 17 of Modules,
+// after those pairsLaterModules writes, then those of pairsTailModules (a
+// continuation for the Lizard limit).
 func pairsLastModules(e *encoder, m Modules) {
 	if m.Credit != nil {
 		e.id(15)
@@ -574,6 +574,13 @@ func pairsLastModules(e *encoder, m Modules) {
 		pairsInfrastructure(e, *m.Infrastructure)
 		e.end()
 	}
+	pairsTailModules(e, m)
+}
+
+// pairsTailModules writes the pairs of the modules of ids 19, 20, 21, 22, 24 and 25
+// of Modules, after those pairsLastModules writes (a continuation for the Lizard
+// limit).
+func pairsTailModules(e *encoder, m Modules) {
 	if m.Polity != nil {
 		e.id(19)
 		pairsPolity(e, *m.Polity)

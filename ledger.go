@@ -149,6 +149,14 @@ func moduleReasons(c *Config) [][]ledger.Reason {
 	if c.Modules.Merchants != nil {
 		m = append(m, []ledger.Reason{ledger.EscrowIn, ledger.EscrowOut, ledger.EscrowRefund})
 	}
+	return append(m, laterModuleReasons(c)...)
+}
+
+// laterModuleReasons returns the reason lists of the employment, credit, tenure and
+// risk modules, in module order (a continuation of moduleReasons for the Lizard
+// limit; the lists are appended after the ones it builds).
+func laterModuleReasons(c *Config) [][]ledger.Reason {
+	var m [][]ledger.Reason
 	if c.Modules.Employment != nil {
 		m = append(m, employmentReasons(c.Modules.Employment.Hire)...)
 	}
