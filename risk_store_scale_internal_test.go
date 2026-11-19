@@ -150,3 +150,20 @@ func TestEvent_RiskEventsPlainData(t *testing.T) {
 		}
 	}
 }
+
+// TestSetStoreScale_AKeyWithNoRowIsAViolatedInvariant verifies that setStoreScale, whose
+// callers validate the key, panics with an invariant message for a key that is no
+// store row, and changes no scale.
+//
+// Requirement: FR-RSK-028
+// Guard: a nil row would be dereferenced and the sparse list left half-edited.
+func TestSetStoreScale_AKeyWithNoRowIsAViolatedInvariant(t *testing.T) {
+	t.Parallel()
+	w, _ := storeScaleWorld(t)
+	if msg := invariantMessage(func() { w.risk.setStoreScale(storeScaleRec{region: regFar, class: classBarn}, 5_000) }); msg == "" {
+		t.Error("setStoreScale of a key with no row did not panic with an invariant message")
+	}
+	if len(w.risk.storeScales) != 0 {
+		t.Errorf("storeScales = %v after the refused set, want none", w.risk.storeScales)
+	}
+}

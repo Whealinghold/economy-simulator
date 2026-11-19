@@ -161,6 +161,9 @@ func (w *World) SetStoreRiskScales(scales []StoreRiskScale) error {
 // row's probability. It returns the scale before and whether it changed.
 func (r *risk) setStoreScale(k storeScaleRec, bp int64) (before int64, changed bool) {
 	row := r.findStore(k.region, k.class)
+	if row == nil {
+		invariant("a store risk scale was set for a key that is no store row")
+	}
 	if before = row.scale; before == bp {
 		return before, false
 	}
