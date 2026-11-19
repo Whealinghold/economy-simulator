@@ -458,3 +458,33 @@ func TestInvariants_Risk_StoreBoundaryBalanceEqualsEvents(t *testing.T) {
 		t.Error("no unit was lost in 12 ticks at probabilities of 6 000 and 5 000, want some")
 	}
 }
+
+// TestRisk_WorkIsCounted verifies the store half of NFR-RSK-002: a tick with no store
+// row above 0 reads no agent at P8.1a. A store record of an agent that does not exist
+// stands in for the read: reading it indexes the agents and panics, so it is read when
+// a row is above 0 (the control) and never when every row is at 0.
+//
+// Requirement: NFR-RSK-002
+// Guard: P8.1a visiting the agents of a world that has no store risk in force.
+func TestRisk_WorkIsCounted(t *testing.T) {
+	t.Parallel()
+	w, _ := riskStoreWorld(t, storeRisk("barn", 5_000, 10_000, false))
+	stockAgent(t, w, shipHome, 40, classBarn)
+	ghost := len(w.agents)
+	w.sto.stores = append(w.sto.stores, make([][]uint8, ghost+1-len(w.sto.stores))...)
+	w.sto.stores[ghost] = []uint8{1}
+	reads := func() (read bool) {
+		defer func() { read = recover() != nil }()
+		w.p81aStores()
+		return false
+	}
+	if !reads() {
+		t.Fatal("P8.1a with a row above 0 did not read the store record of the stand-in, want the control to read it")
+	}
+	if err := w.SetStoreRiskScales([]StoreRiskScale{{Region: regHome, Class: classBarn, BP: 0}}); err != nil {
+		t.Fatalf("SetStoreRiskScales error = %v, want nil", err)
+	}
+	if reads() {
+		t.Error("P8.1a with every row at 0 read an agent, want none (NFR-RSK-002)")
+	}
+}
