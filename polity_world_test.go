@@ -353,7 +353,12 @@ func TestPolity_NoRegionFieldRead(t *testing.T) {
 	// The fiscal module names the authority of a flow, the jurisdictions of a treasury target and their
 	// coverage (spec-fiscal.md 3.2, 15.1; plan 3-fis PR 2): its validator, class rules and warnings. They read
 	// the tree of the polity and no region tunable of a jurisdiction; the files of its steps are added here.
+	// The policy module attaches each actor to a jurisdiction and reads the keys that jurisdiction
+	// covers (spec-policy.md 3.1, 5; plan 3-plc): its validator, reach and warnings. They read the
+	// tree of the polity and no region tunable; a new policy file is added to both lists.
+	policyFiles := []string{"policy_validate.go", "policy_reach.go", "policy_warn.go"}
 	readers := append([]string{"fiscal.go", "fiscal_validate.go", "fiscal_class.go", "fiscal_warnings.go"}, institutionsFiles...)
+	readers = append(readers, policyFiles...)
 	files, err := filepath.Glob("*.go")
 	if err != nil {
 		t.Fatal(err)
@@ -377,7 +382,7 @@ func TestPolity_NoRegionFieldRead(t *testing.T) {
 	}
 	fset := token.NewFileSet()
 	region := map[string]bool{"ReferencePrice": true, "ExtraUpkeep": true, "ReferenceBasket": true, "Yields": true, "StartMoney": false}
-	for _, name := range append([]string{"polity.go", "polity_validate.go"}, institutionsFiles...) {
+	for _, name := range append(append([]string{"polity.go", "polity_validate.go"}, institutionsFiles...), policyFiles...) {
 		file, err := parser.ParseFile(fset, name, nil, 0)
 		if err != nil {
 			t.Fatal(err)
