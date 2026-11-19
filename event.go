@@ -2849,7 +2849,7 @@ type RightSuspensionSet struct {
 func (RightSuspensionSet) isEvent() {}
 
 // PolicyDecided is emitted at P0.3a once per due policy actor whose decision has any count
-// below above zero, after the slot events of its application (spec-policy.md 12.1). It is
+// above zero, after the slot events of its application (spec-policy.md 12.1). It is
 // never emitted for an actor that returned nothing and held nothing for a reason, and never
 // for hold. It is emitted only with the policy module on. Every field is an int64 or an ID.
 type PolicyDecided struct {
