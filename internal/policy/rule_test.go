@@ -150,6 +150,27 @@ func TestRule_LargestProductDoesNotWrap(t *testing.T) {
 	}
 }
 
+// TestRule_LowestErrorSaturatesTheBand verifies that an error of the lowest int64 is
+// compared with the deadband as the highest int64, never negated into itself: a
+// deadband below it moves the rule, a deadband of the highest int64 holds it in band.
+//
+// Requirement: FR-PLC-062
+//
+// Guard: -MinInt64 wraps to MinInt64, so a naive |e| <= Deadband would read a huge
+// negative error as inside every band.
+func TestRule_LowestErrorSaturatesTheBand(t *testing.T) {
+	t.Parallel()
+	moving := policy.Reaction{Deadband: 100, Span: 1, Move: 1, Raise: true}
+	// e = MinInt64 - 0, times Move 1 over Span 1, added to 0: MinInt64.
+	if got, hold := policy.RuleStep(moving, math.MinInt64, true, 0); hold != policy.Moved || got != math.MinInt64 {
+		t.Errorf("RuleStep(e = MinInt64, deadband 100) = %d, %v; want MinInt64, Moved", got, hold)
+	}
+	widest := policy.Reaction{Deadband: math.MaxInt64, Span: 1, Move: 1, Raise: true}
+	if got, hold := policy.RuleStep(widest, math.MinInt64, true, 7); hold != policy.InBand || got != 7 {
+		t.Errorf("RuleStep(e = MinInt64, deadband MaxInt64) = %d, %v; want 7, InBand", got, hold)
+	}
+}
+
 // TestRule_BadSpanReadsAsNoReading verifies the guard for a span below 1, which
 // validation excludes.
 //
