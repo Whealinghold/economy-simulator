@@ -26,16 +26,20 @@ func hireForkConfig(t *testing.T) (economysim.Config, hirePackStrategy) {
 }
 
 // TestFork_EmploymentHire verifies FR-EMP-043 and the fork-at-N of CHK 8.1 with the hire
-// form on: a world with hires of 3 ticks is checkpointed before any hire (N 0), in the
-// tick of the first formations (N 1) and in the middle of the jobs (N 2 and 3), and the
-// original, the restore and the restore of the restore give the same events, snapshot,
+// form on: a world with hires of 3 ticks is checkpointed before any hire (N 0 to 2: the
+// first hires form in tick 2), after the tick of the first formations (N 3) and in the
+// middle of the jobs (N 4), and the original, the restore and the restore of the restore give the same events, snapshot,
 // audit and checkpoint bytes for the next ticks, with the logs compared. A restore that
 // lost a hire, its Escrow account or the wages paid would differ at the first release
 // or at the end of the hire.
 //
 // Requirement: FR-EMP-043, FR-EMP-044
 //
-// Guard: the case at N 2 or 3 fails if no hire was in progress at the boundary, so the
+// Fix: dp3-emp-4 review. The restore of the Production section rejected the job of a hired
+// worker, whose recipe is on the employer's hire list and not on its own role's list, so
+// a world with an open hire could not be restored (N 3 failed before the fix).
+//
+// Guard: the case at N 3 or 4 fails if no hire was in progress at the boundary, so the
 // test cannot pass on a world that never held one.
 func TestFork_EmploymentHire(t *testing.T) {
 	t.Parallel()
@@ -43,7 +47,7 @@ func TestFork_EmploymentHire(t *testing.T) {
 		t.Skip("end-to-end test, skipped with -short")
 	}
 	cfg, s := hireForkConfig(t)
-	for _, n := range []int{0, 1, 2, 3} {
+	for _, n := range []int{0, 1, 2, 3, 4} {
 		t.Run(fmt.Sprintf("N %d", n), func(t *testing.T) {
 			t.Parallel()
 			held := 0
@@ -60,7 +64,7 @@ func TestFork_EmploymentHire(t *testing.T) {
 					held = len(snap.Hires)
 				},
 			})
-			if n >= 2 && held == 0 {
+			if n >= 3 && held == 0 {
 				t.Errorf("N %d: no hire in progress at the boundary, want at least one", n)
 			}
 		})

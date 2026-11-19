@@ -77,6 +77,13 @@ func (e *employment) initHire(c *Config) {
 // isHire says the world is in the hire form; it is false for a nil module.
 func (e *employment) isHire() bool { return e != nil && e.hire }
 
+// hiresRecipe says the job of recipe rec under the principal is one a hire can pay for:
+// the world is in the hire form and the principal's role has rec on its hire list. The
+// restore of a job reads it, as a hired worker's recipe is the employer's, not its own.
+func (e *employment) hiresRecipe(principal *agent, rec RecipeID) bool {
+	return e.isHire() && e.roles[principal.role].on && slices.Contains(e.roles[principal.role].list, rec)
+}
+
 // hireOfWorker returns the hire in progress of the agent as a worker, or nil.
 func (e *employment) hireOfWorker(id AgentID) *hireRec {
 	if !e.isHire() || id < 0 || int(id) >= len(e.workerOf) || e.workerOf[id] == 0 {

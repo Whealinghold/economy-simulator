@@ -201,6 +201,9 @@ func (w *World) employmentCross() error {
 		e.grow(max(h.worker, h.employer))
 		e.workerOf[h.worker] = h.id + 1
 		e.hired[h.employer] += h.k
+		if e.hired[h.employer] > e.roles[w.agents[h.employer].role].maxHires {
+			return fmt.Errorf("%w: hire %d: employer %d holds more than MaxHires %d executions", ErrCheckpointCorrupt, h.id, h.employer, e.roles[w.agents[h.employer].role].maxHires)
+		}
 		e.open[h.region]++
 		if e.open[h.region] > e.maxOpen {
 			return fmt.Errorf("%w: hire %d: region %d holds more than MaxOpen %d hires", ErrCheckpointCorrupt, h.id, h.region, e.maxOpen)
@@ -267,6 +270,9 @@ func (w *World) hireJobFault(h *hireRec) string {
 		return "its worker's job has no working tick behind it and one ahead, or the wages paid are not a whole number of wages"
 	}
 	h.worked = h.ticks - job.remaining
+	if h.formed+h.worked != w.Tick() { // one wage a tick from the formation tick: P2.7, then P2.1
+		return fmt.Sprintf("formed at tick %d with %d ticks worked, but the checkpoint is at tick %d", h.formed, h.worked, w.Tick())
+	}
 	return ""
 }
 

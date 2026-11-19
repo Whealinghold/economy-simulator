@@ -845,6 +845,16 @@ func (w *World) loadJobs(_ *restoreCtx, r *codec.Reader) error {
 	return nil
 }
 
+// jobOnList says the recipe of a job read from a checkpoint is one its worker a may hold:
+// on its role's list, or, in the hire form, on the hire list of the principal's role (a
+// hired worker's recipe is the employer's).
+func (w *World) jobOnList(a *agent, rec RecipeID, principal int64) bool {
+	if _, ok := slices.BinarySearch(w.roles.row(a.role).jobs, rec); ok {
+		return true
+	}
+	return principal >= int64(w.firstHousehold) && principal < int64(len(w.agents)) && w.employment.hiresRecipe(&w.agents[principal], rec)
+}
+
 // loadJob reads the job of a, whose flag was set: the recipe, the executions left
 // and made, the principal, the yield and the pending quantity of each output.
 func (w *World) loadJob(r *codec.Reader, a *agent) {
@@ -858,7 +868,7 @@ func (w *World) loadJob(r *codec.Reader, a *agent) {
 	principal := r.Bounded("principal", math.MaxInt64)
 	j.principal = AgentID(principal)
 	j.yield = r.Bounded("yield", MaxYieldBP)
-	_, onList := slices.BinarySearch(w.roles.row(a.role).jobs, rec)
+	onList := w.jobOnList(a, rec, principal)
 	switch {
 	case r.Err() != nil:
 		return
