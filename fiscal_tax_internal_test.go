@@ -360,3 +360,66 @@ func TestFiscal_SetFlowScalesRefusals(t *testing.T) {
 		t.Errorf("after the refusals: scale %d, %d events, want 10000 and none", w.fiscal.flows[0].scale, len(of[MoneyFlowScaled](rec)))
 	}
 }
+
+// TestFiscal_EventsRebuildTheCollection verifies that an observer that keeps no
+// configuration rebuilds from FiscalFlowApplied alone what the adapter needs for
+// economysim.fiscal.collected and .unapplied (observability-and-logging.md 5.3.1): the
+// money each treasury gained or lost, by the authority that is paid and, for a class of
+// treasuries, the treasury seated in the region of the event that pays; and per flow the
+// money due and not moved.
+//
+// Arithmetic: two ticks. Tick 1: "zpoll" takes 5 from each of two yonder millers
+// holding 100 (due 10, applied 10) and "alpha" takes 1 000 bp of the shire's 1 010,
+// 101, for the crown. Tick 2: one miller holds 3, so "zpoll" is due 10 and applies 8
+// (unapplied 2). The expected treasuries are not recomputed here: they are read from
+// the ledger and compared with the fold.
+//
+// Guard: the metrics are only recorded from the events (rule 5.3.1); if the event lost
+// the region of a treasury payer or Due less Applied stopped being the unmoved money,
+// the adapter's series would drift from the ledger with no test in the core to say so.
+//
+// Requirement: FR-FIS-044
+func TestFiscal_EventsRebuildTheCollection(t *testing.T) {
+	t.Parallel()
+	yonder := FlowTarget{Kind: TargetHouseholds, Region: "yonder", Role: "miller"}
+	m := &Fiscal{Taxes: []Tax{
+		{ID: "alpha", Authority: "crown", Target: FlowTarget{Kind: TargetTreasury}, RateBP: 1_000},
+		{ID: "zpoll", Authority: "shire", Target: yonder, Amount: 5},
+	}}
+	w, c, rec := fiscalMill(t, m, nil)
+	treasury := [2]int64{treasuryMoney(t, w, 0), treasuryMoney(t, w, 1)}
+	for _, held := range []int64{100, 3} {
+		money := map[AgentID]int64{}
+		for _, id := range c.yonderMillers {
+			money[id] = 100
+		}
+		money[c.yonderMillers[0]] = held
+		setBalances(t, w, money)
+		w.p17bFiscal()
+	}
+	unapplied := foldFiscal(of[FiscalFlowApplied](rec), &treasury)
+	for j := range treasury {
+		if got := treasuryMoney(t, w, j); got != treasury[j] {
+			t.Errorf("treasury %d holds %d, the events rebuild %d", j, got, treasury[j])
+		}
+	}
+	if unapplied["zpoll"] != 2 || unapplied["alpha"] != 0 {
+		t.Errorf("unapplied by flow = %v, want zpoll 2 and alpha 0", unapplied)
+	}
+}
+
+// foldFiscal adds each event to the treasuries as the adapter would: the authority is
+// paid its Applied and a class of treasuries pays it from the treasury seated in the
+// region of the event (the crown is seated at region 0, the shire at region 1). It
+// returns Due less Applied by flow.
+func foldFiscal(events []FiscalFlowApplied, treasury *[2]int64) map[string]Money {
+	unapplied := map[string]Money{}
+	for _, e := range events {
+		treasury[e.Authority] += int64(e.Applied)
+		if e.Class == FiscalTreasury {
+			treasury[e.Region] -= int64(e.Applied)
+		}
+		unapplied[e.Flow] += e.Due - e.Applied
+	}
+	return unapplied
+}
