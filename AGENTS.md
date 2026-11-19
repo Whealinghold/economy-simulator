@@ -160,6 +160,7 @@ economy-sim/
 │   institutions_rights.go institutions_legal.go institutions_report.go (ORG)
 │   insurance_validate.go insurance_round.go insurance_settle.go
 │   insurance_strategy.go insurance_report.go (INS)
+│   saving_validate.go saving_view.go saving_strategy.go saving_report.go (SAV)
 │                           # CONTINUATION files: a concept past the Lizard limits
 │                           #   of N-243 is split; each maps to the area code of
 │                           #   its concept, and its _test.go carries that area's
