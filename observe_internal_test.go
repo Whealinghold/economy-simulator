@@ -409,6 +409,11 @@ var stepSites = []site{
 			w.p83aRent()
 		}
 	})},
+	{"P8.3b", noError(func(w *World) {
+		if w.infra != nil {
+			w.p83bFacilities()
+		}
+	})},
 	{"P8.3c", noError(func(w *World) {
 		if w.tec != nil {
 			w.p83cTechnology()

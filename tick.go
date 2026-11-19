@@ -81,6 +81,7 @@ var positionList = [...]position{
 	{"P8.2", "LED", line},
 	{"P8.3", "RES", line},
 	{"P8.3a", "LND", line},
+	{"P8.3b", "CAP", line},
 	{"P8.3c", "TEC", line},
 	{"P8.4", "LED", line},
 	{"P8.5", "OBS", bracket}, // TickEnded, in endStep
@@ -97,7 +98,7 @@ var notBuiltPositions = [...]string{
 	"P2.8b",
 	"P3.3c", "P3.4a", "P3.6b", "P3.6c",
 	"P4.1a",
-	"P8.1b", "P8.3b",
+	"P8.1b",
 }
 
 // positions is the straight line of a step: one call for each position of
@@ -325,6 +326,9 @@ func (w *World) positionsEnd() error {
 func (w *World) positionsClose() error {
 	if w.tenure != nil {
 		w.p83aRent()
+	}
+	if w.infra != nil {
+		w.p83bFacilities()
 	}
 	if w.tec != nil {
 		w.p83cTechnology()

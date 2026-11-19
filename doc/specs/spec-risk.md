@@ -770,7 +770,7 @@ bridge washed away) would be a status set inside a step, at a position that the 
 | Read | Source | When | Use |
 |------|--------|------|-----|
 | the expected loss of a route | `RouteLoss`, 8.2 | any time at a boundary, or at a position of INS | a premium |
-| the loss of a shipment | `ShipmentArrived`: `Lost` of each line and `AccountLost` | P1.3, at the arrival | a loss report (a payout is INS's) |
+| the loss of a shipment | `ShipmentArrived`: `Lost` of each line and `AccountLost`; for every shipment that arrived in the tick, a row (shipment, lines lost, account lost) of a per-tick list kept by `risk_loss.go` whether or not an observer was supplied and only while INS is on, cleared at the entry of P1.3 and read at P1.3a (plan 3-ins D6, H-11; a held arrival has no row) | P1.3, at the arrival; P1.3a, for every arrival of the tick | a loss report; a payout is INS's |
 | the loss of a store | `StoreLoss` | P8.1a | a loss report |
 | the rows | `Config().Modules.Risk` | construction | the correlation: a `Common` row is a risk that strikes every insured at once |
 
@@ -797,7 +797,7 @@ lane is struck at once, RSK-A3). A bust of every insurer at once is a common row
 | CAP | a facility that lowers a probability (a watch, a harbour); a facility lowered by a strike (a raid on a bridge) | nothing in version 1: CAP writes no slot and has no internal setter (`spec-infrastructure.md` 5.5 and 4.1: a facility is a layer, not a slot; a fifth kind of effect needs a spec that owns it, here RSK). The damage is **not** done by this module in version 1: `AdjustFacilities` stays the consumer's call (open question 13 gives the reserved shape, answering `spec-infrastructure.md` 21 item 7) | reserved |
 | FIS | a protection payment, a toll | nothing: a levy and a strike are separate | none |
 | LND | loss of a title by conflict | nothing in version 1: a title is not goods and this module has no actor; the call of `spec-land.md` 6.3 (`TransferTitles`) stays the consumer's, and the two LND texts that say "a cause RSK names" are edited (section 19) | none |
-| INS | premium, payout | 10.2 and the scratch of the lost units of an arrival and of a strike (`spec-insurance.md` 5, 8), kept with or without an observer | used |
+| INS | premium, payout | 10.2 and the per-tick list of the lost units of each arrival and of a strike (`spec-insurance.md` 5, 8), kept with or without an observer | used |
 | PLC | a policy actor's levers | nothing: `SetRouteRiskScales` and `SetStoreRiskScales` are not levers (a hazard is a story shock, `spec-policy.md` 6.3.3) | none |
 | EXT | the outside's lines | nothing: no shipment to an outside node, no store of the outside | none |
 

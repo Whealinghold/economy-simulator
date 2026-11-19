@@ -541,7 +541,9 @@ does not read that reason. It reads the per-recipe field **`Standing`** (5.2.2):
 first reason of the order, other than `no_input` and `no_tool`, that would refuse a
 start of one execution **were the inputs and the tools held** (`zero_yield`,
 `no_site`, `no_facility`, `no_endowment`, `no_title`, `rent_funds`, `not_unlocked`,
-`facility_cap`, `no_target`, `store_refused`, `nothing_to_repair`), or empty. The
+`facility_cap`, `no_target`, `store_refused`, `nothing_to_repair`) or, with the
+institutions module, `not_permitted` (a right refused to a non-member, which buying
+inputs does not cure: N-492), or empty. The
 world derives it at P2.5 from the limits it already computes, none of which
 reads the household's inputs (an owed edit, 17.2 row 4 and 9). A project with a
 `Standing` that is not empty is **not weighed**, whatever its benefit: the
@@ -656,6 +658,13 @@ project's own inputs and tools as tier 2 (zero in every tick but the one in whic
 without the term the inputs would be counted twice in the tick they are bought,
 once in `avail` and once in `Goal`, and `e` would be lowered by them again; with it
 the target is the money that is still to be held (example A3, 16.5).
+
+The view holds no plan, so the exported rule takes the tier 2 spend as an argument,
+as `DefaultCredit` takes the figures the view does not hold (`spec-credit.md` 10.4):
+`SavingTarget(v, tier2)` (7.2), and the default passes the plan's own. A read of
+saved state (the counts of `SavingPlanned`, the snapshot rows of 8.4.2 and the query
+of 7.3, FR-SAV-031, 037) passes `tier2` 0: the difference is confined to the one
+tick in which a funded household buys its project's inputs (N-490).
 
 5.6.4. **The planned recipe.** When the household is funded, its planned recipe
 `r*` of `spec-agents.md` 7.2 is the project's recipe and `k*` is `m`: then 7.3's
@@ -851,7 +860,10 @@ rules are exported as pure functions of the view, as the default's rules are
 
 ```go
 // SavingTarget returns the floor, the goal and the target S* of the agent.
-func SavingTarget(v *AgentView) SavingTargetResult
+// tier2 is the money the plan of this tick has committed to the chosen
+// project's own inputs and tools as tier 2 (5.6.3); a read of saved state
+// passes 0.
+func SavingTarget(v *AgentView, tier2 int64) SavingTargetResult
 
 // ChooseProject returns the project that passes the test of 5.5 and is the
 // best of those that do, and whether there is one, with its benefit, cost,
@@ -1168,6 +1180,13 @@ path.
   `ErrOverflow`** and has no failing-case test for one: the 128-bit helper
   (`spec-currency.md` 7) is used for each product and a saturation is never a wrap
   (architecture.md 3.5; FR-SAV-043, tested by fuzz at the bounds).
+- **The drawdown.** Each field of a ring's record is clamped to plus or minus
+  `MaxInt64 / MaxWelfareWindow` (`spec-welfare-and-wages.md` 13), so the net of a
+  window can still reach twice `MaxInt64`. The drawdown **saturates** at plus or
+  minus `MaxInt64` at each step instead of failing: the buffer is capped by
+  `PrecautionCapTicks * UpkeepCost` anyway, so a saturated drawdown changes no
+  result below the cap, and an error would have no caller to handle it inside a tick
+  (N-491, FR-SAV-006, 043).
 - **That a project is worth it.** The test judges the household's own numbers; a
   project that never pays in the setting is the pack's choice.
 - **That the spread is wide enough.** It is a warning, not an error (the model of
@@ -1232,8 +1251,9 @@ are the values of `reason` in the `Debug` line and the four constants of the met
 attribute `economysim.bar`; `Building` has no reason (a household in progress is
 not declined). No `OrderRejected` reason and no ledger reason is added, and
 `economysim.reason` is not extended (it is a closed set of flow, boundary and
-order-rejection reasons, rules 5.4.1; `no_return` is a constant of `economysim.limit`
-already).
+order-rejection reasons, rules 5.4.1). The four constants are the values of
+`economysim.bar` only (`observability-and-logging.md` 5.4.1); `economysim.limit` has
+no `no_return` (N-495).
 
 ### 12.4 Metrics
 
@@ -1772,7 +1792,7 @@ are placeholders (N-015, N-027).
 | FR-SAV-003 | For an agent whose role has a block the savings target MUST be `max(ReserveMoney, Precaution) + Goal` and MUST replace `ReserveMoney` in the excess `e` of the spend cap (`spec-agents.md` 7.4.4) and nowhere else: the survival rule, tiers 1 and 2 and the work share MUST read the flat reserve. |
 | FR-SAV-004 | For an agent whose role has no block, or with the module off, the target MUST be `ReserveMoney`. |
 | FR-SAV-005 | The target MUST NOT change tiers 1 and 2, the production halt, the choice among recipes other than by 5.7, beliefs or the validity of any order; the sum of limit times quantity of an agent's bids MUST stay at most its available money, and the cut in the cap MUST be at most `SpendMaxShare * SpendHalfTicks * UpkeepCost / 10 000`. |
-| FR-SAV-006 | The drawdown MUST be the deepest fall from a running peak of the cumulative `income - cost` over the agent's ring, 0 when there is none, by checked arithmetic. |
+| FR-SAV-006 | The drawdown MUST be the deepest fall from a running peak of the cumulative `income - cost` over the agent's ring, 0 when there is none, by checked arithmetic that saturates at plus or minus `MaxInt64` and never wraps (11.3). |
 | FR-SAV-007 | `Precaution` MUST be `min(PrecautionCapTicks * UpkeepCost, PrecautionShareBP * Drawdown / 10 000)`, 0 with a share of 0, and `Floor` MUST be `max(ReserveMoney, Precaution)`. |
 | FR-SAV-008 | The world MUST compute the drawdown from the ring and hand it in the view; a strategy MUST NOT be able to change it. |
 | FR-SAV-009 | The value per tick of a recipe MUST be `trunc(net_r * 10 000 / Duration_r)` with `net_r` of `spec-agents.md` 7.1.4 at the agent's centres, and a recipe MUST be valued when it is eligible ignoring stock (a positive yield, `net_r > 0` or a source, not halted). |
@@ -1808,8 +1828,8 @@ are placeholders (N-015, N-027).
 | FR-SAV-039 | The module MUST emit no `Info` or `Warn` inside the tick; its warnings are at construction, and a `Debug` line MUST be guarded by `Enabled`. |
 | FR-SAV-040 | A checkpoint taken with households saving, holding inputs and mid-build MUST restore a world whose plans, requests, snapshot rows and query results equal the original's. |
 | FR-SAV-041 | A world with a facility chain and a saver role MUST be able to build its own capital from a configuration file alone (architecture.md 9.4). |
-| FR-SAV-042 | The exported `SavingTarget` and `ChooseProject` MUST return what the default strategy uses for the same view. |
-| FR-SAV-043 | Every product MUST be computed with checked arithmetic within the bounds of 10.2; an overflow MUST NOT wrap. |
+| FR-SAV-042 | The exported `SavingTarget(v, tier2)` and `ChooseProject(v)` MUST return what the default strategy uses for the same view and the same plan tier 2 spend; a read of saved state passes `tier2` 0 (5.6.3). |
+| FR-SAV-043 | Every product MUST be computed with checked arithmetic within the bounds of 10.2; an overflow MUST NOT wrap, and the drawdown MUST saturate (11.3). |
 | FR-SAV-044 | A start of a project that the world refuses for a transient reason (`no_input`, `no_tool`) MUST leave the inputs held and MUST be evaluated again in the next tick with no state kept. |
 | FR-SAV-045 | A project MUST be chosen only if reachable: `max(0, Outlay - HeldValue + Floor - Money) * n <= max(0, C_n) * T` (`T` the service time: `T_p` of a build, `T_rep` of a repair, 5.8.1) over the agent's ring (with `n` 0 only a need of 0); a household with passing projects none of which is reachable MUST have no goal and MUST be counted `Unreachable`. |
 | FR-SAV-046 | For an agent not barred by survival whose active job is of a recipe with `Builds` or `Repairs` no project MUST be chosen and the goal MUST be `UpkeepCost * (Remaining + 1 + SafetyTicks)`; a facility completed in the tick MUST be in the `Facilities` of the same tick's `Work` and `Trade` views, and the project just completed MUST NOT buy a second set of inputs. |
