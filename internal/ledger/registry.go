@@ -122,6 +122,10 @@ const (
 	// and no sink.
 	Rent
 	TitleSale
+	// Loss is the goods a strike of the risk module takes (spec-risk.md 7.1): a
+	// goods sink from a Transit or an agent account to the boundary, never money and
+	// never an estate. Its pinned code is its row of the table, 36.
+	Loss
 	// NumReasons is the number of reasons the ledger knows.
 	NumReasons
 )
@@ -249,6 +253,9 @@ var table = [NumReasons][2]row{
 	// names only the first pairing, so the registry test adds the second.
 	Rent:      {thingMoney: {true, Internal, setAgent, setAE, false, true, 28}},
 	TitleSale: {thingMoney: {true, Internal, setAE, setAE, false, true, 29}},
+	// loss is a goods sink from a Transit or an agent account to the boundary
+	// (spec-risk.md 7.1, spec-ledger.md 7.2): no money form and no estate form.
+	Loss: {thingGoods: {true, Sink, setTransit | setAgent, setBoundary, false, true, 36}},
 }
 
 // isDeclared reports whether reason r is a declared reason: one whose row a

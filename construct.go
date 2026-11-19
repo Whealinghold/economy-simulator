@@ -148,6 +148,7 @@ func (w *World) allocate() {
 	w.sub = newSubsistence(&w.cfg, &w.roles, &w.recipes)
 	w.pop = newPopulation(&w.cfg)
 	w.transport = newTransport(&w.cfg)
+	w.risk = newRisk(&w.cfg, w.geo.g)
 	w.info = newInformation(&w.cfg, &w.roles)
 	w.migration = newMigration(&w.cfg)
 	w.mer = newMerchants(&w.cfg, &w.roles, w.transport)
@@ -387,6 +388,7 @@ func modulesOn(c *Config) []string {
 		{"settlements", m.Settlements != nil},
 		{"tenure", m.Tenure != nil},
 		{"infrastructure", m.Infrastructure != nil},
+		{"risk", m.Risk != nil},
 	}
 	on := []string{}
 	for _, t := range table {
@@ -465,6 +467,9 @@ func (w *World) summary() []slog.Attr {
 	if m := w.cfg.Modules.Technology; m != nil {
 		attrs = append(attrs, slog.Int(logkeys.Fields, len(m.Fields)))
 	}
+	if w.risk != nil {
+		attrs = append(attrs, slog.Int(logkeys.Rows, w.risk.rows))
+	}
 	if present {
 		attrs = append(attrs, slog.Int64(logkeys.Prices, warm.prices), slog.Int64(logkeys.Wages, warm.wages),
 			slog.Int64(logkeys.Groups, warm.groups), slog.Int64(logkeys.Jobs, warm.jobs))
@@ -482,6 +487,12 @@ func (w *World) summary() []slog.Attr {
 	if x := w.external; x != nil {
 		attrs = append(attrs, slog.Int(logkeys.Nodes, len(w.cfg.Modules.External.Nodes)), slog.Int(logkeys.Counterparties, len(x.cps)))
 	}
+	return w.summaryLater(attrs)
+}
+
+// summaryLater appends the attributes of the later modules to the attributes of
+// summary (a continuation for the Lizard limit).
+func (w *World) summaryLater(attrs []slog.Attr) []slog.Attr {
 	if w.polity != nil {
 		total, governed := polityTotals(&w.cfg)
 		attrs = append(attrs, slog.Int(logkeys.Jurisdictions, total), slog.Int(logkeys.Governed, governed))
