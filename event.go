@@ -307,6 +307,13 @@ const (
 	// an internal transfer of money, agent to agent in the payroll form of the
 	// employment module (spec-employment.md 24.1.6), no faucet and no sink.
 	ReasonWagePay Reason = "wage_pay"
+	// ReasonWageEscrow is the money an employer puts into an Escrow account at the
+	// formation of a hire, and ReasonWageRefund the money the account gives back to
+	// the employer for the executions that did not run and at the end of the hire
+	// (spec-employment.md 7.1): internal transfers of money, no faucet and no sink.
+	// In the hire form wage_pay is also paid from the Escrow account.
+	ReasonWageEscrow Reason = "wage_escrow"
+	ReasonWageRefund Reason = "wage_refund"
 	// ReasonRent is the money a tenant pays a lessor for the units it drew from a let
 	// unit, and ReasonTitleSale the price of a title in a TransferTitles call
 	// (spec-land.md 5.8): internal transfers of money, agent to agent or estate, no
@@ -1996,6 +2003,121 @@ type PayrollPaid struct {
 
 func (PayrollPaid) isEvent() {}
 
+// The reasons of the labour round (spec-employment.md 5.2, 5.5), constants of
+// Reason. The admission reasons refuse an offer or a vacancy whole; the others
+// are the refusals of a formation and of a vacancy left open at the end of the
+// round. The reasons of the checks that are the production module's (no_tool,
+// no_input, zero_yield, no_site, no_endowment, no_title, rent_funds, no_room,
+// invalid_price, in_traineeship) are the constants of that module.
+const (
+	// ReasonEmploymentOff is an offer or a vacancy returned while the hire form of
+	// the employment module is not on. It is logged at Debug only.
+	ReasonEmploymentOff Reason = "employment_off"
+	// ReasonNotHireable is an offer of an agent whose role is not Hireable.
+	ReasonNotHireable Reason = "not_hireable"
+	// ReasonInOwnUse is an offer of an agent in the own-use mode.
+	ReasonInOwnUse Reason = "in_own_use"
+	// ReasonInvalidHouseholds is an offer of fewer than 1 household or of more than
+	// the agent's weight.
+	ReasonInvalidHouseholds Reason = "invalid_households"
+	// ReasonNotEmployer is a vacancy of an agent whose role has no employer block.
+	ReasonNotEmployer Reason = "not_employer"
+	// ReasonNotOnHireList is a vacancy of a recipe that is not on the hire list of
+	// the role.
+	ReasonNotOnHireList Reason = "not_on_hire_list"
+	// ReasonInvalidPositions is a vacancy of fewer than 1 position.
+	ReasonInvalidPositions Reason = "invalid_positions"
+	// ReasonEmployerFull is a vacancy of an employer that has no place left in its
+	// establishment.
+	ReasonEmployerFull Reason = "employer_full"
+	// ReasonTooManyHires closes the lane of a region: the hires open in it are
+	// MaxOpen.
+	ReasonTooManyHires Reason = "too_many_hires"
+	// ReasonNoLabour is the reason of a vacancy that stayed open to the end of the
+	// round with positions left: no offer reached it.
+	ReasonNoLabour Reason = "no_labour"
+	// ReasonEmployerFunds is a formation refused because the employer's available
+	// money is below the bill of the job.
+	ReasonEmployerFunds Reason = "employer_funds"
+)
+
+// The causes of HireEnded (spec-employment.md 15.1), constants of Cause.
+const (
+	// CauseCompleted is a hire whose job completed.
+	CauseCompleted Cause = "completed"
+	// CauseWorkerLeft is a hire that ended with the removal of its worker.
+	CauseWorkerLeft Cause = "worker_left"
+	// CauseWorkerRole is a hire that ended because its worker changed role.
+	CauseWorkerRole Cause = "worker_role"
+	// CauseWorkerMoved is a hire that ended because its worker's account changed
+	// region.
+	CauseWorkerMoved Cause = "worker_moved"
+	// CauseEmployerLeft is a hire that ended with the removal of its employer.
+	CauseEmployerLeft Cause = "employer_left"
+	// CauseEmployerRole is a hire that ended because its employer changed role.
+	CauseEmployerRole Cause = "employer_role"
+	// CauseNotStarted is a hire whose job started no execution (the ration, the
+	// rent or the room cut it to nothing), the whole escrow refunded.
+	CauseNotStarted Cause = "not_started"
+)
+
+// HireFormed is emitted when a hire is formed, at P2.5a in formation order
+// (spec-employment.md 5.5, 15.1). It is per hire, like ContractFormed. Money is
+// in minor units.
+type HireFormed struct {
+	Tick int64
+	// Hire is the hire, Region the region of the lane (the employer's and the
+	// worker's), Employer and Worker the two agents and EmployerRole and
+	// WorkerRole their roles.
+	Hire         HireID
+	Region       RegionID
+	Employer     AgentID
+	Worker       AgentID
+	EmployerRole RoleID
+	WorkerRole   RoleID
+	// Recipe is the recipe the worker runs for the employer and Households the
+	// executions of the job.
+	Recipe     RecipeID
+	Households int64
+	// Wage is the wage per household-tick, Ticks the duration of the job and
+	// Escrowed the bill moved to the Escrow account: Wage times Ticks times
+	// Households.
+	Wage     Money
+	Ticks    int64
+	Escrowed Money
+	// Reserve and Bid are the two limits that fixed the wage.
+	Reserve Price
+	Bid     Price
+}
+
+func (HireFormed) isEvent() {}
+
+// HireEnded is emitted when a hire ends, once: at the completion at P2.1 or P2.7,
+// at a start that starts nothing, with a removal, a role change or a move
+// (spec-employment.md 6.3, 6.4, 15.1). It is per hire. Money is in minor units.
+type HireEnded struct {
+	Tick int64
+	// Hire is the hire, Region the employer's region at the event, Employer and
+	// Worker the two agents and Recipe the recipe of the job.
+	Hire     HireID
+	Region   RegionID
+	Employer AgentID
+	Worker   AgentID
+	Recipe   RecipeID
+	// Households is the executions of the job at the end.
+	Households int64
+	// Worked is the working ticks paid and Paid the wages paid over the hire.
+	Worked int64
+	Paid   Money
+	// Refunded is the remainder of the escrow at the end, returned to the employer.
+	// The refund of a cut start is not here: it is in the LabourRound of its tick.
+	Refunded Money
+	// Cause says why the hire ended.
+	Cause Cause
+}
+
+func (HireEnded) isEvent() {}
+
 // TraineeshipStarted is emitted when a place is filled from the queue and an
 // applicant becomes a trainee, in a region's entry step at P7.1(a), after the
 // completions of the step (spec-skill-barriers.md 4.7, 8.1; spec-observability.md
@@ -2529,6 +2651,68 @@ type RouteRiskScaled struct {
 }
 
 func (RouteRiskScaled) isEvent() {}
+
+// The kinds of a fiscal flow in FiscalFlowApplied.Kind, constants of Kind (spec-fiscal.md
+// 16.1). A purchase and a release have none: they trade under the reason trade and
+// report in TreasuryOrdered.
+const (
+	// KindTax is a tax or a remittance: a class pays the treasury of its authority.
+	KindTax Kind = "tax"
+	// KindDuty is a tax on the value of a trade.
+	KindDuty Kind = "duty"
+	// KindToll is a charge for crossing a border at dispatch.
+	KindToll Kind = "toll"
+	// KindPayout is a transfer from a treasury to a class.
+	KindPayout Kind = "payout"
+)
+
+// FiscalClass is the class of accounts that pays or receives in FiscalFlowApplied, a
+// member of a closed set (spec-fiscal.md 3.2).
+type FiscalClass string
+
+const (
+	// FiscalHouseholds is the accounts of the households of a role and region.
+	FiscalHouseholds FiscalClass = "households"
+	// FiscalPool is the estate account of a region.
+	FiscalPool FiscalClass = "pool"
+	// FiscalTreasury is the Treasury account of a governed jurisdiction.
+	FiscalTreasury FiscalClass = "treasury"
+)
+
+// FiscalFlowApplied is the aggregate of one fiscal flow in one region: emitted once
+// per flow and region per tick in which the flow was at a scale above 0 and a due
+// was computed, at P1.7b (taxes, remittances, payouts), P3.6c (tolls) or P4.1a
+// (duties), in the order of the flows and per region ascending; never when nothing
+// was due and never for a flow at scale 0 (spec-fiscal.md 16.1, FR-FIS-044). It is
+// the counter of every silent rule of the module: Due less Applied is what did not
+// move. Amounts are minor units, or units for a payout in kind.
+type FiscalFlowApplied struct {
+	Tick int64
+	// Flow is the flow's ID, which is also its ledger reason.
+	Flow string
+	// Kind is the kind of the flow and Authority the jurisdiction whose treasury is
+	// paid or pays.
+	Kind      Kind
+	Authority JurisdictionID
+	// Region is the payer's for a tax, a duty or a toll and the recipient's for a
+	// payout, and Class the class of that payer or recipient.
+	Region RegionID
+	Class  FiscalClass
+	// Commodity is the good of a payout in kind, NoCommodity for money.
+	Commodity CommodityID
+	// Due is what the rule computed and Applied what moved.
+	Due, Applied Money
+	// Parties are the payers or recipients with a due, as the sum of their weights.
+	Parties int64
+	// Short counts the payers that paid less than they were due, Cut the recipients
+	// cut by an empty treasury and Headroom the payers cut at the treasury's
+	// headroom, in the unit of Parties.
+	Short, Cut, Headroom int64
+	// Exempt counts the trades of a duty whose payer was a pseudo-agent.
+	Exempt int64
+}
+
+func (FiscalFlowApplied) isEvent() {}
 
 // StoreLoss is emitted at P8.1a once per agent and store class struck, in ascending
 // agent ID then class, after the whole position has been applied (spec-risk.md 6.4,

@@ -87,6 +87,10 @@ type ShipmentID int64
 // formation from 0 and never reused (spec-merchants.md 16).
 type ContractID int64
 
+// HireID identifies a hire of the employment module. IDs are assigned in order
+// of formation from a counter that is state (spec-employment.md 3.4.1, 16).
+type HireID int64
+
 // ClaimID identifies a claim of the credit module, a loan or a payout claim. IDs are
 // assigned in order of formation from 0 and never reused within a world
 // (spec-credit.md 3.1.1).

@@ -126,6 +126,13 @@ const (
 	// goods sink from a Transit or an agent account to the boundary, never money and
 	// never an estate. Its pinned code is its row of the table, 36.
 	Loss
+	// WageEscrow is the money an employer puts into an Escrow account at the
+	// formation of a hire, the bill of the job (spec-employment.md 7.1): agent to
+	// escrow. WageRefund is the money the escrow gives back to the employer for the
+	// executions that did not run and at the end of the hire: escrow to agent. Both
+	// are declared rows, open no boundary account and are no faucet and no sink.
+	WageEscrow
+	WageRefund
 	// NumReasons is the number of reasons the ledger knows.
 	NumReasons
 )
@@ -245,8 +252,12 @@ var table = [NumReasons][2]row{
 	OutsideUnsold:    {thingGoods: {true, Sink, setOutside, setBoundary, false, true, 17}},
 	OutsidePurchases: {thingGoods: {true, Sink, setOutside, setBoundary, false, true, 18}},
 	// wage_pay runs from an agent to an agent in the payroll form (spec-ledger.md
-	// 7.2, spec-employment.md 24.1.6); the hire form adds the escrow to agent pairing.
-	WagePay: {thingMoney: {true, Internal, setAgent, setAgent, false, true, 23}},
+	// 7.2, spec-employment.md 24.1.6) and from an Escrow account to an agent in the
+	// hire form (spec-employment.md 7.1): the two pairings, no other. wage_escrow and
+	// wage_refund are the hire form's other two rows, ranks 22 and 24 of the table.
+	WagePay:    {thingMoney: {true, Internal, setAgent | setEscrow, setAgent, false, true, 23}},
+	WageEscrow: {thingMoney: {true, Internal, setAgent, setEscrow, false, true, 22}},
+	WageRefund: {thingMoney: {true, Internal, setEscrow, setAgent, false, true, 24}},
 	// rent runs from an agent to an agent or an estate, the pool never paying
 	// (spec-land.md 5.3.3); title_sale also runs from an estate to an agent, the pool
 	// paying the price of a release (spec-land.md 6.3.2). The row of spec-ledger.md 7.2

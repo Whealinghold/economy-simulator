@@ -532,7 +532,8 @@ duties, tolls and payouts (`spec-fiscal.md` 3.4), imports and exports
 (`spec-external-sector.md` 8.1: the six `outside_*` reasons, declared when the external
 module is on), the wage reasons of the employment module, the loan reasons of the credit
 module, `rent` and `title_sale` of the tenure module and `premium` and `payout` of the
-insurance module. A reason that a module declares is declared when the module is on and
+insurance module (pinned rows 30 and 31 of the table: a built-in reason takes a pinned
+code below 42, `spec-checkpoint.md` 4.2.7). A reason that a module declares is declared when the module is on and
 closed for the run, and collides with no flow ID (`ErrReasonCollision`,
 `spec-money-supply.md` 4.5.2). The names are the strings used in events and logs, and are the
 values of the `reason` attribute (observability-and-logging.md 3.3.2).

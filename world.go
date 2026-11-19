@@ -117,6 +117,8 @@ type World struct {
 	external *external
 	// polity is the state of the polity module, nil when it is off (polity.go).
 	polity *polity
+	// fiscal is the state of the fiscal module, nil when it is off (fiscal.go).
+	fiscal *fiscalState
 	// sto is the state of the storage module, nil when it is off (storage.go).
 	sto *storage
 	// credit is the state of the credit module, nil when it is off (credit.go).

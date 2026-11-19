@@ -46,43 +46,43 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351, N-353 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424, N-474, N-490 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
-| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-388, N-438 |
-| CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433 |
-| CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435 |
+| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-388, N-438, N-475, N-492 |
+| CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-494, N-496 |
+| CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444, N-471 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241, N-457 |
-| CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457, N-438 |
-| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398 |
+| CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457, N-491, N-493, N-494, N-438 |
+| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398, N-472 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-444, N-445 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361 |
 | EXT | N-108, N-112, N-113, N-214 |
-| FIS | N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437 |
+| FIS | N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-475 |
 | GDS | N-039 |
-| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380 |
+| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
-| INS | N-176, N-179, N-213, N-227 |
+| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-496 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
-| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436 |
-| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438 |
+| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436, N-471 |
+| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-455, N-456 |
-| ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457 |
+| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495 |
+| ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-492 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
-| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380 |
-| SAV | N-145, N-156, N-195, N-197, N-362, N-382 |
-| SCL | N-030, N-198, N-222, N-300 |
+| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470 |
+| SAV | N-145, N-156, N-195, N-362, N-382, N-475, N-490, N-491, N-492, N-493, N-495, N-496 |
+| SCL | N-030, N-198, N-222, N-300, N-493 |
 | SET | N-404, N-140, N-192, N-268, N-348, N-365 |
 | SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
 | SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
@@ -93,8 +93,8 @@ PR description.
 | TEC | N-358, N-359, N-360, N-361, N-384 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383 |
-| WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346 |
-| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438 |
+| WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346, N-472, N-491 |
+| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438, N-475 |
 
 ## Open notes
 
@@ -1049,6 +1049,7 @@ PR description.
 - **Areas:** DEM, STY, REF, SAV
 - **Raised:** 2026-10-13, `spec-employment.md` 11.2 and `models/emp/circuit.py`.
 - **Note:** With midpoint wages and employers who spend only their upkeep, hired households settle at `E u_e / ((1 - phi) a)`. REF's overlay with an employer role needs wants on the employer side; STY may state a report fact; SAV is the investment outlet and its default builds nothing for a role with no block.
+- **Update (2026-11-19, plan 3-sav PR 1):** read: the outlet exists once the saving module is built (a `Saver` block on the employer role and a `Worth` row for its workshop class, `spec-employment.md` 11.3); the REF overlay with an employer's wants is STY's. Left open.
 
 ### N-146 A steady state with employers is not a zero-profit state
 
@@ -1126,6 +1127,7 @@ PR description.
 - **Note:** The decision to acquire a title is SAV's, with CRD's credit; it calls `TransferTitles` and needs a field in the plan a `Strategy` returns. It cannot be made until a holder's receipt is something a household can see: today a holder's receipts depend on others' draws and the attribution of `spec-land.md` 4.4.2, and the view carries the rent in force and no draws, and there is no seller (the pool holds and lets). The shape, if a consumer asks, is a plan field `TitleBids` matched in a round (SAV 6.3, open question 2). A facility bought for a price has the same two gaps (CAP 5.3.4: a ground facility is valued only by a `Worth` row).
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: `TradePlan` has `Intents` and `Discards` only and no `TitleBids`; the plan type is built so that a field is appended (architecture.md 2.10.5). Left open.
 - **Update (2026-11-14, plan 3-lnd Phase 1):** read: LND builds `TransferTitles` and the queries `Titles`, `Holders`, `Rent` (PR 3 of plan 3-lnd); the view carries `Posted`, `ShareBP`, `Entitled` and `Closed` and no other holder's share (`spec-land.md` 4.6.1); `TradePlan` still has no `TitleBids`. Left open for SAV, CRD and AGT (see N-362).
+- **Update (2026-11-19, plan 3-sav PR 1):** read: no title or facility is bought for a price in the saving module (`spec-saving-and-investment.md` 6.3 stands); `TradePlan` has no `TitleBids` and the plan type is built so that a field is appended. Left open.
 
 ### N-158 The steady-state programme has one row per endowment; the warm start has no rent column
 
@@ -1276,6 +1278,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-risk.md` 4, 10.2.2 and `spec-insurance.md` 6.1.2.
 - **Note:** `LossBP` is in the record and in `ShipmentDispatched` for an observer, and no view carries it. Insurance reads `RouteLoss` and the arrival's lost units and never `LossBP`, a draw or a scale; it would insure only what is lost. FR-INS-025 is the test: two worlds that differ only in a lane's strikes form the same policies.
 - **Update (2026-11-18, plan 3-rsk Phase 1):** read: FR-INS-025 is INS's test. RSK supplies `RouteLoss`, the events and the scratch of the lost units, and no view carries `LossBP` (FR-RSK-011). Left open for INS.
+- **Update (2026-11-19, plan 3-ins Phase 1):** read: FR-INS-025 is built in INS PR C (`TestInsurance_ReadsNoLossBP`, `TestInsurance_SameWorldsOppositeStrikes`); the note is applied and removed at PR F, when the scenario S160 has run. Left open.
 
 ### N-177 No endogenous risk in version 1
 
@@ -1294,6 +1297,7 @@ PR description.
 - **Areas:** INS, STB, EXP
 - **Raised:** 2026-10-13, `spec-risk.md` 3.3, 10.2.3, RSK-A3.
 - **Note:** A sweep through a scale of 0 is a different stream from there (the row takes no word at 0); a sweep above 0 stays aligned (`spec-risk.md` 11.4).
+- **Update (2026-11-19, plan 3-ins Phase 1):** read: the sweep is the readers' (STB, EXP), not INS's. Left open.
 
 ### N-180 The expected loss is in the shipper's margin and in the lanes
 
@@ -1384,6 +1388,7 @@ PR description.
 - **Areas:** SAV, CRD
 - **Raised:** 2026-10-13, `spec-saving-and-investment.md` 6.2.2, 19 (1).
 - **Note:** A bullet loan that falls due at the end of a build is the debt squeeze of CRD-A1; the default asks for no loan for a project; a claim with a schedule is the safe form.
+- **Update (2026-11-19, plan 3-sav PR 1):** read: the saving module builds no loan for a project (a funded household finds no gap, `spec-credit.md` 10.2.5); a consumer's strategy may append its own `CreditRequest`. Left open for CRD.
 
 ### N-196 A `Facilities` group in the `Trade` view
 
@@ -1392,12 +1397,7 @@ PR description.
 - **Note:** CAP 9.1 leaves the `Trade` view without facilities; SAV's goal and planned recipe are decided in `Trade`, and the clauses go in the per-recipe group.
 - **Update (2026-10-17, plan 1-7 Phase 1):** read: no `Facilities` group in the slice view. Left open for CAP and SAV.
 - **Update (2026-11-18, plan 3-cap Phase 1):** the `Work` view carries `Facilities` (CAP builds it in PR 4); the `Trade`-view group of a `Saver` role is SAV's (N-382). Left open for SAV.
-
-### N-197 FR-CAP-018 and CAP 4.5 carry a carve-out for a role with a `Saver` block
-
-- **Areas:** CAP, SAV
-- **Raised:** 2026-10-13, `spec-saving-and-investment.md` (the edits owed to `spec-infrastructure.md`).
-- **Note:** The default builds and repairs nothing for a role with no block; with a block it is SAV's plan that starts a build. Redundant if the edit owed to CAP is applied.
+- **Update (2026-11-19, plan 3-sav PR 1):** read: `spec-infrastructure.md` 9.1 already says the `Facilities` field is also in the `Trade` view of an agent whose role has a `Saver` block; the field is built in PR 3 of plan 3-sav with N-382 (D6). Left open until PR 3.
 
 ### N-198 The drawdown is `O(T)` per agent and tick
 
@@ -1480,6 +1480,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-insurance.md` 9.2.
 - **Note:** The credit list holds claims of two origins, `loan` and `payout`. The credit instruments and `Warn`s, `ForgiveClaims` and `CreditSettled` count loans only; the payments of a payout claim are INS's, in `CoverSettled` (`Stage` `claim`, fields `ClaimEnded`, `ClaimPaid`, `ClaimReceived`); the welfare record counts the principal of a payout claim as income and cost, and the identity of CRD 3.6 reads `Lent + Awarded`. INS counts its own outstanding payout claims in `economysim.insurance.claims`.
 - **Update (2026-10-13, Phase 1 of the ledger row):** applied for LED: the ledger's section 10 and FR-LED-063 carry the origin, `Awarded` and `Obligate` (`spec-ledger.md` 10, FR-LED-064); the first build keeps both origins in one list and checks the principal identity with `Awarded`. LED removed from the areas.
+- **Update (2026-11-19, plan 3-ins Phase 1):** the INS half is built by plan 3-ins (the stage-`claim` counts of `CoverSettled`, the welfare principal of a payout claim, N-472). Left open until PR D.
 
 ### N-210 The premium is not in the merchant's margin
 
@@ -1499,6 +1500,7 @@ PR description.
 - **Areas:** CRD
 - **Raised:** 2026-10-13, `spec-insurance.md` 7.1.2, INS-A6 (a case of L11 and L45).
 - **Note:** The cover round is after the credit round, so a household can pay a premium from this tick's loan.
+- **Update (2026-11-19, plan 3-ins Phase 1):** a premium paid from a loan formed at P3.3b is a test of scenario S161. Left open until PR F.
 
 ### N-213 A store has no expected-loss read
 
@@ -1506,6 +1508,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-insurance.md` 6.4.2 and open question 4.
 - **Note:** A store premium is the underwriter's posted rate, a pack's data; a read like `RouteLoss` for a store is the ask.
 - **Update (2026-11-18, plan 3-rsk Phase 1):** read: a store expected-loss read is INS's ask and is not built here (plan 3-rsk, leaves out). Left open for INS.
+- **Update (2026-11-19, plan 3-ins Phase 1):** read: a store expected-loss read is an ask of RSK and is not built in version 1 (plan 3-ins, leaves out). Left open.
 
 ### N-214 Keyed random streams (ADR 0008): the edits owed
 
@@ -1653,6 +1656,7 @@ PR description.
 - **Areas:** CRD, INS
 - **Raised:** 2026-10-13, `plan-phase-1-1.md` (git history, `2abbe62^`) D9 and Phase 1 deliverable 1b.
 - **Note:** The owner accepted two recommendations and `spec-credit.md` is amended in this change: (i) CRD 8.5 had the settlement set `Overdue` and none of the five operations of 3.2 did, so a sixth ledger operation `MarkOverdue(claim, tick)` sets it (atomic, refused with `ErrUnknownClaim`, and, beyond the plan, with `ErrClaimShape` for a `tick` below the claim's `Due`, so that `Overdue` is -1 or in `[Due, tick)` by construction, CRD 17.5; an `Overdue` already set is left as it is); (ii) a `Settle` with one part 0 skips that transfer, because a transfer of 0 is refused by `spec-ledger.md` 4.2, and both parts 0 is `ErrInvalidAmount`. Edited: CRD 3.2 and 3.2.1, 8.5 (item 2), FR-CRD-003, 032 and 034 (the rows that count the operations or set `Overdue`), the edits table and the home table; LED 10, FR-LED-063 and 16. Still owed: the models of CRD were not re-run (in Docker only): `doc/specs/models/crd/loans.py` sets `over` as a field write (line 83, which is `MarkOverdue` in the library) and `doc/specs/models/crd/alloc.py` draws random operations on a mini ledger (`Lend`, `Settle`, ...) with no `MarkOverdue` and, to check, a `Settle` that may be given a part of 0 (legal now, and both parts 0 is not); `spec-insurance.md` 9.2 and FR-INS-004 name `Obligate` only and need no edit; `spec-integration.md` 13.2 (`ForgiveClaims` uses `WriteOff`) is unchanged. The ledger code of the six operations is Phase 5 of the plan.
+- **Update (2026-11-19, plan 3-ins Phase 1):** read: INS owes nothing here; `MarkOverdue` is CRD's and `Obligate` needs no edit. Left open.
 
 ### N-228 A module's items in the tradable set have no touch point
 
@@ -2273,6 +2277,7 @@ PR description.
 - **Areas:** SAV, CRD, AGT
 - **Raised:** 2026-11-14, `spec-land.md` 18.1 (a), plan 3-lnd Phase 1.
 - **Note:** The decision to buy a title calls `TransferTitles` and is made by SAV; a loan of CRD funds the money of the call, and no title is pledged in version 1 (`spec-credit.md` 3.5). It needs a field in the plan a `Strategy` returns, and `TradePlan` has none (see N-156).
+- **Update (2026-11-19, plan 3-sav PR 1):** read: same gap as N-156, nothing built in the saving module; `TradePlan` still has no `TitleBids`. Left open.
 
 ### N-363 MIG's estimate of a destination's income reads neither rent nor title
 
@@ -2316,6 +2321,7 @@ PR description.
 - **Areas:** AGT, SAV, CAP
 - **Raised:** 2026-11-18, plan 3-cap Phase 1, `spec-infrastructure.md` 4.2.2 and 9.1.
 - **Note:** the per-recipe field `Standing` and the `Trade`-view `Facilities` group of a `Saver` role are read only by SAV's project rule. CAP builds the `Work`-view `Facilities` and the helper `standingReason`, and no `Trade` field; SAV adds the group, the field and its owed rows.
+- **Update (2026-11-19, plan 3-sav PR 1):** read: the specs already carry the rows (`spec-agents.md` 6.4.1, `spec-infrastructure.md` 4.2.2 and 9.1); the group, the field and the clauses are built in PR 3 of plan 3-sav (D5, D6). Left open until PR 3.
 
 ### N-383 The capacity row of the viability programme for a `Needs` recipe
 
@@ -2488,7 +2494,43 @@ PR description.
 
 - **Areas:** OBS, FIS
 - **Raised:** 2026-11-18, plan 3-fis PR 2 observability review, plan Q3.
-- **Note:** `observability-and-logging.md` 5.3 and 5.3.1 already list `economysim.fiscal.collected`, `.paid`, `.in_kind`, `.unapplied` and `.order.cut` (attribute `economysim.clamp`: `cash`, `hold`, `stock`), fed by `FiscalFlowApplied` and `TreasuryOrdered`. Plan 3-fis Q3 defers them, as SKL Q7 and CRD Q3 did: PR 2 builds no event and no snapshot field, so nothing feeds them yet, and the core module records no metric (rule 5). The adapter PR after FIS PR 6 adds the five instruments, the cardinality test over the flow IDs, regions and authorities, the `economysim.clamp` series count for the reference chain (5.4.2), and takes `FiscalFlowApplied` and `TreasuryOrdered` out of `ignoredEvents`. The ten construction warnings of `fiscal_warnings.go` need no metric: they are fixed by the configuration and read through `Config.Warnings` (counterpart rule of 8.1).
+- **Note:** `observability-and-logging.md` 5.3 and 5.3.1 already list `economysim.fiscal.collected`, `.paid`, `.in_kind`, `.unapplied` and `.order.cut` (attribute `economysim.clamp`: `cash`, `hold`, `stock`), fed by `FiscalFlowApplied` and `TreasuryOrdered`. Plan 3-fis Q3 defers them, as SKL Q7 and CRD Q3 did: PR 2 builds no event and no snapshot field, so nothing feeds them yet, and the core module records no metric (rule 5). The adapter PR after FIS PR 6 adds the five instruments, the cardinality test over the flow IDs, regions and authorities, the `economysim.clamp` series count for the reference chain (5.4.2), and takes `FiscalFlowApplied` and `TreasuryOrdered` out of `ignoredEvents`. The ten construction warnings of `fiscal_warnings.go` need no metric: they are fixed by the configuration and read through `Config.Warnings` (counterpart rule of 8.1). Candidate for the same adapter PR, found in the PR 3 observability review: one more instrument, `economysim.fiscal.limited` (Counter, `{household}`, attributes `economysim.reason` (the fiscal flow ID) and `economysim.fiscal_limit` with the closed set `short`, `headroom`, `cut`), fed by `FiscalFlowApplied` (`Short`, `Headroom`, `Cut`). Why: `economysim.fiscal.unapplied` says how much money did not move but not why. Payers too poor to pay (`short`) and a treasury at `MaxMoney` (`headroom`) or empty (`cut`, from PR 4) have different fixes, as for `economysim.money.flow.limited`. The adapter PR adds the row to 5.3, 5.3.1 and the closed set to 5.4.1 (`economysim.fiscal_limit`), and states the series count for the reference chain (5.4.2). Declined on purpose: a metric for `Parties` (the event carries it; no use apart from the share of the limited counts, so add it only if that share is wanted), `Exempt` (PR 5, duties), and attributes for class, authority or region (the flow ID fixes class and authority; region is not needed by any of the five). `TestFiscal_EventsRebuildTheCollection` proves `collected` and `unapplied` derivable from the events.
+
+### N-470 The arrival's lost units are a per-tick list kept by RSK's file
+
+- **Areas:** INS, RSK
+- **Raised:** 2026-11-19, plan 3-ins D6, H-11, `spec-risk.md` 10.2.1.
+- **Note:** `risk_loss.go` overwrote the lost units of the last arrival; P1.3a runs after all of P1.3 and needs the figures of each arrived shipment that has a policy. INS adds a per-tick list `risk.arrived` (shipment, lines lost, account lost), cleared at the entry of P1.3, kept whether or not an observer was supplied and only while insurance is on. A shipment whose arrival is held (RSK's order guard) has no row and its policy stays open. A `Guard:` test (`TestRisk_ArrivedListKeptWithoutObserver`) pins the observer-free case.
+
+### N-471 `premium` and `payout` are pinned rows 30 and 31, and a built-in reason takes a code below 42
+
+- **Areas:** LED, INS, CHK
+- **Raised:** 2026-11-19, plan 3-ins D2, Q1, `spec-checkpoint.md` 4.2.7.
+- **Note:** The allocation "codes 60 to 67" of the first insurance draft cannot hold a built-in reason: a code from 42 up is a configured money or fiscal flow's, and `reasonOfCode` would read it back as a flow (the lesson of RSK's `loss`, code 36 and not 44). The two reasons use the pinned rows 30 and 31. A module that needs a new built-in reason takes the next number only by changing `pinnedRows`, which is a checkpoint format change.
+
+### N-472 `N_t` enters the welfare record by `addUnearned`, and a flow after P6.3 amends the pushed record
+
+- **Areas:** WEL, CRD, INS
+- **Raised:** 2026-11-19, plan 3-ins D10, Q2, H-12, H-13, `spec-insurance.md` 11.1.3.
+- **Note:** The premium, the payout and the principal paid on a claim of origin `payout` are each one signed `addUnearned` call (CRD 11.1 says the principal of a loan is neither income nor cost; a payout claim's principal is both parties' `N_t`). A flow that moves after P6.3 (the payout of a store policy at P8.1b, the principal a removal's waterfall pays at P7.1) is added to the record already pushed in the tick by `Ring.Amend` (replaces the running sums and re-applies the clamp, no new record, no window change); an agent with no record of the tick is not amended. The fallback if review refuses a change to `internal/welfare` is a one-tick lag.
+
+### N-473 No indicator preset exists for premiums, payouts, shortfalls and the loss ratio
+
+- **Areas:** IND, INS
+- **Raised:** 2026-11-19, plan 3-ins Q6, `spec-insurance.md` 20.2 row `spec-indicators.md`.
+- **Note:** `spec-indicators.md` has no row or requirement for an insurance preset. The events carry the exact figures (`CoverFormed`, `CoverSettled`), so a loss ratio is exact from them. A preset needs a spec row first; INS does not build one.
+
+### N-474 `Directed` keeps the cover requests and the offer of the fallback
+
+- **Areas:** AGT, INS
+- **Raised:** 2026-11-19, plan 3-ins D13, `spec-insurance.md` 10.5.
+- **Note:** `directCredit` replaces only the credit fields of a directed agent's plan, so its cover requests and offer survive (a test pins it). A directive field for cover is open question 9 of `spec-insurance.md`; nothing builds one.
+
+### N-475 P1.3a, P3.3c and P8.1b land in the straight line of `tick.go` with the other modules' positions
+
+- **Areas:** WLD, INS, CAP, LND, SAV, FIS
+- **Raised:** 2026-11-19, plan 3-ins R5.
+- **Note:** `fillAgentView` and `arrive` are at CCN 10 and the callers of P1.3, P3.3b and the phase 8 tail may reach 10 with one more call. Whichever module lands first makes the refactor-first split of the shared function; the others rebase onto it. The order of the tail is P8.1, P8.1a, P8.1b, P8.2, then P8.3a to P8.3c, and of the removal steps 2d, 2e, 2f, 2g.
 
 ## Read receipt
 
@@ -2533,12 +2575,14 @@ PR description.
 - **Areas:** EMP, MER, LED, CHK
 - **Raised:** 2026-11-18, plan 3-emp Phase 1 (`spec-employment.md` 12, plan D6).
 - **Note:** An Escrow account is free when no open contract and no open hire uses it. The free list is derived, never saved: `contract_settle.go` derives it in two places and `checkpoint_restore.go` checks that an Escrow account is used by a contract; the hire form adds the hire list as a second user through one helper, and with MER off and the hire form on the restore check must accept an Escrow account. The audit of "exactly `price * quantity`" (FR-MER-045) is for a contract's account only. Any later module that holds money in an Escrow account (CRD, FIS) goes through the same helper.
+- **Update (2026-11-18, plan 3-emp PR 3):** PR 3: the free list is the merchants module's when it is on and the module's own when not (`escrowTake`, `escrowPut`); `markEscrow` adds the hires' accounts to the `used` set of the merchants audit and cross-check. The restore side (tag 24) is PR 4. Left open.
 
 ### N-371 The employment form selector and the one-form rule
 
 - **Areas:** EMP, CFG
 - **Raised:** 2026-11-18, plan 3-emp Phase 1 (D1, `spec-employment.md` 24.3).
 - **Note:** `Employment.Hire` selects the hire form and the module is the payroll form without it. A world runs one form: the payroll pays any worker with a job in progress, a hired job included, so both together would pay twice. A block with the fields of the other form is `ErrEmploymentShape`. `PayrollBP` is written to the hash only when non-zero; every valid payroll block has it at least 1, so no valid payroll hash moves. A world that wants both forms is a later spec.
+- **Update (2026-11-18, plan 3-emp PR 3):** PR 3 runs the form: the labour round, the hired job and the escrow. Left open until the checkpoint section and the golden are built.
 
 ### N-372 The event order of a removal: the rule file and the code win over `spec-employment.md` 6.5.2
 
@@ -2557,12 +2601,14 @@ PR description.
 - **Areas:** EMP, LED, CHK
 - **Raised:** 2026-11-18, plan 3-emp PR 2 (`internal/ledger/checkpoint.go`, `TestReasonCode_Pinned`).
 - **Note:** Plan 3-emp D5 guessed codes 42 and 43. The pinned table of `spec-ledger.md` 7.2 has 42 rows (`pinnedRows`) and already names `wage_escrow` at row 22 and `wage_refund` at row 24; a code of 42 or more is the code of a configured money flow. PR 3 pins `ReasonWageEscrow` to 22 and `ReasonWageRefund` to 24 and adds the constants to `reasonCodes` and `reasonNames`.
+- **Update (2026-11-18, plan 3-emp PR 3):** Applied: `ReasonWageEscrow` and `ReasonWageRefund` are in the registry at ranks 22 and 24, in `reasonCodes`, `reasonNames` and the declared list of the employment module; `wage_pay` has the two pairings. Left open until PR 4 pins them in a checkpoint fixture test.
 
 ### N-430 What the hire form owes the payroll hooks and the overflow check
 
 - **Areas:** EMP, PRO, CODE
 - **Raised:** 2026-11-18, plan 3-emp PR 2 (config only, nothing runs yet).
 - **Note:** (a) P4.1b must not run in the hire form (D1): `newEmployment` still marks an employer role a payer and `collect` still walks the agents; guard it by the form flag in PR 3. (b) The derived overflow check of `spec-production.md` 10.3 (`yieldMax` in `validate.go`) must take `HireYieldBP` of the hire-list recipes into the largest yield factor (`spec-employment.md` 14.1, last paragraph); PR 2 does not, because no hired output exists yet. Whoever builds the hired job adds it with a failing-case test.
+- **Update (2026-11-18, plan 3-emp PR 3):** Applied in PR 3: `p41bPayroll` returns at once in the hire form, and `withHire` in `employment_validate.go` takes `HireYieldBP` of the hire-list recipes into `yieldMax`, with `TestValidate_OverflowReadsHireYieldBP`. Part of the note is settled; left open for the record of the weight of a hired cohort (the product uses the employer role weight, not the worker's).
 
 ### N-431 The warnings of the hire form that read prices
 
@@ -2624,6 +2670,30 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-rsk PR C, `spec-indicators.md` 9.1 row 25, 20.
 - **Note:** `Losses` tallies a strike with `StrikeTally`, apart from `LossTally`, because a strike that takes no unit has no commodity. The route `Struck` count is by origin, at dispatch. `indicator/` has no registry of presets, so row 25 is declared by its type and constructor, as `PriceIndex` is. The sentence of `spec-indicators.md` 20 that said the code does not declare the presets is changed for row 25. Rows 22 to 24 are still undeclared. Left open for EMP.
 
+### N-442 A hire completes in the order of the starts, not in ascending hire ID
+
+- **Areas:** EMP
+- **Raised:** 2026-11-18, plan 3-emp PR 3.
+- **Note:** `spec-employment.md` 6.3.3 says the `HireEnded` events of one position come in ascending hire ID. A job of one tick completes in its start tick, in the rotation order of P2.7, and the existing completion steps (P2.1 and P2.7) run in the rotation order too; `RecipeExecuted` and `HireEnded` of one hire are adjacent. PR 3 keeps the rotation order (the plan's recommendation: no second pass). Decide in the next change of the spec whether to reword 6.3.3 or to sort.
+
+### N-443 A withdrawn request has 0 executions and is not rationed
+
+- **Areas:** EMP, RES
+- **Raised:** 2026-11-18, plan 3-emp PR 3.
+- **Note:** The labour round withdraws the own request of a matched worker. Its draws on an endowment stay in `resourcesState.reqs` with `executions` 0, and `p26Ration` skips a record of 0 executions, so no worker has two requests on one endowment (`rationRun` panics on that). Any new reader of `reqs` must skip a record of 0 executions. The withdrawal itself is not tested with the resources module on in PR 3 (no pack has a hireable role that draws). Check 7 `no_endowment` is tested with a test-only pack (`TestAdmission_NoEndowmentRefusesTheFormation`).
+
+### N-444 A world with a hire open cannot be checkpointed yet
+
+- **Areas:** EMP, CHK
+- **Raised:** 2026-11-18, plan 3-emp PR 3.
+- **Note:** The section of tag 24 is PR 4. Until then a checkpoint of a hire-form world with a hire in progress drops the hires and the Escrow money would not be explained on restore. No consumer should save such a world before PR 4; PR 4 adds the section and its restore test.
+
+### N-445 The rule file names a field `HireEnded` does not have
+
+- **Areas:** EMP, OBS
+- **Raised:** 2026-11-18, plan 3-emp PR 3.
+- **Note:** `observability-and-logging.md` 4.3 lists, for `HireEnded`, "whether [the remainder] went to the estate". `spec-employment.md` 15.1 has no such field, and 6.4.1 returns the remainder to the employer's own account first, so it never goes to the estate directly. PR 3 follows the spec. Correct the row of the rule file (with a fresh RULE-TAG) in PR 5, which edits that file for `LabourRound`.
+
 ### N-454 A trainee's job is read against a `produce` right at `skillsWork`
 
 - **Areas:** ORG, PRO
@@ -2648,6 +2718,48 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-org PR C review.
 - **Note:** The root calls `clearing.AdmitClamp`; `Admit` is a wrapper kept by `spec-clearing.md` 3.2.1.1 so that a caller that reads no range is unchanged, and only tests call it. Drop it, or keep it with a test that pins it to `AdmitClamp`, when the next change touches `internal/clearing/admit.go`.
 
+### N-490 `SavingTarget` takes the plan's tier 2
+
+- **Areas:** SAV, AGT
+- **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-saving-and-investment.md` 5.6.3 and FR-SAV-042.
+- **Note:** The goal is net of `Tier2_p`, the money the plan of this tick has committed to the project's inputs, and the view carries no plan, so the exported rule is `SavingTarget(v, tier2)` as `DefaultCredit` takes the figures the view does not hold. A read of saved state (the counts of `SavingPlanned`, the snapshot rows, the query) passes `tier2` 0; the two differ only in the tick in which a funded household buys its inputs, and a test pins it (R1, R9 of the plan). Applied to the spec in PR 1; remove when PR 3 has built the rule.
+
+### N-491 The drawdown saturates
+
+- **Areas:** SAV, WEL, CODE
+- **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-saving-and-investment.md` 4.1 and 11.3.
+- **Note:** The ring clamps each record field to plus or minus `MaxInt64 / MaxWelfareWindow`, so the net of a window can still reach twice `MaxInt64`. `welfare.Drawdown` saturates at each step and returns no error: the buffer is capped by `PrecautionCapTicks * UpkeepCost` and a failure has no caller. Applied to the spec and built in PR 1 (`internal/welfare/drawdown.go`, `FuzzDrawdown`); remove at the close of the row.
+
+### N-492 A right refused to a non-member is a standing refusal
+
+- **Areas:** SAV, ORG, CAP
+- **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-saving-and-investment.md` 5.5.1.
+- **Note:** ORG's `not_permitted` (`spec-institutions.md` 4) is not cured by buying inputs, so it belongs in the per-recipe `Standing` of a `Builds` or `Repairs` recipe, or the household would save for a start it is refused every tick. Listed in 5.5.1 in PR 1; CAP's `standingReason` must put it in its order (after `not_on_role`) and `TestStanding_NotPermitted` pins it once ORG's PR B has merged. Left open until then.
+
+### N-493 The drawdown is computed in both views
+
+- **Areas:** SAV, SCL, CODE
+- **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-saving-and-investment.md` 4.1.4 and open question 3.
+- **Note:** The drawdown is `O(window)` per agent with a block and per view, so twice a tick, with no cache. `BenchmarkDrawdown` (PR 1) measured 17.6 microseconds and no allocation at `MaxWelfareWindow` 3 650, which is a cost of 35 microseconds a tick for an agent at the longest window and 1 microsecond at the default of 30. A per-tick cache or a running form needs state and is built only if a scenario at scale shows a cost. Left open for SCL.
+
+### N-494 Two config tests use `modules.saving` as an unbuilt module
+
+- **Areas:** CFG, CODE
+- **Raised:** 2026-11-19, plan 3-sav PR 1, `config/config_test.go` and `config/demand_test.go`.
+- **Note:** Both tests use `[modules.saving]` as "a module that is not built". When PR 2 of plan 3-sav builds the module they need another unbuilt module, or the test of an unknown key. Left open for PR 2.
+
+### N-495 The `economysim.limit` sentence of `spec-saving-and-investment.md` 12.3 was false
+
+- **Areas:** SAV, OBS
+- **Raised:** 2026-11-19, plan 3-sav PR 1.
+- **Note:** The spec said `no_return` is a constant of `economysim.limit` already; the rule file lists only `economysim.bar` (`no_return`, `standing`, `unreachable`, `survival`). Corrected in 12.3 in PR 1; the four constants are the bars. Remove when PR 4 has built them.
+
+### N-496 `Role.Cover` 28 and `Role.Saver` 29 are reserved
+
+- **Areas:** CFG, INS, SAV
+- **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-config.md` 8.2.2.
+- **Note:** The hash ids of the `Role` fields are 28 for `Cover` (insurance) and 29 for `Saver`, reserved in one edit so that the order in which the two modules are built cannot make them collide. INS takes 28 when it is built. Left open for INS.
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2658,4 +2770,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: d015b212dbb2779809cc7a9f
+NOTES-TAG: 8d1029bf8206861a5b40f731
