@@ -1803,6 +1803,35 @@
 //   - MembershipChanged, RightRefused, PriceControlled, LegalLevelSet, RightSuspensionSet: the
 //     events of the membership round, of the refusals of a right, of the clamps of a control
 //     and of the two slots.
+//   - Cover, policy, kind: the insurance module and the act of buying and selling single-event
+//     protection, and the record of one cover formed (a "cover policy" where it could be
+//     taken for a policy actor's Policy). A policy is of the route kind (one shipment) or the
+//     store kind (the goods an agent holds, for one tick). The log key is cover_policy.
+//   - Underwriter, insured: the two parties of a policy, agents whose roles carry an
+//     Underwrite block or an Insure block (UnderwriteTerms, InsureTerms, CoverTerms). The
+//     word insurer is not used.
+//   - Premium (of a cover), sum insured, maximum payout, cover share, loading, store rate: the
+//     money the insured pays at formation, the value of the goods covered, the most the
+//     policy pays, the share of a loss the underwriter bears (a coinsurance, in basis
+//     points), the underwriter's price over the expected payout, and its price of a store
+//     policy as a share of the sum.
+//   - Capacity, open liability: of an underwriter, what its cap allows it to stand behind
+//     and the sum of the maximum payouts of its open policies.
+//   - Unit value, value cap, loss value, due: a unit of a commodity valued at its published
+//     price capped at a multiple of its reference price; that multiple; the value of the
+//     units a loss took at those unit values; and what the policy owes for it, the cover
+//     share of the loss value cut at the maximum payout.
+//   - Payout, payout claim, shortfall: the money paid under a policy, the ledger claim
+//     (origin payout) the underwriter owes for the part its pot could not pay, and that part.
+//   - Cover round, lane request: the pass at P3.3c that admits, orders, matches and forms
+//     policies (its lane is a region, not a transport lane); a request for one lane of a
+//     trip (LaneCover), beside a request for a store (StoreCover) and an offer to
+//     underwrite (CoverOffer).
+//   - CoverView, CoverPolicyRow, InsuranceTotals, Insurance: the view group of a strategy,
+//     the snapshot rows of the open policies and of the totals, and the module's
+//     configuration.
+//   - CoverFormed, CoverEnded, CoverRound, CoverSettled: the events of a policy formed, of a
+//     policy ended, of the cover round and of the settlement of a position.
 //   - Saving, Saver, ProjectWorth: the optional module of saving and investment, the block of a
 //     role whose households save for a purpose and invest, and the row that states what a whole
 //     facility of a class is worth to the role per tick (spec-saving-and-investment.md 3.2).

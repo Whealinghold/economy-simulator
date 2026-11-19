@@ -772,7 +772,8 @@ as money above the shield allows.
 
 The debtor's money falls by the payment and its welfare record of the tick gains
 the interest as a cost (`I^out_t`, 11.1). The creditor's money rises by it and the
-record gains the interest as income (`I^in_t`, in the signed `G_t`). The principal is neither (11.1). The
+record gains the interest as income (`I^in_t`, in the signed `G_t`). The principal is neither (11.1), except on a claim of origin `payout`, whose principal is
+`N_t` of both parties. The
 creditor's view of its claims at the next `Trade` is the sums of 10.1; nothing in
 the pass is a decision of either.
 
@@ -1098,10 +1099,13 @@ income_t = R_t + K_t + K^own_t + F_t + G_t - S_t(Input) - W_t - I^out_t
 
 with `I^in_t` the interest the agent **received** in tick `t` (`loan_interest` to it, at
 P1.7a), which is a term of the signed unearned sum `G_t` (WEL 2.1.9), and `I^out_t` the
-interest it **paid** (the letters are WEL's; `Y_t` and `V_t` there are wages). **The principal is neither**: a loan is a
+interest it **paid** (the letters are WEL's; `Y_t` and `V_t` there are wages). **The principal is neither, for a claim of origin `loan`**: a loan is a
 balance-sheet exchange, so `loan_out` and `loan_repay` are not income and not cost,
 and the household that borrows to eat does not look richer, and the lender that is
-repaid does not. The two interest terms follow the rule of inputs (WEL 2.1.3): a
+repaid does not. **The principal paid on a claim of origin `payout` is `N_t`** of both
+parties (income of the insured, cost of the underwriter, in the signed `G_t`, WEL 2.1.9):
+the claim was formed by `Obligate` with no transfer, so the payment is the payout itself
+(`spec-insurance.md` 11.1; plan 3-ins E7, H-12; N-472). The two interest terms follow the rule of inputs (WEL 2.1.3): a
 financing cost is netted when paid, cash and not accrual, because the ledger records
 cash and the accrual needs no valuation.
 
