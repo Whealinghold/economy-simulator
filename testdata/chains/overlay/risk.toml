@@ -1,0 +1,29 @@
+# The risk module on the routes of pack two (plan 3-rsk phase 8, spec-risk.md 16, spec-reference-chain.md 4.5): the route
+# rows of the two edges between north and south in both directions, one common row. Layer it after the pack,
+# overlay/trade-two.toml and overlay/transport-two.toml (a route row needs the edge and the mode): base.toml, two.toml,
+# overlay/trade-two.toml, overlay/transport-two.toml, this file. A test double, not a design: every number is a
+# placeholder (N-015, N-027), chosen so that a run of 400 ticks with a shipper holds both a struck and an untouched
+# shipment.
+#
+# foot north to south: a unit row, every shipment draws for itself; a strike takes 8 000 of 10 000 of each line, so a one-unit
+#   line is lost whole (rhe(1 * 8 000 / 10 000) = 1, spec-risk.md 5.3.2).
+# foot south to north: the common row of its origin region: one draw a tick for the whole origin, kept for every shipment
+#   that leaves south that tick (P3.1a).
+# coach both ways: unit rows with a smaller strike and a smaller severity, so that a hired carrier loses part of a cargo.
+
+[modules.risk.route.north.south.foot]
+strike_bp = 4000
+severity_bp = 8000
+
+[modules.risk.route.south.north.foot]
+strike_bp = 3000
+severity_bp = 8000
+common = true
+
+[modules.risk.route.north.south.coach]
+strike_bp = 1000
+severity_bp = 5000
+
+[modules.risk.route.south.north.coach]
+strike_bp = 1000
+severity_bp = 5000
