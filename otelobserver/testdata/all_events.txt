@@ -60,6 +60,8 @@ ShipmentArrived
 ShipmentDispatched
 ShipmentRejected
 StoreChanged
+StoreLoss
+StoreRiskScaled
 TechnologyAdjusted
 TechnologyAdvanced
 TickEnded

@@ -63,6 +63,11 @@ type Window struct {
 	Dispatches  []DispatchTally
 	Arrivals    []ArrivalTally
 	Settlements []SettlementTally
+	// StoreLosses and StoreStrikes are StoreLoss summed: the units lost by (region,
+	// store class, commodity) and the strikes by (region, store class). They stay
+	// empty with the risk module off.
+	StoreLosses  []LossTally
+	StoreStrikes []StrikeTally
 }
 
 // MarketTally is the sums of MarketCleared of one market over the window.
@@ -178,6 +183,24 @@ type ArrivalTally struct {
 	Commodity                                   economysim.CommodityID
 	Shipped, Delivered, Diverted, Spoiled, Lost int64
 	AccountLost                                 int64
+}
+
+// LossTally is the units a store strike took, by (region, store class, commodity),
+// summed over StoreLoss events.
+type LossTally struct {
+	Region    economysim.RegionID
+	Class     economysim.StoreClassID
+	Commodity economysim.CommodityID
+	Units     int64
+}
+
+// StrikeTally is the strikes on the stores of one class in one region: Events is
+// the StoreLoss events (an agent and a class struck) and Stores the stores struck.
+// A strike that took no unit is here and in no LossTally.
+type StrikeTally struct {
+	Region         economysim.RegionID
+	Class          economysim.StoreClassID
+	Events, Stores int64
 }
 
 // SettlementTally is the contracts' money by (deliverer's region, destination):

@@ -76,6 +76,7 @@ var positionList = [...]position{
 	{"P7.2a", "SET", line},
 	{"P7.2b", "ORG", line},
 	{"P8.1", "LED", line},
+	{"P8.1a", "RSK", line},
 	{"P8.2", "LED", line},
 	{"P8.3", "RES", line},
 	{"P8.3a", "LND", line},
@@ -95,7 +96,7 @@ var notBuiltPositions = [...]string{
 	"P2.8b",
 	"P3.3c", "P3.4a", "P3.6b", "P3.6c",
 	"P4.1a",
-	"P8.1a", "P8.1b", "P8.3b",
+	"P8.1b", "P8.3b",
 }
 
 // positions is the straight line of a step: one call for each position of
@@ -305,6 +306,9 @@ func (w *World) positionsReview() error {
 func (w *World) positionsEnd() error {
 	if err := w.p81Age(); err != nil {
 		return err
+	}
+	if w.risk != nil {
+		w.p81aStores()
 	}
 	w.p82Flows()
 	w.p83Regen()
