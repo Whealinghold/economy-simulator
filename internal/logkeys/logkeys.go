@@ -108,6 +108,11 @@ const (
 	// for a recipient or region, and the amount actually applied.
 	Due     = "due"
 	Applied = "applied"
+	// Cut and Headroom are counts of households (the sum of weights): those a fiscal
+	// flow paid less than their due because the treasury was short, and those it paid
+	// less than the share left them because the recipient had no room.
+	Cut      = "cut"
+	Headroom = "headroom"
 	// Births and Deaths are counts of households born and of households that died.
 	Births = "births"
 	Deaths = "deaths"
@@ -267,4 +272,18 @@ const (
 const (
 	Authority   = "authority"
 	FiscalFlows = "fiscal_flows"
+)
+
+// The keys of the policy module (spec-policy.md 12.2): the ID of a policy actor, of one
+// of its levers and of the reading a rule used, the counts of entries a policy returned
+// and of settings changed, and the counts of actors and levers in the construction
+// summary.
+const (
+	Actor   = "actor"
+	Lever   = "lever"
+	Reading = "reading"
+	Entries = "entries"
+	Changed = "changed"
+	Actors  = "actors"
+	Levers  = "levers"
 )

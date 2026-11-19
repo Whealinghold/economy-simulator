@@ -301,3 +301,21 @@ func polityCoverage(c *Config, m *PolityConfig) (covering, assigned map[string]b
 	}
 	return covering, assigned
 }
+
+// soundPolity builds the Polity of a configuration whose polity module is on and sound,
+// and reports false when the module is off or any rule of spec-polity.md 9.1 fails
+// (the errors themselves are validatePolity's, reported once). It is the shared step of
+// N-433, "the built Polity or nothing"; the policy module uses it, and the fiscal and
+// institutions modules keep their copies until a later pure move (N-483).
+func soundPolity(c *Config, lk lookup) (Polity, bool) {
+	if c.Modules.Polity == nil {
+		return Polity{}, false
+	}
+	sub := &validator{c: *c, lk: lk}
+	sub.validatePolity()
+	if sub.rep.err() != nil {
+		return Polity{}, false
+	}
+	cc := c.canonical()
+	return buildPolity(&cc), true
+}

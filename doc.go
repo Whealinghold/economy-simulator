@@ -1803,6 +1803,30 @@
 //   - MembershipChanged, RightRefused, PriceControlled, LegalLevelSet, RightSuspensionSet: the
 //     events of the membership round, of the refusals of a right, of the clamps of a control
 //     and of the two slots.
+//   - Policy actor: a policy attached to one jurisdiction that sets the value of its levers on
+//     its own cadence. It is not an agent: it has no agent ID, no account and no strategy, and
+//     it never bids. PolicyConfig is the module's configuration, PolicyActor its row, ActorID
+//     the index of an actor in ascending order of its ID.
+//   - Lever: the one thing an actor can move, a handle on a slot key (a flow's scale, an edge's
+//     factor and closed flag, a transit factor) or on the group of edges that Against expands
+//     to. Lever is its row, LeverKind its kind (LeverFlow, LeverEdge, LeverTransit) and LeverID
+//     the index of a lever in the order of the actor's lever IDs.
+//   - Mandate, reach, holder (of a key): the levers an actor holds, the keys its jurisdiction
+//     covers and so lets it name, and the one actor that holds a key (a key has one holder).
+//   - Decision, due, cadence: the pass of one actor at P0.3a (the view, Decide, the checks and
+//     the application), the tick on which an actor's rotation selects it, and the Every ticks
+//     between two decisions.
+//   - Mailbox, actor directive: the settings a player left for a directed actor with
+//     DirectPolicy, applied at its next decision and then cleared whatever the outcome.
+//   - Gauge, reading: one of the four closed measures a rule reads (treasury, unfed_share,
+//     mean_ratio, price) and the number it gives for one decision. Gauge is the type of the
+//     name.
+//   - Target, deadband, span, move, step limit, rest: the reading at which a rule rests, the
+//     half-width of its rest band, the error that moves the lever by Move, the basis points
+//     of lever value per Span, the largest change per decision (MaxStep) and a decision that
+//     leaves the lever alone because the reading is in the band.
+//   - Reaction, schedule step, cycle: a rule's row for one lever (Reaction), one step of a
+//     fixed schedule (ScheduleStep) and the length in ticks after which a schedule repeats.
 //   - Cover, policy, kind: the insurance module and the act of buying and selling single-event
 //     protection, and the record of one cover formed (a "cover policy" where it could be
 //     taken for a policy actor's Policy). A policy is of the route kind (one shipment) or the

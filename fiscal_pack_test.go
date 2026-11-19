@@ -60,9 +60,10 @@ func fiscalPackConfig(t *testing.T, off bool) economysim.Config {
 
 // TestFiscal_PackTaxFillsTheTreasury verifies, on files alone (testing.md 6.4), that the
 // warm five with the governed polity and the fiscal overlay builds and runs 30 audited
-// steps, that the head tax on the cooks of the seat region moves money into the root's
-// treasury (so the treasury ends above its start money and above the same pack with the
-// module off), and that the configuration hash tells the two apart. The payout, the duty
+// steps, that the head tax and the payout of the overlay move money through the root's
+// treasury and never past it (it ends between zero and what it holds with the module off
+// plus one tick's tax), and that the configuration hash tells the two apart. The payout
+// pays each cook what the tax took, so the treasury stays near its start money; the duty
 // and the standing orders of the overlay are not built yet and change nothing.
 //
 // Requirement: FR-FIS-001, FR-FIS-002, FR-FIS-005, FR-FIS-021
@@ -85,8 +86,8 @@ func TestFiscal_PackTaxFillsTheTreasury(t *testing.T) {
 	if len(ron.Final.Jurisdictions) == 0 || len(roff.Final.Jurisdictions) != len(ron.Final.Jurisdictions) {
 		t.Fatalf("treasury rows with the module on = %d, off = %d, want the same non-zero count", len(ron.Final.Jurisdictions), len(roff.Final.Jurisdictions))
 	}
-	if got, base := ron.Final.Jurisdictions[0].Money, roff.Final.Jurisdictions[0].Money; got <= base {
-		t.Errorf("treasury money after %d ticks (seed %d) with the module on = %d, off = %d, want above: the head tax pays into it", ticks, seed, got, base)
+	if got, base := ron.Final.Jurisdictions[0].Money, roff.Final.Jurisdictions[0].Money; got < 0 || got > base+1_000 {
+		t.Errorf("treasury money after %d ticks (seed %d) with the module on = %d, off = %d, want between 0 and off + 1000: the payout returns what the tax took", ticks, seed, got, base)
 	}
 }
 
