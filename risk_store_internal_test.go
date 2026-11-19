@@ -428,3 +428,33 @@ func TestRisk_NeutralAtZeroStores(t *testing.T) {
 		t.Errorf("%d events with the module on at 0, %d with no row, want the same non-empty run", len(on), len(off))
 	}
 }
+
+// TestInvariants_Risk_StoreBoundaryBalanceEqualsEvents verifies, over 12 ticks of a
+// world with the audit on, that the units the loss boundary holds are exactly the
+// units the StoreLoss events say were lost, each tick, and that something was lost
+// (spec-risk.md 7.3 items 2 and 3, store side).
+//
+// Requirement: FR-RSK-022, FR-RSK-023
+func TestInvariants_Risk_StoreBoundaryBalanceEqualsEvents(t *testing.T) {
+	t.Parallel()
+	w, rec := riskStoreWorld(t, storeRisk("barn", 6_000, 5_000, false), storeRisk("shed", 5_000, 8_000, true))
+	stockAgent(t, w, shipHome, 40, classBarn, classShed)
+	stockAgent(t, w, shipHome2, 40, classBarn)
+	grain := commodityOf(t, w, "grain")
+	var lost int64
+	for range 12 {
+		step(t, w, 1)
+		lost = 0
+		for _, e := range storeLosses(rec) {
+			for _, a := range e.Lost {
+				lost += int64(a.Quantity)
+			}
+		}
+		if got := lossBoundary(t, w, grain); got != lost {
+			t.Fatalf("tick %d: the loss boundary holds %d grain, the events say %d", w.Tick(), got, lost)
+		}
+	}
+	if lost == 0 {
+		t.Error("no unit was lost in 12 ticks at probabilities of 6 000 and 5 000, want some")
+	}
+}
