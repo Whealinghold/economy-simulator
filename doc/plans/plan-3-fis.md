@@ -238,6 +238,7 @@ A hook holds no branch on the module's data and no arithmetic (architecture.md 2
 | 13 | `moneyflow.go` `auditModules` / `fiscal.go` | the fiscal audit call: every carry names an open account of the class's kind, the section's lists are in order | 4 | the audit hook; the identities themselves are the ledger's (treasury term) and POL's. |
 | 14 | `validate.go` | `validateFiscal`, `fiscalWarnings` | 3 | the catalogue call. |
 | 15 | `snapshot.go` `MarketRow` and its filler | `HeldByTreasury`, one guarded call in the row builder | 9 | hook class (f). |
+| 16 | `phase_outcomes.go` `p63Welfare` (after `valuePrices`) | `if w.fiscal != nil { w.priceFiscalReceipts() }` | 5 | accepted by the owner: spec-fiscal.md 12.3 values the units of an in-kind payout at the prices of P6.3, which exist only there; the shape of the subsistence and skills calls beside it; with the module off the call is not made. |
 
 No hook in `removeAgent`, `agentJoined`, `agentRoleChanged`, `relocationRefusal`, `phase_exit.go`, `estates.go` or the strategy files: D3 (a tax keeps no per-agent state; a household's tax is not a strategy input, FIS position 11).
 
@@ -417,3 +418,23 @@ Golden rule held: `testdata/golden/off/`, `golden/all/`, the pinned hash and bot
 Tests: unit and internal tests on a two-region world with two governed jurisdictions (`fiscal_tax_internal_test.go`: the class, the fixed and the rate due and their carries, the forgiven shortfall, the order of the passes and the remittance, the headroom cut, a paused flow, a closed account's carry, the scale refusals), `fiscal_state_internal_test.go` (tag 30 round trip, bytes after more ticks, `ErrCheckpointConfig`, sixteen loader cases, the audit), `fiscal_run_internal_test.go` (window, season, observation, no allocation, no draw, no call from a removal), `fiscal_scale_test.go` (both owners of the scale in one call), and the integration test of the pack. The catalogue, call-site, field, glossary and cardinality tests carry the new event, position and field.
 
 Left open: the welfare terms `X_t` and `P_t` (PR 4), the payouts and the cut (PR 4), the duties and the tolls (PR 5), the standing orders (PR 6), the module-alone golden and S132 to S136 (PR 7), gomu on `internal/fiscal` (PR 1's owed run), the otelobserver instruments (Q3).
+
+## PR 4 result (Phase 5, recorded when PR 4 was built)
+
+Rule tags read: architecture=645d155e21f440e7e94863d7, observability=9701798a5a03417c57f1a38a, testing=66af7645b01fef4e2796c367. No spec or note was edited, so the notes file was not re-read; the numbers N-389 to N-396 left to this row stay unused by this PR.
+
+Built: the payout pass of P1.7b (`fiscal_payout.go`): the active payouts are grouped by authority in ascending `JurisdictionID`, then by resource (money, then commodities ascending), the flows of a group in flow order; the dues of the whole group are computed first (a rate with the carry through `moneyflow.Spread`, a top-up through `moneyflow.TopUp`), the stock of the treasury after the taxes is shared by `internal/fiscal.Scratch.Cut` with the key `K(tick, owner agent)`, a headroom cut at the recipient follows and the unapplied part stays in the treasury; money moves by `Transfer`, goods by `Move` (oldest lots first, the ledger's rule). The counters `Cut` and `Headroom` count the weight of the recipients cut. `FiscalFlowApplied.Commodity` names the commodity of an in-kind payout. The welfare terms: a tax paid is netted (`X_t`, `netCharge`, the signed `addUnearned`, which already holds a negative), a payout that is not `NotIncome` is added (`P_t`); a payout in kind is a receipt list valued at the prices of P6.3 (`priceFiscalReceipts`).
+
+Deviations and choices the plan left open:
+
+- One new hook not in the table: `p63Welfare` calls `priceFiscalReceipts` after `valuePrices` when the module is on (one guarded call, the shape of the subsistence and skills calls beside it). Spec-fiscal.md 12.3 says the in-kind units are valued at P6.3; the prices of the tick exist only there. The owner accepted it; it is row 16 of the hook table. A module-less world does not make the call.
+- `dueTax`'s merge of the saved carries with the payers became `carryWalk` (`fiscal_tax.go`), shared by taxes and payouts; no behaviour moved.
+- `welfare.go` needed no accessor (hook 11 stays "none"): `addUnearned` takes a negative amount.
+- The pool and treasury recipients are never in the welfare terms; a household class only.
+- The headroom cut at a recipient is pinned by `TestFiscal_PayoutCut_headroom`.
+
+Golden rule held: no golden, hash or fixture is in the diff.
+
+Tests: `fiscal_payout_internal_test.go`: `TestFiscal_PayoutOrder`, `_PayoutCut`, `_PayoutTopUp`, `_PayoutInKind`, `_PayoutToPool`, `_PayoutToTreasury`, `_PayoutScaleZeroSkipped`, `TestFiscal_WelfareTerms`, `TestFiscal_NoOverdraft`.
+
+Left open: the headroom cut at a recipient is a `min` and has no test of its own (a balance near `MaxMoney` needs a fixture the ledger does not offer cheaply); the duty and the toll call `netCharge` in PR 5; the otelobserver instruments (Q3).
