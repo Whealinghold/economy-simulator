@@ -50,8 +50,8 @@ PR description.
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386 |
-| CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431 |
-| CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368 |
+| CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433 |
+| CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241 |
 | CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427 |
@@ -62,20 +62,20 @@ PR description.
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361 |
 | EXT | N-108, N-112, N-113, N-214 |
-| FIS | N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-185, N-187, N-188, N-190, N-204, N-389, N-391, N-392 |
+| FIS | N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437 |
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
 | INS | N-176, N-179, N-213, N-227 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
-| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391 |
+| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436 |
 | LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377 |
-| ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399 |
-| PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392 |
+| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437 |
+| ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433 |
+| PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426 |
@@ -91,7 +91,7 @@ PR description.
 | STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399 |
 | SUB | N-121, N-228, N-268, N-244, N-426 |
 | TEC | N-358, N-359, N-360, N-361, N-384 |
-| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374 |
+| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346 |
 | WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390 |
@@ -1315,14 +1315,6 @@ PR description.
 - **Note:** A route row names a mode (TRN) and an edge (REG), a store row a class (STO): validation must run after the owners' tables exist and report `ErrModuleDependency` when an owner is off.
 - **Update (2026-10-18, plan 1-10 Phase 1):** read, not touched by this row. Left open.
 
-### N-185 One order per agent, commodity, named lot and side
-
-- **Areas:** FIS
-- **Raised:** 2026-10-13, `spec-fiscal.md` 9.4.1.
-- **Note:** The rule of `spec-clearing.md` 3.1.1 becomes one order per agent, commodity, named lot and side. A treasury may place a bid and an ask for one commodity with `limit(Purchase) < limit(Release)` on the integer limit prices (9.2, not on the basis points), so they never cross and a treasury never matches itself.
-- **Update (2026-10-15, plan 1-3 Phase 1):** applied for CLR, which leaves the areas: the duplicate key of the book is (agent, commodity, named lot, side) (FR-CLR-004), and the one-bid-one-ask treasury case is tested with the two sides of one agent. FIS keeps the validation (`ErrFiscalShape`).
-- **Update (2026-11-18, plan 3-fis Phase 1):** read: the clearing's key is applied; FIS builds the validation `ErrFiscalShape` (equal integer limits, two purchases of one commodity) in plan 3-fis PR 2 and closes the note there.
-
 ### N-187 A tax on a reason (rent, a wage, interest) needs a hook at the transfer
 
 - **Areas:** LND, EMP, CRD, FIS
@@ -2353,6 +2345,7 @@ PR description.
 - **Areas:** MON, FIS
 - **Raised:** 2026-11-18, plan 3-fis Q5, `spec-fiscal.md` 4.2.
 - **Note:** FIS builds the kind constant `treasury` and the field `FlowTarget.Jurisdiction` because a `Tax.Target` is a `FlowTarget`. MON's own validation keeps rejecting the kind `treasury` in a money flow until a MON follow-up builds a grant to a treasury and a levy on one (the ruler's mint); a pack funds a treasury by `StartMoney` and by taxes. The warning `treasury_unfunded` is written for a world with no such grant.
+- **Update (2026-11-18, plan 3-fis PR 2):** built: `TargetTreasury` and `FlowTarget.Jurisdiction` (hash id 5) exist, and `flowTarget` in `moneyflow.go` still answers `ErrModuleDependency` for the kind `treasury` in a money flow. `treasury_unfunded` and `treasury_idle` count no MON grant or levy. Left open for MON.
 
 ### N-390 `positionsTrade` is split: `positionsClear` holds P3.5 to P4.1a
 
@@ -2365,6 +2358,7 @@ PR description.
 - **Areas:** LED, FIS
 - **Raised:** 2026-11-18, plan 3-fis D5.
 - **Note:** A tax, a duty, a toll and a payout is a ledger reason named by its flow ID, of kind internal, with no boundary account, numbered after the money-flow reasons by position. A later module that needs per-flow Internal reasons reuses the family (INS's premium and payout are fixed reasons and do not). The format-1 checkpoint fixtures must not move; a test pins the positions.
+- **Update (2026-11-18, plan 3-fis PR 2):** built as `ledger.Config.Fiscal []FiscalFlow` (`Goods` marks an in-kind payout, a goods-only row): fiscal flow `j` is `FlowReason(len(Flows)+j)`, saved by position (`TestFiscalFlows_CheckpointByPosition`), and `fiscalReasons` in `fiscal.go` fills it in the canonical order taxes, duties, tolls, payouts. The `trade` row now names the Treasury kind. Left open for a later module that needs per-flow Internal reasons.
 
 ### N-392 The flow scale has two owners in one flow-ID order
 
@@ -2449,6 +2443,36 @@ PR description.
 - **Areas:** CODE, OBS, LND
 - **Raised:** 2026-11-18, plan 3-lnd PR 5 (Phase 6, the log tests).
 - **Note:** a five-sized world with a logger that keeps every line took over 60 s and much memory in `play`, so `tenureLogScenario` is pack one with the overlays (200 ticks) and the Warn and Debug lines are proved on small worlds. A test that must read the Debug lines of a five-sized scenario needs a logger handler that filters or counts at the source.
+
+### N-433 Three modules derive the coverage of a jurisdiction for their validators
+
+- **Areas:** CFG, ORG, PLC, FIS
+- **Raised:** 2026-11-18, plan 3-fis PR 2 (`fiscal_validate.go`).
+- **Note:** `validateFiscal` checks that a region or a treasury is covered by an authority by building the `Polity` of the configuration (`fiscalCheck.buildPolity`: a sub-validator runs `validatePolity` and, if it finds nothing, `buildPolity` reads the canonical copy). ORG derives coverage with its own scoper (`orgScoper`) and POL with `polityCovers`. PLC, which also keys a lever by jurisdiction, will need the same answer. One shared helper in `polity_validate.go` that returns the built `Polity` or nothing would remove the third copy; it is not built here, so the PR touches no other module's file.
+
+### N-434 `toll_no_border` reads every edge for any mode
+
+- **Areas:** FIS, TRN
+- **Raised:** 2026-11-18, plan 3-fis PR 2, `spec-fiscal.md` 15.2.
+- **Note:** The warning is worded "for its mode", but an `Edge` has no field for modes (every mode may use every edge), so the code looks at the whole graph and a toll with a `Mode` is checked like one without. If TRN ever lets an edge be closed to a mode, the warning must read that list.
+
+### N-435 Adding or removing a money flow moves every fiscal reason's position
+
+- **Areas:** LED, CHK, FIS
+- **Raised:** 2026-11-18, plan 3-fis PR 2, plan 3-fis D5.
+- **Note:** The ledger saves a flow reason by its position (`pinnedRows` plus the index), and the fiscal reasons follow the money flows, so a configuration with one more money flow numbers every fiscal reason one higher. Nothing breaks: the configuration hash covers both lists, so a restore under another configuration is `ErrCheckpointConfig` before the ledger section is read. A tool that migrates a checkpoint between configurations would have to renumber the fiscal rows with the money rows.
+
+### N-436 A flow reason's row belongs to the ledger, not to the table
+
+- **Areas:** LED, FIS
+- **Raised:** 2026-11-18, plan 3-fis PR 2.
+- **Note:** `ledger.Allowed` and the package-level `rowOf` read the static table and answer false for every flow reason. Code that asks whether a reason fits two account kinds must go through the ledger's own `rowOf`; `Move` read the package one until this change and so refused the goods of an in-kind payout. A later per-flow reason of any thing (goods included) is safe only if a test moves it through `Transfer` and `Move`.
+
+### N-437 The five fiscal metrics and the `economysim.clamp` attribute wait for one adapter PR
+
+- **Areas:** OBS, FIS
+- **Raised:** 2026-11-18, plan 3-fis PR 2 observability review, plan Q3.
+- **Note:** `observability-and-logging.md` 5.3 and 5.3.1 already list `economysim.fiscal.collected`, `.paid`, `.in_kind`, `.unapplied` and `.order.cut` (attribute `economysim.clamp`: `cash`, `hold`, `stock`), fed by `FiscalFlowApplied` and `TreasuryOrdered`. Plan 3-fis Q3 defers them, as SKL Q7 and CRD Q3 did: PR 2 builds no event and no snapshot field, so nothing feeds them yet, and the core module records no metric (rule 5). The adapter PR after FIS PR 6 adds the five instruments, the cardinality test over the flow IDs, regions and authorities, the `economysim.clamp` series count for the reference chain (5.4.2), and takes `FiscalFlowApplied` and `TreasuryOrdered` out of `ignoredEvents`. The ten construction warnings of `fiscal_warnings.go` need no metric: they are fixed by the configuration and read through `Config.Warnings` (counterpart rule of 8.1).
 
 ## Read receipt
 
@@ -2576,4 +2600,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: c56dceb6f276772cf2c1afcc
+NOTES-TAG: e3fba197a15eef9a74b93702

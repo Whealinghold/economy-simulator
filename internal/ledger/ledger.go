@@ -44,6 +44,19 @@ type Config struct {
 	// money-only row, and no state is added to a ledger whose Flows is nil
 	// (plan 2-6 D323).
 	Flows []Class
+	// Fiscal lists the fiscal flows of the fiscal module in canonical order (taxes,
+	// duties, tolls, payouts), after the money flows (spec-fiscal.md 3.4.1, plan
+	// 3-fis D5). Fiscal flow j has the reason FlowReason(len(Flows)+j), an Internal
+	// row between agent, estate and treasury accounts, and opens no boundary
+	// account. No state is added to a ledger whose Fiscal is nil.
+	Fiscal []FiscalFlow
+}
+
+// FiscalFlow is the shape of one fiscal flow's reason: money only, or goods only for
+// an in-kind payout.
+type FiscalFlow struct {
+	// Goods makes the reason move goods and no money.
+	Goods bool
 }
 
 // account is one slot of the account table. A closed account keeps its kind
@@ -97,6 +110,10 @@ type Ledger struct {
 	// money slot; both are nil in a ledger with no flow.
 	flowClass []Class
 	flowOff   []int
+	// fiscalFrom is the position of the first fiscal flow in flowClass, and
+	// fiscalGoods marks the fiscal flows that move goods (nil with no fiscal flow).
+	fiscalFrom  int
+	fiscalGoods []bool
 
 	accounts []account
 	// rooms is the block the next rooms are cut from: a limited account is created at
@@ -181,17 +198,17 @@ func validate(cfg Config) (declared [NumReasons]bool, err error) {
 	if cfg.MaxClaims < 0 {
 		return declared, fmt.Errorf("%w: %d claims, want at least 0", ErrInvalidConfig, cfg.MaxClaims)
 	}
-	if err := validateFlows(cfg.Flows); err != nil {
+	if err := validateFlows(cfg.Flows, len(cfg.Fiscal)); err != nil {
 		return declared, err
 	}
 	return declaredSet(cfg.Declared)
 }
 
-// validateFlows checks that every flow is a faucet or a sink and that the
-// reasons fit the Reason type.
-func validateFlows(flows []Class) error {
-	if len(flows) > math.MaxUint8-int(NumReasons) {
-		return fmt.Errorf("%w: %d flows do not fit the reason numbers", ErrInvalidConfig, len(flows))
+// validateFlows checks that every money flow is a faucet or a sink and that the
+// reasons of the money flows and of the fiscal flows fit the Reason type.
+func validateFlows(flows []Class, fiscal int) error {
+	if len(flows)+fiscal > math.MaxUint8-int(NumReasons) {
+		return fmt.Errorf("%w: %d flows do not fit the reason numbers", ErrInvalidConfig, len(flows)+fiscal)
 	}
 	for i, c := range flows {
 		if c != Faucet && c != Sink {
@@ -233,10 +250,20 @@ func (l *Ledger) layout(declared *[NumReasons]bool) {
 	}
 	// The flow slots follow every row of the table, so a ledger with no flow
 	// has the layout it had before (plan 2-6 D323).
-	for range l.flowClass {
+	for i := range l.flowClass {
 		l.flowOff = append(l.flowOff, l.stride)
-		l.stride++
+		if l.flowGoods(i) {
+			l.stride += len(l.comms)
+		} else {
+			l.stride++
+		}
 	}
+}
+
+// flowGoods reports whether flow reason i (0-based, money flows first) is a fiscal
+// flow that moves goods and no money.
+func (l *Ledger) flowGoods(i int) bool {
+	return i >= l.fiscalFrom && l.fiscalGoods != nil && l.fiscalGoods[i-l.fiscalFrom]
 }
 
 // reasons is the number of reason numbers the ledger knows: the table's and
@@ -249,10 +276,11 @@ func (l *Ledger) rowOf(r Reason, goods bool) (row, bool) {
 	if r < NumReasons {
 		return rowOf(r, goods)
 	}
-	if i := int(r) - int(NumReasons); !goods && i < len(l.flowClass) {
-		return flowRow(l.flowClass[i]), true
+	i := int(r) - int(NumReasons)
+	if i < 0 || i >= len(l.flowClass) || goods != l.flowGoods(i) {
+		return row{}, false
 	}
-	return row{}, false
+	return flowRow(l.flowClass[i]), true
 }
 
 // setOff records the offset of (r, t). The slice of later reasons grows only as
@@ -285,7 +313,7 @@ func (l *Ledger) offOf(r Reason, t int) int {
 	case int(r) < numStage1Reasons:
 		return l.off[r][t]
 	case r >= NumReasons:
-		if i := int(r) - int(NumReasons); t == thingMoney && i < len(l.flowOff) {
+		if i := int(r) - int(NumReasons); i < len(l.flowOff) && (t == thingGoods) == l.flowGoods(i) {
 			return l.flowOff[i]
 		}
 		return -1
@@ -310,8 +338,15 @@ func New(cfg Config) (*Ledger, error) {
 		regions:      cfg.Regions,
 		construction: true,
 	}
-	if len(cfg.Flows) > 0 {
+	if len(cfg.Flows)+len(cfg.Fiscal) > 0 {
 		l.flowClass = slices.Clone(cfg.Flows)
+		if len(cfg.Fiscal) > 0 {
+			l.fiscalFrom = len(l.flowClass)
+		}
+		for _, f := range cfg.Fiscal {
+			l.flowClass = append(l.flowClass, Internal)
+			l.fiscalGoods = append(l.fiscalGoods, f.Goods)
+		}
 	}
 	l.layout(&declared)
 	n, ok := checked.Mul(int64(l.stride), int64(cfg.Regions))

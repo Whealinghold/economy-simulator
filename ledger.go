@@ -108,6 +108,7 @@ func newLedger(cfg Config) (*ledger.Ledger, error) {
 		MaxQuantity: MaxQuantity,
 		Declared:    declared,
 		Flows:       classes,
+		Fiscal:      fiscalReasons(&cfg),
 		MaxClaims:   cfg.Modules.Credit.claimsLimit(),
 	})
 	if err != nil {

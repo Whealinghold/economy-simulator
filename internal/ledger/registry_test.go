@@ -109,14 +109,18 @@ func pairing(between string) (from, to []ledger.Kind, back bool) {
 	return kinds(l), kinds(r), back
 }
 
-// withTreasury adds the Treasury kind to a side of the pairing of initial money, the
-// only row that names it so far: the spec text of the trade and fiscal rows names it
-// too, but the fiscal module builds those (plan 3-pol D5, FR-POL-017).
+// withTreasury adds the Treasury kind to a side of the pairing of initial money and of
+// trade, the two rows of the table that name it: the pairing parser reads no word
+// "treasury" (plan 3-pol D5, FR-POL-017; plan 3-fis Phase 3, FR-FIS-052). The fiscal
+// reasons are per-flow rows of Config.Fiscal, not rows of this table.
 func withTreasury(name, between string, from, to []ledger.Kind) ([]ledger.Kind, []ledger.Kind) {
 	if name == "title_sale" {
 		// A release makes the pool pay the holder (spec-land.md 6.3.2); the row of 7.2
 		// lists only the sale to the pool, so the spec text owes "or back".
 		return append(from, ledger.KindEstate), to
+	}
+	if name == "trade" && strings.Contains(strings.ToLower(between), "treasury") {
+		return append(from, ledger.KindTreasury), append(to, ledger.KindTreasury)
 	}
 	if name == "initial" {
 		_, r, _ := strings.Cut(between, " to ")
