@@ -92,12 +92,14 @@ func eligible(c *Candidate, o *Offer) (maxPayout int64, ok bool) {
 func fillCandidate(c *Candidate, offers []Offer, store bool, form func(Fill) Outcome) (halted bool) {
 	for j := range offers {
 		o := &offers[j]
+		if price(o, store) > c.Limit {
+			// Ascending prices: no later offer is cheaper, so skipping first
+			// (spec-insurance.md 7.3.2 step 1) cannot change the result.
+			return false
+		}
 		mp, ok := eligible(c, o)
 		if !ok {
 			continue
-		}
-		if price(o, store) > c.Limit {
-			return false // ascending prices: no underwriter at the price
 		}
 		switch form(Fill{Candidate: c.Ref, Offer: o.Ref, MaxPayout: mp}) {
 		case Halted:
