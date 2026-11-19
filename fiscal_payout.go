@@ -35,7 +35,7 @@ type fiscalReceipt struct {
 }
 
 // runPayouts applies the payouts that run in the tick: one group per authority in
-// ascending JurisdictionID, and within it money first, then the commodities in
+// ascending authority order, and within it money first, then the commodities in
 // ascending order; the flows of a group in ascending flow ID (spec-fiscal.md 5.3.1,
 // 8.4.1).
 func (w *World) runPayouts(s *fiscalState) {
@@ -248,12 +248,35 @@ func (w *World) stock(account, resource int) int64 {
 	return max(h-r, 0)
 }
 
-// room is how much of a resource an account can still take before its bound: MaxMoney
-// of money or MaxQuantity of a commodity.
+// room is how much of a resource an account can still take: before its bound, MaxMoney
+// of money or MaxQuantity of a commodity, and, for goods, before the free room of a
+// household whose role has stores (spec-storage.md 4.1.3), which the ledger would
+// refuse a credit past with ErrNoRoom.
 func (w *World) room(account, resource int) int64 {
 	if resource < 0 {
 		return max(MaxMoney-w.balance(account), 0)
 	}
 	h, _ := w.held(account, resource)
-	return max(MaxQuantity-h, 0)
+	return min(max(MaxQuantity-h, 0), w.storeFits(account, resource))
+}
+
+// storeFits is the units of a commodity that fit the free room of an account with a
+// room limit, in mass and in bulk; MaxQuantity for an account with none.
+func (w *World) storeFits(account, resource int) int64 {
+	rm, err := w.ledger.RoomOf(account)
+	if err != nil || !rm.Limited {
+		return MaxQuantity
+	}
+	mass, bulk, err := w.ledger.FreeRoom(account)
+	if err != nil {
+		invariant("the free room of a limited account is unreadable: " + err.Error())
+	}
+	n, c := int64(MaxQuantity), &w.cfg.Commodities[resource]
+	if c.Mass > 0 {
+		n = min(n, mass/c.Mass)
+	}
+	if c.Bulk > 0 {
+		n = min(n, bulk/c.Bulk)
+	}
+	return n
 }
