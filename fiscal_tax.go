@@ -68,7 +68,10 @@ func (w *World) dueTax(s *fiscalState, f *fiscalFlowState) {
 	old, next := f.carry, s.next[:0]
 	s.dues, s.take = s.dues[:0], s.take[:0]
 	j := 0
-	for _, p := range s.payers {
+	for k, p := range s.payers {
+		if k > 0 && p.account <= s.payers[k-1].account {
+			invariant("a fiscal flow's payers are not in ascending account order: " + f.id)
+		}
 		for ; j < len(old) && old[j].account < p.account; j++ {
 			next = w.keepCarry(next, old[j])
 		}

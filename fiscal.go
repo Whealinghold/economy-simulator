@@ -205,10 +205,14 @@ func (s *fiscalState) add(c *Config, k fiscalKind, i int, id, authority string, 
 
 // flowPeriod is the ticks of the period Per names (spec-fiscal.md 5.2).
 func flowPeriod(c *Config, per string) int64 {
-	if per == PerYear {
-		return c.Calendar.TicksPerYear()
+	if per != PerYear {
+		return 1
 	}
-	return 1
+	n := c.Calendar.TicksPerYear()
+	if n < 1 {
+		invariant("a fiscal flow's year has no ticks after validation")
+	}
+	return n
 }
 
 // numberReasons gives the taxes, duties, tolls and payouts their ledger reasons in
@@ -269,7 +273,14 @@ func (w *World) setScaleOf(id string, bp int64, cause Cause) error {
 	if at := slices.IndexFunc(w.moneyFlowList(), func(f MoneyFlow) bool { return f.ID == id }); at >= 0 {
 		return w.setFlowScale(at, bp, cause)
 	}
-	return w.setFiscalScale(slices.IndexFunc(w.fiscal.flows, func(f fiscalFlowState) bool { return f.id == id }), bp, cause)
+	at := -1
+	if w.fiscal != nil {
+		at = slices.IndexFunc(w.fiscal.flows, func(f fiscalFlowState) bool { return f.id == id })
+	}
+	if at < 0 {
+		invariant("a flow ID found by flowKey is neither a money flow nor a fiscal flow: " + id)
+	}
+	return w.setFiscalScale(at, bp, cause)
 }
 
 // setFiscalScale sets the scale of the fiscal flow at position i: ErrOutOfBounds
