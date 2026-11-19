@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"slices"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -41,11 +42,30 @@ func riskRun(t *testing.T, c economysim.Config, seed uint64, ticks int64) ([]eco
 	return events, snap
 }
 
+// withoutLoss returns snap with what the module on adds to a snapshot taken out: the
+// boundary rows of the reason loss, which the module opens (spec-world.md 5.2 row
+// 3a) and a run with no strike leaves at 0 (the test fails if one holds a balance),
+// and its name in the list of modules (FR-RSK-005).
+func withoutLoss(t *testing.T, snap economysim.Snapshot) economysim.Snapshot {
+	t.Helper()
+	var rows []economysim.BoundaryRow
+	for _, b := range snap.Boundary {
+		if b.Reason != economysim.ReasonLoss {
+			rows = append(rows, b)
+		} else if b.Balance != 0 {
+			t.Errorf("boundary account loss of commodity %d holds %d, want 0 in a run with no strike", b.Commodity, b.Balance)
+		}
+	}
+	snap.Boundary = rows
+	snap.Modules = slices.DeleteFunc(slices.Clone(snap.Modules), func(m string) bool { return m == "risk" })
+	return snap
+}
+
 // TestRisk_OnWorldBuildsAndRunsLikeOff verifies, over three seeds, that a world
 // built from a configuration with the risk module on (two route rows, two store
 // rows, one of each common) is accepted by NewWorld, runs, hashes differently
 // from the same configuration with the module off, and emits the same events and
-// ends in the same snapshot as that configuration, because no position reads the
+// ends in the same snapshot as that configuration but for the boundary accounts of loss, because no position reads the
 // rows yet.
 //
 // Guard: PR A lands rows that nothing reads. If a later change made them read
@@ -76,7 +96,7 @@ func TestRisk_OnWorldBuildsAndRunsLikeOff(t *testing.T) {
 		if !reflect.DeepEqual(onEvents, offEvents) {
 			t.Errorf("seed %d: %d events with the module on, %d with it off, want the same events", seed, len(onEvents), len(offEvents))
 		}
-		if !reflect.DeepEqual(onSnap, offSnap) {
+		if !reflect.DeepEqual(withoutLoss(t, onSnap), offSnap) {
 			t.Errorf("seed %d: snapshots differ with the module on and off, want equal", seed)
 		}
 	}
@@ -149,8 +169,8 @@ func TestScenario_RiskFileLoadsValidatesAndRuns(t *testing.T) {
 	if len(onEvents) == 0 {
 		t.Fatal("no event after WorldCreated in 40 ticks, the comparison would pass for nothing")
 	}
-	if !reflect.DeepEqual(onEvents, offEvents) || !reflect.DeepEqual(onSnap, offSnap) {
-		t.Errorf("pack with the risk file: %d events, snapshot equal %v; pack alone: %d events, want the same run", len(onEvents), reflect.DeepEqual(onSnap, offSnap), len(offEvents))
+	if !reflect.DeepEqual(onEvents, offEvents) || !reflect.DeepEqual(withoutLoss(t, onSnap), offSnap) {
+		t.Errorf("pack with the risk file: %d events, snapshot equal %v; pack alone: %d events, want the same run", len(onEvents), reflect.DeepEqual(withoutLoss(t, onSnap), offSnap), len(offEvents))
 	}
 }
 

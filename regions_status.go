@@ -63,6 +63,9 @@ func (w *World) setEdgeStatuses(changes []EdgeStatus, cause Cause) error {
 		w.geo.status = nil
 	}
 	w.geo.rebuilds++
+	if w.risk != nil {
+		w.risk.rebuild(g, len(w.cfg.Regions))
+	}
 	for _, i := range changed {
 		w.edgeStatusChanged(g.view(i), next[i], cause)
 	}

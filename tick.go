@@ -49,6 +49,7 @@ var positionList = [...]position{
 	{"P2.8", "SUB", line},
 	{"P2.8a", "OBS", line},
 	{"P3.1", "TRN", line},
+	{"P3.1a", "RSK", line},
 	{"P3.2", "AGT", line},
 	{"P3.3", "MER", line},
 	{"P3.3a", "MER", line},
@@ -89,7 +90,7 @@ var notBuiltPositions = [...]string{
 	"P0.3a",
 	"P1.3a", "P1.7b", "P1.9a",
 	"P2.5a", "P2.8b",
-	"P3.1a", "P3.3c", "P3.4a", "P3.6b", "P3.6c",
+	"P3.3c", "P3.4a", "P3.6b", "P3.6c",
 	"P4.1a",
 	"P7.2b",
 	"P8.1a", "P8.1b", "P8.3b",
@@ -183,6 +184,9 @@ func (w *World) positionsProduce() error {
 func (w *World) positionsPlan() error {
 	if w.transport != nil {
 		w.p31Fix()
+	}
+	if w.risk != nil {
+		w.p31aCommon()
 	}
 	if err := w.p32Trade(); err != nil {
 		return err

@@ -31,6 +31,10 @@ type shipment struct {
 	account             int // the Transit ledger account; -1 for a trip to oneself
 	units, haulUnits    int64
 	lines               []Line
+	// loss is the share of every commodity of the cargo a strike takes at the
+	// arrival, in basis points, fixed at the dispatch (spec-risk.md 4.1); 0 with the
+	// risk module off.
+	loss int64
 }
 
 // modeRes is a mode with its commodities resolved to typed IDs, once, at

@@ -131,6 +131,8 @@ type World struct {
 	// infra is the state of the infrastructure module, nil when it is off
 	// (infrastructure.go).
 	infra *infrastructure
+	// risk is the state of the risk module, nil when it is off (risk.go).
+	risk *risk
 	// integ is what INT keeps (integration.go).
 	integ integrationState
 	// firstHousehold is the agent ID of the first household: the number of

@@ -314,6 +314,10 @@ const (
 	// tenure module is on.
 	ReasonRent      Reason = "rent"
 	ReasonTitleSale Reason = "title_sale"
+	// ReasonLoss is the goods a strike of the risk module takes: a sink from a
+	// Transit or an agent account to the boundary (spec-risk.md 7.1), reserved as a
+	// money flow ID while the risk module is on.
+	ReasonLoss Reason = "loss"
 )
 
 // The declared ledger reasons of the external module, six rows declared while
@@ -1501,6 +1505,10 @@ type ShipmentDispatched struct {
 	Units, HaulUnits int64
 	// Lines is what is shipped, by commodity.
 	Lines []Amount
+	// LossBP is the share of every commodity of the cargo a strike takes at the
+	// arrival, fixed at the dispatch by the risk module (spec-risk.md 4.1, 14.1): 0
+	// for no strike or with the module off.
+	LossBP int64
 }
 
 // ShipmentRejected is emitted when a shipment request is refused, in the plan
@@ -1578,18 +1586,23 @@ type ShipmentArrived struct {
 	Diverted bool
 	// Lines are what each commodity did.
 	Lines []ArrivedLine
+	// AccountLost is what a strike took of the traveller's own account of a
+	// self-carried trip, by commodity in commodity order, the mode's vehicle left out
+	// (spec-risk.md 5.4); empty for a hired shipment, a removed traveller or no strike.
+	AccountLost []Amount
 }
 
 // ArrivedLine is what became of one line of a shipment: the units shipped, the
 // units delivered to the consignee, diverted to the estate of the destination and
-// spoiled in transit. They add up to Shipped. Lost is appended with the risk
-// module.
+// spoiled in transit and lost to a strike of the risk module. They add up to
+// Shipped (spec-risk.md 5.2.2); Lost is 0 with the module off.
 type ArrivedLine struct {
 	Commodity CommodityID
 	Shipped   Quantity
 	Delivered Quantity
 	Diverted  Quantity
 	Spoiled   Quantity
+	Lost      Quantity
 }
 
 // TransitFactorChanged is emitted by a call that sets the transit factor of an
@@ -2472,3 +2485,17 @@ type FacilityChanged struct {
 }
 
 func (FacilityChanged) isEvent() {}
+
+// RouteRiskScaled is emitted once per route row whose scale a SetRouteRiskScales call
+// changes, in (From, To, Mode) order, after the whole call has been applied
+// (spec-risk.md 9.2, 14.1). It is emitted only when the risk module is on.
+type RouteRiskScaled struct {
+	Tick int64
+	// From and To are the regions of the row's edge and Mode its mode.
+	From, To RegionID
+	Mode     ModeID
+	// BeforeBP and AfterBP are the scale before and after, in basis points.
+	BeforeBP, AfterBP int64
+}
+
+func (RouteRiskScaled) isEvent() {}

@@ -450,6 +450,9 @@ type SlotState struct {
 	OutsideShocks  []OutsideShock
 	RentScales     []EndowmentScale
 	RateScales     []RegionScale
+	// RouteRiskScales are the route scales of the risk module that differ from 10 000,
+	// in (From, To, Mode) order.
+	RouteRiskScales []RouteRiskScale
 }
 
 // Slots returns a deep copy of the slots that hold a value other than their default
@@ -476,6 +479,7 @@ func (w *World) Slots() (SlotState, error) {
 	w.outsideSlots(&s)
 	w.tenureSlots(&s)
 	w.creditSlots(&s)
+	w.riskSlots(&s)
 	return s, nil
 }
 

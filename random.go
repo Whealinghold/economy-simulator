@@ -14,7 +14,7 @@ import (
 // "economy-sim/site/" and its Go name, as a record of origin only. No two
 // differ by less than 2^32, because the first fold step adds the site to the
 // seed (a Guard: test holds this). A later module appends its own site with
-// its change; the rows D12 to D15 and D17 have none yet.
+// its change; the row D17 has none yet.
 const (
 	// siteConstruction keys D1: tick 0, id the agent.
 	siteConstruction uint64 = 0xC103123756D13F20
@@ -55,6 +55,24 @@ const (
 	// is derived from the effective seed with tick 0 and entity 0 and takes no word
 	// (spec-technology.md 4.4.1, 6.3, ADR 0008). A key, not a draw.
 	siteTechnology uint64 = 0xF68B3E6A63DA053C
+	// siteRiskCommon keys D13: tick, id the From region, sub To * MaxModes + Mode
+	// (the indices); one word for the common route row of that key, taken at P3.1a
+	// (spec-risk.md 4.2, 11.2).
+	siteRiskCommon uint64 = 0x7BECBB022BE68D1A
+	// siteRiskDispatch keys D14: tick, id the shipment. The record of a dispatched
+	// shipment keys it once and takes one word for each unit route row on its path
+	// with a probability above 0, in path order, as siteInform is keyed once for a
+	// view (spec-risk.md 4.1, 11.2).
+	siteRiskDispatch uint64 = 0x7E59E8F556FE1651
+	// siteRiskStoreCommon keys D15 (i): tick, id the region, sub the store class;
+	// one word for the common store row of that key, taken at P8.1a (spec-risk.md
+	// 6.2, 11.2). It has no draw until the store side of the module is built.
+	siteRiskStoreCommon uint64 = 0x22650FB6363BD5BC
+	// siteRiskStore keys D15 (ii): tick, id the agent, sub the store class; one
+	// word for each store of that class the agent holds, taken at P8.1a for a unit
+	// store row (spec-risk.md 6.2, 11.2). It has no draw until the store side of the
+	// module is built.
+	siteRiskStore uint64 = 0x85E20986FA93C736
 )
 
 // stream is the one random source of a world (architecture.md 7.3, ADR 0008):

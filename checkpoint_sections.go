@@ -53,6 +53,7 @@ var checkpointSections = [...]section{
 	{tag: 25, name: "Tenure", present: func(c *Config) bool { return c.Modules.Tenure != nil }, save: (*World).saveTenure, load: (*World).loadTenure},
 	{tag: 26, name: "Credit", present: func(c *Config) bool { return c.Modules.Credit != nil }, save: (*World).saveCredit, load: (*World).loadCredit},
 	{tag: 27, name: "Facilities", present: func(c *Config) bool { return c.Modules.Infrastructure != nil }, save: (*World).saveFacilities, load: (*World).loadFacilities},
+	{tag: 28, name: "Risk", present: func(c *Config) bool { return c.Modules.Risk != nil }, save: (*World).saveRisk, load: (*World).loadRisk},
 	{tag: 33, name: "Technology", present: func(c *Config) bool { return c.Modules.Technology != nil }, save: (*World).saveTechnology, load: (*World).loadTechnology},
 	{tag: 34, name: "Extensions", save: (*World).saveExtensions, load: (*World).loadExtensions},
 }
@@ -77,7 +78,7 @@ type notBuiltSection struct {
 // on a tag of the spec that is neither built nor listed.
 var notBuiltSections = [...]notBuiltSection{
 	{24, "Employment", "Employment"},
-	{28, "Risk", "Risk"}, {29, "Insurance", "Insurance"},
+	{29, "Insurance", "Insurance"},
 	{30, "Fiscal", "Fiscal"}, {31, "Institutions", "Institutions"}, {32, "Policy", "Policy"},
 }
 

@@ -43,6 +43,7 @@ RentPaid
 RentScaled
 RoleChanged
 RoomLimited
+RouteRiskScaled
 RumoursServed
 RunEnded
 RunStarted
