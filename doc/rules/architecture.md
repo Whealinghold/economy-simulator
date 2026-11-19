@@ -153,6 +153,7 @@ economy-sim/
   infrastructure_build.go  infrastructure_report.go  infrastructure_state.go     (CAP)
   institutions_validate.go  institutions_warn.go  institutions_round.go
   institutions_rights.go  institutions_legal.go  institutions_report.go  (ORG)
+  saving_validate.go  saving_view.go  saving_strategy.go  saving_report.go   (SAV)
 
   # Module files, one per optional module (2.10.1), named after the concept.
   demand.go  resources.go  subsistence.go  population.go  transport.go
@@ -1100,4 +1101,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 645d155e21f440e7e94863d7
+RULE-TAG: c081891dcb9a3f52752c6d97

@@ -1033,6 +1033,10 @@ a `CreditRequest` of its own (6.2.2 there).
 
 ### 10.3 The default lender
 
+A lender that also has a `Saver` block could keep `max(KeepTicks * UpkeepCost, Floor)` of
+`spec-saving-and-investment.md` 4.2 instead of the flat keep. That rule is optional and not
+built: `DefaultLend` reads the flat keep for every role (plan 3-sav, Q10).
+
 A household of a role with a `Lend` block appends **one offer** from what its own bids
 left:
 
