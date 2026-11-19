@@ -847,12 +847,13 @@ func (w *World) loadJobs(_ *restoreCtx, r *codec.Reader) error {
 
 // jobOnList says the recipe of a job read from a checkpoint is one its worker a may hold:
 // on its role's list, or, in the hire form, on the hire list of the principal's role (a
-// hired worker's recipe is the employer's).
+// hired worker's recipe is the employer's; a job the agent is its own principal of is never
+// a hired one).
 func (w *World) jobOnList(a *agent, rec RecipeID, principal int64) bool {
 	if _, ok := slices.BinarySearch(w.roles.row(a.role).jobs, rec); ok {
 		return true
 	}
-	return principal >= int64(w.firstHousehold) && principal < int64(len(w.agents)) && w.employment.hiresRecipe(&w.agents[principal], rec)
+	return principal != int64(a.id) && principal >= int64(w.firstHousehold) && principal < int64(len(w.agents)) && w.employment.hiresRecipe(&w.agents[principal], rec)
 }
 
 // loadJob reads the job of a, whose flag was set: the recipe, the executions left

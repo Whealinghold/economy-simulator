@@ -3,6 +3,7 @@ package economysim
 import (
 	"errors"
 	"math"
+	"slices"
 	"testing"
 )
 
@@ -200,4 +201,34 @@ func TestCheckpoint_RestoreRejects_WagesPaidAndOwedOverflow(t *testing.T) {
 	// the divisibility check passes and only the sum with the wages owed fails.
 	row[7] = uint64(math.MaxInt64 - math.MaxInt64%int64(h.wage))
 	wantCorrupt(t, w, hireBody(uint64(h.id)+1, row))
+}
+
+// TestJobOnList_SelfPrincipalIsNotAHiredJob verifies that a job whose principal is the
+// agent itself is accepted on the role's list only: the hire list of the agent's own role
+// does not admit it, while the same recipe is admitted for the hired worker.
+//
+// Fix: a restored job of an employer that was its own principal with a recipe on its own
+// hire list but not on its role's job list passed jobOnList, and hiredJobsFault skips
+// self-principal jobs, so nothing else refused it.
+func TestJobOnList_SelfPrincipalIsNotAHiredJob(t *testing.T) {
+	t.Parallel()
+	w := rejectFixture(t, hireOpts{hands: 1, handRecipe: true, duration: 4}, farmWants(1, 100, 40), 1)
+	h := w.employment.hires[0]
+	rec := h.recipe
+	emp, hand := &w.agents[h.employer], &w.agents[h.worker]
+	w.roles.row(emp.role).jobs = nil // the hire list alone must admit the recipe
+	if _, on := slicesIndexJobs(w, emp, rec); on {
+		t.Fatalf("recipe %d is on the employer role's job list, want it off so the hire list alone admits it", rec)
+	}
+	if !w.jobOnList(hand, rec, int64(h.employer)) {
+		t.Errorf("jobOnList(worker, %d, employer) = false, want true", rec)
+	}
+	if w.jobOnList(emp, rec, int64(emp.id)) {
+		t.Errorf("jobOnList(employer, %d, employer itself) = true, want false", rec)
+	}
+}
+
+// slicesIndexJobs reports whether rec is on the job list of a's role.
+func slicesIndexJobs(w *World, a *agent, rec RecipeID) (int, bool) {
+	return slices.BinarySearch(w.roles.row(a.role).jobs, rec)
 }
