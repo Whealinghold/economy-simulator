@@ -705,3 +705,27 @@ const (
 	// MaxContracts).
 	MaxHireRecords = 1_000_000
 )
+
+// The bounds of the policy module (spec-policy.md 10). All are placeholders (N-015,
+// N-027). The module also reuses MaxMoney, MaxFlowScale, MaxEdgeFactorBP,
+// MaxTransitFactorBP and MaxLabelBytes, which are the owners'.
+const (
+	// MaxActors is the most policy actors: at most one per jurisdiction, and a pack has
+	// few authorities.
+	MaxActors = 64
+	// MaxLevers is the most levers of one actor.
+	MaxLevers = 32
+	// MaxScheduleSteps is the most steps of one actor's schedule.
+	MaxScheduleSteps = 256
+	// MaxPolicyEvery is the largest Every: ten years of a 365-tick year.
+	MaxPolicyEvery = 3_650
+	// MaxPolicyCycle is the largest Cycle of a schedule, in ticks.
+	MaxPolicyCycle = 3_650
+	// MaxScheduleTick is the largest At of a schedule step.
+	MaxScheduleTick = 1_000_000_000
+	// MaxLeverKeys is the most keys a single Against lever expands to.
+	MaxLeverKeys = 256
+	// MaxMoveBP is the largest Move of a reaction: basis points of a lever value per
+	// Span, so the product of an error and a move fits in 128 bits.
+	MaxMoveBP = 100_000
+)

@@ -588,6 +588,10 @@ const (
 	// CauseOwnerRemoved is a FacilityChanged at the removal of the facility's owner:
 	// a transfer to the estate of its region, or the ruin of a store facility.
 	CauseOwnerRemoved Cause = "owner_removed"
+	// CausePolicy is a slot set by a policy actor at P0.3a (spec-policy.md 6.4.1): the
+	// cause of a MoneyFlowScaled, a TransitFactorChanged or an EdgeStatusChanged that a
+	// lever wrote, as CauseConsumer is the cause of the consumer's own call.
+	CausePolicy Cause = "policy"
 )
 
 // Kind is the kind of a boundary flow, a member of a closed set: a faucet

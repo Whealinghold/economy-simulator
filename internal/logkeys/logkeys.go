@@ -268,3 +268,17 @@ const (
 	Authority   = "authority"
 	FiscalFlows = "fiscal_flows"
 )
+
+// The keys of the policy module (spec-policy.md 12.2): the ID of a policy actor, of one
+// of its levers and of the reading a rule used, the counts of entries a policy returned
+// and of settings changed, and the counts of actors and levers in the construction
+// summary.
+const (
+	Actor   = "actor"
+	Lever   = "lever"
+	Reading = "reading"
+	Entries = "entries"
+	Changed = "changed"
+	Actors  = "actors"
+	Levers  = "levers"
+)

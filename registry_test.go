@@ -39,7 +39,6 @@ var notBuilt = []string{
 	// The pointers of Modules: a module's change adds its field and deletes its
 	// entry here.
 	"Modules.Insurance",
-	"Modules.Policy",
 	"Modules.Saving",
 	// Fields that a module appends to the core types Recipe, Region and Role.
 	"Role.Cover",
@@ -47,10 +46,8 @@ var notBuilt = []string{
 	// Scopes (Go type names) of the modules that are not built.
 	"CoverTerms",
 	"Insurance", "Insure",
-	"Lever",
-	"Policy", "PolicyActor", "ProjectWorth",
-	"Reaction",
-	"Saver", "Saving", "ScheduleStep",
+	"ProjectWorth",
+	"Saver", "Saving",
 	"Underwrite",
 }
 
@@ -78,7 +75,7 @@ var exemptFields = map[string]bool{
 // the table names the module and the type is called after its configuration
 // (spec-config.md 3.7.1: the scope Subsistence is the type SubsistenceConfig, as
 // Tenure is TenureConfig).
-var scopeAlias = map[string]string{"Subsistence": "SubsistenceConfig", "Polity": "PolityConfig", "Tenure": "TenureConfig", "Lend": "LendTerms", "Borrow": "BorrowTerms"}
+var scopeAlias = map[string]string{"Subsistence": "SubsistenceConfig", "Polity": "PolityConfig", "Tenure": "TenureConfig", "Policy": "PolicyConfig", "Lend": "LendTerms", "Borrow": "BorrowTerms"}
 
 // readOwnerTable reads the parameter-owner table of doc/specs/README.md by a
 // plain text parse: the pipe rows under the heading "Parameter owners".
@@ -327,6 +324,8 @@ var noFailingCase = map[string]string{
 	"StoreRisk.Common":          "a bool: both values are valid",
 	"TenureTerm.Closed":         "a bool: both values are valid",
 	"Institutions.OwnUseBound":  "a bool: both values are valid",
+	"PolicyActor.Policy":        "a registered name: NewWorld checks it with the registrations (spec-policy.md 4.5.1), Validate cannot",
+	"Reaction.Raise":            "a bool: both values are valid",
 }
 
 // builtRows returns the rows of the owner table that are built and are not
