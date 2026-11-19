@@ -315,6 +315,27 @@ func TestLog_RuleMovedLever(t *testing.T) {
 	}
 }
 
+// TestLog_RuleMoveRefusedByMaxIsNotLogged verifies that a rule move the checks cut back to the
+// lever's current value (Max 10 000 equals the value, so the entry is Unchanged) writes no
+// "rule moved lever" line, because the lever did not move.
+//
+// Guard: the line carries the value the rule asked for; without the outcome check the Debug
+// stream would report a move from 10 000 to 10 600 that was never written.
+func TestLog_RuleMoveRefusedByMaxIsNotLogged(t *testing.T) {
+	t.Parallel()
+	a := crownActor("rule", 1)
+	a.Levers[1].Max = 10_000
+	a.Rules = []Reaction{{Lever: "poll", Gauge: GaugeTreasury, Target: 400, Span: 1_000, Move: 1_000, Raise: true}}
+	logs := newCapture()
+	w := newMill(t, policyMillConfig(a), WithSeed(3), WithLogger(slog.New(logs)))
+	if err := w.Step(); err != nil {
+		t.Fatalf("Step() error = %v, want nil", err)
+	}
+	if got := debugLines(logs, "rule moved lever"); len(got) != 0 {
+		t.Errorf("rule moved lever lines = %+v, want none for a move cut back to the current value", got)
+	}
+}
+
 // TestDeterminism_PolicyNonInterference verifies FR-PLC-033: a world with an observer and an
 // enabled logger and a world with neither reach the same snapshot and the same slots after
 // 40 ticks of a schedule and a rule that read regions.

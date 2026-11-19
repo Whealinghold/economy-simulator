@@ -147,7 +147,7 @@ func (w *World) policyReport(id ActorID, a *policyActor, t policy.Tally, hold he
 }
 
 // policyDebugLines writes the Debug lines of the refused entries and of the levers a rule
-// moved.
+// moved and the checks applied.
 func (w *World) policyDebugLines(a *policyActor) {
 	ctx := context.Background()
 	s := &w.policy.scratch
@@ -160,7 +160,12 @@ func (w *World) policyDebugLines(a *policyActor) {
 	if a.rule == nil {
 		return
 	}
-	for _, m := range a.rule.moves {
+	for i, m := range a.rule.moves {
+		// The rule's entries and moves are appended in step, so move i is entry i; only a
+		// move the checks applied changed the lever.
+		if s.check.Results[i].Outcome != policy.Applied {
+			continue
+		}
 		w.log.LogAttrs(ctx, slog.LevelDebug, "rule moved lever", slog.String(logkeys.Actor, a.id),
 			slog.String(logkeys.Lever, a.leverID(int(m.lever))), slog.Int64(logkeys.Reading, m.reading),
 			slog.Int64(logkeys.From, m.from), slog.Int64(logkeys.To, m.to))
