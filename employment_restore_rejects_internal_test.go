@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"errors"
+	"math"
 	"testing"
 )
 
@@ -182,4 +183,21 @@ func TestCheckpoint_RestoreRejects_RegionOverMaxOpen(t *testing.T) {
 	w, a, b := twoHires(t)
 	w.employment.maxOpen = 1
 	wantCorrupt(t, w, hireBody(2, rowOf(a, a.escrow), rowOf(b, b.escrow)))
+}
+
+// TestCheckpoint_RestoreRejects_WagesPaidAndOwedOverflow verifies that a hire whose
+// wages paid, with the wages still owed for the ticks left, do not fit in an int64 is
+// refused: releaseWage adds each tick's wage to the total without a check.
+//
+// Fix: the restore checked only a lower bound of the wages paid, so a crafted section
+// with the wages paid near the int64 limit loaded and the next wage wrapped the total.
+func TestCheckpoint_RestoreRejects_WagesPaidAndOwedOverflow(t *testing.T) {
+	t.Parallel()
+	w := rejectFixture(t, hireOpts{hands: 1, handRecipe: true, duration: 4}, farmWants(1, 100, 40), 1)
+	h := w.employment.hires[0]
+	row := rowOf(h, h.escrow)
+	// The largest multiple of the wage that an int64 holds: a whole number of wages, so
+	// the divisibility check passes and only the sum with the wages owed fails.
+	row[7] = uint64(math.MaxInt64 - math.MaxInt64%int64(h.wage))
+	wantCorrupt(t, w, hireBody(uint64(h.id)+1, row))
 }

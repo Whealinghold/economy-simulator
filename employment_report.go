@@ -250,6 +250,10 @@ func hirePaidFault(h *hireRec) string {
 	if !ok || h.paid < floor {
 		return fmt.Sprintf("the wages paid %d are below the %d ticks worked at wage %d for %d executions", h.paid, h.worked, h.wage, h.k)
 	}
+	// The wages still to be paid are added to h.paid a tick at a time without a check: the sum must fit.
+	if rest, ok := payroll.Bill(h.wage, h.ticks-h.worked, h.k); !ok || h.paid > math.MaxInt64-rest {
+		return fmt.Sprintf("the wages paid %d and the wages still owed at wage %d for %d executions do not fit", h.paid, h.wage, h.k)
+	}
 	return ""
 }
 
