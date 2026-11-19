@@ -234,6 +234,44 @@ func TestArrival_TotalLossNothingToDivert(t *testing.T) {
 	}
 }
 
+// TestArrival_PartialLossDivertsTheSurvivors verifies spec-risk.md 5.5.1 and FR-RSK-015: a
+// shipment of 4 units struck at a LossBP of 5 000 whose consignee was removed loses
+// rhe(4 * 5 000 / 10 000) = 2 units first, and only the 2 that survived are diverted to the
+// estate of the destination, so the line says Lost 2, Diverted 2, Delivered 0 and the
+// identity shipped = delivered + diverted + spoiled + lost holds. The mode is foot, which
+// the traveller carries itself, so its own account loses rhe(4 * 5 000 / 10 000) = 2 more
+// (AccountLost, FR-RSK-013) and the boundary of loss holds 2 + 2 = 4.
+//
+// Guard: the two orders give different lines. Diverting before the loss would hand the
+// estate 4 units and then take 2 back from the estate's account, and the event would say
+// Diverted 4 or Lost 0; the loss belongs to the Transit account whatever the consignee does.
+//
+// Requirement: FR-RSK-012, FR-RSK-013, FR-RSK-014, FR-RSK-015
+func TestArrival_PartialLossDivertsTheSurvivors(t *testing.T) {
+	t.Parallel()
+	row := RouteRisk{From: "a_home", To: "b_far", Mode: "foot", StrikeBP: 10_000, SeverityBP: 5_000}
+	w, rec := newShipWorld(t, riskShip(row), onTick(0, toFar(Line{Commodity: grain, Quantity: 4})))
+	step(t, w, 1)
+	if err := w.removeAgent(&w.agents[shipFar], CauseConsumer); err != nil {
+		t.Fatalf("removeAgent() = %v, want nil", err)
+	}
+	step(t, w, 2)
+	got := of[ShipmentArrived](rec)
+	if len(got) != 1 || !got[0].Diverted || len(got[0].Lines) != 1 {
+		t.Fatalf("ShipmentArrived = %+v, want one diverted arrival of one line", got)
+	}
+	want := ArrivedLine{Commodity: grain, Shipped: 4, Delivered: 0, Diverted: 2, Spoiled: 0, Lost: 2}
+	if l := got[0].Lines[0]; l != want {
+		t.Errorf("ShipmentArrived line = %+v, want %+v", l, want)
+	}
+	if al := got[0].AccountLost; len(al) != 1 || al[0] != (Amount{Commodity: grain, Quantity: 2}) {
+		t.Errorf("ShipmentArrived.AccountLost = %+v, want 2 units of grain taken from the traveller's account", al)
+	}
+	if b := lossBoundary(t, w, grain); b != 4 {
+		t.Errorf("boundary of loss for grain = %d, want 4 (2 of the Transit account and 2 of the trip account)", b)
+	}
+}
+
 // TestContract_LostBorneByDeliverer verifies spec-risk.md 5.6.1: a contract of 10 units
 // at 100 whose shipment is struck at 2 500 loses rhe(2.5) = 2 units (a tie, to the even
 // 2); the 8 that reached are paid 800, 200 are refunded to the payer, the settlement
