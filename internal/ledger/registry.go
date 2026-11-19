@@ -160,7 +160,7 @@ const (
 	setEscrow   = kindSet(1 << KindEscrow)
 	setOutside  = kindSet(1 << KindOutside)
 	// setTreasury is the Treasury kind of the polity module; the row initial names it
-	// for money (spec-ledger.md 7.2, FR-LED-065), and the fiscal rows will name it.
+	// for money (spec-ledger.md 7.2, FR-LED-065), and the fiscal rows name it.
 	setTreasury = kindSet(1 << KindTreasury)
 	// setHolder is every non-boundary kind: "any holder" of 7.2.
 	setHolder = kindSet(1<<KindBoundary - 1)
@@ -194,8 +194,9 @@ func (rw row) fits(from, to Kind) bool {
 // 7.1). A reason with no row for a thing cannot move that thing.
 var table = [NumReasons][2]row{
 	// trade also runs to and from an Outside account (spec-ledger.md 7.2, FR-LED-057);
-	// no Outside account exists while the external module is off.
-	Trade:        {thingMoney: {true, Internal, setAE | setOutside, setAE | setOutside, false, false, 0}, thingGoods: {true, Internal, setAE | setOutside, setAE | setOutside, false, false, 0}},
+	// no Outside account exists while the external module is off. It runs to and from a
+	// Treasury account too, for the standing orders of the fiscal module (FR-FIS-052).
+	Trade:        {thingMoney: {true, Internal, setAE | setOutside | setTreasury, setAE | setOutside | setTreasury, false, false, 0}, thingGoods: {true, Internal, setAE | setOutside | setTreasury, setAE | setOutside | setTreasury, false, false, 0}},
 	Initial:      {thingMoney: {true, Faucet, setBoundary, setAE | setTreasury, false, false, 0}, thingGoods: {true, Faucet, setBoundary, setAE, false, false, 0}},
 	RecipeInput:  {thingGoods: {true, Sink, setAgent, setBoundary, false, false, 0}},
 	RecipeOutput: {thingGoods: {true, Faucet, setBoundary, setAgent, false, false, 0}},
@@ -280,10 +281,15 @@ func Rank(r Reason) (int, bool) {
 // never saved raw (checkpoint.go saves pinnedRows plus its position).
 func FlowReason(i int) Reason { return NumReasons + Reason(i) }
 
-// flowRow is the row of a money flow of the given class: a faucet runs from
-// its boundary to an agent or an estate, a sink the other way round
-// (spec-money-supply.md 4.5.1). It moves money only.
+// flowRow is the row of a flow of the given class: a faucet runs from its
+// boundary to an agent or an estate, a sink the other way round
+// (spec-money-supply.md 4.5.1), and an Internal flow of the fiscal module runs
+// between agent, estate and treasury accounts (spec-fiscal.md 3.4.1). The caller
+// decides whether the row moves money or goods; a flow moves one of the two.
 func flowRow(c Class) row {
+	if c == Internal {
+		return row{ok: true, class: Internal, from: setAE | setTreasury, to: setAE | setTreasury}
+	}
 	if c == Faucet {
 		return row{ok: true, class: Faucet, from: setBoundary, to: setAE}
 	}

@@ -371,3 +371,26 @@ Each has a recommendation, taken as accepted (the supervisor holds the owner's d
 10. **Q10. Defaults.** Recommend no default is set from a source (N-018, N-027): the overlays carry labelled placeholders (rates, exemptions, limits, a 60-tick job-free window) and the PR says so; the module has no default macro constant.
 11. **Q11. An example under `examples/`?** Recommend none in this row (the first consumer's pack is the supervisor's call after Stage 3; the overlays are the worked examples of FIS 18).
 12. **Q12. A flow at scale 0 and `MoneyFlowScaled` for a fiscal flow?** Recommend as the spec says (13.1, 13.2): the event name stays, the flow is skipped whole before its base is built, and a due that truncates to 0 at a scale above 0 is reported.
+
+## PR 2 result (Phase 3, recorded when PR 2 was built)
+
+Rule tags read: architecture=645d155e21f440e7e94863d7, observability=9ebd6516273680595f477c95, testing=66af7645b01fef4e2796c367. Notes tag read: c4a0edb9b94c8f1ac9e30ce0 (replaced by a fresh tag in this change: N-185 closed, N-433 to N-436 added, updates to N-389 and N-391). The open notes tagged FIS and ALL were read (the entries, not the whole file, as `doc/notes.md` is too long for one context); verdicts: N-185 applied and removed, N-389 and N-391 updated and left open, N-131, N-140, N-159, N-160, N-161, N-163, N-172 to N-174, N-187, N-188, N-190, N-204 and the ALL notes read and left open, unchanged by this PR.
+
+Built: `Config.Modules.Fiscal` (hash id 20) with `Fiscal`, `Window`, `Tax`, `Duty`, `Toll`, `Payout`, `Purchase`, `Release`, `FlowTarget.Jurisdiction` (id 5) and `TargetTreasury` (`config.go`); the bounds `MaxFiscalFlows`, `MaxDutyBP`, `MaxLimitBP`; the sentinels `ErrNotGoverned`, `ErrNotCovered`, `ErrFiscalShape`; `validateFiscal` in the seven phases of FIS 15.1 (`fiscal_validate.go`, `fiscal_class.go`) and the ten warnings (`fiscal_warnings.go`); `pairsFiscal` (`fiscal_hash.go`); the tables `[modules.fiscal.<kind>.<id>]` (`config/mapping.go`); `fiscalReasons` (`fiscal.go`) and, in `internal/ledger`, `Config.Fiscal`, `FiscalFlow` and the Treasury kind in the `trade` row. The module is configured, validated and hashed, declares its ledger reasons and does nothing else: no state, no position, no event, no section.
+
+Deviations and choices the plan left open:
+
+- The flow types list their fields in the order of the spec's structs, `Window` before `Label`, and the hash ids are the ones `spec-config.md` 8.2.2 pins (`Tax` `Window` 8, `Duty` 8, `Toll` 6, `Payout` 9, `Purchase` and `Release` 7); D1 gave the rule and not the numbers.
+- `Duty.Scope` has the canonical default `any` (an empty string is rewritten like `Per`), so two spellings of a default hash alike; `spec-config.md` 8.2.2 now says so.
+- The ledger family is `ledger.Config.Fiscal []FiscalFlow` (`Goods` for an in-kind payout) and not a bare `Class`: the fiscal flows are appended to the ledger's flow list as Internal classes after the money flows, so `FlowReason(len(Flows)+j)` and the checkpoint's by-position code need no new rule. `Move` read the package-level row for goods and now reads the ledger's (N-436); `trade` names the Treasury kind for money and goods without a condition, as it does for Outside.
+- `classes()` (the last phase of 15.1) lives in `fiscal_class.go`, the file the plan reserves for the runtime class walk, so `fiscal_validate.go` stays at about 320 lines and no file beyond the layout of architecture.md 2.6 was added.
+- `validateFiscal` builds the polity through a sub-validator (N-433) and ends the run silently when the polity itself is invalid: its errors are `validatePolity`'s.
+- `modulesOn` does not list `fiscal` yet (hook 2 is PR 3), so the construction summary and `Snapshot.Modules` do not name the module in this PR.
+- `TestAllPack_EveryModuleIsOn` lists `Fiscal` in `allPackNotYetOn` and `TestPolity_NoRegionFieldRead` allows the three fiscal validation files to name a jurisdiction; both test lists are the staged form of architecture.md 9.7 and move nothing in `golden/all/`.
+- The duplicate-season case of a window is `ErrDuplicateID` (the spec lists no rule for it): a repeat would build the world of the single season and hash differently.
+
+Golden rule held: `testdata/golden/off/`, `golden/all/`, the pinned hash and both format-1 checkpoint fixtures (`TestFixture_Format1`, `TestFixture_Format1All`) are unchanged.
+
+Tests: the ledger family in `internal/ledger` (the rows, the checkpoint by position and the refusal of fewer flows, the trade row with a Treasury); every row of the owner table of the six lists by a failing case (`fiscalFieldCases`, read by the registry test), `TestValidateFiscal_Order`, `_Dependencies`, `_ConfigIsValid`, `TestFiscalWarnings` (a firing and a quiet case for each of the ten), `TestFiscalHash`, `TestFiscalHashEncodingPinned`, `TestFiscalHashCanonicalSpelling`, `TestFiscal_ReasonsInternal`, `TestFiscal_ReasonsMoveBetweenSectors`, `TestFiscal_ModuleOnBuildsAWorld` (five audited steps), `TestLoad_Fiscal` and `_FiscalRejections` in `config/`, and the fuzz tests `FuzzFiscalValidate` and `FuzzLoadFiscal` (no crasher; no corpus file).
+
+Left open: gomu on `internal/fiscal` (PR 1's owed run) is not part of this PR; `treasury_unfunded` and `treasury_idle` count no MON grant (N-389); the warning `toll_no_border` reads every edge for any mode (N-434).
