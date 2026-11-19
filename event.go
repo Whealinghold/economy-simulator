@@ -325,6 +325,12 @@ const (
 	// Transit or an agent account to the boundary (spec-risk.md 7.1), reserved as a
 	// money flow ID while the risk module is on.
 	ReasonLoss Reason = "loss"
+	// ReasonPremium is the money an insured pays an underwriter for a policy at its
+	// formation, and ReasonPayout the money an underwriter pays an insured for the
+	// loss of a policy (spec-insurance.md 9.1): internal transfers of money, agent
+	// to agent, no faucet and no sink. Both are reserved words for a money flow ID.
+	ReasonPremium Reason = "premium"
+	ReasonPayout  Reason = "payout"
 )
 
 // The declared ledger reasons of the external module, six rows declared while
