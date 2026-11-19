@@ -46,30 +46,30 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351, N-353 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424, N-474 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
-| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386 |
+| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-475 |
 | CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433 |
-| CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444 |
+| CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444, N-471 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241, N-457 |
 | CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457 |
-| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398 |
+| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398, N-472 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-444, N-445 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361 |
 | EXT | N-108, N-112, N-113, N-214 |
-| FIS | N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437 |
+| FIS | N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-475 |
 | GDS | N-039 |
-| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380 |
+| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
-| INS | N-176, N-179, N-213, N-227 |
+| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354 |
-| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436 |
-| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427 |
+| LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436, N-471 |
+| LND | N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-475 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
@@ -80,8 +80,8 @@ PR description.
 | PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
-| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380 |
-| SAV | N-145, N-156, N-195, N-197, N-362, N-382 |
+| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470 |
+| SAV | N-145, N-156, N-195, N-197, N-362, N-382, N-475 |
 | SCL | N-030, N-198, N-222, N-300 |
 | SET | N-404, N-140, N-192, N-268, N-348, N-365 |
 | SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
@@ -93,8 +93,8 @@ PR description.
 | TEC | N-358, N-359, N-360, N-361, N-384 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383 |
-| WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346 |
-| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390 |
+| WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346, N-472 |
+| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-475 |
 
 ## Open notes
 
@@ -1276,6 +1276,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-risk.md` 4, 10.2.2 and `spec-insurance.md` 6.1.2.
 - **Note:** `LossBP` is in the record and in `ShipmentDispatched` for an observer, and no view carries it. Insurance reads `RouteLoss` and the arrival's lost units and never `LossBP`, a draw or a scale; it would insure only what is lost. FR-INS-025 is the test: two worlds that differ only in a lane's strikes form the same policies.
 - **Update (2026-11-18, plan 3-rsk Phase 1):** read: FR-INS-025 is INS's test. RSK supplies `RouteLoss`, the events and the scratch of the lost units, and no view carries `LossBP` (FR-RSK-011). Left open for INS.
+- **Update (2026-11-19, plan 3-ins Phase 1):** read: FR-INS-025 is built in INS PR C (`TestInsurance_ReadsNoLossBP`, `TestInsurance_SameWorldsOppositeStrikes`); the note is applied and removed at PR F, when the scenario S160 has run. Left open.
 
 ### N-177 No endogenous risk in version 1
 
@@ -1294,6 +1295,7 @@ PR description.
 - **Areas:** INS, STB, EXP
 - **Raised:** 2026-10-13, `spec-risk.md` 3.3, 10.2.3, RSK-A3.
 - **Note:** A sweep through a scale of 0 is a different stream from there (the row takes no word at 0); a sweep above 0 stays aligned (`spec-risk.md` 11.4).
+- **Update (2026-11-19, plan 3-ins Phase 1):** read: the sweep is the readers' (STB, EXP), not INS's. Left open.
 
 ### N-180 The expected loss is in the shipper's margin and in the lanes
 
@@ -1480,6 +1482,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-insurance.md` 9.2.
 - **Note:** The credit list holds claims of two origins, `loan` and `payout`. The credit instruments and `Warn`s, `ForgiveClaims` and `CreditSettled` count loans only; the payments of a payout claim are INS's, in `CoverSettled` (`Stage` `claim`, fields `ClaimEnded`, `ClaimPaid`, `ClaimReceived`); the welfare record counts the principal of a payout claim as income and cost, and the identity of CRD 3.6 reads `Lent + Awarded`. INS counts its own outstanding payout claims in `economysim.insurance.claims`.
 - **Update (2026-10-13, Phase 1 of the ledger row):** applied for LED: the ledger's section 10 and FR-LED-063 carry the origin, `Awarded` and `Obligate` (`spec-ledger.md` 10, FR-LED-064); the first build keeps both origins in one list and checks the principal identity with `Awarded`. LED removed from the areas.
+- **Update (2026-11-19, plan 3-ins Phase 1):** the INS half is built by plan 3-ins (the stage-`claim` counts of `CoverSettled`, the welfare principal of a payout claim, N-472). Left open until PR D.
 
 ### N-210 The premium is not in the merchant's margin
 
@@ -1499,6 +1502,7 @@ PR description.
 - **Areas:** CRD
 - **Raised:** 2026-10-13, `spec-insurance.md` 7.1.2, INS-A6 (a case of L11 and L45).
 - **Note:** The cover round is after the credit round, so a household can pay a premium from this tick's loan.
+- **Update (2026-11-19, plan 3-ins Phase 1):** a premium paid from a loan formed at P3.3b is a test of scenario S161. Left open until PR F.
 
 ### N-213 A store has no expected-loss read
 
@@ -1506,6 +1510,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-insurance.md` 6.4.2 and open question 4.
 - **Note:** A store premium is the underwriter's posted rate, a pack's data; a read like `RouteLoss` for a store is the ask.
 - **Update (2026-11-18, plan 3-rsk Phase 1):** read: a store expected-loss read is INS's ask and is not built here (plan 3-rsk, leaves out). Left open for INS.
+- **Update (2026-11-19, plan 3-ins Phase 1):** read: a store expected-loss read is an ask of RSK and is not built in version 1 (plan 3-ins, leaves out). Left open.
 
 ### N-214 Keyed random streams (ADR 0008): the edits owed
 
@@ -1653,6 +1658,7 @@ PR description.
 - **Areas:** CRD, INS
 - **Raised:** 2026-10-13, `plan-phase-1-1.md` (git history, `2abbe62^`) D9 and Phase 1 deliverable 1b.
 - **Note:** The owner accepted two recommendations and `spec-credit.md` is amended in this change: (i) CRD 8.5 had the settlement set `Overdue` and none of the five operations of 3.2 did, so a sixth ledger operation `MarkOverdue(claim, tick)` sets it (atomic, refused with `ErrUnknownClaim`, and, beyond the plan, with `ErrClaimShape` for a `tick` below the claim's `Due`, so that `Overdue` is -1 or in `[Due, tick)` by construction, CRD 17.5; an `Overdue` already set is left as it is); (ii) a `Settle` with one part 0 skips that transfer, because a transfer of 0 is refused by `spec-ledger.md` 4.2, and both parts 0 is `ErrInvalidAmount`. Edited: CRD 3.2 and 3.2.1, 8.5 (item 2), FR-CRD-003, 032 and 034 (the rows that count the operations or set `Overdue`), the edits table and the home table; LED 10, FR-LED-063 and 16. Still owed: the models of CRD were not re-run (in Docker only): `doc/specs/models/crd/loans.py` sets `over` as a field write (line 83, which is `MarkOverdue` in the library) and `doc/specs/models/crd/alloc.py` draws random operations on a mini ledger (`Lend`, `Settle`, ...) with no `MarkOverdue` and, to check, a `Settle` that may be given a part of 0 (legal now, and both parts 0 is not); `spec-insurance.md` 9.2 and FR-INS-004 name `Obligate` only and need no edit; `spec-integration.md` 13.2 (`ForgiveClaims` uses `WriteOff`) is unchanged. The ledger code of the six operations is Phase 5 of the plan.
+- **Update (2026-11-19, plan 3-ins Phase 1):** read: INS owes nothing here; `MarkOverdue` is CRD's and `Obligate` needs no edit. Left open.
 
 ### N-228 A module's items in the tradable set have no touch point
 
@@ -2476,6 +2482,42 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-fis PR 2 observability review, plan Q3.
 - **Note:** `observability-and-logging.md` 5.3 and 5.3.1 already list `economysim.fiscal.collected`, `.paid`, `.in_kind`, `.unapplied` and `.order.cut` (attribute `economysim.clamp`: `cash`, `hold`, `stock`), fed by `FiscalFlowApplied` and `TreasuryOrdered`. Plan 3-fis Q3 defers them, as SKL Q7 and CRD Q3 did: PR 2 builds no event and no snapshot field, so nothing feeds them yet, and the core module records no metric (rule 5). The adapter PR after FIS PR 6 adds the five instruments, the cardinality test over the flow IDs, regions and authorities, the `economysim.clamp` series count for the reference chain (5.4.2), and takes `FiscalFlowApplied` and `TreasuryOrdered` out of `ignoredEvents`. The ten construction warnings of `fiscal_warnings.go` need no metric: they are fixed by the configuration and read through `Config.Warnings` (counterpart rule of 8.1). Candidate for the same adapter PR, found in the PR 3 observability review: one more instrument, `economysim.fiscal.limited` (Counter, `{household}`, attributes `economysim.reason` (the fiscal flow ID) and `economysim.fiscal_limit` with the closed set `short`, `headroom`, `cut`), fed by `FiscalFlowApplied` (`Short`, `Headroom`, `Cut`). Why: `economysim.fiscal.unapplied` says how much money did not move but not why. Payers too poor to pay (`short`) and a treasury at `MaxMoney` (`headroom`) or empty (`cut`, from PR 4) have different fixes, as for `economysim.money.flow.limited`. The adapter PR adds the row to 5.3, 5.3.1 and the closed set to 5.4.1 (`economysim.fiscal_limit`), and states the series count for the reference chain (5.4.2). Declined on purpose: a metric for `Parties` (the event carries it; no use apart from the share of the limited counts, so add it only if that share is wanted), `Exempt` (PR 5, duties), and attributes for class, authority or region (the flow ID fixes class and authority; region is not needed by any of the five). `TestFiscal_EventsRebuildTheCollection` proves `collected` and `unapplied` derivable from the events.
 
+### N-470 The arrival's lost units are a per-tick list kept by RSK's file
+
+- **Areas:** INS, RSK
+- **Raised:** 2026-11-19, plan 3-ins D6, H-11, `spec-risk.md` 10.2.1.
+- **Note:** `risk_loss.go` overwrote the lost units of the last arrival; P1.3a runs after all of P1.3 and needs the figures of each arrived shipment that has a policy. INS adds a per-tick list `risk.arrived` (shipment, lines lost, account lost), cleared at the entry of P1.3, kept whether or not an observer was supplied and only while insurance is on. A shipment whose arrival is held (RSK's order guard) has no row and its policy stays open. A `Guard:` test (`TestRisk_ArrivedListKeptWithoutObserver`) pins the observer-free case.
+
+### N-471 `premium` and `payout` are pinned rows 30 and 31, and a built-in reason takes a code below 42
+
+- **Areas:** LED, INS, CHK
+- **Raised:** 2026-11-19, plan 3-ins D2, Q1, `spec-checkpoint.md` 4.2.7.
+- **Note:** The allocation "codes 60 to 67" of the first insurance draft cannot hold a built-in reason: a code from 42 up is a configured money or fiscal flow's, and `reasonOfCode` would read it back as a flow (the lesson of RSK's `loss`, code 36 and not 44). The two reasons use the pinned rows 30 and 31. A module that needs a new built-in reason takes the next number only by changing `pinnedRows`, which is a checkpoint format change.
+
+### N-472 `N_t` enters the welfare record by `addUnearned`, and a flow after P6.3 amends the pushed record
+
+- **Areas:** WEL, CRD, INS
+- **Raised:** 2026-11-19, plan 3-ins D10, Q2, H-12, H-13, `spec-insurance.md` 11.1.3.
+- **Note:** The premium, the payout and the principal paid on a claim of origin `payout` are each one signed `addUnearned` call (CRD 11.1 says the principal of a loan is neither income nor cost; a payout claim's principal is both parties' `N_t`). A flow that moves after P6.3 (the payout of a store policy at P8.1b, the principal a removal's waterfall pays at P7.1) is added to the record already pushed in the tick by `Ring.Amend` (replaces the running sums and re-applies the clamp, no new record, no window change); an agent with no record of the tick is not amended. The fallback if review refuses a change to `internal/welfare` is a one-tick lag.
+
+### N-473 No indicator preset exists for premiums, payouts, shortfalls and the loss ratio
+
+- **Areas:** IND, INS
+- **Raised:** 2026-11-19, plan 3-ins Q6, `spec-insurance.md` 20.2 row `spec-indicators.md`.
+- **Note:** `spec-indicators.md` has no row or requirement for an insurance preset. The events carry the exact figures (`CoverFormed`, `CoverSettled`), so a loss ratio is exact from them. A preset needs a spec row first; INS does not build one.
+
+### N-474 `Directed` keeps the cover requests and the offer of the fallback
+
+- **Areas:** AGT, INS
+- **Raised:** 2026-11-19, plan 3-ins D13, `spec-insurance.md` 10.5.
+- **Note:** `directCredit` replaces only the credit fields of a directed agent's plan, so its cover requests and offer survive (a test pins it). A directive field for cover is open question 9 of `spec-insurance.md`; nothing builds one.
+
+### N-475 P1.3a, P3.3c and P8.1b land in the straight line of `tick.go` with the other modules' positions
+
+- **Areas:** WLD, INS, CAP, LND, SAV, FIS
+- **Raised:** 2026-11-19, plan 3-ins R5.
+- **Note:** `fillAgentView` and `arrive` are at CCN 10 and the callers of P1.3, P3.3b and the phase 8 tail may reach 10 with one more call. Whichever module lands first makes the refactor-first split of the shared function; the others rebase onto it. The order of the tail is P8.1, P8.1a, P8.1b, P8.2, then P8.3a to P8.3c, and of the removal steps 2d, 2e, 2f, 2g.
+
 ## Read receipt
 
 ### N-358 A gain is not a recipe
@@ -2672,4 +2714,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: f9febf421abfd4c13223c017
+NOTES-TAG: 29885294a5b440424afcc280
