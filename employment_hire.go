@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 
+	payroll "github.com/Whealinghold/economy-sim/internal/employment"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/transit"
 )
@@ -388,7 +389,11 @@ func (w *World) escrowFault(h *hireRec) string {
 	if msg := w.jobFault(h, left); msg != "" {
 		return msg
 	}
-	if want := h.wage * h.k * left; v.Balance < want {
+	want, ok := payroll.Bill(h.wage, left, h.k)
+	if !ok {
+		return fmt.Sprintf("the wages of %d ticks at %d for %d executions do not fit", left, h.wage, h.k)
+	}
+	if v.Balance < want {
 		return fmt.Sprintf("account %d holds %d, want at least %d", h.escrow, v.Balance, want)
 	}
 	return ""

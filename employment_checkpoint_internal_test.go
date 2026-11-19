@@ -247,6 +247,28 @@ func TestCheckpoint_EmploymentSharedAccountRejected(t *testing.T) {
 	}
 }
 
+// TestCheckpoint_EmploymentBillOverflowRejected verifies that a hire whose bill (wage * ticks
+// * executions) does not fit int64 is refused as ErrCheckpointCorrupt rather than compared
+// after a wrapped product, and that the audit reports it as ErrAuditFailed.
+//
+// Requirement: FR-EMP-044
+func TestCheckpoint_EmploymentBillOverflowRejected(t *testing.T) {
+	t.Parallel()
+	w := hireWorld(t, defaultHire(hireOpts{hands: 2, handRecipe: true, duration: 10}), farmWants(1, 100, 40))
+	stepN(t, w, 1)
+	h := w.employment.hires[0]
+	w.agents[h.worker].job.executions = MaxQuantity
+	body := hireBody(1, [8]uint64{0, uint64(h.employer), uint64(h.worker), MaxPrice, uint64(h.escrow), 0, 0, MaxPrice * MaxQuantity})
+	if err := loadHireBody(w, body); !errors.Is(err, ErrCheckpointCorrupt) {
+		t.Errorf("a bill above int64 = %v, want ErrCheckpointCorrupt", err)
+	}
+	h2 := &w.employment.hires[0]
+	h2.wage, h2.k = MaxPrice, MaxQuantity
+	if err := w.auditHires(); !errors.Is(err, ErrAuditFailed) {
+		t.Errorf("the audit of a bill above int64 = %v, want ErrAuditFailed", err)
+	}
+}
+
 // FuzzDecodeEmploymentSection verifies that no body makes the decoder of tag 24 panic
 // or allocate without bound: any bytes load or fail with an error, whatever the world
 // the section is read into.

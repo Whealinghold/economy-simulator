@@ -7,8 +7,8 @@ import (
 	"math"
 	"slices"
 
-	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/codec"
+	payroll "github.com/Whealinghold/economy-sim/internal/employment"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
 )
@@ -243,7 +243,10 @@ func (w *World) hireShapeFault(h *hireRec, used map[int]bool) string {
 // paid the wage of the executions of the job at the time, and the executions only fall,
 // so the wages paid are at least worked * wage * k.
 func hirePaidFault(h *hireRec) string {
-	floor, ok := checked.Mul(h.wage*h.worked, h.k)
+	if _, ok := payroll.Bill(h.wage, h.ticks, h.k); !ok {
+		return fmt.Sprintf("the bill of %d ticks at wage %d for %d executions does not fit", h.ticks, h.wage, h.k)
+	}
+	floor, ok := payroll.Bill(h.wage, h.worked, h.k) // fits: the bill above does and worked < ticks
 	if !ok || h.paid < floor {
 		return fmt.Sprintf("the wages paid %d are below the %d ticks worked at wage %d for %d executions", h.paid, h.worked, h.wage, h.k)
 	}
