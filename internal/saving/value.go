@@ -54,13 +54,11 @@ func WorthRate(decay, wear, w, capacity int64) int64 {
 // ServiceTime returns T_p = min(floor(durability / rate), payback), payback for
 // a rate of 0 (spec 5.3.1, FR-SAV-011).
 func ServiceTime(durability, rate, payback int64) int64 {
+	payback = nonneg(payback)
 	if rate <= 0 {
 		return payback
 	}
-	if t := nonneg(durability) / rate; t < payback {
-		return t
-	}
-	return payback
+	return min(nonneg(durability)/rate, payback)
 }
 
 // SiteBenefit returns dJ * tp / 10 000 truncated, saturated at maxMoney

@@ -224,15 +224,40 @@ func TestPrecaution_ShareCapAndZero(t *testing.T) {
 	}
 }
 
-// TestToolBuy_SaturatesOnExtremeStock verifies that m - stock saturates instead
-// of wrapping, so a stock at the negative extreme cannot understate the outlay.
+// TestToolBuy_NegativeStockIsZero verifies that a negative stock reads as no
+// stock, as HeldValue reads it, so the difference cannot wrap or overstate.
 //
-// Guard: a wrapped difference is negative, nonneg turns it into 0, and the
-// household would look funded for a tool it cannot pay for.
-func TestToolBuy_SaturatesOnExtremeStock(t *testing.T) {
+// Guard: without the clamp, stock -5 and m 2 would ask for 7 tools, and a
+// stock at MinInt64 would wrap m - stock and understate the outlay.
+func TestToolBuy_NegativeStockIsZero(t *testing.T) {
 	t.Parallel()
-	got := saving.ToolBuy(2, []int64{math.MinInt64}, []int64{1})
-	if got != math.MaxInt64 {
-		t.Errorf("ToolBuy(2, [MinInt64], [1]) = %d, want %d", got, int64(math.MaxInt64))
+	tests := []struct {
+		name  string
+		stock int64
+	}{
+		{"small negative", -5},
+		{"extreme negative", math.MinInt64},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// m = 2 tools wanted, none held, centre 1: the buy is 2 * 1.
+			if got := saving.ToolBuy(2, []int64{tt.stock}, []int64{1}); got != 2 {
+				t.Errorf("ToolBuy(2, [%d], [1]) = %d, want 2", tt.stock, got)
+			}
+		})
+	}
+}
+
+// TestServiceTime_NegativePaybackIsZero verifies that a negative payback gives
+// a service time of 0 with and without a wear rate.
+//
+// Guard: a negative service time would reach callers that use it directly.
+func TestServiceTime_NegativePaybackIsZero(t *testing.T) {
+	t.Parallel()
+	for _, rate := range []int64{0, 4} {
+		if got := saving.ServiceTime(100, rate, -3); got != 0 {
+			t.Errorf("ServiceTime(100, %d, -3) = %d, want 0", rate, got)
+		}
 	}
 }
