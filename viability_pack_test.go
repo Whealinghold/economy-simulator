@@ -267,6 +267,12 @@ func TestPacks_OnlyD1ToD5AreNotViable(t *testing.T) {
 		if strings.HasPrefix(f, "overlay/polity") {
 			continue
 		}
+		// The institutions overlays name the region centre and the jurisdictions of the
+		// polity overlay, which pack one lacks; TestGolden_InstitutionsExercisesTheModule
+		// and TestScenarioORG5_InertOverlayIsNeutral load and run them over their layers.
+		if strings.HasPrefix(f, "overlay/institutions") {
+			continue
+		}
 		// The tenure overlay titles the endowments of the resources overlay, which pack
 		// one alone lacks; TestPacks_TenureOverlayLoadsAndSolves validates it over the
 		// layers it needs.
