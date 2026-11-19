@@ -59,6 +59,7 @@ func (e *employment) initHire(c *Config) {
 	e.free = make([]transit.Free, len(c.Regions))
 	e.tally = make([]labourTally, len(c.Regions))
 	e.lanes = make([]labourLane, len(c.Regions))
+	e.unmatchedRun, e.unfilledRun = make([]int64, len(c.Regions)*len(c.Roles)), make([]int64, len(c.Regions)*len(c.Roles))
 	for i := range c.Roles {
 		b := c.Roles[i].Employer
 		if b == nil {

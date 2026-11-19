@@ -55,7 +55,7 @@ type hireOpts struct {
 // household is one agent of weight 1, the slots of the farms first. There is no
 // upkeep and no order, so nothing moves money but the module. The strategy
 // "script" is plan for both roles.
-func hireWorld(t *testing.T, o hireOpts, plan func(v *AgentView) JobRequest, opts ...Option) *World {
+func hireWorld(t testing.TB, o hireOpts, plan func(v *AgentView) JobRequest, opts ...Option) *World {
 	t.Helper()
 	if o.regions == 0 {
 		o.regions = 1
