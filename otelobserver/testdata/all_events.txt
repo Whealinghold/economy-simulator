@@ -16,6 +16,8 @@ EntryLimited
 EstateOpened
 FacilityChanged
 FiscalFlowApplied
+HireEnded
+HireFormed
 LegalLevelSet
 LoanEnded
 LoanFormed

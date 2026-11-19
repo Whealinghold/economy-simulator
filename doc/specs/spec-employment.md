@@ -652,7 +652,9 @@ job, by its own decision.
 its `Agent` is the executor, the worker, as for a trainee. A measure of value added by
 recipe is unaffected by who held the principal's account. **Order at a completion:**
 `RecipeExecuted` first (the output is created), then `HireEnded` (`completed`), both at P2.1
-(or P2.7 for a one-tick job), hires in ascending hire ID within the position; the `LabourRound`
+(or P2.7 for a one-tick job), hires in the rotation order of the position (the order in which
+the completion steps of P2.1 and P2.7 visit the agents; N-442), so that the two events of one hire
+are adjacent; the `LabourRound`
 of the tick follows at P2.8b.
 
 6.3.4. **An employer that is also a trainer.** Its trainees' requests and its hires both take

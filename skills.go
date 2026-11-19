@@ -293,7 +293,7 @@ func (w *World) skillsWork(a *agent, region RegionID) bool {
 		if k0 < 1 {
 			continue
 		}
-		ask := jobAsk{recipe: rid, maximum: a.weight, set: true}
+		ask := jobAsk{recipe: rid, maximum: a.weight, k0: w.committedK0(k0), set: true}
 		ask.first, ask.draws = w.recordDraws(a, q.principal, region, rid, k0)
 		w.pr.asks[a.id] = ask
 		return true
@@ -323,8 +323,13 @@ func (w *World) traineeRequest(q *startReq, a *agent, region RegionID) {
 // is the trainer's recipe, so it takes the trainer's residues of it, and the
 // fraction of a unit stays with the principal (spec-production.md 6.6).
 func (w *World) residueOwner(a *agent) *agent {
-	if trainer, ok := w.skills.trainerOf(a.id); ok {
-		return &w.agents[trainer]
+	if w.skills != nil {
+		if trainer, ok := w.skills.trainerOf(a.id); ok {
+			return &w.agents[trainer]
+		}
+	}
+	if h := w.employment.unstarted(a.id); h != nil {
+		return &w.agents[h.employer] // a hired job is the employer's recipe (spec-employment.md 6.1.1)
 	}
 	return a
 }

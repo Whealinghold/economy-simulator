@@ -46,6 +46,7 @@ var positionList = [...]position{
 	{"P2.3", "RES", line},
 	{"P2.4", "SUB", line},
 	{"P2.5", "AGT", line},
+	{"P2.5a", "EMP", line},
 	{"P2.6", "RES", line},
 	{"P2.7", "PRO", line},
 	{"P2.8", "SUB", line},
@@ -93,7 +94,7 @@ var positionList = [...]position{
 var notBuiltPositions = [...]string{
 	"P0.3a",
 	"P1.3a",
-	"P2.5a", "P2.8b",
+	"P2.8b",
 	"P3.3c", "P3.4a", "P3.6b", "P3.6c",
 	"P4.1a",
 	"P8.1b", "P8.3b",
@@ -173,6 +174,9 @@ func (w *World) positionsProduce() error {
 	}
 	if err := w.p25Work(); err != nil {
 		return err
+	}
+	if w.employment != nil {
+		w.p25aLabour()
 	}
 	w.p26Ration()
 	if err := w.p27Start(); err != nil {

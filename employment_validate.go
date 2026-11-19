@@ -382,3 +382,26 @@ func upkeepValue(c *Config, lk lookup, r *Role, regions []string) int64 {
 	}
 	return best
 }
+
+// withHire multiplies the largest yield factor of a recipe that is on the hire list of
+// some employer role by the largest HireYieldBP of those roles over 10 000, when that
+// is above 1 (spec-employment.md 14.1, spec-production.md 10.3): a hired execution
+// takes the place of the trainee term of the effective factor with HireYieldBP, which
+// may be up to MaxYieldBP. A recipe on no hire list, the payroll form and the module off
+// are as they were, and a block whose factor is outside its own bound is not read (its
+// rule has spoken).
+func (v *validator) withHire(recipe string, yieldMax int64) int64 {
+	m := v.c.Modules.Employment
+	if m == nil || !m.Hire {
+		return yieldMax
+	}
+	factor := int64(wholeBP)
+	for i := range v.c.Roles {
+		b := v.c.Roles[i].Employer
+		if b != nil && b.HireYieldBP >= 1 && b.HireYieldBP <= MaxYieldBP && slices.Contains(b.Recipes, recipe) {
+			factor = max(factor, b.HireYieldBP)
+		}
+	}
+	// rounded up: the result is a bound, as withTech's is. At most 10^6 * 10^5 / 10^4.
+	return (yieldMax*factor + wholeBP - 1) / wholeBP
+}

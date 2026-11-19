@@ -66,6 +66,8 @@ var reasonNames = [...]Reason{
 	ledger.Rent:             ReasonRent,
 	ledger.TitleSale:        ReasonTitleSale,
 	ledger.Loss:             ReasonLoss,
+	ledger.WageEscrow:       ReasonWageEscrow,
+	ledger.WageRefund:       ReasonWageRefund,
 }
 
 // ledgerReason returns the ledger's reason of a root Reason, and false for a
@@ -148,7 +150,7 @@ func moduleReasons(c *Config) [][]ledger.Reason {
 		m = append(m, []ledger.Reason{ledger.EscrowIn, ledger.EscrowOut, ledger.EscrowRefund})
 	}
 	if c.Modules.Employment != nil {
-		m = append(m, []ledger.Reason{ledger.WagePay})
+		m = append(m, employmentReasons(c.Modules.Employment.Hire)...)
 	}
 	if c.Modules.Credit != nil {
 		m = append(m, creditReasons())
@@ -158,6 +160,17 @@ func moduleReasons(c *Config) [][]ledger.Reason {
 	}
 	if c.Modules.Risk != nil {
 		m = append(m, riskReasons())
+	}
+	return m
+}
+
+// employmentReasons returns the employment module's reason lists: the wage row,
+// and in the hire form the escrow rows too, which are the hire form's only (the
+// payroll form's ledger layout stays as it was).
+func employmentReasons(hire bool) [][]ledger.Reason {
+	m := [][]ledger.Reason{{ledger.WagePay}}
+	if hire {
+		m = append(m, []ledger.Reason{ledger.WageEscrow, ledger.WageRefund})
 	}
 	return m
 }

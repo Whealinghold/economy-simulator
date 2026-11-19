@@ -487,6 +487,10 @@ func reliefOn(w *World) bool { return w.relief != nil }
 // module off has no pass, and the replay leaves the row out.
 func employmentOn(w *World) bool { return w.employment != nil }
 
+// hireOn is the guard of the row of the labour round: only a world in the hire form
+// has the round, so the position hashes of the payroll form do not move.
+func hireOn(w *World) bool { return w.employment.isHire() }
+
 // skillsOn is the guard of the row of the teaching step: a world with no role that
 // trains has no state, and the replay leaves the row out.
 func skillsOn(w *World) bool { return w.skills != nil }
@@ -528,6 +532,7 @@ var replayRows = []replayRow{
 	{id: "P2.3", run: noErr((*World).p23Snapshot), on: resourcesOn},
 	{id: "P2.4", run: noErr((*World).p24OwnUse), on: subsistenceOn},
 	{id: "P2.5", run: (*World).p25Work},
+	{id: "P2.5a", run: noErr((*World).p25aLabour), on: hireOn},
 	{id: "P2.6", run: noErr((*World).p26Ration), on: resourcesOn},
 	{id: "P2.7", run: (*World).p27Start},
 	{id: "P2.8", run: noErr((*World).p28OwnUse), on: subsistenceOn},

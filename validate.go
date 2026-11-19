@@ -1508,7 +1508,7 @@ func (v *validator) yieldMax(entry map[string]int64, rc *Recipe) int64 {
 	if !rc.Sited {
 		top = max(top, wholeBP)
 	}
-	return v.withTech(rc.ID, top*MaxYieldBP/wholeBP)
+	return v.withHire(rc.ID, v.withTech(rc.ID, top*MaxYieldBP/wholeBP))
 }
 
 // overflow is phase 5: the derived products of spec-config.md 4.2 that the
