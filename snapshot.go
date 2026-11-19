@@ -83,6 +83,9 @@ type Snapshot struct {
 	// empty with the merchants module off (spec-merchants.md 15.4).
 	Contracts []ContractRow
 	Escrow    Money
+	// Hires are the hires in progress of the employment module's hire form, by hire
+	// ID; empty with the form off (spec-employment.md 15.4).
+	Hires []HireRow
 	// Outside is the state of the external module (spec-observability.md 5.3.9); the
 	// zero value with the module off.
 	Outside OutsideState
@@ -305,6 +308,10 @@ type RoleRow struct {
 	// ClampedHouseholds is the households whose welfare ring holds a field at
 	// the clamp; appended after the welfare fields.
 	ClampedHouseholds int64
+	// Employed is the households of the role on a hired job at the boundary and
+	// Employing the hired households working for agents of the role; both 0 while the
+	// hire form is off (spec-employment.md 15.4).
+	Employed, Employing int64
 	// OnOwnUse is the households in the own-use mode of the subsistence module, the
 	// sum of the weights of the agents with the flag at the boundary; 0 while the
 	// module is off (spec-subsistence.md 14.4).

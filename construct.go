@@ -230,6 +230,9 @@ func (w *World) registerBounds() {
 	if w.sto != nil {
 		w.bounds.add(hasStoreName, w.sto.holds)
 	}
+	if w.employment.isHire() {
+		w.bounds.add(openHire, w.employment.holds)
+	}
 }
 
 // seedPrices returns the function that gives the seed price of a market: the
