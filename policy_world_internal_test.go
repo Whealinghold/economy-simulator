@@ -216,7 +216,7 @@ func TestPolicy_InterfaceShape(t *testing.T) {
 // TestPolicy_NoWorldInExports verifies that no exported type of the module holds a
 // *World, so a policy never receives the world (spec-policy.md 4.3.2, FR-PLC-023).
 //
-// Requirement: FR-PLC-023
+// Requirement: FR-PLC-023, FR-PLC-035
 func TestPolicy_NoWorldInExports(t *testing.T) {
 	t.Parallel()
 	for _, typ := range []reflect.Type{
@@ -254,7 +254,7 @@ func reachedTypes(typ reflect.Type, seen map[reflect.Type]bool) []string {
 // indicator/ nor experiment/: the library never calls an indicator (spec-policy.md 4.3.3,
 // FR-PLC-091).
 //
-// Requirement: FR-PLC-091
+// Requirement: FR-PLC-091, FR-PLC-035
 func TestPolicy_NoIndicatorImport(t *testing.T) {
 	t.Parallel()
 	files := []string{"policy.go", "policy_validate.go", "policy_reach.go", "policy_warn.go", "policy_view.go", "policy_apply.go", "policy_builtin.go"}
