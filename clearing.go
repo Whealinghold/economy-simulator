@@ -302,27 +302,11 @@ func (b *book) stock(l *ledger.Ledger, acct int, lot LotKey) (held, reserved, lo
 // named-lot ask of one commodity in one book is also a violated invariant, as
 // only an estate names a lot and it names one always (spec-clearing.md 3.1.2).
 func (b *book) admit(l *ledger.Ledger, f orderFacts, o Order) (Reason, bool) {
-	if o.Commodity != b.commodity {
-		invariant("an order of another commodity reached the book of a market")
-	}
-	if o.Side != Bid && o.Side != Ask {
-		invariant("an order has a side that is neither bid nor ask")
-	}
-	bid := o.Side == Bid
-	if bid {
+	b.checkRoute(o)
+	if o.Side == Bid {
 		o.Lot = LotKey{}
 	}
-	cf := clearing.Facts{
-		AgentKnown: f.AgentKnown, SideAllowed: f.SideAllowed,
-		CommodityKnown: f.CommodityKnown, Tradable: f.Tradable,
-		Bid: bid, Price: int64(o.Price), Qty: int64(o.Quantity),
-		MaxPrice: MaxPrice, MaxQuantity: MaxQuantity, MaxMoney: MaxMoney,
-		Duplicate: b.duplicate(o),
-		Limited:   f.Limited && bid, FreeMass: f.FreeMass, FreeBulk: f.FreeBulk, SizeMass: f.SizeMass, SizeBulk: f.SizeBulk,
-	}
-	if f.AgentKnown {
-		b.readFacts(l, f, o, &cf)
-	}
+	cf := b.facts(l, f, o)
 	if code := clearing.Admit(cf); code != clearing.Admitted {
 		r, ok := reasonOfCode(code)
 		if !ok {
@@ -340,6 +324,35 @@ func (b *book) admit(l *ledger.Ledger, f orderFacts, o Order) (Reason, bool) {
 		roomed: cf.Limited, sizeMass: f.SizeMass, sizeBulk: f.SizeBulk,
 	})
 	return "", true
+}
+
+// checkRoute panics on an order that was routed to the wrong book or has no side: the
+// world routes by commodity and rejects a bad side before the book sees it (D39).
+func (b *book) checkRoute(o Order) {
+	if o.Commodity != b.commodity {
+		invariant("an order of another commodity reached the book of a market")
+	}
+	if o.Side != Bid && o.Side != Ask {
+		invariant("an order has a side that is neither bid nor ask")
+	}
+}
+
+// facts is the Facts of an order for the admission: what the world resolved (f), the
+// order itself and, for a known agent, what the ledger holds.
+func (b *book) facts(l *ledger.Ledger, f orderFacts, o Order) clearing.Facts {
+	bid := o.Side == Bid
+	cf := clearing.Facts{
+		AgentKnown: f.AgentKnown, SideAllowed: f.SideAllowed,
+		CommodityKnown: f.CommodityKnown, Tradable: f.Tradable,
+		Bid: bid, Price: int64(o.Price), Qty: int64(o.Quantity),
+		MaxPrice: MaxPrice, MaxQuantity: MaxQuantity, MaxMoney: MaxMoney,
+		Duplicate: b.duplicate(o),
+		Limited:   f.Limited && bid, FreeMass: f.FreeMass, FreeBulk: f.FreeBulk, SizeMass: f.SizeMass, SizeBulk: f.SizeBulk,
+	}
+	if f.AgentKnown {
+		b.readFacts(l, f, o, &cf)
+	}
+	return cf
 }
 
 // duplicate reports whether the book holds an order of the same (agent, lot,
