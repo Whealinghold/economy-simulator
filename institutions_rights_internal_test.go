@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"log/slog"
+	"maps"
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/ledger"
@@ -433,5 +434,43 @@ func TestRight_EstateAndCounterpartyExempt(t *testing.T) {
 	}
 	if got := of[OrderRejected](rec); len(got) != 0 {
 		t.Errorf("OrderRejected = %+v, want none for the estate", got)
+	}
+}
+
+// TestEvents_RightRefusalsMatchRejectedOrders verifies that the instruments the adapter will
+// fold from RightRefused (economysim.right.refusals, by activity) and from OrderRejected
+// (economysim.market.orders.rejected, reason not_permitted) agree for orders: each refused
+// order is counted once by each, so the Sell and Buy counts of a region equal its rejections
+// for the reason, and a dashboard must not add the two (observability-and-logging.md 5.3.1).
+//
+// Arithmetic: two bids in c are barred by buy_c (Buy 2) and one ask of a non-member in b by
+// sell_b (Sell 1); so the rejections for not_permitted are 2 in c and 1 in b.
+//
+// Requirement: FR-ORG-040, FR-ORG-055
+//
+// Guard: the adapter-change note N-405 tells the reader that the two counts overlap; if the
+// event counted a refusal the rejection did not, or the reverse, the two series would
+// disagree and the note would be wrong.
+func TestEvents_RightRefusalsMatchRejectedOrders(t *testing.T) {
+	t.Parallel()
+	w, rec, _ := orgReady(t, orgRightsToy())
+	for _, i := range orgAgents(w, orgC, orgSmith)[:2] {
+		w.submit(&w.agents[i], orgC, orgIntent(Bid))
+	}
+	_, out := orgPair(t, w)
+	w.submit(out, orgB, orgIntent(Ask))
+	w.p72bInstitutions()
+	refused := map[RegionID]int64{}
+	for _, e := range of[RightRefused](rec) {
+		refused[e.Region] += e.Sell + e.Buy
+	}
+	rejected := map[RegionID]int64{}
+	for _, e := range of[OrderRejected](rec) {
+		if e.Reason == ReasonNotPermitted {
+			rejected[e.Region]++
+		}
+	}
+	if want := map[RegionID]int64{orgB: 1, orgC: 2}; !maps.Equal(refused, want) || !maps.Equal(rejected, want) {
+		t.Errorf("refused by RightRefused = %v, by OrderRejected = %v, want both %v", refused, rejected, want)
 	}
 }
