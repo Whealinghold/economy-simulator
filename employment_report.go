@@ -28,6 +28,10 @@ import (
 // belong to plus 1, so a count of an earlier tick is dropped at the first use of
 // the tick (tallyOf) and no position has to clear it.
 type labourTally struct {
+	// roles are the counts of each role (the worker's or the employer's) in the region
+	// and tick, by RoleID: the rows of LabourRound and the two Warn lines of
+	// spec-employment.md 15.2.2.
+	roles                                         []roleLabour
 	stamp                                         int64
 	offered, hired, noVacancy, notStarted         int64
 	posted, filled, unfilled                      int64
@@ -36,12 +40,24 @@ type labourTally struct {
 	refused                                       [numLabourReasons]int64
 }
 
+// roleLabour is the counts of one role in one region and tick: the households it
+// offered as workers, those hired and those left with no vacancy, and the positions it
+// posted as an employer, those filled and those left unfilled, with the positions each
+// reason of labourReasons closed.
+type roleLabour struct {
+	offered, hired, noVacancy int64
+	posted, filled, unfilled  int64
+	refused                   [numLabourReasons]int64
+}
+
 // tallyOf returns the counts of region g in the tick, starting them afresh at the
 // first use in a tick.
 func (e *employment) tallyOf(g RegionID, tick int64) *labourTally {
 	t := &e.tally[g]
 	if t.stamp != tick+1 {
-		*t = labourTally{stamp: tick + 1}
+		roles := t.roles
+		clear(roles)
+		*t = labourTally{stamp: tick + 1, roles: roles}
 	}
 	return t
 }
@@ -52,19 +68,29 @@ func (w *World) countLane(g RegionID, l *labourLane) {
 	e := w.employment
 	t := e.tallyOf(g, w.Tick())
 	for _, o := range e.res.Offers {
+		rl := &t.roles[w.agents[l.workers[o.Ref]].role]
 		t.offered += o.Households
+		rl.offered += o.Households
 		if o.Hired {
 			t.hired += o.Households
+			rl.hired += o.Households
 		} else {
 			t.noVacancy += o.Households
+			rl.noVacancy += o.Households
 		}
 	}
 	for _, v := range e.res.Vacancies {
-		t.posted += l.posts[v.Ref].positions
+		post := &l.posts[v.Ref]
+		rl := &t.roles[w.agents[post.employer].role]
+		t.posted += post.positions
 		t.filled += v.Filled
 		t.unfilled += v.Left
+		rl.posted += post.positions
+		rl.filled += v.Filled
+		rl.unfilled += v.Left
 		if v.Left > 0 {
 			t.refused[v.Reason] += v.Left
+			rl.refused[v.Reason] += v.Left
 			w.logHireRefused(g, labourReasons[v.Reason])
 		}
 	}
@@ -86,6 +112,115 @@ func (w *World) logHireRefused(g RegionID, reason Reason) {
 	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
 		w.log.LogAttrs(ctx, slog.LevelDebug, "hire refused", slog.Int64(logkeys.Region, int64(g)), slog.String(logkeys.Reason, string(reason)))
 	}
+}
+
+// p28bLabour is P2.8b (spec-employment.md 15.1, 15.2.2): for each region in ascending
+// RegionID, the two diagnostic runs of the Warn lines advance, and, when an observer was
+// supplied and the region had any count in the tick, LabourRound is delivered. It reads
+// the counts of P2.1, P2.5a and P2.7 and changes no result.
+func (w *World) p28bLabour() {
+	e := w.employment
+	if !e.isHire() {
+		return
+	}
+	tick := w.Tick()
+	for g := range e.tally {
+		t := &e.tally[g]
+		live := t.stamp == tick+1
+		w.labourWarns(RegionID(g), t, live)
+		if live && w.obs.supplied {
+			w.obs.deliver(w.labourRound(RegionID(g), t, tick))
+		}
+	}
+}
+
+// labourWarns advances the two runs of every role of region g and logs the Warn lines
+// of spec-employment.md 15.2.2 at the first tick a run reaches warnRun and at each
+// multiple of it. A region with no count in the tick (live false) has every run reset.
+func (w *World) labourWarns(g RegionID, t *labourTally, live bool) {
+	e := w.employment
+	var idle roleLabour
+	nr := len(w.cfg.Roles)
+	for role := range nr {
+		rl, cell := &idle, int(g)*nr+role
+		if live {
+			rl = &t.roles[role]
+		}
+		if advanceCell(&e.unmatchedRun[cell], moreThanHalf(rl.noVacancy, rl.offered)) {
+			w.warnUnmatched(g, RoleID(role), rl.noVacancy)
+		}
+		if advanceCell(&e.unfilledRun[cell], rl.unfilled > 0) {
+			w.warnUnfilled(g, RoleID(role), rl)
+		}
+	}
+}
+
+// moreThanHalf says part is strictly more than half of whole, written without the
+// product (the condition of the Warn "labour unmatched"); a whole of 0 has no half.
+func moreThanHalf(part, whole int64) bool { return whole > 0 && part > whole/2 }
+
+// advanceCell advances one diagnostic run in place and says whether its Warn is due.
+func advanceCell(run *int64, active bool) bool {
+	next, warn := advanceRun(*run, active, false)
+	*run = next
+	return warn
+}
+
+// warnUnmatched logs the Warn "labour unmatched" of a worker role in region g, the
+// households it left unmatched in the tick.
+func (w *World) warnUnmatched(g RegionID, role RoleID, households int64) {
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelWarn) {
+		w.log.LogAttrs(ctx, slog.LevelWarn, "labour unmatched", slog.Int64(logkeys.Region, int64(g)),
+			slog.Int64(logkeys.Role, int64(role)), slog.Int64(logkeys.Households, households))
+	}
+}
+
+// warnUnfilled logs the Warn "vacancies unfilled" of an employer role in region g: the
+// positions left unfilled in the tick and the commonest reason that closed them.
+func (w *World) warnUnfilled(g RegionID, role RoleID, rl *roleLabour) {
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelWarn) {
+		w.log.LogAttrs(ctx, slog.LevelWarn, "vacancies unfilled", slog.Int64(logkeys.Region, int64(g)),
+			slog.Int64(logkeys.Role, int64(role)), slog.Int64(logkeys.Vacancies, rl.unfilled),
+			slog.String(logkeys.Reason, string(commonestReason(&rl.refused))))
+	}
+}
+
+// commonestReason is the reason that closed the most positions, the lower code on a tie,
+// among the codes a vacancy can end a round with (no_labour included).
+func commonestReason(refused *[numLabourReasons]int64) Reason {
+	best := payroll.ReasonTooMany
+	for code := best + 1; code < numLabourReasons; code++ {
+		if refused[code] > refused[best] {
+			best = code
+		}
+	}
+	return labourReasons[best]
+}
+
+// labourRound builds the LabourRound of region g from its counts of the tick: the fields
+// of the unbuilt modules (not_permitted, the facility reasons) are 0, and the rows are the
+// roles that had a count, in ascending RoleID.
+func (w *World) labourRound(g RegionID, t *labourTally, tick int64) LabourRound {
+	r := t.refused
+	ev := LabourRound{
+		Tick: tick, Region: g, Offered: t.offered, Hired: t.hired, NoVacancy: t.noVacancy, NotStarted: t.notStarted,
+		Posted: t.posted, Filled: t.filled, Unfilled: t.unfilled,
+		OffersRefused: t.offersRefused, VacanciesRefused: t.vacanciesRefused, Matched: t.matched,
+		TooMany: r[payroll.ReasonTooMany], NoSite: r[lrNoSite], ZeroYield: r[lrZeroYield], NoTool: r[lrNoTool],
+		NoInput: r[lrNoInput], NoEndowment: r[lrNoEndowment], NoTitle: r[lrNoTitle], RentFunds: r[lrRentFunds],
+		NoRoom: r[lrNoRoom], EmployerFunds: r[lrEmployerFunds],
+		WageBelowUnit: t.wageBelowUnit, HouseholdTicks: t.householdTicks, Paid: Money(t.paid), Refunded: Money(t.refunded),
+	}
+	for role := range t.roles {
+		rl := &t.roles[role]
+		if rl.offered > 0 {
+			ev.Workers = append(ev.Workers, LabourRow{Role: RoleID(role), Offered: rl.offered, Hired: rl.hired, NoVacancy: rl.noVacancy})
+		}
+		if rl.posted > 0 {
+			ev.Employers = append(ev.Employers, VacancyRow{Role: RoleID(role), Posted: rl.posted, Filled: rl.filled, Unfilled: rl.unfilled})
+		}
+	}
+	return ev
 }
 
 // reportHireFormed delivers HireFormed under the flag (spec-employment.md 15.1).

@@ -19,6 +19,7 @@ FacilityLimited
 FiscalFlowApplied
 HireEnded
 HireFormed
+LabourRound
 LegalLevelSet
 LoanEnded
 LoanFormed

@@ -158,7 +158,8 @@ func TestWelfare_PooledWageExcludesEmployerRoles(t *testing.T) {
 // class_without_income is not raised for a Hireable role in a world with the employment
 // module and an employer role: its income is wages (spec-demand.md 10.2).
 //
-// Requirement: FR-EMP-001
+// Guard: without the exemption the warning would tell every pack with hired labour that
+// its workers have no income, which wages are.
 func TestDemand_HireableNoClassWithoutIncomeWhenEmployerExists(t *testing.T) {
 	t.Parallel()
 	hand := DefaultRole()
@@ -178,5 +179,22 @@ func TestDemand_HireableNoClassWithoutIncomeWhenEmployerExists(t *testing.T) {
 	cfg.Modules.Employment = nil
 	if !classWithoutIncome(cfg, ro, 1_000, 100) {
 		t.Errorf("classWithoutIncome(Hireable, module off) = false, want true")
+	}
+}
+
+// TestWelfare_InKindIgnoredForWages verifies that the in-kind share of a Hireable role
+// changes nothing of a wage: the worker's income of the tick is the money wage and no
+// goods are received in kind (spec-employment.md 8.6.1); the warning inkind_wage_ignored of
+// the configuration says so.
+//
+// Requirement: FR-EMP-050
+func TestWelfare_InKindIgnoredForWages(t *testing.T) {
+	t.Parallel()
+	edit := func(c *Config) { c.Roles[1].InKind = 5_000 }
+	w := hireWorld(t, defaultHire(hireOpts{edit: edit}), farmWants(1, 100, 0))
+	hand := slotsOf(w, "hand")[0]
+	runBeforeWelfare(t, w)
+	if f := w.welfare.at(hand); f.earned != 50 || f.inKind != 0 {
+		t.Errorf("hand flows = earned %d, in kind %d, want 50 (0 + 100 * 5 000 / 10 000) and 0", f.earned, f.inKind)
 	}
 }
