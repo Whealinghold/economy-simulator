@@ -279,14 +279,33 @@ func (w *World) hiredRequest(q *startReq, a *agent, region RegionID) {
 	q.account, q.principal, q.effective, q.hasProfile = p.account, p.id, e, has
 }
 
-// snapshotHireEscrow adds the money held in the Escrow accounts of the open hires
-// to the contract sector of the snapshot: the total in escrow, the money of the
-// region and the money of the world (spec-employment.md 7.4.1).
-func (w *World) snapshotHireEscrow(s *Snapshot) {
+// HireRow is a hire in progress in the snapshot (spec-employment.md 15.4): a function
+// of the saved state. Region is the employer's, Households the executions of the job,
+// Ends the tick of its completion, TicksLeft the working ticks still to be paid,
+// Account the Escrow account and Held the money in it.
+type HireRow struct {
+	Hire             HireID
+	Region           RegionID
+	Employer, Worker AgentID
+	Recipe           RecipeID
+	Households       int64
+	Wage             Money
+	Formed, Ends     int64
+	TicksLeft        int64
+	Account          int
+	Held             Money
+}
+
+// snapshotHires adds the hires in progress to the snapshot: their rows, the money
+// held in their Escrow accounts to the contract sector (the total in escrow, the
+// money of the region and the money of the world, spec-employment.md 7.4.1), and the
+// households employed and employing to the role rows (15.4).
+func (w *World) snapshotHires(s *Snapshot) {
 	e := w.employment
 	if !e.isHire() {
 		return
 	}
+	nr := len(w.cfg.Roles)
 	for i := range e.hires {
 		h := &e.hires[i]
 		v, err := w.ledger.Account(h.escrow)
@@ -297,6 +316,13 @@ func (w *World) snapshotHireEscrow(s *Snapshot) {
 		s.Escrow = satMoney(s.Escrow, held, 0)
 		s.Regions[h.region].MoneyContract = satMoney(s.Regions[h.region].MoneyContract, held, 0)
 		s.Money = satMoney(s.Money, held, 0)
+		s.Hires = append(s.Hires, HireRow{
+			Hire: h.id, Region: h.region, Employer: h.employer, Worker: h.worker, Recipe: h.recipe, Households: h.k,
+			Wage: Money(h.wage), Formed: h.formed, Ends: h.formed + h.ticks - 1, TicksLeft: h.ticks - h.worked,
+			Account: h.escrow, Held: held,
+		})
+		s.Roles[int(h.region)*nr+int(w.agents[h.worker].role)].Employed += h.k
+		s.Roles[int(h.region)*nr+int(w.agents[h.employer].role)].Employing += h.k
 	}
 }
 
@@ -449,4 +475,18 @@ func (w *World) hiredReweighed(a *agent) {
 	}
 	w.employment.hired[h.employer] -= h.k - a.job.executions
 	h.k = a.job.executions
+}
+
+// fillHireState sets the employment group of the state of agent a: the employer of
+// the hire it works on, and the executions it holds open as an employer. It sets
+// nothing with the hire form off.
+func (w *World) fillHireState(st *AgentState, a *agent) {
+	e := w.employment
+	if !e.isHire() {
+		return
+	}
+	if h := e.hireOfWorker(a.id); h != nil {
+		st.HasEmployer, st.Employer = true, h.employer
+	}
+	st.Hired = e.hiredBy(a.id)
 }

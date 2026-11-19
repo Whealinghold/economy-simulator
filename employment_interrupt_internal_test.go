@@ -297,3 +297,54 @@ func TestRelocation_PrincipalOfOpenHire_ErrRegionBound_OpenHire_KeysAreHireIDs(t
 		t.Errorf("RelocationRefusal(employer) after the hire ended = %v, want nil", err)
 	}
 }
+
+// TestSnapshot_HiresRoleRowsAndAgentState verifies the rows of 15.4 and the group of
+// AgentState on a hire one tick into a job of 3: the HireRow (wage 70, 1 household,
+// formed at 0, ends at tick 2, 2 ticks left, the escrow account holding 140), the
+// households employed on the worker's role row and employing on the employer's, the
+// employer of the worker and the executions hired by the farm, and nothing once the
+// hire has ended.
+//
+// Requirement: FR-EMP-055
+func TestSnapshot_HiresRoleRowsAndAgentState(t *testing.T) {
+	t.Parallel()
+	log := &hireLog{}
+	w := midJob(t, 1, log)
+	farm, hand := AgentID(slotsOf(w, "farm")[0]), AgentID(slotsOf(w, "hand")[0])
+	s, err := w.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot() = %v, want nil", err)
+	}
+	h := w.employment.hires[0]
+	want := []HireRow{{Hire: 0, Region: 0, Employer: farm, Worker: hand, Recipe: 0, Households: 1, Wage: 70,
+		Formed: 0, Ends: 2, TicksLeft: 2, Account: h.escrow, Held: 140}}
+	if !slices.Equal(s.Hires, want) {
+		t.Errorf("Snapshot().Hires = %+v, want %+v", s.Hires, want)
+	}
+	if got := []int64{s.Roles[0].Employing, s.Roles[0].Employed, s.Roles[1].Employed, s.Roles[1].Employing}; !slices.Equal(got, []int64{1, 0, 1, 0}) {
+		t.Errorf("Employing and Employed of the farm role, then Employed and Employing of the hand role = %v, want [1 0 1 0]", got)
+	}
+	if s.Escrow != 140 {
+		t.Errorf("Snapshot().Escrow = %d, want 140", s.Escrow)
+	}
+	checkHireAgentState(t, w, farm, hand)
+	stepN(t, w, 2)
+	s, _ = w.Snapshot()
+	if len(s.Hires) != 0 || s.Roles[0].Employing != 0 || s.Roles[1].Employed != 0 {
+		t.Errorf("after the end: Hires %+v, Employing %d, Employed %d, want none", s.Hires, s.Roles[0].Employing, s.Roles[1].Employed)
+	}
+}
+
+// checkHireAgentState checks the employment group of AgentState of a worker and of
+// its employer, one hire of 1 household open.
+func checkHireAgentState(t *testing.T, w *World, farm, hand AgentID) {
+	t.Helper()
+	ws, err := w.Agent(hand)
+	if err != nil || !ws.HasEmployer || ws.Employer != farm || ws.Hired != 0 {
+		t.Errorf("Agent(worker) = HasEmployer %v, Employer %d, Hired %d (%v), want the farm as employer", ws.HasEmployer, ws.Employer, ws.Hired, err)
+	}
+	fs, err := w.Agent(farm)
+	if err != nil || fs.HasEmployer || fs.Hired != 1 {
+		t.Errorf("Agent(employer) = HasEmployer %v, Hired %d (%v), want 1 hired execution", fs.HasEmployer, fs.Hired, err)
+	}
+}
