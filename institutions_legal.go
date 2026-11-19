@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"cmp"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/institution"
@@ -232,7 +233,9 @@ func (o *institutions) reportControls(w *World) {
 		if l.rateTally[g] != (institution.Tally{}) {
 			l.order = append(l.order, controlRef{control: l.rateAt[g] - 1, cell: -1})
 		}
-		slices.SortFunc(l.order, func(a, b controlRef) int { return int(a.control) - int(b.control) })
+		slices.SortFunc(l.order, func(a, b controlRef) int {
+			return cmp.Or(cmp.Compare(a.control, b.control), cmp.Compare(a.cell, b.cell))
+		})
 		for _, r := range l.order {
 			w.obs.deliver(o.controlEvent(w.Tick(), RegionID(g), r))
 		}

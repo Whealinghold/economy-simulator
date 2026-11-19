@@ -332,7 +332,11 @@ func (b *book) admit(l *ledger.Ledger, f orderFacts, o Order) (Reason, bool) {
 	}
 	// The check passed, so none of the products below can fail.
 	if r, ok := b.reserve(l, f, o, cf.Tally); !ok {
+		b.clamped = false
 		return r, false
+	}
+	if changed {
+		b.org.noteClamp(b.region, b.commodity, o.Side == Bid, int64(o.Quantity))
 	}
 	b.entries = append(b.entries, bookEntry{
 		agent: o.Agent, account: f.Account, side: o.Side,
@@ -377,10 +381,9 @@ func (b *book) facts(l *ledger.Ledger, f orderFacts, o Order) clearing.Facts {
 
 // clampTo admits the order with the limit price the legal range replaced its own with
 // (spec-institutions.md 6.3.1): the reservation, the entry and the event OrderPlaced
-// carry it, and the clamp is counted for P7.2b.
+// carry it. admit counts the clamp for P7.2b once the reservation succeeds.
 func (b *book) clampTo(o *Order, price int64) {
 	o.Price, b.clamped, b.replaced = Price(price), true, Price(price)
-	b.org.noteClamp(b.region, b.commodity, o.Side == Bid, int64(o.Quantity))
 }
 
 // duplicate reports whether the book holds an order of the same (agent, lot,
