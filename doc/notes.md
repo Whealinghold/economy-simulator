@@ -51,13 +51,13 @@ PR description.
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-197, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386 |
 | CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433 |
-| CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444 |
+| CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-458, N-460 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241, N-457 |
-| CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457 |
-| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398 |
+| CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457, N-460 |
+| CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398, N-461 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-444, N-445 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-445, N-458, N-459, N-460, N-461 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361 |
@@ -77,7 +77,7 @@ PR description.
 | ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
-| PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454 |
+| PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454, N-459 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380 |
@@ -2626,12 +2626,6 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-emp PR 3.
 - **Note:** The labour round withdraws the own request of a matched worker. Its draws on an endowment stay in `resourcesState.reqs` with `executions` 0, and `p26Ration` skips a record of 0 executions, so no worker has two requests on one endowment (`rationRun` panics on that). Any new reader of `reqs` must skip a record of 0 executions. The withdrawal itself is not tested with the resources module on in PR 3 (no pack has a hireable role that draws). Check 7 `no_endowment` is tested with a test-only pack (`TestAdmission_NoEndowmentRefusesTheFormation`).
 
-### N-444 A world with a hire open cannot be checkpointed yet
-
-- **Areas:** EMP, CHK
-- **Raised:** 2026-11-18, plan 3-emp PR 3.
-- **Note:** The section of tag 24 is PR 4. Until then a checkpoint of a hire-form world with a hire in progress drops the hires and the Escrow money would not be explained on restore. No consumer should save such a world before PR 4; PR 4 adds the section and its restore test.
-
 ### N-445 The rule file names a field `HireEnded` does not have
 
 - **Areas:** EMP, OBS
@@ -2662,6 +2656,30 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-org PR C review.
 - **Note:** The root calls `clearing.AdmitClamp`; `Admit` is a wrapper kept by `spec-clearing.md` 3.2.1.1 so that a caller that reads no range is unchanged, and only tests call it. Drop it, or keep it with a test that pins it to `AdmitClamp`, when the next change touches `internal/clearing/admit.go`.
 
+### N-458 The checkpoint section of tag 24 saves the wages paid
+
+- **Areas:** EMP, CHK
+- **Raised:** 2026-11-19, plan 3-emp PR 4.
+- **Note:** `spec-employment.md` 16 lists the saved fields of a hire as the ID, the employer, the worker, the wage, the Escrow account, the formation tick and the region, and says the rest comes from the worker's job. The section also saves the wages paid so far (`paid`, `HireEnded.Paid`): after a fall of the worker's weight it is not derivable from the wage, the job and the escrow, and a restore must give the same `HireEnded` as the original (FR-EMP-043). The recipe, the executions (the hire follows the job, N-459), the ticks and the ticks worked are read from the job. Section 16 and `spec-checkpoint.md` 4.2 row 24 are to list the field. The reserve and the bid are not saved: only `HireFormed` reads them. The section also writes the two diagnostic runs of 15.2.2 as empty sparse blocks until PR 5 fills them, so the layout does not change then.
+
+### N-459 A fall of the worker's weight lowers the executions of the hire
+
+- **Areas:** EMP, PRO
+- **Raised:** 2026-11-19, plan 3-emp PR 4.
+- **Note:** `spec-employment.md` 6.4 says the job of a worker whose weight falls is re-weighed and not abandoned, and the remainder returns with the end. The code makes the hire's executions follow the job (`hiredReweighed`, one call after `reweigh` in `execReduce`), so the executions the employer holds open, the wages still owed and `HireEnded.Households` ("the executions at the end", 15.1) are those of the job, and a restore reads them from the job. The bill is not reduced: the difference is refunded with the end, as 6.4 says. A second place where a job is re-weighed would need the same call; there is none today.
+
+### N-460 A hire of a restored world is checked from the section's own load
+
+- **Areas:** EMP, CHK, CODE
+- **Raised:** 2026-11-19, plan 3-emp PR 4.
+- **Note:** The cross-check of the hires (`employmentCross`) runs at the end of the section's load, not in `checkpointCross`: it needs the agents, the jobs and the ledger, which tags 2, 3 and 6 have already loaded, and it derives the free list of Escrow accounts when the merchants module is off. With the merchants module on, its own cross-check builds the shared list and reads the hire accounts through `markEscrow`. A test that restores with both modules on and a hire and a contract in flight is not in this PR (no pack has both); the first PR that has one adds it. The public API removes only external agents, so the fork cell "after a removal" is covered by the internal round trip (`TestCheckpoint_EmploymentRoundTrip`), not by `TestFork_EmploymentHire` (the name `TestFork_Employment` is the payroll form's).
+
+### N-461 The refund of an employer's escrow before the waterfall is tested without the credit module
+
+- **Areas:** EMP, CRD
+- **Raised:** 2026-11-19, plan 3-emp PR 4.
+- **Note:** Step 2c (`dropHires`) runs before `dropClaims`, and `TestInterrupt_EmployerRemoved_*` proves the refund reached the employer's own account before the estate took it (`AgentBankrupted.Money` holds it). No test runs a removal with a claim against the employer, so that the waterfall of `spec-credit.md` 9.1 pays a creditor from the refunded escrow. The first change that has a credit pack with a hire world (the proof PR of EMP, or CRD's) adds it.
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2672,4 +2690,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: f9febf421abfd4c13223c017
+NOTES-TAG: aa05f49b403f9292322ffb0a
