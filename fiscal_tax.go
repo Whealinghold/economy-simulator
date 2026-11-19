@@ -70,10 +70,8 @@ func (w *World) dueTax(s *fiscalState, f *fiscalFlowState) {
 	rule := f.rule(w.cfgFiscalTax(f))
 	walk := w.walkCarries(f.carry, s.next[:0])
 	s.dues, s.take = s.dues[:0], s.take[:0]
-	for k, p := range s.payers {
-		if k > 0 && p.account <= s.payers[k-1].account {
-			invariant("a fiscal flow's payers are not in ascending account order: " + f.id)
-		}
+	s.checkAscending(f)
+	for _, p := range s.payers {
 		res, ok := rule.Due(p.weight, w.available(p.account), walk.start(p.account, rule.StartCarry(int64(p.account))))
 		if !ok {
 			invariant("a tax's arithmetic left its validated bounds: " + f.id)
@@ -82,6 +80,16 @@ func (w *World) dueTax(s *fiscalState, f *fiscalFlowState) {
 		s.dues, s.take = append(s.dues, res.Due), append(s.take, res.Collected)
 	}
 	f.carry, s.next = walk.finish()
+}
+
+// checkAscending refuses payers that are not in ascending account ID, which the merge
+// with the saved carries needs.
+func (s *fiscalState) checkAscending(f *fiscalFlowState) {
+	for k := 1; k < len(s.payers); k++ {
+		if s.payers[k].account <= s.payers[k-1].account {
+			invariant("a fiscal flow's payers are not in ascending account order: " + f.id)
+		}
+	}
 }
 
 // carryWalk is the merge of a flow's saved pairs with the accounts it acts on, both

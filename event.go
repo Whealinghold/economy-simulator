@@ -2680,7 +2680,8 @@ type FiscalFlowApplied struct {
 	Class  FiscalClass
 	// Commodity is the good of a payout in kind, NoCommodity for money.
 	Commodity CommodityID
-	// Due is what the rule computed and Applied what moved.
+	// Due is what the rule computed and Applied what moved: money, or units of
+	// Commodity for a payout in kind (they are not money then).
 	Due, Applied Money
 	// Parties are the payers or recipients with a due, as the sum of their weights.
 	Parties int64

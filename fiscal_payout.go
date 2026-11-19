@@ -108,6 +108,7 @@ func (w *World) duePayout(s *fiscalState, f *fiscalFlowState, pos int) {
 	if po.Amount != 0 {
 		walk = w.walkCarries(f.carry, s.next[:0])
 	}
+	s.checkAscending(f)
 	room := int64(MaxMoney)
 	if f.resource >= 0 {
 		room = MaxQuantity
