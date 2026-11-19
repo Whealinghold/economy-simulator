@@ -150,6 +150,7 @@ func TestScenarioRSK5_ScriptedScales(t *testing.T) {
 		checkExact(t, rep, "S130", "two", seed, "the surge strikes at least one dispatch", len(struck) > 0, "%d dispatches struck", len(struck))
 		// Not "struck iff lost": a strike can take no unit (rounding), so only a loss implies a strike.
 		checkExact(t, rep, "S130", "two", seed, "a unit is lost only by a dispatch that was struck", lost == 0 || len(struck) > 0, "%d dispatches struck and %d units lost", len(struck), lost)
+		checkExact(t, rep, "S130", "two", seed, "a shipment struck before the patrol still loses units at its arrival", lost > 0, "%d units lost", lost)
 		msgLoss := unstruckLoss(rw.rec.events)
 		checkExact(t, rep, "S130", "two", seed, "a patrol after the dispatch gives no share and takes none that was given", msgLoss == "", "%s", msgLoss)
 		rep.num(seed, "dispatches struck at the surge", int64(len(struck)))
