@@ -239,6 +239,17 @@ func TestRoute_Layer(t *testing.T) {
 	if s := errVal(w.Slots()); len(s.TransitFactors) != 1 || s.TransitFactors[0].BP != 20_000 {
 		t.Errorf("Slots().TransitFactors = %+v, want the consumer's 20 000 and not the layer's 30 000", s.TransitFactors)
 	}
+}
+
+// TestRoute_LayerCapClosedAndSum verifies the rest of the layer rule (5.2.2): the factor is
+// capped at MaxTransitFactorBP, a slot of 0 stays closed whatever the road, and the gains
+// of two roads add. Split from TestRoute_Layer to keep each test within the complexity limit.
+//
+// Requirement: FR-CAP-021
+func TestRoute_LayerCapClosedAndSum(t *testing.T) {
+	t.Parallel()
+	w, _ := routeWorld(t, nil)
+	facRoad(t, w, regHome, regFar)
 	if got := w.infra.layer(regHome, regFar, modeFoot, MaxTransitFactorBP); got != MaxTransitFactorBP {
 		t.Errorf("layer at the slot bound = %d, want it capped at %d", got, int64(MaxTransitFactorBP))
 	}
