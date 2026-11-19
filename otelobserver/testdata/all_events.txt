@@ -15,10 +15,12 @@ EndowmentChanged
 EntryLimited
 EstateOpened
 FacilityChanged
+LegalLevelSet
 LoanEnded
 LoanFormed
 LoanPassed
 MarketCleared
+MembershipChanged
 MerchantsPlanned
 MigrationReviewed
 MigrationStarted
@@ -34,6 +36,7 @@ OwnUseChanged
 PayrollPaid
 PopulationChanged
 PopulationScaled
+PriceControlled
 ProductionHalted
 RecipeAbandoned
 RecipeExecuted
@@ -41,6 +44,8 @@ RecipeRefused
 ReliefPaid
 RentPaid
 RentScaled
+RightRefused
+RightSuspensionSet
 RoleChanged
 RoomLimited
 RouteRiskScaled

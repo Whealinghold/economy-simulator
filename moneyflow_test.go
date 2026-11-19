@@ -90,6 +90,7 @@ func moneyFieldCases() []fieldCase {
 		mon("MoneyFlow.NotIncome", "on a levy", economysim.ErrFlowShape, func(f *economysim.MoneyFlow) { f.NotIncome = true }, "charge", "not_income"),
 		mon("FlowTarget.Kind", "not a kind", bounds, func(f *economysim.MoneyFlow) { f.Target.Kind = "bogus" }, "stipend", "target.kind"),
 		mon("FlowTarget.Region", "unknown region", economysim.ErrUnknownRegion, func(f *economysim.MoneyFlow) { f.Target.Region = "nowhere" }, "stipend", "target.region"),
+		mon("FlowTarget.Jurisdiction", "on a target that is not a treasury", economysim.ErrFlowShape, func(f *economysim.MoneyFlow) { f.Target.Jurisdiction = "inland" }, "stipend", "target.jurisdiction"),
 		mon("FlowTarget.Role", "unknown role", economysim.ErrUnknownRole, func(f *economysim.MoneyFlow) { f.Target.Role = "nobody" }, "stipend", "target.role"),
 	}
 }

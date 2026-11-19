@@ -731,3 +731,20 @@ var (
 	// (spec-institutions.md 7.1.1).
 	ErrUnknownRight = errors.New("unknown right")
 )
+
+// The sentinels of the fiscal module (spec-fiscal.md 15.1, FR-FIS-012). They are root
+// sentinels matched with errors.Is (N-075). The module reuses ErrModuleDependency,
+// ErrTooMany, ErrInvalidID, ErrDuplicateID, ErrReasonCollision,
+// ErrUnknownJurisdiction, ErrUnknownRole, ErrUnknownRegion, ErrUnknownCommodity,
+// ErrUnknownMode, ErrUnknownSeason, ErrOutOfBounds, ErrUnknownFlow and ErrModuleOff.
+var (
+	// ErrNotGoverned is an Authority, or a target treasury, with no seat: a grouping
+	// jurisdiction has no treasury.
+	ErrNotGoverned = errors.New("jurisdiction is not governed")
+	// ErrNotCovered is a Region the authority does not cover, or a target treasury that
+	// is not a proper descendant of the authority.
+	ErrNotCovered = errors.New("region or treasury is not covered by the authority")
+	// ErrFiscalShape is a fiscal flow of the wrong shape: a wrong combination of its
+	// fields (spec-fiscal.md 15.1).
+	ErrFiscalShape = errors.New("fiscal flow has the wrong shape")
+)
