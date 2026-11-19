@@ -145,3 +145,47 @@ func TestSort_OrderIndependentOfInput(t *testing.T) {
 func rotate[T any](s []T) []T {
 	return append(slices.Clone(s[1:]), s[0])
 }
+
+// TestPremium_FactorOverflowAndLimitBoundary verifies the two edges the worked
+// examples never reach: a product of the three basis-point factors that does not
+// fit int64 is refused at either multiplication, and a premium exactly equal to
+// the limit passes while one above it does not.
+//
+// Guard: the factors are multiplied before the 128-bit division (spec-insurance.md
+// 6.4.1). Without the checks a wrapped k would give a small, wrong premium instead
+// of the overflow outcome, and a `>` turned into `>=` would refuse a premium that
+// fits.
+//
+// Requirement: FR-INS-022, FR-INS-024, NFR-INS-005
+func TestPremium_FactorOverflowAndLimitBoundary(t *testing.T) {
+	t.Parallel()
+	// 2^40 * 2^40 = 2^80 overflows at the first product; 10^9 * 10^9 = 10^18 fits
+	// and * 10^9 = 10^27 overflows at the second. The example of 19.1 gives 154
+	// at rate 1 357, so a limit of 154 is the exact boundary.
+	tests := []struct {
+		name                         string
+		sum, lossBP, coverBP, loadBP int64
+		limit                        int64
+		wantP, wantRate              int64
+		wantOK                       bool
+	}{
+		{"first product overflows", 1, 1 << 40, 1 << 40, 1, maxMoney, 0, 0, false},
+		{"second product overflows", 1, 1e9, 1e9, 1e9, maxMoney, 0, 0, false},
+		{"premium equals the limit", 1134, 1305, 8000, 13000, 154, 154, 1357, true},
+		{"premium one above the limit", 1134, 1305, 8000, 13000, 153, 0, 0, false},
+		{"zero sum", 0, 1305, 8000, 13000, 0, 0, 1357, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			p, rate, ok := insure.Premium(tt.sum, tt.lossBP, tt.coverBP, tt.loadBP, tt.limit)
+			if p != tt.wantP || rate != tt.wantRate || ok != tt.wantOK {
+				t.Errorf("Premium(%d, %d, %d, %d, %d) = %d, %d, %v, want %d, %d, %v",
+					tt.sum, tt.lossBP, tt.coverBP, tt.loadBP, tt.limit, p, rate, ok, tt.wantP, tt.wantRate, tt.wantOK)
+			}
+		})
+	}
+	if p, ok := insure.StorePremium(1000, 1000, 100); p != 100 || !ok {
+		t.Errorf("StorePremium(1000, 1000) with limit 100 = %d, %v, want 100, true (1000 * 1000 / 10 000)", p, ok)
+	}
+}
