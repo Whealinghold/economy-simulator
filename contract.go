@@ -1079,6 +1079,7 @@ func (w *World) admitOffers() {
 			continue
 		}
 		used++
+		w.org.clampOffer(&s.o)
 		w.rnd.keyedPair(siteContract, tick, int64(s.agent), int64(2*s.idx))
 		m.offers = append(m.offers, roundOffer{agent: s.agent, region: w.regionOf(a), o: s.o, key: w.rnd.word()})
 		m.cnt(supplied, s.o.To).offers++
@@ -1103,11 +1104,14 @@ func (w *World) admitTakes() {
 	for i := range m.subTakes {
 		s := &m.subTakes[i]
 		a := &w.agents[s.agent]
-		region := w.regionOf(a)
+		region, limit := w.regionOf(a), s.t.Limit
 		if reason := w.takeRefusal(a, s); reason != "" {
 			m.cnt(supplied, region).takesRefused++
 			w.logContractRefused("take refused", s.agent, reason)
 			continue
+		}
+		if s.t.Limit != limit {
+			w.org.noteClamp(region, s.t.Commodity, true, int64(s.t.Quantity))
 		}
 		w.rnd.keyedPair(siteContract, tick, int64(s.agent), int64(2*s.idx+1))
 		m.takes = append(m.takes, roundTake{agent: s.agent, region: region, t: s.t, key: w.rnd.word()})
@@ -1138,9 +1142,21 @@ func (w *World) takeRefusal(a *agent, s *submittedTake) Reason {
 			return ReasonDuplicateTake
 		}
 	}
+	return w.takeFunds(a, t)
+}
+
+// takeFunds is rows 9 and 10 of a take, with the legal clamp of the institutions module
+// between them (spec-merchants.md 9.3, spec-institutions.md 6.7.1): the value of the limit
+// does not fit MaxMoney, then the limit is lowered to the cap in force for the commodity in
+// the destination region (the take's own), then the value at the admitted limit is above
+// the available cash. It leaves the admitted limit in the take.
+func (w *World) takeFunds(a *agent, t *DeliveryTake) Reason {
 	value, ok := checked.Mul(int64(t.Limit), int64(t.Quantity))
 	if !ok || value > MaxMoney {
 		return ReasonOverflow
+	}
+	if p, changed := w.org.clampLimit(w.regionOf(a), t.Commodity, true, t.Limit); changed {
+		t.Limit, value = p, int64(p)*int64(t.Quantity) // a lower limit: the product fits
 	}
 	if value > w.cash(a) {
 		return ReasonInsufficientFunds

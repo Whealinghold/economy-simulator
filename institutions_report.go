@@ -30,6 +30,7 @@ func (w *World) p72bInstitutions() {
 	}
 	if w.obs.supplied {
 		o.reportRights(w)
+		o.reportControls(w)
 	}
 }
 

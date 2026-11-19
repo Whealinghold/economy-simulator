@@ -245,6 +245,13 @@ type book struct {
 	// invalid is returned, by pointer, by a failed clearMarket so that the
 	// failure allocates nothing; it is overwritten by the next failure.
 	invalid tradeListError
+	// org is the institutions module, nil when it is off: the legal range of the market
+	// is read from it at each admission (spec-institutions.md 6.3). clamped says the
+	// last order admitted had its limit replaced by the range, and replaced is the limit it
+	// was admitted with, which OrderPlaced shows.
+	org      *institutions
+	clamped  bool
+	replaced Price
 }
 
 // newBook returns an empty book of the market (region, commodity) of a tick.
@@ -311,12 +318,17 @@ func (b *book) admit(l *ledger.Ledger, f orderFacts, o Order) (Reason, bool) {
 		o.Lot = LotKey{}
 	}
 	cf := b.facts(l, f, o)
-	if code := clearing.Admit(cf); code != clearing.Admitted {
+	b.clamped = false
+	code, price, changed := clearing.AdmitClamp(cf)
+	if code != clearing.Admitted {
 		r, ok := reasonOfCode(code)
 		if !ok {
 			invariant("admission returned a code with no reason")
 		}
 		return r, false
+	}
+	if changed {
+		b.clampTo(&o, price)
 	}
 	// The check passed, so none of the products below can fail.
 	if r, ok := b.reserve(l, f, o, cf.Tally); !ok {
@@ -357,7 +369,18 @@ func (b *book) facts(l *ledger.Ledger, f orderFacts, o Order) clearing.Facts {
 	if f.AgentKnown {
 		b.readFacts(l, f, o, &cf)
 	}
+	if b.org != nil {
+		cf.Cap, cf.Floor = b.org.rangeAt(b.region, b.commodity)
+	}
 	return cf
+}
+
+// clampTo admits the order with the limit price the legal range replaced its own with
+// (spec-institutions.md 6.3.1): the reservation, the entry and the event OrderPlaced
+// carry it, and the clamp is counted for P7.2b.
+func (b *book) clampTo(o *Order, price int64) {
+	o.Price, b.clamped, b.replaced = Price(price), true, Price(price)
+	b.org.noteClamp(b.region, b.commodity, o.Side == Bid, int64(o.Quantity))
 }
 
 // duplicate reports whether the book holds an order of the same (agent, lot,
@@ -466,6 +489,9 @@ func (b *book) reserveRoom(l *ledger.Ledger, f orderFacts, o Order) {
 func (b *book) emitPlaced(obs *observers, o Order) {
 	if !obs.supplied {
 		return
+	}
+	if b.clamped {
+		o.Price = b.replaced
 	}
 	obs.deliver(OrderPlaced{
 		Tick: b.tick, Region: b.region, Commodity: o.Commodity, Agent: o.Agent,

@@ -207,11 +207,16 @@ func (o *institutions) startBarred(w *World, a, p *agent, trainee bool, g Region
 }
 
 // attach is the construction call that gives the module what the world holds and the
-// module does not: the counts of the refusals of the rights, which exist only when an
-// observer was supplied (observability-and-logging.md 4.5), so a world without one
-// keeps none. A nil module does nothing.
-func (o *institutions) attach(supplied bool) {
-	if o != nil && supplied {
+// module does not: the books of the markets, which read the legal range, and the counts of
+// the refusals of the rights and of the clamps, which exist only when an observer was
+// supplied (observability-and-logging.md 4.5), so a world without one keeps none. A nil
+// module does nothing.
+func (o *institutions) attach(m *marketTable, supplied bool) {
+	if o == nil {
+		return
+	}
+	o.attachBooks(m, supplied)
+	if supplied {
 		o.rights.refused = make([]int64, o.nr*len(o.m.Rights))
 	}
 }

@@ -229,7 +229,7 @@ func TestCredit_RateSeamInvariants(t *testing.T) {
 	t.Run("negative cap", func(t *testing.T) {
 		t.Parallel()
 		w, _, _ := loanWorld(t, newLoanScript())
-		w.credit.rateCap = func(RegionID) (int64, bool) { return -1, true }
+		w.credit.rateCap = func(RegionID, int64) (int64, bool) { return -1, true }
 		w.credit.round.reqs = []subRequest{{hMillA, CreditRequest{Principal: 1_000, Term: 30, MaxRateBP: 500}}}
 		w.creditPrices()
 		if msg := invariantMessage(w.admitCreditRequests); !strings.Contains(msg, want) {
@@ -239,7 +239,7 @@ func TestCredit_RateSeamInvariants(t *testing.T) {
 	t.Run("a cap below 0 that reports no cap is ignored", func(t *testing.T) {
 		t.Parallel()
 		w, _, _ := loanWorld(t, newLoanScript())
-		w.credit.rateCap = func(RegionID) (int64, bool) { return -1, false }
+		w.credit.rateCap = func(RegionID, int64) (int64, bool) { return -1, false }
 		w.credit.round.reqs = []subRequest{{hMillA, CreditRequest{Principal: 1_000, Term: 30, MaxRateBP: 500}}}
 		w.creditPrices()
 		if msg := invariantMessage(w.admitCreditRequests); msg != "" {

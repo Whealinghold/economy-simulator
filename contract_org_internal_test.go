@@ -80,3 +80,44 @@ func TestContract_RightRowIsAfterGoodsBeforeAmounts(t *testing.T) {
 		t.Errorf("refusals of an offer that fails the right and the amount = %v, want [not_permitted]", offers)
 	}
 }
+
+// TestContract_TakeCappedOfferFloored verifies the clamp of the contract round
+// (spec-institutions.md 6.7.1): a take's bid limit above the cap in force for the commodity
+// in the destination region is lowered to it, an offer's ask limit below the floor is raised,
+// the funds of the take are tested at the lowered limit, and the contract forms at the
+// midpoint of the clamped limits.
+//
+// Arithmetic: the reference price of grain is 1 000, so the cap of 12 000 bp is 1 200 and the
+// floor of 8 000 bp is 800. The offer of 8 units at 500 is raised to 800 and the take of 8
+// units at 2 000 lowered to 1 200; the midpoint is (800 + 1 200) / 2 = 1 000, escrowing 8 000.
+// Without the law the take would need 8 * 2 000 = 16 000 against a cash of 10 000 and be refused
+// for funds; at 1 200 it needs 9 600 and is admitted. PriceControlled counts one bid and one ask
+// and the 16 units.
+//
+// Requirement: FR-ORG-035, FR-MER-064
+func TestContract_TakeCappedOfferFloored(t *testing.T) {
+	t.Parallel()
+	plan := roundPlan{
+		offers: map[AgentID][]DeliveryOffer{brokerHome: {{Mode: modeCoach, To: regFar, Commodity: cGrain, Quantity: 8, Limit: 500}}},
+		takes:  map[AgentID][]DeliveryTake{brokerFar: {{Commodity: cGrain, Quantity: 8, Limit: 2_000}}},
+	}
+	mut := func(c *Config) {
+		c.Modules.Institutions = &Institutions{Controls: []Control{{ID: "assize", Commodity: "grain", Region: "b_far", CapBP: 12_000, FloorBP: 8_000}}}
+	}
+	w, rec, cp := roundWorld(t, mut, plan, brokerHome)
+	step(t, w, 1)
+	if _, takes := refusals(cp); len(takes) != 0 {
+		t.Errorf("refusals of takes = %v, want none: the funds are tested at the cap", takes)
+	}
+	got := of[ContractFormed](rec)
+	if len(got) != 1 || got[0].Price != 1_000 || got[0].Quantity != 8 || got[0].Escrowed != 8_000 {
+		t.Fatalf("ContractFormed = %+v, want one of 8 units at 1 000 escrowing 8 000", got)
+	}
+	want := PriceControlled{Tick: 0, Region: regFar, Control: 0, Commodity: cGrain, Bids: 1, Asks: 1, Units: 16}
+	if pc := of[PriceControlled](rec); len(pc) != 1 || pc[0] != want {
+		t.Errorf("PriceControlled = %+v, want [%+v]", pc, want)
+	}
+	if got := w.org.legal.tally[int(regFar)*len(w.cfg.Commodities)+int(cGrain)]; got.Lowered != 0 {
+		t.Errorf("tally after P7.2b = %+v, want it cleared", got)
+	}
+}
