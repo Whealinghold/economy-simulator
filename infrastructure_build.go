@@ -252,11 +252,11 @@ func (n *infrastructure) started(region RegionID, q *startReq, k, cut int64) {
 // refused counts a start refused whole for a reason of 4.2.2 under an observer (14.1):
 // Refused by one, and Cut by the executions the capacity took off when the reason is
 // no_facility. It is nil-safe and ignores every other reason.
-func (n *infrastructure) refused(a *agent, region RegionID, recipe RecipeID, reason Reason, free int64) {
+func (n *infrastructure) refused(principal AgentID, region RegionID, recipe RecipeID, reason Reason, free int64) {
 	if n == nil || !n.world.obs.supplied {
 		return
 	}
-	class, ok := n.refusalClass(a.id, region, recipe, reason)
+	class, ok := n.refusalClass(principal, region, recipe, reason)
 	if !ok {
 		return
 	}

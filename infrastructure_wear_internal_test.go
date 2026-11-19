@@ -236,3 +236,38 @@ func TestEvents_FacilityLimitedCutIsBookedOnTheBindingClass(t *testing.T) {
 		t.Errorf("FacilityLimited of the kiln = %+v, want none: the kiln did not bind and an event is emitted only for a non-zero Cut, Refused, Voided or Pending (seed %d)", onKiln, facSeed)
 	}
 }
+
+// TestRefusal_CountsAgainstThePrincipalsClass verifies that the class a no_facility refusal is
+// counted against is read from the principal's facilities: the recipe needs the arbor and the
+// mill, the principal holds an arbor and no mill, so the class is the mill, while a worker with
+// neither is told the first needed class, the arbor.
+//
+// Requirement: FR-CAP-013
+//
+// Guard: a hired start is refused for the employer's full class, and World.refuseFor passes the
+// principal here; read as the executor, the class would be the first needed one whatever bound.
+// The wiring of refuseFor itself has no test, since a hire cannot form without the facility.
+func TestRefusal_CountsAgainstThePrincipalsClass(t *testing.T) {
+	t.Parallel()
+	w, _, _ := bldWorld(t, func(c *Config) {
+		m := c.Modules.Infrastructure
+		m.Classes = append(m.Classes, FacilityClass{ID: "arbor", Kind: "site", Durability: 1_000, Capacity: 10})
+		c.Recipes = append(c.Recipes, Recipe{ID: "zz_two", TraineeYield: 5_000, Duration: 1, Inputs: []Item{{Commodity: "grain", Quantity: 1}},
+			Needs: []string{"arbor", "mill"}, Outputs: []Output{{Commodity: "flour", Quantity: 2, CostShare: 10_000}}})
+		c.Roles[0].Recipes = append(c.Roles[0].Recipes, "zz_two")
+	})
+	classes := w.cfg.Modules.Infrastructure.Classes
+	arbor := FacilityClassID(slices.IndexFunc(classes, func(c FacilityClass) bool { return c.ID == "arbor" }))
+	mill := FacilityClassID(slices.IndexFunc(classes, func(c FacilityClass) bool { return c.ID == "mill" }))
+	principal, worker := bldMiller(w, 0), bldMiller(w, 1)
+	bldAdd(t, w, arbor, principal, 1)
+	w.infra.rebuild()
+	recipe := bldRecipe(t, w, "zz_two")
+	got, ok := w.infra.refusalClass(principal, 0, recipe, ReasonNoFacility)
+	if !ok || got != mill {
+		t.Errorf("refusalClass(principal with an arbor and no mill) = %d, %v, want the mill %d (seed %d)", got, ok, mill, facSeed)
+	}
+	if got, _ := w.infra.refusalClass(worker, 0, recipe, ReasonNoFacility); got != arbor {
+		t.Errorf("refusalClass(worker with neither) = %d, want the first needed class %d, the arbor (seed %d)", got, arbor, facSeed)
+	}
+}
