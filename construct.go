@@ -74,7 +74,6 @@ func (w *World) construct(warnings []Warning) error {
 	checkCensus(b.plans, &b.w.cfg, b.w.live.agents, b.w.live.households)
 	b.w.set.found(b.w)
 	b.wireSeams()
-	b.w.wireOrgHeadroom() // after the settlements module filled the slot, so the least of the two limits wraps it
 	if b.w.tenure != nil {
 		b.w.tenure.found(b.w) // step 8a: the titles of the holdings, before the warm start
 	}

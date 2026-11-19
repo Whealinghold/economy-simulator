@@ -297,7 +297,8 @@ func (w *World) storeClassGate() func(RegionID, int) bool {
 // completion (hook H-10) and the gate of the store classes (spec-storage.md 3.2.3). A
 // restore calls it too, after allocation, so a restored world holds the slots the
 // uninterrupted one holds (N-462); construction calls it after the initial agents, which the
-// gate would otherwise refuse before lockStores counts them. It does nothing without the module.
+// gate would otherwise refuse before lockStores counts them. It does nothing without the module (the wrap of the institutions
+// module is then wired by allocation).
 func (w *World) wireSlots() {
 	if w.set == nil {
 		return
@@ -308,6 +309,7 @@ func (w *World) wireSlots() {
 	if w.sto != nil {
 		w.sto.gate = w.storeClassGate()
 	}
+	w.wireOrgHeadroom() // last, so the least of the two limits wraps the slot just set
 }
 
 // wireSeams takes from the initial agents the stores a class lacks, once the classes of
