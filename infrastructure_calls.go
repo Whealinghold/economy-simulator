@@ -95,7 +95,7 @@ func (w *World) AddFacilities(adds []NewFacility) ([]FacilityID, error) {
 	for i, p := range plan {
 		ids[i] = n.apply(p)
 	}
-	n.rebuild()
+	n.settle()
 	return ids, nil
 }
 
@@ -267,7 +267,7 @@ func (w *World) AdjustFacilities(changes []FacilityAdjustment) error {
 	for _, i := range byID(ids) {
 		n.adjust(changes[i])
 	}
-	n.rebuild()
+	n.settle()
 	return nil
 }
 
@@ -374,7 +374,7 @@ func (w *World) TransferFacilities(moves []FacilityTransfer) error {
 	for _, i := range byID(ids) {
 		n.move(moves[i])
 	}
-	n.rebuild()
+	n.settle()
 	return nil
 }
 
@@ -439,7 +439,7 @@ func (w *World) dropFacilities(a *agent) {
 		n.give(i, AgentID(f.region))
 		w.reportFacility(f, FacilityTransferred, CauseOwnerRemoved, f.condition, 0)
 	}
-	n.rebuild()
+	n.settle()
 }
 
 // Facility returns one facility: its record, its class, region, target, owner, condition,
@@ -474,4 +474,30 @@ func (w *World) Facilities(r RegionID) ([]FacilityState, error) {
 		}
 	}
 	return out, nil
+}
+
+// facilitiesEnded is the step of a role change for the module (spec-infrastructure.md 5.4.3,
+// FR-CAP-047): a role with no base room ends every store of the agent, so its installed
+// store facilities are ruined, in ascending ID, with cause role_changed, after the
+// RoleChanged and storage's StoreChanged events of the change. The stores are already gone
+// (the goods outside the new room went to the estate in the change, so no lots are
+// listed here and no second removal is made); a pending facility has no store and stays
+// pending. The ruin happens with or without an observer. It is nil-safe: with the module
+// off it does nothing.
+func (w *World) facilitiesEnded(a *agent) {
+	n := w.infra
+	if n == nil || w.sto == nil || len(n.byOwner[a.id]) == 0 || w.sto.limited(a) {
+		return
+	}
+	for _, id := range slices.Clone(n.byOwner[a.id]) {
+		i := n.index(id)
+		f := n.fac[i]
+		if !f.installed {
+			continue
+		}
+		before := f.condition
+		n.remove(i)
+		f.condition = 0
+		w.reportFacility(&f, FacilityRuined, CauseRoleChanged, before, 0)
+	}
 }

@@ -366,7 +366,10 @@ later takes the next number, and a code is never moved or reused, as a tag is no
 The code of a configured money flow or fiscal flow is 42 plus its position in the ID order
 of the flows the configuration declares (the two kinds share one ID namespace,
 `spec-money-supply.md` 4.5.2), so adding a reason to the library never changes saved
-bytes. A code at or above 42 plus the number of flows, or the code of a reason whose module
+bytes. A built-in reason that a module declares takes a pinned code below 42 (`premium` 30
+and `payout` 31 are the insurance module's, plan 3-ins D2); no module takes a code of 42 or
+above for one, because that range is a configured flow's and would be read back as a flow
+(N-471). A code at or above 42 plus the number of flows, or the code of a reason whose module
 is off, is corrupt (R6). A **thing** is `0` for money and `1 + c` for the commodity index
 `c`, checked against the commodity count (R6).
 

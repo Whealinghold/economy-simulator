@@ -994,7 +994,7 @@ A strategy may ignore beliefs, the tradable set's targets and the default rules,
 price and size however it likes, within 6.5. It may call the default strategy's
 methods: `DefaultStrategy` is exported and stateless, and a consumer's type holds one
 in a named field and delegates (architecture.md 4.7 forbids embedding in a public
-struct). The pure rules of the saving module are exported beside it, `SavingTarget(v *AgentView)`
+struct). The pure rules of the saving module are exported beside it, `SavingTarget(v *AgentView, tier2 int64)`
 and `ChooseProject(v *AgentView)` (`spec-saving-and-investment.md` 4.3.3, FR-SAV-042), as are
 `DefaultCover` and `DefaultOffer` of the insurance module (`spec-insurance.md` 10.4). That is the wrapper for the default belief rule that `spec-beliefs.md` 10.5
 asks this spec to decide: `DefaultStrategy.Revise`. The merchant strategy of

@@ -72,8 +72,9 @@ func facilityForkCells() []facilityForkCell {
 // ID and the installed flag; the lists and tables are rebuilt from them).
 //
 // Setup: infrastructureConfig (all four kinds, two initial mills), seed 7, M = 30 ticks
-// after the boundary. The module has no step yet, so the records change only at a call:
-// the cells prove that what a restore rebuilds does not drift from what a run keeps.
+// after the boundary. The facility step decays the records every tick and the calls change
+// them between ticks: the cells prove that what a restore rebuilds does not drift from what
+// a run keeps.
 //
 // Requirement: FR-CAP-041, FR-CAP-029, FR-CHK-050
 func TestFork_Infrastructure(t *testing.T) {

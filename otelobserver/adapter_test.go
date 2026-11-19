@@ -277,7 +277,7 @@ var (
 	ignoredEvents = []string{"EstateOpened", "EdgeStatusChanged", "ReliefPaid", "MoneyFlowEnded", "MoneyFlowScaled",
 		"PopulationScaled", "TransitFactorChanged", "OutsideEnded", "OutsideShocked", "YieldShocked",
 		"TraineeshipStarted", "TraineeshipCompleted", "TraineeshipEnded", "StoreChanged", "RoomLimited", "TechnologyAdvanced", "TechnologyAdjusted", "LoanEnded", "LoanPassed", "CreditSettled", "LoanFormed", "CreditRound", "CreditRateScaled",
-		"SettlementClassChanged", "SettlementHeld", "TitleTransferred", "RentScaled", "RentPaid", "FacilityChanged", "HireFormed", "HireEnded", "RouteRiskScaled", "MembershipChanged", "RightRefused", "PriceControlled",
+		"SettlementClassChanged", "SettlementHeld", "TitleTransferred", "RentScaled", "RentPaid", "FacilityChanged", "FacilityLimited", "HireFormed", "HireEnded", "RouteRiskScaled", "MembershipChanged", "RightRefused", "PriceControlled",
 		"LegalLevelSet", "RightSuspensionSet", "StoreLoss", "StoreRiskScaled", "FiscalFlowApplied"}
 )
 

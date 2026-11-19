@@ -52,7 +52,10 @@ type transportState struct {
 	next    ShipmentID
 	ships   []shipment
 	factors []factorRec
-	modes   []modeRes
+	// layer is the factor of a pair after the facility gain, set by the infrastructure
+	// module and nil without a route class (the factor is then the slot). Derived.
+	layer func(from, to RegionID, mode ModeID, slot int64) int64
+	modes []modeRes
 	// free is, per origin region, the open Transit accounts no shipment uses.
 	free []transit.Free
 	// due is the arrival schedule: the shipments by (arrival tick, ID). It is derived
@@ -158,6 +161,17 @@ func (t *transportState) factorOf(from, to RegionID, mode ModeID) int64 {
 		return defaultTransitBP
 	}
 	return t.factors[i].bp
+}
+
+// effective is the transit factor that dispatch and Travel use: the slot passed through
+// the layer of the infrastructure module when there is one (spec-infrastructure.md 5.2.2).
+// Slots and the snapshot keep the slot value, which is the consumer's.
+func (t *transportState) effective(from, to RegionID, mode ModeID) int64 {
+	f := t.factorOf(from, to, mode)
+	if t.layer == nil {
+		return f
+	}
+	return t.layer(from, to, mode, f)
 }
 
 // cmpFactorKey orders factor records by (from, to, mode).

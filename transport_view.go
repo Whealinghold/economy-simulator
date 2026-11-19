@@ -179,7 +179,7 @@ func (w *World) travel(from, to RegionID, mode ModeID) (ticks, haulPerUnit int64
 		return 0, 0, false
 	}
 	d, ok := w.geo.distance(from, to)
-	f := w.transport.factorOf(from, to, mode)
+	f := w.transport.effective(from, to, mode)
 	md := &w.cfg.Modules.Transport.Modes[mode]
 	if !ok || f == 0 {
 		return 0, 0, false
