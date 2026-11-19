@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/Whealinghold/economy-sim/internal/codec"
+	"github.com/Whealinghold/economy-sim/internal/institution"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
 )
 
@@ -44,15 +45,14 @@ func (o *institutions) reportCell(w *World, g, b int) {
 	if warn {
 		w.warnWaiting(g, b, out.Waiting)
 	}
-	if !w.obs.supplied || (out.Admitted == 0 && out.LapsedList == 0 && out.LapsedScope == 0 && out.Skipped == 0 &&
-		out.Barred == 0 && out.Waiting == 0) {
+	if !w.obs.supplied || *out == (institution.Outcome{}) {
 		return
 	}
 	w.obs.deliver(MembershipChanged{
 		Tick: w.Tick(), Region: RegionID(g), Body: BodyID(b),
 		Members: o.rd.members[cell], Places: o.places[b], Eligible: o.rd.eligible[cell],
 		Admitted: out.Admitted, LapsedRole: out.LapsedList, LapsedRegion: out.LapsedScope,
-		Skipped: out.Skipped, Barred: out.Barred, Waiting: out.Waiting,
+		Skipped: out.Skipped, Barred: out.Barred, Waiting: out.Waiting, Held: out.Held,
 	})
 }
 

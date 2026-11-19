@@ -197,6 +197,9 @@ func (w *World) fillRoles(g RegionID) {
 	if w.set != nil {
 		w.fillRoleGates(g)
 	}
+	if w.org != nil {
+		w.fillRoleBodies(g)
+	}
 }
 
 // toolPrice is the published price, in the region being viewed, of the tool
