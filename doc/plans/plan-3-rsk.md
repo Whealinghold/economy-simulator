@@ -389,7 +389,7 @@ Left open for PR D: the module-alone goldens, S126 to S131, `TestFork_Risk`, `Te
 
 ## PR D result (Phase 8, recorded when PR D was built)
 
-Rule tags read: architecture=645d155e21f440e7e94863d7, observability=9701798a5a03417c57f1a38a, testing=66af7645b01fef4e2796c367. No rule file, spec or note was edited, so no notes tag applies; the notes this change would add are proposed below for the supervisor to apply (N-458 to N-461).
+Rule tags read: architecture=645d155e21f440e7e94863d7, observability=9701798a5a03417c57f1a38a, testing=66af7645b01fef4e2796c367. No rule file or spec was edited. `doc/notes.md` was edited (N-458 to N-461 added, the index rows and the notes tag replaced), so the notes tag applies and was read first.
 
 Built: `testdata/chains/overlay/risk.toml` (four route rows of pack two, one of them common) and `overlay/risk-store.toml` (one store row of the barn of pack one); the two module-alone golden sets under `testdata/golden/risk/` (`two*` and `one-store*`: the rendering, the events of a Run and the per-position hash, recorded once through the slot guard, new files only); `TestGolden_RiskProbeExercisesStrikes` (seeds 1 to 4: a struck dispatch with units lost on the route pack, a `StoreLoss` on the store pack, so the golden is not empty for the module); S126 to S131 (`scenario_s126_test.go` to `scenario_s131_test.go`, helpers in `risk_scenario_helpers_test.go`); `TestFork_RiskStores`, `TestFork_RiskRouteScaleCall`, `TestDeterminism_Risk`, `TestInvariants_RiskPacks`, `TestConfigOnly_RiskNeedsOnlyConfiguration` (`risk_fork_stores_test.go`, `risk_proof_test.go`). `golden/off`, `golden/all`, the pinned hash, every other golden and `testdata/checkpoints` are untouched; no production code changed.
 

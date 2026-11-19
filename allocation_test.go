@@ -60,9 +60,9 @@ const creditStepAllocBaseline = 94
 // 64 and 64 on pack two, 70 and 70 on pack one, so the module adds nothing to a step. Raising
 // one is a reviewed change (rule 8.2).
 const (
-	riskStepAllocBaseline      = 64
-	riskStoreStepAllocBaseline = 70
 	twoTransportStepAllocBase  = 64
+	riskStepAllocBaseline      = twoTransportStepAllocBase
+	riskStoreStepAllocBaseline = storageStepAllocBaseline
 )
 
 // TestStep_AllocationsStayAtTheBaseline checks that a full Step of pack one

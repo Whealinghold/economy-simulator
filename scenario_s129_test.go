@@ -51,6 +51,7 @@ func TestScenarioRSK4_BufferStoreOwners(t *testing.T) {
 			checkExact(t, rep, "S129", "one", seed, "the loss boundary equals the events every tick", msg == "", "%s", msg)
 			ticks, owners, flagOK := storeStrikeTicks(rw.rec.events, common)
 			checkExact(t, rep, "S129", "one", seed, "every StoreLoss carries the common flag of its row", flagOK, "a StoreLoss differs from the row's flag %t", common)
+			checkExact(t, rep, "S129", "one", seed, "the barns are struck at least once", owners > 0, "%d owners struck", owners)
 			rep.num(seed, "ticks with a strike", ticks)
 			rep.num(seed, "owners struck", owners)
 			rep.num(seed, "units lost from stores", rw.tally.storeLost)
