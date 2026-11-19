@@ -561,7 +561,7 @@ func pairsEmployer(e *encoder, b Employer) {
 	e.num(5, b.HireYieldBP)
 }
 
-// pairsLastModules writes the pairs of the modules of ids 15, 16 and 17 of Modules,
+// pairsLastModules writes the pairs of the modules of ids 15, 16, 17 and 18 of Modules,
 // after those pairsLaterModules writes, then those of pairsTailModules (a
 // continuation for the Lizard limit).
 func pairsLastModules(e *encoder, m Modules) {

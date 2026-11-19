@@ -154,8 +154,8 @@ func moduleReasons(c *Config) [][]ledger.Reason {
 	return append(m, laterModuleReasons(c)...)
 }
 
-// laterModuleReasons returns the reason lists of the employment, credit, tenure and
-// risk modules, in module order (a continuation of moduleReasons for the Lizard
+// laterModuleReasons returns the reason lists of the employment, credit, tenure,
+// risk and insurance modules, in module order (a continuation of moduleReasons for the Lizard
 // limit; the lists are appended after the ones it builds).
 func laterModuleReasons(c *Config) [][]ledger.Reason {
 	var m [][]ledger.Reason
