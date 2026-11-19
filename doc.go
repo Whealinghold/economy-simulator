@@ -1638,6 +1638,10 @@
 //     Until, Seasons); not the welfare window nor the price window.
 //   - Scale (of a fiscal flow): the flow's runtime factor in basis points, set between
 //     steps through the same slot as a money flow's; it is state and is not hashed.
+//   - FiscalFlowApplied: the aggregate event of one fiscal flow in one region and tick,
+//     with the counts of the rules that stay silent (Short, Cut, Headroom, Exempt); its
+//     kind is a Kind (KindTax, KindDuty, KindToll, KindPayout) and its class a
+//     FiscalClass (FiscalHouseholds, FiscalPool, FiscalTreasury).
 //   - Hire: the one-job contract of the hire form of the employment module
 //     (spec-employment.md 3.4): a worker household runs one recipe of an employer's
 //     hire list for the employer's account, for a wage fixed at formation and paid a

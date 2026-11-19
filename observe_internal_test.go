@@ -269,6 +269,11 @@ var stepSites = []site{
 			w.p17aSettle()
 		}
 	})},
+	{"P1.7b", noError(func(w *World) {
+		if w.fiscal != nil {
+			w.p17bFiscal()
+		}
+	})},
 	{"P1.8", noError(func(w *World) {
 		if w.external != nil {
 			w.p18Walk()
