@@ -63,6 +63,9 @@ type Outcome struct {
 	Barred int64
 	// Waiting is the eligible non-members left after the round.
 	Waiting int64
+	// Held is the completions of a traineeship held for want of headroom after the round,
+	// counted at P7.1(a) of the tick (spec-institutions.md 4.5.2).
+	Held int64
 }
 
 // Lapsed counts a household of weight w whose membership lapsed for the reason k.

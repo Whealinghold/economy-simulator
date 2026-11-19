@@ -105,6 +105,7 @@ func (w *World) restoreState(rs *restoreCtx, sections []byte) error {
 		return err
 	}
 	w.allocate()
+	w.wireSlots() // the slots of the settlements module, as construction wires them (N-462)
 	if err := w.loadSections(rs, bodies); err != nil {
 		return err
 	}

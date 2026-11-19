@@ -10,8 +10,8 @@ import (
 
 // rightReaders are the calls through which a right is read and the files that may make
 // them: the module's own file, and the hook sites of spec-institutions.md 7.3.2, each one
-// guarded call (hooks H-4, H-5, H-7 of plan 3-org). The training right is PR D's and
-// joins the list with its hook.
+// guarded call (hooks H-4, H-5, H-7 and H-12 of plan 3-org). The training right is read when
+// a place opens, by canTrain and by the entry step's count of the places it closes.
 var rightReaders = map[string][]string{
 	"rightIn(":         {"institutions_rights.go"},
 	"barredAt(":        {"institutions_rights.go"},
@@ -21,11 +21,13 @@ var rightReaders = map[string][]string{
 	"refusedOrder(":    {"institutions_rights.go", "phase_trade.go"},
 	"contractRefusal(": {"institutions_rights.go", "contract.go"},
 	"NotPermitted =":   {"phase_trade.go"},
+	"mayTrain(":        {"institutions_rights.go", "skills_queue.go"},
+	"noteTrain(":       {"institutions_rights.go", "skills_queue.go"},
 }
 
 // TestRightReaders_StaticCheck verifies that a right is read only at a start (P2.5 and a
-// trainee's request), an order (P3.2) and an offer or a take of the contract round (P3.3),
-// by the calls of the hook list and nowhere else: not at a continuation, a completion, a
+// trainee's request), an order (P3.2), an offer or a take of the contract round (P3.3) and a
+// place for a trainee (P7.1(a)), by the calls of the hook list and nowhere else: not at a continuation, a completion, a
 // holding or a shipment (spec-institutions.md 5.5.1, FR-ORG-018).
 //
 // Requirement: FR-ORG-018, FR-ORG-054
