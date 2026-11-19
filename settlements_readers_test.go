@@ -42,11 +42,12 @@ func TestViews_CarryNoClass(t *testing.T) {
 }
 
 // readsClassByRow reports whether the file may read the class: a test file, a file of the
-// settlements module, and infrastructure_calls.go, which is the row H8 of 6.3 (the class of
-// a facility may need a flag of the region's class, read at AddFacilities through regionHas
-// and nowhere else).
+// settlements module, and infrastructure_calls.go and infrastructure_build.go, which are the
+// row H8 of 6.3 (the class of a facility may need a flag of the region's class, read at
+// AddFacilities and at the start of a build through regionHas and nowhere else).
 func readsClassByRow(f string) bool {
-	return strings.HasSuffix(f, "_test.go") || strings.HasPrefix(f, "settlements") || f == "infrastructure_calls.go"
+	return strings.HasSuffix(f, "_test.go") || strings.HasPrefix(f, "settlements") ||
+		f == "infrastructure_calls.go" || f == "infrastructure_build.go"
 }
 
 // TestReaders_StaticCheck verifies FR-SET-019: the readers of a class are exactly the

@@ -85,7 +85,7 @@ func TestFanIns_AreCompositionsOfTheExpectedCalls(t *testing.T) {
 		fn   string
 		want []string
 	}{
-		{"fillAgentView", []string{"fillCore", "fillWants", "fillEndowments", "fillTransport", "fillTradeOnly", "fillView", "fillBoard", "fillRoomView", "fillTenure"}},
+		{"fillAgentView", []string{"fillCore", "fillWants", "fillEndowments", "fillTransport", "fillTradeOnly", "fillView", "fillBoard", "fillRoomView", "fillTenure", "fillView"}}, // the last is the infrastructure module's (spec-infrastructure.md 9.1)
 		{"checkTradePlan", []string{"normalisePlan", "checkDiscards", "checkWants", "checkMerchantPlan", "checkRoomPlan", "checkCreditPlan"}},
 		{"removeAgent", []string{"Tick", "regionOf", "dropAgent", "hasJob", "abandonJob", "dropTraveller", "dropJourney", "dropContracts", "Errorf", "dropAgent", "dropClaims", "dropFacilities", "receive", "Errorf", "mustClose", "Close", "deliver", "deliver", "pool", "dropModules", "logRemoval", "forget"}},
 		{"dropModules", []string{"dropAgent", "dropAgent", "drop", "dropExternal", "dropStorage"}},
