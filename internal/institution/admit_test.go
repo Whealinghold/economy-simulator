@@ -1,6 +1,7 @@
 package institution_test
 
 import (
+	"math"
 	"slices"
 	"testing"
 
@@ -340,5 +341,38 @@ func TestAdmit_NonPositiveWeightIsNoCandidate(t *testing.T) {
 	_, out = institution.Admit(nil, cands, 2, true, true)
 	if want := (institution.Outcome{Barred: 3, Waiting: 3}); out != want {
 		t.Errorf("Admit(barred) = %+v, want %+v (weights -3, 0, 2, 1 count 2 + 1)", out, want)
+	}
+}
+
+// TestOutcome_SaturatesAtMaxInt64 verifies that the counts of a cell stop at the
+// largest int64 and never wrap: lapses, admissions, skipped, barred and waiting
+// candidates whose weights sum past it.
+//
+// Requirement: FR-ORG-011
+//
+// Guard: architecture.md 3.5. A wrapped count would be negative and the next free
+// place and the event would be wrong, and no other test uses weights this large.
+func TestOutcome_SaturatesAtMaxInt64(t *testing.T) {
+	t.Parallel()
+	var o institution.Outcome
+	o.Lapsed(institution.LapsedList, math.MaxInt64)
+	o.Lapsed(institution.LapsedList, 1)
+	o.Lapsed(institution.LapsedScope, math.MaxInt64)
+	o.Lapsed(institution.LapsedScope, 5)
+	if o.LapsedList != math.MaxInt64 || o.LapsedScope != math.MaxInt64 {
+		t.Errorf("lapsed = (%d, %d), want both %d", o.LapsedList, o.LapsedScope, int64(math.MaxInt64))
+	}
+	big := []institution.Candidate{{ID: 0, Weight: math.MaxInt64}, {ID: 1, Weight: 2}}
+	_, out := institution.Admit(nil, slices.Clone(big), 0, true, true)
+	if out.Barred != math.MaxInt64 || out.Waiting != math.MaxInt64 {
+		t.Errorf("barred = %d, waiting = %d, want both %d", out.Barred, out.Waiting, int64(math.MaxInt64))
+	}
+	_, out = institution.Admit(nil, slices.Clone(big), 1, true, false)
+	if out.Skipped != math.MaxInt64 || out.Waiting != math.MaxInt64 {
+		t.Errorf("skipped = %d, waiting = %d, want both %d", out.Skipped, out.Waiting, int64(math.MaxInt64))
+	}
+	_, out = institution.Admit(nil, slices.Clone(big), 0, false, false)
+	if out.Admitted != math.MaxInt64 {
+		t.Errorf("admitted = %d, want %d", out.Admitted, int64(math.MaxInt64))
 	}
 }
