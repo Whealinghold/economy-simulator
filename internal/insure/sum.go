@@ -25,7 +25,10 @@ func dot(qty, value []int64, skip int, limit int64) (sum int64, ok bool) {
 			return 0, false
 		}
 	}
-	return sum, sum <= limit
+	if sum > limit {
+		return 0, false
+	}
+	return sum, true
 }
 
 // SumLines returns the lines term of a sum insured, the sum of qty * value over the

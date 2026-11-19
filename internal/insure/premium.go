@@ -46,7 +46,10 @@ func StorePremium(sum, rateBP, limit int64) (int64, bool) {
 		return 0, false
 	}
 	p, ok := checked.MulDivHalfEven(sum, rateBP, Basis)
-	return p, ok && p <= limit
+	if !ok || p > limit {
+		return 0, false
+	}
+	return p, true
 }
 
 // MaxPayout returns halfEven(coverBP * sum / 10 000), the most a policy pays
