@@ -238,6 +238,7 @@ A hook holds no branch on the module's data and no arithmetic (architecture.md 2
 | 13 | `moneyflow.go` `auditModules` / `fiscal.go` | the fiscal audit call: every carry names an open account of the class's kind, the section's lists are in order | 4 | the audit hook; the identities themselves are the ledger's (treasury term) and POL's. |
 | 14 | `validate.go` | `validateFiscal`, `fiscalWarnings` | 3 | the catalogue call. |
 | 15 | `snapshot.go` `MarketRow` and its filler | `HeldByTreasury`, one guarded call in the row builder | 9 | hook class (f). |
+| 16 | `phase_outcomes.go` `p63Welfare` (after `valuePrices`) | `if w.fiscal != nil { w.priceFiscalReceipts() }` | 5 | accepted by the owner: spec-fiscal.md 12.3 values the units of an in-kind payout at the prices of P6.3, which exist only there; the shape of the subsistence and skills calls beside it; with the module off the call is not made. |
 
 No hook in `removeAgent`, `agentJoined`, `agentRoleChanged`, `relocationRefusal`, `phase_exit.go`, `estates.go` or the strategy files: D3 (a tax keeps no per-agent state; a household's tax is not a strategy input, FIS position 11).
 
@@ -426,10 +427,11 @@ Built: the payout pass of P1.7b (`fiscal_payout.go`): the active payouts are gro
 
 Deviations and choices the plan left open:
 
-- One new hook not in the table: `p63Welfare` calls `priceFiscalReceipts` after `valuePrices` when the module is on (one guarded call, the shape of the subsistence and skills calls beside it). Spec-fiscal.md 12.3 says the in-kind units are valued at P6.3; the prices of the tick exist only there. Recorded as a question for the owner in the working notes; the recommendation of 12.3 was taken.
+- One new hook not in the table: `p63Welfare` calls `priceFiscalReceipts` after `valuePrices` when the module is on (one guarded call, the shape of the subsistence and skills calls beside it). Spec-fiscal.md 12.3 says the in-kind units are valued at P6.3; the prices of the tick exist only there. The owner accepted it; it is row 16 of the hook table. A module-less world does not make the call.
 - `dueTax`'s merge of the saved carries with the payers became `carryWalk` (`fiscal_tax.go`), shared by taxes and payouts; no behaviour moved.
 - `welfare.go` needed no accessor (hook 11 stays "none"): `addUnearned` takes a negative amount.
 - The pool and treasury recipients are never in the welfare terms; a household class only.
+- The headroom cut at a recipient is pinned by `TestFiscal_PayoutCut_headroom`.
 
 Golden rule held: no golden, hash or fixture is in the diff.
 

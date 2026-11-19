@@ -130,6 +130,53 @@ func TestFiscal_PayoutCut(t *testing.T) {
 	auditNow(t, w)
 }
 
+// TestFiscal_PayoutCut_headroom verifies the headroom cut at a recipient: a share that
+// would take a recipient above MaxMoney is cut to its room, the part not paid stays in
+// the treasury, the recipient is counted in Headroom and not in Cut, and money is
+// conserved.
+//
+// Arithmetic: the first home miller holds MaxMoney - 5, so it has 5 of room; the
+// crown pays 10 to each of three millers and holds 1 000, so no share is cut. The
+// first miller receives 5, the others 10, and the crown ends at 1 000 - 25 = 975.
+//
+// Requirement: FR-FIS-063
+func TestFiscal_PayoutCut_headroom(t *testing.T) {
+	t.Parallel()
+	w, c, rec := payoutWorld(t, stipend("alms", 10))
+	// A start money is bound far below MaxMoney: the first miller is raised from the
+	// pool of its region, seeded for the purpose.
+	pool, first := w.estates.account(0), c.homeMillers[0]
+	if err := w.estates.seedPool(w.ledger, 0, Money(MaxMoney-accountMoney(t, w, pool))); err != nil {
+		t.Fatalf("setup: seedPool error = %v, want nil", err)
+	}
+	if err := w.ledger.Transfer(pool, w.agents[first].account, MaxMoney-105, ledger.StartMoney); err != nil {
+		t.Fatalf("setup: raise the first miller: %v", err)
+	}
+	before := moneyTotal(w)
+	w.p17bFiscal()
+	for k, id := range c.homeMillers {
+		want := int64(110)
+		if k == 0 {
+			want = MaxMoney
+		}
+		if got := heldMoney(t, w, id); got != want {
+			t.Errorf("miller %d holds %d, want %d", id, got, want)
+		}
+	}
+	if got := crownMoney(t, w); got != 975 {
+		t.Errorf("crown holds %d, want 975", got)
+	}
+	if got := moneyTotal(w); got != before {
+		t.Errorf("money = %d, want %d", got, before)
+	}
+	want := FiscalFlowApplied{Flow: "alms", Kind: KindPayout, Authority: 0, Region: 0, Class: FiscalHouseholds,
+		Commodity: NoCommodity, Due: 30, Applied: 25, Parties: 3, Headroom: 1}
+	if got := of[FiscalFlowApplied](rec); len(got) != 1 || got[0] != want {
+		t.Errorf("events = %+v, want exactly %+v", got, want)
+	}
+	auditNow(t, w)
+}
+
 // TestFiscal_PayoutTopUp verifies a payout with a Level: each recipient is topped up to
 // the level, one holding more gets nothing, and the flow keeps no carry.
 //
@@ -172,23 +219,25 @@ func TestFiscal_PayoutInKind(t *testing.T) {
 	p := Payout{ID: "ration", Authority: "crown", Target: homeMillers, Commodity: "grain", Amount: 2}
 	w, c, rec := payoutWorld(t, p)
 	stockCrown(t, w, 5)
-	units := func(account int) int64 { n, _, _ := w.ledger.Holding(account, int(payoutGrain(w))); return n }
-	all := func() (n int64) {
-		for id := range w.agents {
-			n += units(w.agents[id].account)
-		}
-		return n + units(w.polity.tr[0].account)
-	}
-	total, start := all(), map[AgentID]int64{}
+	total, start := grainTotal(w), map[AgentID]int64{}
 	for _, id := range c.homeMillers {
-		start[id] = units(w.agents[id].account)
+		start[id] = grainUnits(w, w.agents[id].account)
 	}
 	w.p17bFiscal()
 	got := map[AgentID]int64{}
 	for _, id := range c.homeMillers {
-		got[id] = units(w.agents[id].account) - start[id]
+		got[id] = grainUnits(w, w.agents[id].account) - start[id]
 	}
-	if after, left := all(), units(w.polity.tr[0].account); after != total || left != 0 {
+	checkInKind(t, w, rec, got, total)
+	checkReceiptsValued(t, w, c, got)
+	auditNow(t, w)
+}
+
+// checkInKind verifies the grain is conserved, the cut falls on one miller and the event
+// names the grain.
+func checkInKind(t *testing.T, w *World, rec *evLog, got map[AgentID]int64, total int64) {
+	t.Helper()
+	if after, left := grainTotal(w), grainUnits(w, w.polity.tr[0].account); after != total || left != 0 {
 		t.Errorf("grain = %d, treasury %d; want %d and 0 (nothing created or destroyed)", after, left, total)
 	}
 	if ones, twos := countOf(got, 1), countOf(got, 2); ones != 1 || twos != 2 {
@@ -197,6 +246,26 @@ func TestFiscal_PayoutInKind(t *testing.T) {
 	if e := of[FiscalFlowApplied](rec); len(e) != 1 || e[0].Commodity != payoutGrain(w) || e[0].Due != 6 || e[0].Applied != 5 || e[0].Cut != 1 {
 		t.Errorf("events = %+v, want one for grain, due 6, applied 5, cut 1", e)
 	}
+}
+
+// grainUnits is the units of grain an account holds.
+func grainUnits(w *World, account int) int64 {
+	n, _, _ := w.ledger.Holding(account, int(payoutGrain(w)))
+	return n
+}
+
+// grainTotal is the grain held by every agent and by the crown's treasury.
+func grainTotal(w *World) (n int64) {
+	for id := range w.agents {
+		n += grainUnits(w, w.agents[id].account)
+	}
+	return n + grainUnits(w, w.polity.tr[0].account)
+}
+
+// checkReceiptsValued prices the receipts of the tick at 7 and verifies that each
+// miller's unearned income is 7 times the units it got, and that the list is cleared.
+func checkReceiptsValued(t *testing.T, w *World, c skillCast, got map[AgentID]int64) {
+	t.Helper()
 	for i := range w.oc.valued {
 		w.oc.valued[i] = 7
 	}
@@ -209,7 +278,6 @@ func TestFiscal_PayoutInKind(t *testing.T) {
 	if len(w.fiscal.receipts) != 0 {
 		t.Errorf("receipts after P6.3 = %d, want 0", len(w.fiscal.receipts))
 	}
-	auditNow(t, w)
 }
 
 // countOf counts the values equal to v.
