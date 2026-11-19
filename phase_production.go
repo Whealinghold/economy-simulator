@@ -340,7 +340,7 @@ func (w *World) startReq(a *agent, region RegionID, recipe RecipeID, maximum int
 // started" behind Enabled and, under the flag, one count in the refusal tally. A
 // recipe outside the configuration has no row in the tally and is only logged.
 func (w *World) refuse(a *agent, region RegionID, recipe RecipeID, reason Reason) {
-	w.infra.refused(a, region, recipe, reason, w.prod.facFree)
+	w.infra.refused(a, region, recipe, reason, w.prod.facCut)
 	if w.sto != nil {
 		w.sto.refusedStart(w.cellOf(region, a), reason)
 		if reason == ReasonNoRoom {
@@ -453,7 +453,7 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 // endowments, the own-use count, the wear of the tools, the working ticks and the
 // pledge of the storage module.
 func (w *World) noteStarted(a *agent, region RegionID, ask *jobAsk, q *startReq, res startResult) {
-	w.infra.started(region, q, res.k, w.prod.facFree)
+	w.infra.started(region, q, res.k, w.prod.facCut)
 	if w.res != nil {
 		w.takeDraws(ask.first, ask.draws, res.k)
 	}

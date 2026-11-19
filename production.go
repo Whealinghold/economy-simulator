@@ -264,11 +264,11 @@ type productionScratch struct {
 	// roomCut is the executions the room took off the last maxExecutions (k0 less
 	// the executions the room allows), 0 when it cut none.
 	roomCut int64
-	// free is the scratch of freeOfNeeds, and facFree the executions the last
-	// maxExecutions would have started without the capacity of the needed classes (0 when
-	// the request did not ask for it): the infrastructure module's count of FacilityLimited.Cut.
-	free    []production.Limit
-	facFree int64
+	// free is the scratch of freeOfNeeds, and facCut the executions the capacity of the needed
+	// classes took off the last maxExecutions, before the room bound (0 when the request did not
+	// ask for it): the infrastructure module's count of FacilityLimited.Cut.
+	free   []production.Limit
+	facCut int64
 	// tec is the technology module's state, nil when it is off: the technology term
 	// of the effective factor is read through it (techFactor).
 	tec *technology
@@ -526,7 +526,7 @@ func (s *productionScratch) maxExecutions(l *ledger.Ledger, q *startReq) (k0 int
 	}
 	k, code := production.Count(q.weight, q.maximum, s.limits)
 	reason = limitReason(code)
-	s.facFree = s.freeOfNeeds(q)
+	s.facCut = max(s.freeOfNeeds(q)-k, 0) // before the room bound: a cut of the room is not the capacity's
 	s.roomCut = 0
 	if s.sto != nil {
 		k, reason = s.sto.boundExecutions(l, q, k, reason, &s.roomCut)

@@ -82,7 +82,7 @@ func (n *infrastructure) request(q *startReq) {
 		return
 	}
 	region, rc := q.region, &n.rec[q.recipe]
-	q.fac.wantCut = n.world.obs.supplied
+	q.fac = facilityCaps{wantCut: n.world.obs.supplied} // a request read twice keeps nothing of the first
 	for i, c := range rc.needs {
 		q.fac.needs[i] = max(n.site[siteKey{q.principal, region, c}]-n.used[ownerClass{q.principal, c}], 0)
 	}
@@ -209,21 +209,38 @@ func (s *productionScratch) freeOfNeeds(q *startReq) int64 {
 	return k
 }
 
+// binding is the index of the needed class that bounded the start: the first with the least
+// capacity left, which FacilityLimited.Cut is counted against once, as a refusal is
+// (refusalClass). It is 0 for a request with no needs.
+func (f *facilityCaps) binding() int {
+	b := 0
+	for i := 1; i < f.nNeeds; i++ {
+		if f.needs[i] < f.needs[b] {
+			b = i
+		}
+	}
+	return b
+}
+
 // started is what the module does at the start of a job that began with k executions, after
 // k is final (4.2.2, 5.1.3): the use wear of each needed class, the running counts of the
-// tick that the second evaluation reads, and the counters under an observer. It is nil-safe.
-func (n *infrastructure) started(region RegionID, q *startReq, k, free int64) {
+// tick that the second evaluation reads, and the counters under an observer, cut being the
+// executions the capacity took off (productionScratch.facCut). It is nil-safe.
+func (n *infrastructure) started(region RegionID, q *startReq, k, cut int64) {
 	if n == nil {
 		return
 	}
 	rc := &n.rec[q.recipe]
-	for _, c := range rc.needs {
+	bind := q.fac.binding()
+	for i, c := range rc.needs {
 		n.wear(q.principal, region, c, k)
 		n.used[ownerClass{q.principal, c}] += k
 		if n.world.obs.supplied {
 			l := &n.limits[n.cell(region, c)]
 			l.served += k
-			l.cut += max(free-k, 0)
+			if i == bind {
+				l.cut += cut
+			}
 		}
 	}
 	if rc.build >= 0 {

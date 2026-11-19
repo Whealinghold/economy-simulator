@@ -184,3 +184,55 @@ func TestInfrastructure_StartAllocsPerRun(t *testing.T) {
 		t.Errorf("allocations of the limits, the wear and the counts of a start = %v, want 0", got)
 	}
 }
+
+// TestEvents_FacilityLimitedCutIsBookedOnTheBindingClass verifies that the executions the
+// capacity took off a start are counted once, against the class that bounded the start, not
+// against every needed class: a recipe that needs the mill (capacity 2) and the kiln (capacity
+// 10), asked for 5 by a household of weight 5, starts 2, so the mill books Served 2 and Cut 3
+// and the kiln has no event (a row is emitted only for a non-zero Cut, Refused, Voided or
+// Pending, 14.1), where booking the cut on both classes gave it a Cut of 3.
+//
+// Arithmetic: free of the needs the start would take the weight, 5; the mill allows 2, the kiln
+// 10; k = 2 and the cut is 5 - 2 = 3, the mill's.
+//
+// Requirement: FR-CAP-013, FR-CAP-038
+//
+// Fix: review of CAP PR 4. Cut was booked on every needed class, so the kiln showed 3
+// executions cut that it never limited.
+func TestEvents_FacilityLimitedCutIsBookedOnTheBindingClass(t *testing.T) {
+	t.Parallel()
+	w, s, rec := bldWorld(t, func(c *Config) {
+		m := c.Modules.Infrastructure
+		m.Classes = append(m.Classes, FacilityClass{ID: "kiln", Kind: "site", Durability: 1_000, Capacity: 10})
+		c.Recipes = append(c.Recipes, Recipe{ID: "zz_two", TraineeYield: 5_000, Duration: 1, Inputs: []Item{{Commodity: "grain", Quantity: 1}},
+			Needs: []string{"mill", "kiln"}, Outputs: []Output{{Commodity: "flour", Quantity: 2, CostShare: 10_000}}})
+		c.Roles[0].Recipes = append(c.Roles[0].Recipes, "zz_two")
+	})
+	// The configuration sorts the classes, so the IDs are read by name.
+	classes := w.cfg.Modules.Infrastructure.Classes
+	mill := FacilityClassID(slices.IndexFunc(classes, func(c FacilityClass) bool { return c.ID == "mill" }))
+	kiln := FacilityClassID(slices.IndexFunc(classes, func(c FacilityClass) bool { return c.ID == "kiln" }))
+	m := bldMiller(w, 0)
+	bldAdd(t, w, mill, m, 1)
+	bldAdd(t, w, kiln, m, 1)
+	bldAsk(t, w, s, "zz_two", 5)
+	facStep(t, w)
+	var onMill, onKiln FacilityLimited
+	for _, e := range of[FacilityLimited](rec) {
+		if e.Region != 0 {
+			continue
+		}
+		switch e.Class {
+		case mill:
+			onMill = e
+		case kiln:
+			onKiln = e
+		}
+	}
+	if onMill.Served != 2 || onMill.Cut != 3 {
+		t.Errorf("FacilityLimited of the mill = Served %d, Cut %d, want 2 and 3 (seed %d)", onMill.Served, onMill.Cut, facSeed)
+	}
+	if onKiln != (FacilityLimited{}) {
+		t.Errorf("FacilityLimited of the kiln = %+v, want none: the kiln did not bind and an event is emitted only for a non-zero Cut, Refused, Voided or Pending (seed %d)", onKiln, facSeed)
+	}
+}
