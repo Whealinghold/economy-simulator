@@ -377,6 +377,11 @@ var stepSites = []site{
 		}
 	})},
 	{"P8.1", (*World).p81Age},
+	{"P8.1a", noError(func(w *World) {
+		if w.risk != nil {
+			w.p81aStores()
+		}
+	})},
 	{"P8.2", noError((*World).p82Flows)},
 	{"P8.3", noError((*World).p83Regen)},
 	{"P8.3a", noError(func(w *World) {

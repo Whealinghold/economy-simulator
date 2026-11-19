@@ -98,6 +98,8 @@ var declaredEvents = []economysim.Event{
 	economysim.RentPaid{},
 	economysim.FacilityChanged{},
 	economysim.RouteRiskScaled{},
+	economysim.StoreLoss{},
+	economysim.StoreRiskScaled{},
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -105,8 +107,6 @@ var declaredEvents = []economysim.Event{
 // regions, checkpoint and skill stages. The change that
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
-	"StoreLoss",
-	"StoreRiskScaled",
 	"HireFormed", "HireEnded", "LabourRound",
 	"FacilityLimited", "FiscalFlowApplied",
 	"TreasuryOrdered", "MembershipChanged", "RightRefused", "PriceControlled",
