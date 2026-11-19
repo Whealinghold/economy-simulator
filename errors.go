@@ -522,8 +522,13 @@ var (
 var (
 	// ErrEmploymentShape is a role that is both Hireable and an employer, or the
 	// employment module on with no role that has an employer block or with no
-	// Hireable role.
+	// Hireable role (payroll form); in the hire form also a mixed form, an empty
+	// hire list or one off Role.Recipes, and MaxOpen set without Hire.
 	ErrEmploymentShape = errors.New("employment has the wrong shape")
+	// ErrEmployerWeight is an employer role with a group of scale above 1, or
+	// whose households exceed one per agent: an employer has weight 1
+	// (spec-employment.md 3.6, 14.1).
+	ErrEmployerWeight = errors.New("employer role has a weight above 1")
 )
 
 // The sentinels of the polity module (spec-polity.md 9.1). They are root sentinels
@@ -725,4 +730,21 @@ var (
 	// ErrUnknownRight is a right that is not configured, named by a call
 	// (spec-institutions.md 7.1.1).
 	ErrUnknownRight = errors.New("unknown right")
+)
+
+// The sentinels of the fiscal module (spec-fiscal.md 15.1, FR-FIS-012). They are root
+// sentinels matched with errors.Is (N-075). The module reuses ErrModuleDependency,
+// ErrTooMany, ErrInvalidID, ErrDuplicateID, ErrReasonCollision,
+// ErrUnknownJurisdiction, ErrUnknownRole, ErrUnknownRegion, ErrUnknownCommodity,
+// ErrUnknownMode, ErrUnknownSeason, ErrOutOfBounds, ErrUnknownFlow and ErrModuleOff.
+var (
+	// ErrNotGoverned is an Authority, or a target treasury, with no seat: a grouping
+	// jurisdiction has no treasury.
+	ErrNotGoverned = errors.New("jurisdiction is not governed")
+	// ErrNotCovered is a Region the authority does not cover, or a target treasury that
+	// is not a proper descendant of the authority.
+	ErrNotCovered = errors.New("region or treasury is not covered by the authority")
+	// ErrFiscalShape is a fiscal flow of the wrong shape: a wrong combination of its
+	// fields (spec-fiscal.md 15.1).
+	ErrFiscalShape = errors.New("fiscal flow has the wrong shape")
 )

@@ -150,17 +150,7 @@ func (w *World) admitCreditRequests() {
 			w.logCreditRefused("request refused", s.agent, reason)
 			continue
 		}
-		limit := s.r.MaxRateBP
-		if cr.rateCap != nil {
-			limitCap, ok := cr.rateCap(g)
-			if ok && limitCap < 0 {
-				invariant("a negative rate cap from the rate limit seam")
-			}
-			if ok && limit > limitCap {
-				limit = limitCap
-				c.priceControlled++
-			}
-		}
+		limit := cr.capped(s.r.MaxRateBP, g, c)
 		c.requests++
 		rd.lanes[g].requests = append(rd.lanes[g].requests, crd.Row{
 			Ref: len(rd.rq), Agent: int64(s.agent), Principal: s.r.Principal, Term: s.r.Term, RateBP: limit,
@@ -333,4 +323,22 @@ func (w *World) formLoan(f crd.Fill) crd.Outcome {
 	c.interest = addSat(c.interest, interest)
 	w.reportFormed(rq.region, &claim, of.agent, rq.agent)
 	return crd.Formed
+}
+
+// capped returns the limit a request of a borrower in region g is admitted with, after the
+// rate cap of the institutions module replaced one above it (spec-credit.md 5.2.3), and counts
+// the replacement in c. A nil seam changes nothing.
+func (cr *credit) capped(limit int64, g RegionID, c *creditCount) int64 {
+	if cr.rateCap == nil {
+		return limit
+	}
+	replaced, lowered := cr.rateCap(g, limit)
+	if !lowered {
+		return limit
+	}
+	if replaced < 0 {
+		invariant("a negative rate cap from the rate limit seam")
+	}
+	c.priceControlled++
+	return replaced
 }

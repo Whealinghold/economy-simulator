@@ -659,6 +659,7 @@ func buildFieldCases() []fieldCase {
 			paths: [][]string{{"warm_start", "groups", "north", "maker", "jobs", "make_tool_a", "recipe"}}},
 	)
 
+	add(fiscalFieldCases()...)
 	add(demandFieldCases()...)
 	add(moneyFieldCases()...)
 	add(resourcesFieldCases()...)
@@ -669,6 +670,7 @@ func buildFieldCases() []fieldCase {
 	add(migrationFieldCases()...)
 	add(merchantFieldCases()...)
 	add(employmentFieldCases()...)
+	add(employmentHireFieldCases()...)
 	add(externalFieldCases()...)
 	add(polityFieldCases()...)
 	add(storageFieldCases()...)

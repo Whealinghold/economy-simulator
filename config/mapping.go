@@ -32,6 +32,16 @@ func (t *tbl) at(key string) []string {
 	return append(t.path[:len(t.path):len(t.path)], key)
 }
 
+// has says any of the keys is present, without marking it read.
+func (t *tbl) has(keys ...string) bool {
+	for _, k := range keys {
+		if _, ok := t.m[k]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 // get returns the value of key and marks it read.
 func (t *tbl) get(key string) (any, bool) {
 	v, ok := t.m[key]
@@ -311,7 +321,7 @@ func (l *loader) laterModules(m *tbl, cfg *economysim.Config) {
 		es.finish()
 	}
 	if es := m.sub("employment"); es != nil {
-		cfg.Modules.Employment = &economysim.Employment{}
+		cfg.Modules.Employment = l.employment(es)
 		es.finish()
 	}
 	if ps := m.sub("polity"); ps != nil {
@@ -356,6 +366,107 @@ func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Institutions = l.institutions(is)
 		is.finish()
 	}
+	if fs := m.sub("fiscal"); fs != nil {
+		cfg.Modules.Fiscal = l.fiscal(fs)
+		fs.finish()
+	}
+}
+
+// fiscal reads [modules.fiscal] (spec-config.md 6.2, spec-fiscal.md 3.1, 18): a flow of
+// each kind as [tax.<id>], [duty.<id>], [toll.<id>], [payout.<id>], [purchase.<id>] and
+// [release.<id>], each with the keys authority and window (start, until, seasons) and
+// label, and its own keys in the order of the spec's types. A key-less table switches the
+// module on with no flow. Every level is read in the order of the keys; Validate and the
+// hash apply the canonical order.
+func (l *loader) fiscal(t *tbl) *economysim.Fiscal {
+	var m economysim.Fiscal
+	t.entities("tax", func(id string, e *tbl) {
+		f := economysim.Tax{ID: id}
+		flowHead(e, &f.Authority, &f.Window, &f.Label)
+		fiscalTarget(e, &f.Target)
+		readInts(e, []intField{{"amount", &f.Amount}, {"rate_bp", &f.RateBP}, {"exempt", &f.Exempt}})
+		e.text("per", &f.Per)
+		m.Taxes = append(m.Taxes, f)
+	})
+	t.entities("duty", func(id string, e *tbl) {
+		f := economysim.Duty{ID: id}
+		flowHead(e, &f.Authority, &f.Window, &f.Label)
+		e.text("region", &f.Region)
+		e.text("commodity", &f.Commodity)
+		e.need("payer", e.text("payer", &f.Payer))
+		e.text("scope", &f.Scope)
+		e.need("rate_bp", integer(e, "rate_bp", &f.RateBP))
+		m.Duties = append(m.Duties, f)
+	})
+	t.entities("toll", func(id string, e *tbl) {
+		f := economysim.Toll{ID: id}
+		flowHead(e, &f.Authority, &f.Window, &f.Label)
+		e.need("on", e.text("on", &f.On))
+		e.text("mode", &f.Mode)
+		e.need("amount", integer(e, "amount", &f.Amount))
+		m.Tolls = append(m.Tolls, f)
+	})
+	t.entities("payout", func(id string, e *tbl) {
+		f := economysim.Payout{ID: id}
+		flowHead(e, &f.Authority, &f.Window, &f.Label)
+		fiscalTarget(e, &f.Target)
+		e.text("commodity", &f.Commodity)
+		readInts(e, []intField{{"amount", &f.Amount}, {"level", &f.Level}})
+		e.text("per", &f.Per)
+		e.flag("not_income", &f.NotIncome)
+		m.Payouts = append(m.Payouts, f)
+	})
+	l.fiscalOrders(t, &m)
+	return &m
+}
+
+// fiscalOrders reads the tables [purchase.<id>] and [release.<id>] of [modules.fiscal].
+func (l *loader) fiscalOrders(t *tbl, m *economysim.Fiscal) {
+	t.entities("purchase", func(id string, e *tbl) {
+		f := economysim.Purchase{ID: id}
+		flowHead(e, &f.Authority, &f.Window, &f.Label)
+		e.need("commodity", e.text("commodity", &f.Commodity))
+		e.need("quantity", integer(e, "quantity", &f.Quantity))
+		e.need("limit_bp", integer(e, "limit_bp", &f.LimitBP))
+		integer(e, "hold", &f.Hold)
+		m.Purchases = append(m.Purchases, f)
+	})
+	t.entities("release", func(id string, e *tbl) {
+		f := economysim.Release{ID: id}
+		flowHead(e, &f.Authority, &f.Window, &f.Label)
+		e.need("commodity", e.text("commodity", &f.Commodity))
+		e.need("quantity", integer(e, "quantity", &f.Quantity))
+		e.need("limit_bp", integer(e, "limit_bp", &f.LimitBP))
+		integer(e, "reserve", &f.Reserve)
+		m.Releases = append(m.Releases, f)
+	})
+}
+
+// flowHead reads the keys every fiscal flow has: authority, which is required, the
+// window and the label. It finishes nothing: the caller reads the rest of the table.
+func flowHead(e *tbl, authority *string, w *economysim.Window, label *string) {
+	e.need("authority", e.text("authority", authority))
+	if ws := e.sub("window"); ws != nil {
+		readInts(ws, []intField{{"start", &w.Start}, {"until", &w.Until}})
+		ws.strings("seasons", &w.Seasons)
+		ws.finish()
+	}
+	e.text("label", label)
+}
+
+// fiscalTarget reads the required target of a tax or a payout: kind, region, role and
+// jurisdiction (store has no meaning for a fiscal flow, and is not read).
+func fiscalTarget(e *tbl, t *economysim.FlowTarget) {
+	tg := e.sub("target")
+	e.need("target", tg != nil)
+	if tg == nil {
+		return
+	}
+	tg.need("kind", tg.text("kind", &t.Kind))
+	tg.text("region", &t.Region)
+	tg.text("role", &t.Role)
+	tg.text("jurisdiction", &t.Jurisdiction)
+	tg.finish()
 }
 
 // risk reads [modules.risk] (spec-config.md 6.2, spec-risk.md 12.1): a route row as
@@ -862,8 +973,7 @@ func (l *loader) role(id string, t *tbl) economysim.Role {
 	}
 	t.flag("hireable", &r.Hireable)
 	if es := t.sub("employer"); es != nil {
-		e := economysim.DefaultEmployer()
-		integer(es, "payroll_bp", &e.PayrollBP)
+		e := employer(es)
 		es.finish()
 		r.Employer = &e
 	}

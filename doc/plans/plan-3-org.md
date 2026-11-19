@@ -388,7 +388,7 @@ Observability entry (observability-and-logging.md 9).
 
 - **Events:** `MembershipChanged`, `RightRefused` and `PriceControlled` (aggregates per (region, body), (region, right), (region, control) at P7.2b, bounded by the configuration), `LegalLevelSet` and `RightSuspensionSet` (one per changed key at a call). Plain data, no map, constructed only under `w.obs.supplied`, after the transition, in the order of spec 7.3.3 (rules 4.1, 4.3, 4.5). A refused order is also an `OrderRejected` with the new reason `not_permitted` (the reason joins the closed set). No existing event gains a field.
 - **Logs:** `Info` only the existing construction line, which gains `bodies`, `rights`, `controls` and `institutions` in `modules`. `Warn` at construction only, one per warning of spec 10.2 with `rule` and `path`, plus the one tick `Warn` "body has waiting households" per (region, body) by pattern B, bounded by the configuration, counterpart `MembershipChanged.Waiting` (rule 3.2.2). `Debug`, guarded by `Enabled`: "start refused" and "order rejected" (existing lines, new reason), "place not open" (`agent`, `role`, `region`, `reason` = `not_member`). No `Error`.
-- **Metrics:** none built. Spec 11.6 proposes `economysim.body.members`, `body.waiting`, `right.refusals` and `control.clamped`; the rows are already in observability 5.3 and 5.3.1; the `otelobserver` instruments are deferred (Question 8), as SKL's, STO's and SET's were. The events carry bounded identifiers, so the instruments can be added without a core change. `economysim.reason` of the rejected-orders metric gains `not_permitted`, a closed-set value. No new unbounded attribute; series are bodies times regions, rights times four, controls times two.
+- **Metrics:** none built (the adapter change is listed in N-405). Spec 11.6 proposes `economysim.body.members`, `body.waiting`, `right.refusals` and `control.clamped`; the rows are already in observability 5.3 and 5.3.1; the `otelobserver` instruments are deferred (Question 8), as SKL's, STO's and SET's were. The events carry bounded identifiers, so the instruments can be added without a core change. `economysim.reason` of the rejected-orders metric gains `not_permitted`, a closed-set value. No new unbounded attribute; series are bodies times regions, rights times four, controls times two.
 - **Non-interference:** nothing draws; a run with and without observer and logger is identical (Phase 5 test). The clamp is counted, never silent (N-045).
 - **New log keys:** the nine of spec 11.3, in `internal/logkeys`; they are already in the table of rules 3.3.2, so E1 edits the rule file only for the continuation files and the typed IDs (fresh RULE-TAG).
 
@@ -423,3 +423,71 @@ Every question is delegated to the supervisor. The recommendation is taken as ac
 8. **Metrics.** Recommended: defer the four instruments and the two slot-event instruments to a later change to `otelobserver/`, as SKL, STO and SET did; the events and the snapshot carry the data and `TestEvents_MetricsDerivable` shows it.
 9. **The credit seam.** Recommended: the seam takes the limit and returns the replaced one (D8), so ORG counts the lowering in its own scratch and the count survives the reset of the round. The alternative (read CRD's count before `rd.reset()` through a second seam) keeps the count in CRD and adds a second assignment.
 10. **Where the least of two limits lives.** Recommended: ORG's `orgHeadroom` wraps SET's `roleHeadroom` (D9), so `settlements.go` is untouched and a pack with ORG and no SET still has a body limit. The alternative (a term inside SET's function) makes SET read ORG.
+
+## PR A result (Phases 1 to 3, merged on `phase-3` as `e4459da`)
+
+Rule tags read: architecture=5c0416f502ba5a59f7b2ae08 (replaced twice by a fresh tag, last 9fae4fd3b85f604b10bec2d6), observability=9ebd6516273680595f477c95, testing=66af7645b01fef4e2796c367. Notes tag read: f85c4b2d7217a479ec7c16dc; the new tag is ed16ceefa88eadd3081d9735. The notes read in full were the ORG and ALL ones and those the plan names, not the whole file.
+
+Built: the owed edits E1 to E13 (the continuation files, the glossary, the notes N-397 to N-399), `internal/institution` (`Resolve`, `Overlap`, `Range`, `Clamp`, `Tally`, `Lapse`, `Admit`, `Headroom`, `Least`), the configuration surface (the five types, hash id 21, the bounds, the seven sentinels, the validator and the eleven warnings, the loader, the nine log keys) and their tests.
+
+Deviations and choices the plan left open:
+
+- A sixth continuation file, `institutions_warn.go`, because the rules and the warnings together passed 500 non-comment lines; it is in `architecture.md` 2.6 and `AGENTS.md`.
+- A produce right with no `Who` is canonicalised to `principal` and any other right with `principal` to none, so the two spellings of a default hash alike (FR-ORG-051).
+- The body's trainee bound is `MaxBodyTrainees` in `bounds.go`; a body lists an entry once (`ErrDuplicateID`).
+- `internal/institution` has 98.8% coverage; `gomu` was not run (Docker, per new file: still owed before PR E).
+
+## PR B result (Phases 4 and 5)
+
+Rule tags read: architecture=9fae4fd3b85f604b10bec2d6, observability=9ebd6516273680595f477c95, testing=66af7645b01fef4e2796c367. No rule file, spec or note was edited, so no notes tag applies; the note and spec edits PR B owes are listed under "Left for the supervisor".
+
+Built: the state and construction (`institutions.go`: the eligibility and scope tables, the membership in two slices of the module, `isMember`, the names), the round at P1.9a (`institutions_round.go`), the resolved rights (`institutions_rights.go`) and legal ranges (`institutions_legal.go`), the events, the Warn, the snapshot rows and tag 31 with the membership tail of tag 3 (`institutions_report.go`), the five event types, `Snapshot.Bodies`, `LegalLevels` and `Suspended`, `Names.Bodies`, `Rights` and `Controls`, the two positions and the section 31 row. No hash id, tag, note or event slot beyond the plan's was taken. `golden/off/`, `golden/all/`, the pinned hash and `testdata/checkpoints/` are unchanged.
+
+Hooks used: H-1, H-2 (the two positions), H-15 to H-18; none of H-3 to H-14 (the readers are PR C and PR D).
+
+Deviations and choices the plan left open:
+
+- The round does the lapse pass of every body first and then the admission of each (body, region) (question 1 of the log). Spec 4.1.1 says "for each body: lapse, then admit"; the two give the same result unless a household lapses from a body and is eligible for one with a lower `BodyID`, which the spec's 4.2.1 says is a candidate in the same round. The order of the bodies would then change a result, against FR-ORG-019.
+- `positionsTail` was at the Lizard CCN limit, so `positionsReview` (P7.2a and P7.2b; the `positionsClose` of P8.3a to the audit is LND's) is split from it by a pure move, and the test of the straight line knows the sixth part.
+- `snapshot.go` was at 498 non-comment lines, so `Region` and `regionEndowments` moved to `regions_status.go` by a pure move.
+- The resolved rights and legal ranges, the levels in force and the suspensions are built and rebuilt (`resolve`) and tag 31 saves and loads them, but nothing sets a level or a suspension until PR D and nothing reads a right or a range until PR C; their tests plant the state. `MembershipChanged.Held` is 0 until PR D.
+- `TestReaders_StaticCheck` allows `institutions_round.go` to read the flag with `regionHas` (the reader of SET's hook H6, spec 3.5.2); `TestPolity_NoRegionFieldRead` lists the other ORG files among those that may name a jurisdiction.
+- `Names.Bodies`, `Rights` and `Controls` are nil when none is declared, so the module present and empty leaves no trace in the names.
+- The end-to-end test of PR A now compares the run without the module's own outputs (its names, rows, list of modules and hash), because the module now has outputs.
+- `HashWorld` of a restored world differs from that of the uninterrupted one in the small world of `institutions_checkpoint_internal_test.go`, with the module on and with it off; the fork tests compare events, snapshots, checkpoint bytes and logs, which agree. It is not the module's, and the test compares snapshots.
+
+Tests by layer: unit (`internal/institution`, unchanged); world (internal: the tables, the round, the need, stale fields, lapse, the resolved rights and ranges, the levels, the work count, the allocation test, the draw guard, the checkpoint of the tail and its corrupt cases, no region-bound obligation, the order of the events); integration (the events and their order, the snapshot rows, the names, the construction line, the Warn, tag 31 and its corrupt cases, `FuzzDecodeInstitutions`, the fork at N, non-interference, the empty module against the off world, determinism over the driving cases, the derivable metrics). Run: `gofmt`, `go vet`, `staticcheck`, `go test -short -race` on the root and `internal/institution`, and the named golden, hash and allocation tests; not run: gate R, gate F, `check.sh`, `full.sh` and `gomu`.
+
+Left for the supervisor (nothing in `doc/notes.md` or a spec was edited, because that needs the whole file read and a fresh tag):
+
+- N-244: the ORG leg is applied (the membership is a slice of the module, saved in tag 3's tail); the note is a standing rule for other modules too, so it stays open with an update line.
+- Spec 4.1.1 of `spec-institutions.md`: say that every lapse runs before any admission.
+- A note for PR D: `Held` and the slot setters fill what PR B built; the tests that plant state (`orgTablesToy`, the levels test) are to be replaced by the call's tests there.
+
+## PR C result (Phases 6 and 7)
+
+Rule tags read: architecture=645d155e21f440e7e94863d7, observability=9701798a5a03417c57f1a38a, testing=66af7645b01fef4e2796c367. No rule file, spec or note is edited, so no notes tag applies; the edits PR C owes are listed under "Left for the supervisor".
+
+Built: the rights of `produce`, `sell` and `buy` and the legal prices. `internal/clearing` gains the code `NotPermitted` (appended after `NoRoom`, checked after `NotTradable`), `Facts.NotPermitted`, `Cap` and `Floor`, and `AdmitClamp`, which replaces the limit between the settlement bounds and the funds row; `Admit` is its wrapper. The root reads a right at a start (`admitJob` and a trainee's request in `skillsWork`, `Who` and the own-use exemption), at an order (the fact `NotPermitted` of `submit`) and at row 5a of an offer and a take of the contract round (destination region). The book holds the module and reads its range at each admission, so the estate's ask and a counterparty's order are clamped too; `OrderPlaced`, the reservation and the entry carry the replaced limit. The contract round clamps an offer's ask after the checks and a take's bid between `overflow` and `insufficient_funds` (`takeFunds`). The credit seam became `rateCap(g, limit) (replaced, lowered)` and `institutions.rateLimit` fills it. `RightRefused` and `PriceControlled` are told at P7.2b from counts kept only under an observer. `golden/off/`, `golden/all/`, the pinned hash and `testdata/checkpoints/` are unchanged; no hash id, tag, note, event or position slot beyond the plan's was taken.
+
+Hooks used: H-4 (`admitJob`, `skillsWork`), H-5, H-6 (`submit`, `book.admit`, `codeReasons`), H-7 (rows 5a, the two clamps), H-8, H-9, and the H-3 half for `rateCap`. Not used: H-10 to H-14 (PR D).
+
+Deviations and choices the plan left open:
+
+- The task listed H-12 and H-13 (`skills_queue.go`) for PR C; the plan puts them in Phase 9 (PR D), and so does this PR.
+- `AdmitClamp` returns `(code, price, changed)`: the side of the order says whether the change is a lowering or a raising.
+- A clamp is counted only for an order that is admitted (an order refused for funds after the clamp is a rejection, counted by `OrderRejected`); likewise for a take and a request.
+- A refused start counts one in `RightRefused.Produce` for each request, not for each household.
+- A trainee's job is also read against a `produce` right, through one guarded call in `skillsWork` (a trainee's request does not pass `admitJob`): the trainer is tested as for `principal` whatever `Who` says, and the trainee is exempt from the executor test (spec 5.3.2). This is one more site than H-4 names.
+- `ReasonNotPermitted` is column -1 of the `RecipeRefused` tally (counted by `RightRefused`, as `no_title` is counted by `RentPaid`); it blocks an own-use start in the any-other slot of `blockedBy`, so the hashed shape does not change.
+- `book.admit` was split into `checkRoute` and `facts` by a pure move first (a refactor-first commit), and `takeRefusal` into `takeRefusal` and `takeFunds`, for the Lizard limit. Lizard does not parse `takeRefusal` and its neighbours in `contract.go` at all, so their CCN was counted by hand (10 and 5).
+- `contract.go` (1 015 non-comment lines), `subsistence.go` (579) and `event.go` were over 500 before; they took only the lines of the hooks.
+
+Tests by layer: unit (`internal/clearing`: the not_permitted row, the clamp rows, the order of the checks, the wrapper); world (internal: the start refusal and its order, `Who`, trainee, own use, the prohibition, no read at a completion, an order refused and its count, the estate exempt and clamped, the reservation, entry and event at the replaced limit, no rejection and no draw, `PriceControlled` counts, offer and take rows 5a and clamps, the rate limit of example C, the claim in force unchanged, a request never refused for the cap, allocation of every reader, the static check of the reader sites); integration (pack one over seeds: every trade inside the cap and inside the floor with the audit on, and the shortage signal of a binding cap). Run: `gofmt`, `go vet`, `staticcheck`, narrow `go test` of the touched tests through the slot guard, `go test -short -race ./internal/...`; not run: gate R, gate F, `check.sh`, `full.sh`, `gomu`, `golden/all`.
+
+Left for the supervisor (nothing in `doc/notes.md` or a spec was edited, since that needs the whole file read and a fresh tag):
+
+- A note: a clamp counts only an admitted order (spec 6.3.1 says "the count of the replaced orders").
+- A note: a trainee's request is read against a `produce` right at `skillsWork`, and `spec-production.md` 4.2 ("tested as the executor is") and `spec-institutions.md` 5.3.2 read differently; this PR follows 5.3.2.
+- A note: `RightRefused.Produce` counts requests, not households.
+- Spec 5.2 and `spec-clearing.md` 3.2.1 may say `AdmitClamp` returns one flag.

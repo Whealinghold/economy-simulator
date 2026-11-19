@@ -80,8 +80,17 @@ var allEvents = []economysim.Event{
 	economysim.SettlementHeld{},
 	economysim.TitleTransferred{},
 	economysim.RentScaled{},
+	economysim.RentPaid{},
 	economysim.FacilityChanged{},
 	economysim.FacilityLimited{},
+	economysim.RouteRiskScaled{},
+	economysim.StoreLoss{},
+	economysim.StoreRiskScaled{},
+	economysim.MembershipChanged{},
+	economysim.RightRefused{},
+	economysim.PriceControlled{},
+	economysim.LegalLevelSet{},
+	economysim.RightSuspensionSet{},
 }
 
 // TestObserve_EveryEventTypeNoPanic sends the zero value of every event type to

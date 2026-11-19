@@ -72,7 +72,7 @@ func (AverageClearing) Clear(bids, asks []Order, rng *rand.Rand) []Trade {
 
 // codeReasons maps the admission codes of internal/clearing to the rejection
 // reasons of event.go, indexed by code (spec-clearing.md 3.2). It is never
-// mutated. The rows of the modules (not_permitted) are added with their codes.
+// mutated. The row of a module is added with its code, at the end.
 var codeReasons = [...]Reason{
 	clearing.UnknownAgent:      ReasonUnknownAgent,
 	clearing.SideNotAllowed:    ReasonSideNotAllowed,
@@ -87,6 +87,7 @@ var codeReasons = [...]Reason{
 	clearing.InsufficientFunds: ReasonInsufficientFunds,
 	clearing.InsufficientStock: ReasonInsufficientStock,
 	clearing.NoRoom:            ReasonNoRoom,
+	clearing.NotPermitted:      ReasonNotPermitted,
 }
 
 // reasonOfCode returns the Reason of a rejection code, and false for Admitted
@@ -178,6 +179,10 @@ type orderFacts struct {
 	Limited            bool
 	FreeMass, FreeBulk int64
 	SizeMass, SizeBulk int64
+	// NotPermitted is whether a right in force bars the agent from placing the order
+	// (institutions module, spec-institutions.md 5.6.2); false for a pseudo-agent and with
+	// the module off.
+	NotPermitted bool
 }
 
 // bookEntry is one admitted order and the reservation it holds.
@@ -240,6 +245,13 @@ type book struct {
 	// invalid is returned, by pointer, by a failed clearMarket so that the
 	// failure allocates nothing; it is overwritten by the next failure.
 	invalid tradeListError
+	// org is the institutions module, nil when it is off: the legal range of the market
+	// is read from it at each admission (spec-institutions.md 6.3). clamped says the
+	// last order admitted had its limit replaced by the range, and replaced is the limit it
+	// was admitted with, which OrderPlaced shows.
+	org      *institutions
+	clamped  bool
+	replaced Price
 }
 
 // newBook returns an empty book of the market (region, commodity) of a tick.
@@ -301,37 +313,30 @@ func (b *book) stock(l *ledger.Ledger, acct int, lot LotKey) (held, reserved, lo
 // named-lot ask of one commodity in one book is also a violated invariant, as
 // only an estate names a lot and it names one always (spec-clearing.md 3.1.2).
 func (b *book) admit(l *ledger.Ledger, f orderFacts, o Order) (Reason, bool) {
-	if o.Commodity != b.commodity {
-		invariant("an order of another commodity reached the book of a market")
-	}
-	if o.Side != Bid && o.Side != Ask {
-		invariant("an order has a side that is neither bid nor ask")
-	}
-	bid := o.Side == Bid
-	if bid {
+	b.checkRoute(o)
+	if o.Side == Bid {
 		o.Lot = LotKey{}
 	}
-	cf := clearing.Facts{
-		AgentKnown: f.AgentKnown, SideAllowed: f.SideAllowed,
-		CommodityKnown: f.CommodityKnown, Tradable: f.Tradable,
-		Bid: bid, Price: int64(o.Price), Qty: int64(o.Quantity),
-		MaxPrice: MaxPrice, MaxQuantity: MaxQuantity, MaxMoney: MaxMoney,
-		Duplicate: b.duplicate(o),
-		Limited:   f.Limited && bid, FreeMass: f.FreeMass, FreeBulk: f.FreeBulk, SizeMass: f.SizeMass, SizeBulk: f.SizeBulk,
-	}
-	if f.AgentKnown {
-		b.readFacts(l, f, o, &cf)
-	}
-	if code := clearing.Admit(cf); code != clearing.Admitted {
+	cf := b.facts(l, f, o)
+	b.clamped = false
+	code, price, changed := clearing.AdmitClamp(cf)
+	if code != clearing.Admitted {
 		r, ok := reasonOfCode(code)
 		if !ok {
 			invariant("admission returned a code with no reason")
 		}
 		return r, false
 	}
+	if changed {
+		b.clampTo(&o, price)
+	}
 	// The check passed, so none of the products below can fail.
 	if r, ok := b.reserve(l, f, o, cf.Tally); !ok {
+		b.clamped = false
 		return r, false
+	}
+	if changed {
+		b.org.noteClamp(b.region, b.commodity, o.Side == Bid, int64(o.Quantity))
 	}
 	b.entries = append(b.entries, bookEntry{
 		agent: o.Agent, account: f.Account, side: o.Side,
@@ -339,6 +344,46 @@ func (b *book) admit(l *ledger.Ledger, f orderFacts, o Order) (Reason, bool) {
 		roomed: cf.Limited, sizeMass: f.SizeMass, sizeBulk: f.SizeBulk,
 	})
 	return "", true
+}
+
+// checkRoute panics on an order that was routed to the wrong book or has no side: the
+// world routes by commodity and rejects a bad side before the book sees it (D39).
+func (b *book) checkRoute(o Order) {
+	if o.Commodity != b.commodity {
+		invariant("an order of another commodity reached the book of a market")
+	}
+	if o.Side != Bid && o.Side != Ask {
+		invariant("an order has a side that is neither bid nor ask")
+	}
+}
+
+// facts is the Facts of an order for the admission: what the world resolved (f), the
+// order itself and, for a known agent, what the ledger holds.
+func (b *book) facts(l *ledger.Ledger, f orderFacts, o Order) clearing.Facts {
+	bid := o.Side == Bid
+	cf := clearing.Facts{
+		AgentKnown: f.AgentKnown, SideAllowed: f.SideAllowed,
+		CommodityKnown: f.CommodityKnown, Tradable: f.Tradable,
+		Bid: bid, Price: int64(o.Price), Qty: int64(o.Quantity),
+		MaxPrice: MaxPrice, MaxQuantity: MaxQuantity, MaxMoney: MaxMoney,
+		Duplicate: b.duplicate(o),
+		Limited:   f.Limited && bid, FreeMass: f.FreeMass, FreeBulk: f.FreeBulk, SizeMass: f.SizeMass, SizeBulk: f.SizeBulk,
+		NotPermitted: f.NotPermitted,
+	}
+	if f.AgentKnown {
+		b.readFacts(l, f, o, &cf)
+	}
+	if b.org != nil {
+		cf.Cap, cf.Floor = b.org.rangeAt(b.region, b.commodity)
+	}
+	return cf
+}
+
+// clampTo admits the order with the limit price the legal range replaced its own with
+// (spec-institutions.md 6.3.1): the reservation, the entry and the event OrderPlaced
+// carry it. admit counts the clamp for P7.2b once the reservation succeeds.
+func (b *book) clampTo(o *Order, price int64) {
+	o.Price, b.clamped, b.replaced = Price(price), true, Price(price)
 }
 
 // duplicate reports whether the book holds an order of the same (agent, lot,
@@ -447,6 +492,9 @@ func (b *book) reserveRoom(l *ledger.Ledger, f orderFacts, o Order) {
 func (b *book) emitPlaced(obs *observers, o Order) {
 	if !obs.supplied {
 		return
+	}
+	if b.clamped {
+		o.Price = b.replaced
 	}
 	obs.deliver(OrderPlaced{
 		Tick: b.tick, Region: b.region, Commodity: o.Commodity, Agent: o.Agent,

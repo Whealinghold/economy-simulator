@@ -71,13 +71,22 @@ func (w *World) p13Arrivals() {
 	}
 }
 
-// arrive processes one arrival and reports whether the shipment is complete. A
-// traveller whose account cannot move now (another obligation refuses) holds the
-// whole arrival: nothing is delivered and the shipment is retried next tick.
+// arrive processes one arrival and reports whether the shipment is complete, in the
+// order guard, step 0 (the loss of the risk module), the traveller's region change,
+// the delivery (spec-transport.md 5.7, spec-risk.md 5.1.3). A traveller whose account
+// cannot move now (another obligation refuses) holds the whole arrival: nothing is
+// lost or delivered and the shipment is retried next tick.
 func (w *World) arrive(s shipment) bool {
 	t := w.transport
-	if w.travellerLive(&s) && !w.moveTraveller(&w.agents[s.traveller], &s) {
+	live := w.travellerLive(&s)
+	if live && w.arrivalHeld(&w.agents[s.traveller], &s) {
 		return false
+	}
+	if w.risk != nil {
+		w.arrivalLoss(&s) // step 0: after the guard, so a held arrival applies nothing
+	}
+	if live {
+		w.moveTraveller(&w.agents[s.traveller], &s)
 	}
 	if !s.hired {
 		t.setAway(s.traveller, false)
@@ -114,26 +123,33 @@ func (w *World) liveAgent(id AgentID) bool {
 	return id >= AgentID(w.firstHousehold) && id < w.state.nextAgent && w.agents[id].weight >= 1
 }
 
-// moveTraveller relocates the traveller to the destination: the guard query run
-// skipping the arriving shipment and the seam of the contract, then the one path
-// that moves an account (cause transport), then the beliefs reseeded with no draw.
-// It reports false, changing nothing, when another obligation refuses.
-func (w *World) moveTraveller(a *agent, s *shipment) bool {
+// arrivalHeld is the guard of an arrival: the guard query run skipping the arriving
+// shipment and the seam of the contract. It reports true, changing nothing, when
+// another obligation of the traveller refuses the region change, so that the arrival
+// is held for the next tick with nothing applied (spec-risk.md 5.1.3).
+func (w *World) arrivalHeld(a *agent, s *shipment) bool {
 	t := w.transport
 	key := string(strconv.AppendInt(append(t.key[:0], openShipment+":"...), int64(s.id), 10))
 	t.skip = append(append(t.skip[:0], key), w.arrivalSkips(s)...)
-	if reason, err := w.relocateRefusal(a.id, s.to, t.skip); err != nil {
-		if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
-			w.log.LogAttrs(ctx, slog.LevelDebug, "arrival held",
-				slog.Int64(logkeys.Shipment, int64(s.id)), slog.Int64(logkeys.Agent, int64(a.id)), slog.String(logkeys.Reason, string(reason)))
-		}
+	reason, err := w.relocateRefusal(a.id, s.to, t.skip)
+	if err == nil {
 		return false
 	}
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "arrival held",
+			slog.Int64(logkeys.Shipment, int64(s.id)), slog.Int64(logkeys.Agent, int64(a.id)), slog.String(logkeys.Reason, string(reason)))
+	}
+	return true
+}
+
+// moveTraveller relocates the traveller to the destination, after the guard
+// (arrivalHeld) has passed and step 0 has run: the one path that moves an account
+// (cause transport), then the beliefs reseeded with no draw.
+func (w *World) moveTraveller(a *agent, s *shipment) {
 	if err := w.moveAgent(a, s.to, CauseTransport); err != nil {
 		invariant("the ledger refused the relocation of an arriving traveller: " + err.Error())
 	}
 	w.reseedAtArrival(a, s.to)
-	return true
 }
 
 // reseedAtArrival reseeds the price beliefs of an agent that has just arrived in
@@ -150,14 +166,15 @@ func (w *World) reseedAtArrival(a *agent, to RegionID) {
 // deliver moves the cargo of the Transit account, line by line in commodity order,
 // to the consignee when it can hold it, else to the estate of the destination
 // (spec-transport.md 5.7 item 2, 5.8). What the account no longer holds spoiled on
-// the way. It records the lines and returns the receiver and whether any went to
+// the way or, with the risk module, was lost to a strike at step 0. It records the
+// lines and returns the receiver and whether any went to
 // the estate.
 func (w *World) deliver(s *shipment) (receiver AgentID, diverted bool) {
 	t := w.transport
 	cons := w.consigneeAccount(s)
 	receiver = s.consignee
-	for _, ln := range s.lines {
-		rec, div := w.deliverLine(s, cons, ln)
+	for i, ln := range s.lines {
+		rec, div := w.deliverLine(s, cons, ln, w.risk.lostOf(i))
 		if div {
 			diverted, receiver = true, AgentID(s.to)
 		}
@@ -171,12 +188,12 @@ func (w *World) deliver(s *shipment) (receiver AgentID, diverted bool) {
 // whether any went to the estate. A consignee that cannot take the whole line within
 // MaxQuantity is passed it whole; one whose room is short is given what fits, whole
 // units, and the rest is diverted (spec-storage.md 5.4.4, FR-STO-015).
-func (w *World) deliverLine(s *shipment, cons int, ln Line) (rec ArrivedLine, diverted bool) {
+func (w *World) deliverLine(s *shipment, cons int, ln Line, lost int64) (rec ArrivedLine, diverted bool) {
 	have, _, err := w.ledger.Holding(s.account, int(ln.Commodity))
 	if err != nil {
 		invariant("the ledger refused the holding of a Transit account: " + err.Error())
 	}
-	rec = ArrivedLine{Commodity: ln.Commodity, Shipped: ln.Quantity, Spoiled: ln.Quantity - Quantity(have)}
+	rec = ArrivedLine{Commodity: ln.Commodity, Shipped: ln.Quantity, Spoiled: ln.Quantity - Quantity(have+lost), Lost: Quantity(lost)}
 	ok := cons >= 0 && w.consigneeHolds(cons, ln.Commodity, have)
 	give := int64(0)
 	if ok {
@@ -186,7 +203,7 @@ func (w *World) deliverLine(s *shipment, cons int, ln Line) (rec ArrivedLine, di
 		}
 	}
 	rec.Delivered, rec.Diverted = Quantity(give), Quantity(have-give)
-	if diverted = !ok || give < have; diverted {
+	if diverted = (!ok || give < have) && !(have == 0 && lost > 0); diverted { // a total loss has nothing to divert (spec-risk.md 5.5.1)
 		w.logDiverted(s)
 	}
 	w.moveCargo(s, cons, ln, give, have-give)
@@ -247,7 +264,7 @@ func (w *World) logDiverted(s *shipment) {
 func (w *World) deliverArrived(s *shipment, receiver AgentID, diverted bool, lines []ArrivedLine) {
 	w.obs.deliver(ShipmentArrived{
 		Tick: w.Tick(), Shipment: s.id, Mode: s.mode, Region: s.from, To: s.to,
-		Receiver: receiver, Diverted: diverted, Lines: slices.Clone(lines),
+		Receiver: receiver, Diverted: diverted, Lines: slices.Clone(lines), AccountLost: w.risk.accountLostCopy(),
 	})
 }
 

@@ -4,7 +4,9 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -245,6 +247,25 @@ func (c *cardChecker) check(e economysim.Event) {
 	case economysim.RentScaled:
 		c.region("RentScaled", e.Tick, e.Region)
 		c.id("RentScaled", e.Tick, "Resource", int(e.Resource), len(c.names.Resources))
+	case economysim.RentPaid:
+		c.region("RentPaid", e.Tick, e.Region)
+		c.id("RentPaid", e.Tick, "Resource", int(e.Resource), len(c.names.Resources))
+		for _, rm := range e.From {
+			c.region("RentPaid", e.Tick, rm.Region)
+		}
+		for _, rm := range e.To {
+			c.region("RentPaid", e.Tick, rm.Region)
+		}
+	case economysim.RouteRiskScaled:
+		c.region("RouteRiskScaled", e.Tick, e.From)
+		c.region("RouteRiskScaled", e.Tick, e.To)
+		c.id("RouteRiskScaled", e.Tick, "Mode", int(e.Mode), len(c.names.Modes))
+	case economysim.StoreRiskScaled:
+		c.region("StoreRiskScaled", e.Tick, e.Region)
+		c.id("StoreRiskScaled", e.Tick, "Class", int(e.Class), len(c.names.StoreClasses))
+	case economysim.StoreLoss:
+		c.region("StoreLoss", e.Tick, e.Region)
+		c.id("StoreLoss", e.Tick, "Class", int(e.Class), len(c.names.StoreClasses))
 	}
 }
 
@@ -298,7 +319,7 @@ func TestCardinality_EventAttributesTakeClosedValues(t *testing.T) {
 
 // TestPacks_FiveAndAllEventAttributesTakeClosedValues is the check of
 // TestCardinality_EventAttributesTakeClosedValues on the warm five (every module off) and
-// on the all-on pack, seed 1, 400 ticks: the configuration of five that N-295 left to
+// on the warm five with the tenure overlays and on the all-on pack, seed 1, 400 ticks: the configuration of five that N-295 left to
 // Stage 2 (plan 2-24 Phase 2). The all-on row is the one that emits the events of the
 // modules (transport, outside node, migration, merchants, demand). It skips under -race with
 // the other 5 000-household runs, and its name starts with a prefix of gateFPrefixes.
@@ -313,7 +334,7 @@ func TestPacks_FiveAndAllEventAttributesTakeClosedValues(t *testing.T) {
 		pack   string
 		layers []string
 		opts   []economysim.Option
-	}{{"five", packFiveWarm, nil}, {"all", allLayers, allOptions()}} {
+	}{{"five", packFiveWarm, nil}, {"five+tenure", packFiveTenure, nil}, {"all", allLayers, allOptions()}} {
 		cfg := loadValidPack(t, row.layers...)
 		t.Run(row.pack, func(t *testing.T) {
 			t.Parallel()
@@ -465,6 +486,10 @@ func TestCardChecker_FlagsOutOfRangeAndOutsideSet(t *testing.T) {
 		{"facility cause outside set", economysim.FacilityChanged{Kind: economysim.FacilityBuilt, Cause: "gift"}, true},
 		{"title resource out of range", economysim.TitleTransferred{Resource: 1, Cause: economysim.CauseConsumer}, true},
 		{"rent scale resource out of range", economysim.RentScaled{Resource: 1}, true},
+		{"route risk scale mode out of range", economysim.RouteRiskScaled{Mode: 1}, true},
+		{"route risk scale region out of range", economysim.RouteRiskScaled{To: 1}, true},
+		{"store risk scale class out of range", economysim.StoreRiskScaled{Class: 1}, true},
+		{"store loss class out of range", economysim.StoreLoss{Class: 1}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -524,5 +549,28 @@ func (c *cardChecker) checkStorage(e economysim.Event) {
 		c.id("StoreChanged", e.Tick, "Class", int(e.Class), len(c.names.StoreClasses))
 		c.member("StoreChanged", e.Tick, "Kind", string(e.Kind))
 		c.member("StoreChanged", e.Tick, "Cause", string(e.Cause))
+	}
+}
+
+// TestCardinality_TierAttribute verifies FR-LND-031: the attribute economysim.tier of the
+// rent metrics has three values in observability-and-logging.md 5.4.1, own, commons and
+// let, and RentPaid carries one unit count for each (OwnUnits, CommonsUnits, LetUnits), so
+// the instrument economysim.rent.units is bounded by the configuration and by that set.
+//
+// Requirement: FR-LND-031
+//
+// Guard: a fourth tier added to the event without the closed set of the rule file, or a set
+// that no field feeds, would make the attribute unbounded or empty.
+func TestCardinality_TierAttribute(t *testing.T) {
+	t.Parallel()
+	rules := readFile(t, "doc/rules/observability-and-logging.md")
+	if !strings.Contains(rules, "`economysim.tier` (`own`, `commons`, `let`)") {
+		t.Errorf("observability-and-logging.md 5.4.1 does not list economysim.tier as own, commons and let")
+	}
+	typ := reflect.TypeFor[economysim.RentPaid]()
+	for _, f := range []string{"OwnUnits", "CommonsUnits", "LetUnits"} {
+		if _, ok := typ.FieldByName(f); !ok {
+			t.Errorf("RentPaid has no field %s, want one unit count for each value of the attribute tier", f)
+		}
 	}
 }

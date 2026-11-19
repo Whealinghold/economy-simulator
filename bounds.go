@@ -675,3 +675,33 @@ const (
 	// (the skills module's, spec-institutions.md 9).
 	MaxBodyTrainees = 100
 )
+
+// The bounds of the fiscal module (spec-fiscal.md 11.4, 14). All are placeholders
+// (N-015, N-027). The module also reuses MaxFlowAmount, MaxFlowRateBP, MaxFlowScale,
+// MaxMoney, MaxWeight, MaxQuantity and MaxPrice.
+const (
+	// MaxFiscalFlows is the most fiscal flows of all six kinds together: the step loops
+	// over the active flows and their classes each tick, so its cost is bounded by the
+	// configuration, as MaxMoneyFlows is.
+	MaxFiscalFlows = 64
+	// MaxDutyBP is the largest RateBP of a duty: the whole value of a trade at a scale
+	// of 10 000. A scale above 10 000 can lift the applied rate above it.
+	MaxDutyBP = 10_000
+	// MaxLimitBP is the largest LimitBP of a standing order: ten times the effective
+	// reference price.
+	MaxLimitBP = 100_000
+)
+
+// The bounds of the hire form of the employment module (spec-employment.md 13).
+// Both are provisional placeholders (N-015, N-027).
+const (
+	// MaxEstablishment is the largest Employer.MaxHires: the hired executions of one
+	// employer in progress at once. With MaxQuantity and MaxPrice the product of a
+	// bill (wage, Duration, executions) fits int64 through the 128-bit helper, and
+	// an establishment above a thousand households is not one agent.
+	MaxEstablishment = 1_000
+	// MaxHireRecords is the largest Employment.MaxOpen: the hires open at once in a
+	// region, and so the Escrow accounts of the hires are at most this many (as
+	// MaxContracts).
+	MaxHireRecords = 1_000_000
+)

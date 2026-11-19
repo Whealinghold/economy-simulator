@@ -26,7 +26,7 @@ var byName = map[string]ledger.Reason{
 	"transit_out": ledger.TransitOut, "transit_in": ledger.TransitIn, "haul_use": ledger.HaulUse, "transit_use": ledger.TransitUse,
 	"outside_budget": ledger.OutsideBudget, "outside_unspent": ledger.OutsideUnspent, "outside_receipts": ledger.OutsideReceipts,
 	"outside_offer": ledger.OutsideOffer, "outside_unsold": ledger.OutsideUnsold, "outside_purchases": ledger.OutsidePurchases,
-	"wage_pay": ledger.WagePay, "rent": ledger.Rent, "title_sale": ledger.TitleSale,
+	"wage_pay": ledger.WagePay, "rent": ledger.Rent, "title_sale": ledger.TitleSale, "loss": ledger.Loss,
 }
 
 // notBuilt lists the reasons of the starting registry that a module owns and
@@ -36,7 +36,7 @@ var notBuilt = []string{
 	"want_consumption",
 	"escrow_in", "escrow_out", "escrow_refund", "wage_escrow",
 	"wage_refund",
-	"premium", "payout", "loss",
+	"premium", "payout",
 }
 
 // specRow is one parsed row of the registry table of spec-ledger.md 7.2.
@@ -99,7 +99,7 @@ func pairing(between string) (from, to []ledger.Kind, back bool) {
 				out = append(out, k)
 			}
 		}
-		for w, k := range map[string]ledger.Kind{"agent": ledger.KindAgent, "estate": ledger.KindEstate, "boundary": ledger.KindBoundary, "outside": ledger.KindOutside} {
+		for w, k := range map[string]ledger.Kind{"agent": ledger.KindAgent, "estate": ledger.KindEstate, "boundary": ledger.KindBoundary, "outside": ledger.KindOutside, "transit": ledger.KindTransit} {
 			if strings.Contains(s, w) {
 				out = append(out, k)
 			}
@@ -109,14 +109,18 @@ func pairing(between string) (from, to []ledger.Kind, back bool) {
 	return kinds(l), kinds(r), back
 }
 
-// withTreasury adds the Treasury kind to a side of the pairing of initial money, the
-// only row that names it so far: the spec text of the trade and fiscal rows names it
-// too, but the fiscal module builds those (plan 3-pol D5, FR-POL-017).
+// withTreasury adds the Treasury kind to a side of the pairing of initial money and of
+// trade, the two rows of the table that name it: the pairing parser reads no word
+// "treasury" (plan 3-pol D5, FR-POL-017; plan 3-fis Phase 3, FR-FIS-052). The fiscal
+// reasons are per-flow rows of Config.Fiscal, not rows of this table.
 func withTreasury(name, between string, from, to []ledger.Kind) ([]ledger.Kind, []ledger.Kind) {
 	if name == "title_sale" {
 		// A release makes the pool pay the holder (spec-land.md 6.3.2); the row of 7.2
 		// lists only the sale to the pool, so the spec text owes "or back".
 		return append(from, ledger.KindEstate), to
+	}
+	if name == "trade" && strings.Contains(strings.ToLower(between), "treasury") {
+		return append(from, ledger.KindTreasury), append(to, ledger.KindTreasury)
 	}
 	if name == "initial" {
 		_, r, _ := strings.Cut(between, " to ")

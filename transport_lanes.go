@@ -13,9 +13,14 @@ import (
 // (spec-transport.md 9.4, FR-TRN-041). It is a pure function of the
 // configuration: it builds no world, draws nothing and logs nothing.
 
-// routeLossBP is the expected loss of a lane in basis points. It is the seam of
-// the risk module (spec-risk.md 8.3): 0 until that module exists (N-180).
-func routeLossBP(*Config, RegionID, RegionID, *Mode) int64 { return 0 }
+// routeLossBP is the expected loss of a lane in basis points: the risk module's
+// rows at the neutral scale over the path of the configured graph with every edge
+// open, 0 with the module off (spec-risk.md 8.3, N-180).
+// ok is false for a row whose numbers are outside 0 to 10 000 (an unvalidated
+// configuration).
+func routeLossBP(c *Config, g Graph, from, to RegionID, md *Mode) (int64, bool) {
+	return configuredLoss(c, g, from, to, md.ID)
+}
 
 // haulRecipe is the cheapest recipe that makes a haul commodity: its ticks per
 // job and the units one job makes.
@@ -107,7 +112,10 @@ func appendModeLanes(out []Lane, c *Config, g Graph, md *Mode, limit int) ([]Lan
 			if err := tooManyLanes(len(out)+len(c.Commodities), limit); err != nil { // before the pair's lanes are allocated
 				return nil, err
 			}
-			loss := routeLossBP(c, RegionID(from), RegionID(to), md)
+			loss, lossOK := routeLossBP(c, g, RegionID(from), RegionID(to), md)
+			if !lossOK {
+				return nil, &ValidationError{Path: []string{"modules", "risk", "routes"}, Rule: ErrOutOfBounds, Bound: "0 to 10000"}
+			}
 			for ci := range c.Commodities {
 				labour, lok := transit.Labour(c.Commodities[ci].Mass, c.Commodities[ci].Bulk, md.UnitMass, md.UnitBulk, md.HaulSpan, d, hr.duration, hr.output)
 				if !lok {

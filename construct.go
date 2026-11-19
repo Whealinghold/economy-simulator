@@ -148,6 +148,7 @@ func (w *World) allocate() {
 	w.sub = newSubsistence(&w.cfg, &w.roles, &w.recipes)
 	w.pop = newPopulation(&w.cfg)
 	w.transport = newTransport(&w.cfg)
+	w.risk = newRisk(&w.cfg, w.geo.g)
 	w.info = newInformation(&w.cfg, &w.roles)
 	w.migration = newMigration(&w.cfg)
 	w.mer = newMerchants(&w.cfg, &w.roles, w.transport)
@@ -178,6 +179,7 @@ func (w *World) allocate() {
 	}
 	w.external = newExternal(&w.cfg)
 	w.outside = outsideMarks(&w.cfg)
+	w.org = newInstitutions(&w.cfg, w.polity, w.set, w.outside)
 	w.tec = newTechnology(&w.cfg, w.outside, &w.geo, w.rnd.seed)
 	w.firstHousehold = regions + w.external.counterpartyCount() + w.polity.treasuryCount()
 	if w.external != nil {
@@ -199,6 +201,10 @@ func (w *World) allocate() {
 	w.tally = newEntryTally(regions)
 	w.runnable = make([][]RecipeID, regions)
 	w.markets = newMarketTable(&w.cfg, w.clr, seedPrices(&w.cfg))
+	w.org.attach(&w.markets, w.obs.supplied)
+	if w.org != nil && w.credit != nil {
+		w.credit.rateCap = w.org.rateLimit // the seam of the rate limit (spec-credit.md 5.2.3)
+	}
 	w.tk = newTickScratch(&w.cfg)
 	w.pr = newProductionTick(&w.cfg)
 	w.oc = newOutcomeTick(&w.cfg)
@@ -366,6 +372,7 @@ func namesOf(c *Config) Names {
 	n.TechFields = techNames(c)
 	n.SettlementClasses = settlementNames(c)
 	n.FacilityClasses = facilityClassNames(c)
+	n.Bodies, n.Rights, n.Controls = orgNames(c)
 	return n
 }
 
@@ -388,6 +395,8 @@ func modulesOn(c *Config) []string {
 		{"settlements", m.Settlements != nil},
 		{"tenure", m.Tenure != nil},
 		{"infrastructure", m.Infrastructure != nil},
+		{"risk", m.Risk != nil},
+		{"institutions", m.Institutions != nil},
 	}
 	on := []string{}
 	for _, t := range table {
@@ -466,6 +475,9 @@ func (w *World) summary() []slog.Attr {
 	if m := w.cfg.Modules.Technology; m != nil {
 		attrs = append(attrs, slog.Int(logkeys.Fields, len(m.Fields)))
 	}
+	if w.risk != nil {
+		attrs = append(attrs, slog.Int(logkeys.Rows, w.risk.rows))
+	}
 	if present {
 		attrs = append(attrs, slog.Int64(logkeys.Prices, warm.prices), slog.Int64(logkeys.Wages, warm.wages),
 			slog.Int64(logkeys.Groups, warm.groups), slog.Int64(logkeys.Jobs, warm.jobs))
@@ -483,6 +495,12 @@ func (w *World) summary() []slog.Attr {
 	if x := w.external; x != nil {
 		attrs = append(attrs, slog.Int(logkeys.Nodes, len(w.cfg.Modules.External.Nodes)), slog.Int(logkeys.Counterparties, len(x.cps)))
 	}
+	return w.summaryLater(attrs)
+}
+
+// summaryLater appends the attributes of the later modules to the attributes of
+// summary (a continuation for the Lizard limit).
+func (w *World) summaryLater(attrs []slog.Attr) []slog.Attr {
 	if w.polity != nil {
 		total, governed := polityTotals(&w.cfg)
 		attrs = append(attrs, slog.Int(logkeys.Jurisdictions, total), slog.Int(logkeys.Governed, governed))
@@ -497,5 +515,5 @@ func (w *World) summary() []slog.Attr {
 	if w.infra != nil {
 		attrs = append(attrs, slog.Int(logkeys.FacilityClasses, len(w.infra.cls)), slog.Int(logkeys.Facilities, len(w.infra.fac)))
 	}
-	return attrs
+	return w.orgSummary(attrs)
 }

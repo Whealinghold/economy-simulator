@@ -334,3 +334,28 @@ Each carries a recommendation, which the supervisor has delegated and this plan 
 - **Q7. Names.** Confirm `Employment.Hire` and `MaxOpen` (D1), the files of D2, the ledger codes 42 and 43 and the notes N-369 to N-372 (reconciled at merge). Recommended: yes to all.
 - **Q8. The form rule.** One form per world, `Hire` selecting it, `PayrollBP` 0 in the hire form. Recommended: yes (D1); a world that wants both is a later spec.
 - **Q9. The event order of a removal (D10).** The rule file and the code win over `spec-employment.md` 6.5.2. Recommended: yes; correct the spec.
+
+## PR 2 result (Phase 3, recorded when PR 2 was built)
+
+Rule tags read: architecture=dcf04f1ce22f6eb654b58a0e, observability=9ebd6516273680595f477c95, testing=66af7645b01fef4e2796c367. Notes tag read: 4b534c158301600c4881b9be (the whole of `doc/notes.md` was read by a subagent I delegated the read to, 460 KB; the tag is replaced by a fresh one in this PR). Notes added: N-428 to N-431; N-355 updated; N-371 stays open until PR 3 runs the form.
+
+Built: `Employment{Hire, MaxOpen}` and the four hire fields of `Employer` (hash ids as D1; `PayrollBP` written only when non-zero, so no payroll hash moves), `MaxEstablishment` and `MaxHireRecords` in `bounds.go`, `DefaultEmployment`, `DefaultHireEmployer` and `DefaultMaxOpen`, `ErrEmployerWeight`, the validator of both forms and the nine warnings of 14.2 in `employment_validate.go` (moved out of `employment.go`), the loader keys in `config/employment.go`, `testdata/chains/overlay/employment-hire.toml` (a new file), the five staged registry entries gone from `notBuilt`. Nothing runs yet: the form is data, and `golden/off`, `golden/employment`, `golden/all`, the pinned hash and `testdata/checkpoints` are untouched (the payroll hash bytes are pinned by `TestHash_EmploymentPayrollUnchanged`).
+
+Deviations and choices the plan left open:
+
+- `max_open` set with `Hire` false is `ErrEmploymentShape` (the hash would ignore it), a clause 14.1 does not carry yet.
+- The loader reads `[role.<id>.employer]` over `DefaultHireEmployer` when any key of the hire form is present, else over `DefaultEmployer`: the keys say the form, so the order the tables are read in does not matter.
+- The warnings that read prices use the dearest region where the employer role has a group, a yield-table entry of 1 and the non-discard outputs; a role with no group draws none (the choice of `roleWarnings`).
+- The validator is in `employment_validate.go`, the loader in a new file `config/employment.go` so that `config/mapping.go` does not grow.
+- The overlay makes the diggers and the foresters Hireable and keeps their recipes; no pack role has an empty list.
+- The five staged entries and `Employment.Hire` and `Employment.MaxOpen` leave `notBuilt`. The README and `spec-calibration.md` rows were already in PR 1.
+
+Left for PR 3 (found here, not built here):
+
+- The ledger codes are 22 (`wage_escrow`) and 24 (`wage_refund`), not 42 and 43: the pinned table of `spec-ledger.md` 7.2 names both and has 42 rows, and a code of 42 or more is the code of a configured money flow (`internal/ledger/checkpoint.go`, `TestReasonCode_Pinned`).
+- P4.1b must not run in the hire form (D1): `newEmployment` still marks an employer role a payer and `collect` still walks the agents. Guard it by the form flag.
+- The derived overflow check of `spec-production.md` 10.3 (`yieldMax` in `validate.go`) must take `HireYieldBP` of the hire-list recipes into the largest yield factor (14.1, last paragraph).
+
+Observability review (PR 2): no event, metric or run-time log is due (configuration only). The nine warnings go through the existing `logWarnings` (`Warn`, constant message, `rule` and `path` keys, IDs not indices, once per entity at construction). The five instruments stay deferred by Q5 to an `otelobserver/` PR and are listed with their use in N-432.
+
+Tests: field cases for every new row of the parameter-owner table, the one-form rule, the hire list, the weight rule, one case per warning plus a silent configuration, the pinned hire encoding and the field ids of the hash, the canonical default of `MaxOpen`, the loader (a hire document, the reject table), `FuzzValidateEmployment`, `FuzzLoadEmployment` with new seeds, and the pack test of the overlay. A break pass (the hire-list rule, the share bound, a hash id, a warning test) failed the tests it should.

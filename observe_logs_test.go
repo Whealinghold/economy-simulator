@@ -97,10 +97,10 @@ func warnRows(t *testing.T) map[int]warnRow {
 
 // builtWarnRows are the rows of 7.3 that the slice emits: configuration warning,
 // households unfed, price beliefs at bound, work floor binding, role extinct,
-// entry unfunded, group below floor, recipe output disposed, welfare record
+// entry unfunded, group below floor, recipe output disposed, tenure refusal, welfare record
 // clamped. The test fails when another row's message is written, since the
 // message set below is built from them.
-var builtWarnRows = []int{1, 2, 3, 4, 6, 7, 8, 19, 26}
+var builtWarnRows = []int{1, 2, 3, 4, 6, 7, 8, 19, 22, 26}
 
 // knownMessages is every message the library may write: the quoted names of 7.2,
 // 7.3 and 7.5 of the spec.
@@ -500,7 +500,7 @@ func logScenarios() []scenario {
 	for _, c := range warnCases() {
 		list = append(list, c.scenario)
 	}
-	list = append(list, storageLogScenario())
+	list = append(list, storageLogScenario(), tenureLogScenario())
 	return append(list, scenario{name: "warm one", ticks: 3, cfg: func(t *testing.T) economysim.Config {
 		return loadPack(t, "base.toml", "one.toml", "warm-one.toml")
 	}})
