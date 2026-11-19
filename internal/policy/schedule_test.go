@@ -101,3 +101,23 @@ func TestSchedule_OtherLeversIgnored(t *testing.T) {
 		t.Errorf("ScheduleValue(lever 0, tick 12) = %d, %v; want 1, true", got, ok)
 	}
 }
+
+// TestSchedule_OrderDoesNotMatter verifies that the value of a lever is the same for
+// the steps in any order, so a caller that does not sort them gets the contract of
+// 8.2.1 and not the last step in its list.
+//
+// Requirement: FR-PLC-061
+func TestSchedule_OrderDoesNotMatter(t *testing.T) {
+	t.Parallel()
+	sorted := []policy.Step{{Lever: 0, At: 0, BP: 1}, {Lever: 0, At: 10, BP: 2}, {Lever: 0, At: 20, BP: 3}}
+	shuffled := []policy.Step{sorted[2], sorted[0], sorted[1]}
+	for _, cycle := range []int64{0, 30} {
+		for tick := int64(-1); tick < 70; tick++ {
+			bp, closed, ok := policy.ScheduleValue(sorted, 0, cycle, tick)
+			bp2, closed2, ok2 := policy.ScheduleValue(shuffled, 0, cycle, tick)
+			if bp != bp2 || closed != closed2 || ok != ok2 {
+				t.Errorf("cycle %d tick %d: sorted (%d, %v, %v), shuffled (%d, %v, %v)", cycle, tick, bp, closed, ok, bp2, closed2, ok2)
+			}
+		}
+	}
+}

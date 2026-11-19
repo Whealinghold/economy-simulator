@@ -1,6 +1,7 @@
 package policy_test
 
 import (
+	"math"
 	"math/big"
 	"testing"
 
@@ -55,7 +56,25 @@ func refDue(tick, actor, every int64) bool {
 	}
 	w := new(big.Int).SetUint64(uint64(uint32(actor) * 0x6A09E667))
 	b := new(big.Int).Rsh(w.Mul(w, big.NewInt(every)), 32).Int64()
-	return (tick+b)%every == 0
+	return new(big.Int).Mod(new(big.Int).Add(big.NewInt(tick), big.NewInt(b)), big.NewInt(every)).Sign() == 0
+}
+
+// TestDue_Int64Edge verifies that a tick at the end of int64 does not wrap the sum
+// of the tick and the bucket: Due agrees with the exact sum for the highest and the
+// lowest tick, for a cadence from 1 to the largest and an actor of each sign.
+//
+// Requirement: FR-PLC-051
+func TestDue_Int64Edge(t *testing.T) {
+	t.Parallel()
+	for _, tick := range []int64{math.MaxInt64, math.MaxInt64 - 1, math.MinInt64, math.MinInt64 + 1, -1} {
+		for _, actor := range []int64{0, 1, 2, -1, math.MaxInt64, math.MinInt64} {
+			for _, every := range []int64{1, 2, 10, 3650, math.MaxInt64} {
+				if got, want := policy.Due(tick, actor, every), refDue(tick, actor, every); got != want {
+					t.Errorf("Due(%d, %d, %d) = %v, want %v", tick, actor, every, got, want)
+				}
+			}
+		}
+	}
 }
 
 // FuzzDue fuzzes Due against the reference of 7.2.1, and checks that exactly one
@@ -67,13 +86,13 @@ func FuzzDue(f *testing.F) {
 	f.Add(int64(0), int64(0), int64(1))
 	f.Add(int64(1_000_000), int64(63), int64(3650))
 	f.Fuzz(func(t *testing.T, tick, actor, every int64) {
-		if tick < 0 || tick > 1<<40 || every > 3650 {
+		if every > 3650 {
 			t.Skip()
 		}
 		if got, want := policy.Due(tick, actor, every), refDue(tick, actor, every); got != want {
 			t.Fatalf("Due(%d, %d, %d) = %v, want %v", tick, actor, every, got, want)
 		}
-		if every < 1 {
+		if every < 1 || tick > math.MaxInt64-every {
 			return
 		}
 		n := 0
