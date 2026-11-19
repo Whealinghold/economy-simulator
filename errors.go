@@ -748,3 +748,30 @@ var (
 	// fields (spec-fiscal.md 15.1).
 	ErrFiscalShape = errors.New("fiscal flow has the wrong shape")
 )
+
+// The sentinels of the policy module (spec-policy.md 11.1). They are root sentinels
+// matched with errors.Is (N-075). The module reuses ErrModuleDependency, ErrTooMany,
+// ErrInvalidID, ErrDuplicateID, ErrUnknownJurisdiction, ErrUnknownFlow,
+// ErrUnknownEdge, ErrUnknownRegion, ErrUnknownMode, ErrUnknownCommodity,
+// ErrOutOfBounds, ErrNotGoverned, ErrNotDirected, ErrNilExtension and ErrModuleOff.
+var (
+	// ErrPolicyShape is a policy actor, lever, schedule or reaction of the wrong
+	// shape: a wrong combination of its fields; the rule names which (spec-policy.md
+	// 11.1).
+	ErrPolicyShape = errors.New("policy actor has the wrong shape")
+	// ErrLeverNotInReach is a lever whose key is outside the reach of the actor's
+	// jurisdiction (spec-policy.md 3.5).
+	ErrLeverNotInReach = errors.New("lever key is outside the reach of the jurisdiction")
+	// ErrLeverShared is a key held by levers of two actors, after the expansion of every
+	// Against (spec-policy.md 3.5.2).
+	ErrLeverShared = errors.New("lever key is held by two actors")
+	// ErrUnknownPolicy is a Policy name that is neither built in nor registered with
+	// WithPolicy; NewWorld reports it after Validate succeeds (spec-policy.md 4.5.1).
+	ErrUnknownPolicy = errors.New("unknown policy")
+	// ErrUnknownActor is a call that names an ActorID that is not an actor
+	// (spec-policy.md 9.1.2).
+	ErrUnknownActor = errors.New("unknown policy actor")
+	// ErrUnknownLever is a call that names a LeverID that is not a lever of the actor
+	// (spec-policy.md 9.1.2).
+	ErrUnknownLever = errors.New("unknown policy lever")
+)

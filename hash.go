@@ -589,6 +589,11 @@ func pairsLastModules(e *encoder, m Modules) {
 		pairsInstitutions(e, *m.Institutions)
 		e.end()
 	}
+	if m.Policy != nil {
+		e.id(22)
+		pairsPolicy(e, *m.Policy)
+		e.end()
+	}
 	if m.Technology != nil {
 		e.id(24)
 		pairsTechnology(e, *m.Technology)
@@ -672,6 +677,59 @@ func pairsInstitutions(e *encoder, m Institutions) {
 		e.num(4, l.CapBP)
 	})
 	e.flag(5, m.OwnUseBound)
+}
+
+// pairsPolicy writes the pairs of a PolicyConfig: Actors 1, in ID order. A PolicyActor
+// has ID 1, Jurisdiction 2, Policy 3 (the name only, spec-policy.md 3.1.3), Every 4,
+// ReadsRegions 5, Levers 6, Schedule 7, Cycle 8 and Rules 9 (Label is presentation only
+// and has no id); a Lever has ID 1, Kind 2, Flow 3, From 4, To 5, Mode 6, Against 7, Min
+// 8, Max 9, MaxStep 10 and MayClose 11; a ScheduleStep has Lever 1, At 2, BP 3 and
+// Closed 4; a Reaction has Lever 1, Gauge 2, Commodity 3, MaxAge 4, Target 5, Deadband 6,
+// Span 7, Move 8 and Raise 9 (spec-config.md 8.2.2). The lists are in the canonical
+// order, and a region, flow, mode, jurisdiction or commodity is written by its ID
+// string, so a reordering of the regions does not change the hash of a lever.
+func pairsPolicy(e *encoder, m PolicyConfig) {
+	encodeList(e, 1, m.Actors, func(e *encoder, a PolicyActor) {
+		e.text(1, a.ID)
+		e.text(2, a.Jurisdiction)
+		e.text(3, a.Policy)
+		e.num(4, a.Every)
+		e.flag(5, a.ReadsRegions)
+		encodeList(e, 6, a.Levers, pairsLever)
+		encodeList(e, 7, a.Schedule, func(e *encoder, s ScheduleStep) {
+			e.text(1, s.Lever)
+			e.num(2, s.At)
+			e.num(3, s.BP)
+			e.flag(4, s.Closed)
+		})
+		e.num(8, a.Cycle)
+		encodeList(e, 9, a.Rules, func(e *encoder, r Reaction) {
+			e.text(1, r.Lever)
+			e.text(2, string(r.Gauge))
+			e.text(3, r.Commodity)
+			e.num(4, r.MaxAge)
+			e.num(5, r.Target)
+			e.num(6, r.Deadband)
+			e.num(7, r.Span)
+			e.num(8, r.Move)
+			e.flag(9, r.Raise)
+		})
+	})
+}
+
+// pairsLever writes the pairs of a Lever (see pairsPolicy).
+func pairsLever(e *encoder, l Lever) {
+	e.text(1, l.ID)
+	e.text(2, string(l.Kind))
+	e.text(3, l.Flow)
+	e.text(4, l.From)
+	e.text(5, l.To)
+	e.text(6, l.Mode)
+	e.text(7, l.Against)
+	e.num(8, l.Min)
+	e.num(9, l.Max)
+	e.num(10, l.MaxStep)
+	e.flag(11, l.MayClose)
 }
 
 // pairsTechnology writes the pairs of a Technology: Fields 1, in ID order. A
