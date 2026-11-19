@@ -1,11 +1,14 @@
 package economysim
 
 import (
+	"context"
+	"log/slog"
 	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/institution"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 )
 
 // This file is the institutions module (spec-institutions.md, ORG): the bodies, the
@@ -273,20 +276,44 @@ func (o *institutions) noteRoleMove(g RegionID, from, to RoleID, weight int64) {
 	}
 }
 
-// noteHeld is called (hook H-13) when a completion of weight households into role r of region
-// g is held for want of headroom, and counts it for the body of the role when the body's own
-// places are what is short, for MembershipChanged.Held (spec-institutions.md 4.5.2). The count
-// exists only for the event, so a world with no observer keeps none.
-func (o *institutions) noteHeld(w *World, g RegionID, r RoleID, weight int64) {
-	if o == nil || !w.obs.supplied {
+// Reasons of the Debug line "completion held": the body's own places are short, or the class
+// limit alone holds the trainee. They are rule constants of the log line and no event field
+// (architecture.md 9.6); MembershipChanged.Held counts the first only (N-465).
+const (
+	reasonBodyPlaces Reason = "body_places"
+	reasonClassLimit Reason = "class_limit"
+)
+
+// noteHeld is called (hook H-13) when a completion of weight households of the trainee into role
+// r of region g is held for want of headroom, and counts it for the body of the role when the
+// body's own places are what is short, for MembershipChanged.Held (spec-institutions.md 4.5.2).
+// The count exists only for the event, so a world with no observer keeps none. With the log at
+// Debug it also writes "completion held", naming the trainee and whether the body or the class
+// limit holds it, which the count does not say; with neither, nothing is read.
+func (o *institutions) noteHeld(w *World, a *agent, g RegionID, r RoleID) {
+	if o == nil {
 		return
 	}
-	b := o.bodyOf[int(g)*o.nroles+int(r)]
-	if b < 0 {
+	ctx := context.Background()
+	debug := w.log.Enabled(ctx, slog.LevelDebug)
+	if !w.obs.supplied && !debug {
 		return
 	}
-	if room, none := o.bodyHeadroom(w, g, int(b)); !none && room < weight {
-		o.rd.out[int(g)*o.nb+int(b)].Held++
+	short := false
+	if b := o.bodyOf[int(g)*o.nroles+int(r)]; b >= 0 {
+		room, none := o.bodyHeadroom(w, g, int(b))
+		if short = !none && room < a.weight; short && w.obs.supplied {
+			o.rd.out[int(g)*o.nb+int(b)].Held++
+		}
+	}
+	if debug {
+		reason := reasonClassLimit
+		if short {
+			reason = reasonBodyPlaces
+		}
+		w.log.LogAttrs(ctx, slog.LevelDebug, "completion held", slog.Int64(logkeys.Agent, int64(a.id)),
+			slog.Int64(logkeys.Role, int64(r)), slog.Int64(logkeys.Region, int64(g)),
+			slog.Int64(logkeys.Households, a.weight), slog.String(logkeys.Reason, string(reason)))
 	}
 }
 

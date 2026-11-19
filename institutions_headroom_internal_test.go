@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"log/slog"
 	"testing"
 )
 
@@ -209,6 +210,60 @@ func TestOrgCompletion_HeldWithoutBodyHeadroom(t *testing.T) {
 	}
 }
 
+// TestOrgCompletion_HeldLogsItsReason verifies the Debug line "completion held" (spec-institutions.md
+// 4.5.2): a trainee held for want of headroom is named with its role, region, weight and the
+// reason, body_places when the body's own places are short and class_limit when the class limit
+// alone holds it, and with no observer the log alone still reads the headroom.
+//
+// Arithmetic: the weaver holds 3 households. A body of 3 places has headroom 0, so both
+// trainees (weight 1) are held by the body: 2 lines body_places. A body of 9 places has headroom
+// 6 and the class limit 4 leaves 1, which a first completion takes, so the second is held by the
+// class alone: 1 line class_limit.
+//
+// Guard: the Held count omits a hold by the class limit and names no trainee (N-465); without the
+// line a trainee that stays one after TrainingTicks has no trace of why.
+func TestOrgCompletion_HeldLogsItsReason(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name   string
+		places int64
+		settle bool
+		reason Reason
+		lines  int
+	}{
+		{"the body's places are short", 3, false, reasonBodyPlaces, 2},
+		{"the class limit alone holds", 9, true, reasonClassLimit, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			lg := newCapture()
+			w := newMill(t, orgSkilledConfig(tc.places, tc.settle, true), WithSeed(exitSeed), WithLogger(slog.New(lg)))
+			step(t, w, 1)
+			millers := orgAgents(w, 0, skMiller)
+			trainer := AgentID(orgAgents(w, 0, skWeaver)[0])
+			w.skills.start(AgentID(millers[0]), trainer, skWeaver, 4, 5)
+			w.skills.start(AgentID(millers[1]), trainer, skWeaver, 4, 2)
+			*lg.lines = nil
+			if err := w.skillsEntry(0); err != nil {
+				t.Fatalf("skillsEntry() error = %v, want nil", err)
+			}
+			var got int
+			for _, l := range *lg.lines {
+				if l.msg != "completion held" {
+					continue
+				}
+				got++
+				if l.strs["reason"] != string(tc.reason) || l.attrs["role"] != int64(skWeaver) || l.attrs["households"] != 1 {
+					t.Errorf("line completion held = reason %q role %d households %d, want %q, %d, 1", l.strs["reason"], l.attrs["role"], l.attrs["households"], tc.reason, skWeaver)
+				}
+			}
+			if got != tc.lines {
+				t.Errorf("lines \"completion held\" = %d, want %d", got, tc.lines)
+			}
+		})
+	}
+}
+
 // heldNow is the Held of MembershipChanged for (home, guild) as P7.2b would tell it now, and
 // clears the count so the next call reads only what came after.
 func heldNow(w *World, rec *evLog) int64 {
@@ -332,7 +387,7 @@ func TestAlloc_InstitutionsSkillsNoOp(t *testing.T) {
 		"trainerMax":      func() { w.org.trainerMax(a, 0, 3) },
 		"viewMaxTrainees": func() { w.org.viewMaxTrainees(0, skWeaver, 3) },
 		"noteTrain":       func() { w.org.noteTrain(w, 0, skWeaver) },
-		"noteHeld":        func() { w.org.noteHeld(w, 0, skWeaver, 1) },
+		"noteHeld":        func() { w.org.noteHeld(w, a, 0, skWeaver) },
 		"noteRoleMove":    func() { w.org.noteRoleMove(0, skMiller, skWeaver, 0) },
 		"orgHeadroom":     func() { w.orgHeadroom(0, skWeaver) },
 		"fillRoleBodies":  func() { w.fillRoleBodies(0) },

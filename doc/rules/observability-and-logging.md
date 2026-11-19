@@ -141,7 +141,7 @@ constants in an internal package and reused. The standard keys are:
 | `price`     | a price, in minor units              |
 | `quantity`  | a quantity, in whole units           |
 | `side`      | `bid` or `ask`                       |
-| `reason`    | machine-readable reason (see below); the values of the "run ended" line are `completed`, `cancelled` and `failed`, the closed set of that one line (log-only values, with no event field); `not_member` is a log-only reason of the institutions module |
+| `reason`    | machine-readable reason (see below); the values of the "run ended" line are `completed`, `cancelled` and `failed`, the closed set of that one line (log-only values, with no event field); `not_member`, `body_places` and `class_limit` are log-only reasons of the institutions module |
 | `error`     | an error value (`slog.Any`)          |
 | `region`    | region ID                            |
 | `bound`     | which bound a price belief sits on: `floor` or `ceiling` |
@@ -981,4 +981,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 9701798a5a03417c57f1a38a
+RULE-TAG: d1bc9f448a531138bce8057d

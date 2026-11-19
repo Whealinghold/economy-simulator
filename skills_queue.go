@@ -73,7 +73,7 @@ func (w *World) completeReady(g RegionID) error {
 		rec, a := &s.trainee[id], &w.agents[id]
 		headroom, noLimit := w.completionHeadroom(g, rec.role)
 		if skill.Complete(rec.served, w.cfg.Roles[rec.role].TrainingTicks, headroom, a.weight, noLimit) != skill.Done {
-			w.org.noteHeld(w, g, rec.role, a.weight)
+			w.org.noteHeld(w, a, g, rec.role)
 			continue
 		}
 		d, from := Decision{Kind: DecideSwitch, Agent: a.id, Role: rec.role, Cause: CauseTraineeship}, a.role
