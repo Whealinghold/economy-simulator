@@ -340,14 +340,20 @@ func (w *World) startReq(a *agent, region RegionID, recipe RecipeID, maximum int
 // started" behind Enabled and, under the flag, one count in the refusal tally. A
 // recipe outside the configuration has no row in the tally and is only logged.
 func (w *World) refuse(a *agent, region RegionID, recipe RecipeID, reason Reason) {
-	w.refuseFor(a.id, a, region, recipe, reason)
+	// No count of the capacity's cut: the last maxExecutions was for another request.
+	w.refuseCut(a.id, a, region, recipe, reason, 0)
 }
 
 // refuseFor is refuse for a request whose principal is not the executor (a hired start: the
 // employer's facilities are the ones that were full), so the module counts the refusal against
 // the principal's class.
 func (w *World) refuseFor(principal AgentID, a *agent, region RegionID, recipe RecipeID, reason Reason) {
-	w.infra.refused(principal, region, recipe, reason, w.prod.facCut)
+	w.refuseCut(principal, a, region, recipe, reason, w.prod.facCut)
+}
+
+// refuseCut is refuseFor with the executions the capacity took off the refused request.
+func (w *World) refuseCut(principal AgentID, a *agent, region RegionID, recipe RecipeID, reason Reason, cut int64) {
+	w.infra.refused(principal, region, recipe, reason, cut)
 	if w.sto != nil {
 		w.sto.refusedStart(w.cellOf(region, a), reason)
 		if reason == ReasonNoRoom {
