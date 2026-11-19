@@ -103,7 +103,7 @@ func (f *fiscalFlowState) rule(t *Tax) fiscal.Rule {
 // keepCarry appends a pair to the new table when its account is still open: a pair
 // of a closed account is dropped with the account (spec-fiscal.md 17).
 func (w *World) keepCarry(next []carryPair, p carryPair) []carryPair {
-	if v, err := w.ledger.Account(p.account); err == nil && !v.Closed {
+	if w.accountOpen(p.account) {
 		return append(next, p)
 	}
 	return next
