@@ -73,8 +73,8 @@ PR description.
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482 |
-| ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-492, N-483, N-484 |
+| OBS | N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482 |
+| ORG | N-400, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-463, N-464, N-465, N-492, N-483, N-484 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454, N-501 |
@@ -84,8 +84,8 @@ PR description.
 | SAV | N-145, N-156, N-195, N-362, N-382, N-475, N-490, N-491, N-492, N-493, N-495, N-496 |
 | SCL | N-030, N-198, N-222, N-300, N-493 |
 | SET | N-404, N-140, N-192, N-268, N-348, N-365 |
-| SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
-| SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
+| SKL | N-464, N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
+| SPN | N-463, N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375, N-388 |
 | STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485, N-458 |
@@ -2412,12 +2412,6 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-org PR A review, `spec-institutions.md` 10.1.
 - **Note:** `Institutions.canonical` hashes `Roles`, `Regions` and `Jurisdictions` of a body in the order given, so two configurations that list the same set in another order, or twice, hash differently and resolve the same tables. The spec is silent on a repeated entry. The CFG owner decides between rejecting a duplicate (a sentinel and a row of 10.1), sorting the lists in `canonical`, or leaving it. Nothing in ORG depends on the answer.
 
-### N-401 ORG: the tests that plant state are replaced by the call's tests in PR D
-
-- **Areas:** ORG
-- **Raised:** 2026-11-18, plan 3-org PR B.
-- **Note:** PR B builds the resolved rights and ranges, the levels in force and the suspensions, and saves them in tag 31, but nothing sets a level or a suspension before PR D. `MembershipChanged.Held` is 0 until PR D. Until then `orgTablesToy` and the levels test plant the state in the module's fields. PR D replaces them with tests of `SetLegalLevels` and `SetRightSuspended` and of the held completion, and removes the planting.
-
 ### N-402 CHK: `hashWorld` of a restored world differs from the uninterrupted one
 
 - **Areas:** CHK, CODE
@@ -2442,6 +2436,7 @@ PR description.
 - **Raised:** 2026-11-18, observability review of plan 3-org PR B (instruments deferred by plan question 8).
 - **Note:** the adapter change (`otelobserver/`, no core change) builds, in this order: (1) `economysim.body.waiting`, a gauge from `Bodies[].Eligible - Members` per body and region: the only metric that shows a body with a queue, the counterpart of the `Warn` "body has waiting households", which fires on the tenth tick of a run and at every tenth after, so a short queue leaves no trace in logs; (2) `economysim.body.members`, a gauge from `Bodies[].Members`, so a drop to 0 (all lapsed) is seen next to `body.waiting`; (3) `economysim.membership.lapsed` is NOT proposed: `MembershipChanged.LapsedRole`, `LapsedRegion`, `Skipped` and `Barred` are cumulative per tick and bounded, so add them as attributes of one counter only if a dashboard needs the cause, and not before; (4) `economysim.right.refusals` and `economysim.control.clamped` from `RightRefused` and `PriceControlled`, which PR C and PR D emit, so they are built after those events exist. Fold the rows once with `TestEvents_MetricsDerivable` as the check, and remove the five entries of `ignoredEvents` in the same change. Series: bodies times regions for the two gauges (bounded by the configuration).
 - **Update (2026-11-19, plan 3-org PR C observability review):** the two counters of (4) are derivable from the events as built (`TestEvents_RightRefusalsMatchRejectedOrders` shows the order counts agree), and the adapter change must keep five facts, each a reading rule and not a new instrument: (a) a refused order is counted twice on purpose, by `economysim.right.refusals` (activity `sell` or `buy`) and by `economysim.market.orders.rejected` (reason `not_permitted`), so a panel must not add them; an offer or a take refused for a right is also in `economysim.contract.refused` for the same reason; (b) a start refused for a right is counted only by `economysim.right.refusals` (activity `produce` or `train`), never by `economysim.recipe.refused` or `economysim.production.halted` (`refusalColumn` returns -1), so a "why did production not start" panel adds `right.refusals` to `recipe.refused`; (c) a rate limit is a `PriceControlled` with `Commodity` `NoCommodity`, `Asks` 0 and `Units` 0, so `economysim.control.clamped` counts it as `side` `bid` (a borrower's request lowered), and a control of a rate limit never has `side` `ask`; (d) `PriceControlled.Units` is not fed to any instrument: the volume that a cap or a floor touched is not proposed (the order count and `MarketCleared` unmatched units are the shortage signal) and is added only if a dashboard needs it, as `economysim.control.units` with the same attributes (no new series); (e) the `Debug` lines of a start refused and an order rejected exist (reason `not_permitted`) and no `Debug` line is written for a clamped limit, because `PriceControlled` per (region, control) and the clamped limit on `OrderPlaced` tell it.
+- **Update (2026-11-19, plan 3-org PR D observability review):** the adapter change reads the train right, the held completion and the headroom as follows, and adds no instrument beyond (1) to (4) except the one candidate in (g). (f) `economysim.right.refusals` with activity `train` is fed by `RightRefused.Train` and needs nothing new; it is `min(f, a)` per (region, right) per tick, so a waiting queue counts again each tick (N-465), and its description says "pressure, not households". (g) Candidate, built only if a dashboard needs it: `economysim.membership.held`, a Counter in `{household}` by `economysim.body` and `economysim.region`, from `MembershipChanged.Held`. Use: a trainee that finished its ticks and cannot complete stays a trainee, takes a trainer's place and counts nothing in `body.members` or `body.waiting`, so a body whose places are full of its own households shows the stuck pipeline only here. It counts a trainee each tick it stays held, and only where the body's own places are short (N-465), so a rising rate with a flat `body.members` is the signal and the value is not a household count. No new attribute and no new series beyond bodies times regions. (h) Headroom limits are not proposed as an instrument: the headroom of a role is a view field and no snapshot row, `Held` is blind to a hold by the class limit alone, and a gauge of a headroom per role would be a new snapshot field for a figure the spawner already reads. The class-limit hold, and which of the two limits holds a trainee, are told by the `Debug` line "completion held" (reason `body_places` or `class_limit`, log-only values of `reason`), written in the PR D observability review; an operator looks for it when `Held` is 0 and a trainee does not complete. (i) `LegalLevelSet` and `RightSuspensionSet` get no instrument: they are one per changed key of a consumer's call between steps, so a counter would only repeat what the consumer did; they stay in `ignoredEvents`.
 
 ### N-424 The default strategy never asks a closed endowment
 
@@ -2714,6 +2709,24 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-org PR C review.
 - **Note:** The root calls `clearing.AdmitClamp`; `Admit` is a wrapper kept by `spec-clearing.md` 3.2.1.1 so that a caller that reads no range is unchanged, and only tests call it. Drop it, or keep it with a test that pins it to `AdmitClamp`, when the next change touches `internal/clearing/admit.go`.
 
+### N-463 ORG, SPN: a body shared by several roles of a region is bounded per role in one entry step
+
+- **Areas:** ORG, SPN
+- **Raised:** 2026-11-19, plan 3-org PR D, `spec-institutions.md` 3.4.2.
+- **Note:** The headroom of a body is the places less the households of all the body's roles in the region. The spawner holds its room per role (`RoleView.Headroom`, `s.room[r]`, `spec-spawner.md` 6.3.1: "a body's places add a second source to the same count and no field"), so two entrants into two roles of one body each see the whole headroom in one entry step and can together exceed the places. `spec-institutions.md` 3.4.2 already says the limit is not enforced on what is there and nothing is removed (SET R3), and the next step's view counts the households, so the overshoot lasts one step. A body over a single role (every example of the spec) is exact. Decision of plan 3-org PR D: documented, not fixed. The spawner owner either shares the room of the roles of a body (a group field on `RoleView` and in `occupation.Limits`, which 6.3.1 says the view does not have) or keeps the overshoot and says so in 3.4.2.
+
+### N-464 ORG, SKL: the expected wait counts the body's trainee limit only where a train right is in force
+
+- **Areas:** ORG, SKL
+- **Raised:** 2026-11-19, plan 3-org PR D, `spec-institutions.md` 5.7.2 and 5.7.3.
+- **Note:** `n_max = Trainers * MaxTrainees` of the spawner's view takes one `MaxTrainees` for a role. With a `train` right in force every trainer is a member, so `RoleView.MaxTrainees` is the least of the role's and the body's, which is exact. Without the right, a member holds the least and a non-member the role's, and one number cannot say both: the view keeps the role's. The snapshot's `Places` is exact for each trainer. A role of a body with a `MaxTrainees` and no train right overstates the places in the applicant's expected wait by the difference.
+
+### N-465 ORG, OBS: `Held` and `Train` count each tick, and `Held` only where a body's own places are short
+
+- **Areas:** ORG, OBS
+- **Raised:** 2026-11-19, plan 3-org PR D.
+- **Note:** `MembershipChanged.Held` counts a held trainee in every tick it stays held (the event says "held at P7.1(a) this tick"), and only when the body's headroom is below the trainee's weight: a completion held by the class limit alone is not a body's. `RightRefused.Train` is `min(f, a)` per (region, right) per tick, so a queue that waits for a closed craft is counted again every tick, as `Produce` counts requests (N-455). Both are pressure, not distinct households, and both exist only under an observer (N-456). The adapter that records them says so in its description.
+
 ### N-480 D17 is keyed once per due actor (`sitePolicy`)
 
 - **Areas:** WLD, PLC, CHK
@@ -2856,4 +2869,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: bf333d1732bff9292fb7b721
+NOTES-TAG: 71e738d26b28d72c9ce40998

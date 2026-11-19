@@ -206,6 +206,7 @@ func (w *World) allocate() {
 	if w.org != nil && w.credit != nil {
 		w.credit.rateCap = w.org.rateLimit // the seam of the rate limit (spec-credit.md 5.2.3)
 	}
+	w.wireOrgHeadroom() // the seam of the completion's headroom (spec-institutions.md 3.4.3), also on a restore
 	w.tk = newTickScratch(&w.cfg)
 	w.pr = newProductionTick(&w.cfg)
 	w.oc = newOutcomeTick(&w.cfg)
