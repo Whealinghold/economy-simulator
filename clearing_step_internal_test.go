@@ -664,7 +664,7 @@ func TestClearMarket_NonInterference(t *testing.T) {
 // as an empty reason, and a constant with no code could never be produced.
 func TestReasonCodes_Guard(t *testing.T) {
 	t.Parallel()
-	for c := clearing.UnknownAgent; c <= clearing.NoRoom; c++ {
+	for c := clearing.UnknownAgent; c <= clearing.NotPermitted; c++ {
 		t.Run(fmt.Sprintf("code %d", c), func(t *testing.T) {
 			r, ok := reasonOfCode(c)
 			if !ok {
@@ -678,8 +678,8 @@ func TestReasonCodes_Guard(t *testing.T) {
 	if r, ok := reasonOfCode(clearing.Admitted); ok {
 		t.Errorf("reasonOfCode(Admitted) = %q, want none", r)
 	}
-	if r, ok := reasonOfCode(clearing.NoRoom + 1); ok {
-		t.Errorf("reasonOfCode(%d) = %q, want none", clearing.NoRoom+1, r)
+	if r, ok := reasonOfCode(clearing.NotPermitted + 1); ok {
+		t.Errorf("reasonOfCode(%d) = %q, want none", clearing.NotPermitted+1, r)
 	}
 	if c, ok := codeOfReason(ReasonTrade); ok {
 		t.Errorf("codeOfReason(trade) = %d, want none", c)
@@ -687,14 +687,15 @@ func TestReasonCodes_Guard(t *testing.T) {
 	if c, ok := codeOfReason(""); ok {
 		t.Errorf("codeOfReason(\"\") = %d, want none", c)
 	}
-	// Every row of the table of 3.2 is a code or a module's deferred row.
+	// Every row of the table of 3.2 is a code or a module's deferred row; the institutions
+	// module has built its row, so none is deferred.
 	spec := mustRead(t, "doc/specs/spec-clearing.md")
 	from := strings.Index(spec, "### 3.2 Validation")
 	to := strings.Index(spec, "Checks run in the order of the table")
 	if from < 0 || to < from {
 		t.Fatalf("table of 3.2 not found in spec-clearing.md")
 	}
-	deferred := []string{"not_permitted"}
+	var deferred []string
 	for _, line := range strings.Split(spec[from:to], "\n") {
 		var name string
 		if _, rest, ok := strings.Cut(line, "| `"); ok {

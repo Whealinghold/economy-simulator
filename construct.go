@@ -200,6 +200,10 @@ func (w *World) allocate() {
 	w.tally = newEntryTally(regions)
 	w.runnable = make([][]RecipeID, regions)
 	w.markets = newMarketTable(&w.cfg, w.clr, seedPrices(&w.cfg))
+	w.org.attach(&w.markets, w.obs.supplied)
+	if w.org != nil && w.credit != nil {
+		w.credit.rateCap = w.org.rateLimit // the seam of the rate limit (spec-credit.md 5.2.3)
+	}
 	w.tk = newTickScratch(&w.cfg)
 	w.pr = newProductionTick(&w.cfg)
 	w.oc = newOutcomeTick(&w.cfg)

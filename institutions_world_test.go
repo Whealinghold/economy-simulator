@@ -47,11 +47,12 @@ const institutionsWorldSeeds = 2
 // a world built from files alone (pack one and a document of the institutions tables, no
 // Go code of the module) loads, validates, is accepted by NewWorld and runs detTicks ticks
 // under the audit; that the module is on with its rows in the world's configuration and
-// in the configuration hash; that two builds of one seed agree; and that the run is the
-// run of pack one without the module, snapshot for snapshot, apart from the module's own
-// outputs (its names, rows and hash), since no reader of a right or a control exists yet:
-// the round of memberships changes no result (plan 3-org, PR B; the readers come in the
-// next pull requests, whose tests compare their results with this run).
+// in the configuration hash; that two builds of one seed agree; and that the round of
+// memberships alone changes no result: the run equals, snapshot for snapshot and apart from
+// the module's own outputs (its names, rows and hash), the run of the same file with its
+// bodies and no right, control or rate limit. The rights and the legal prices bind the
+// economy since PR C, so the run of pack one without the module is no longer the baseline;
+// TestEndToEnd_InstitutionsRightsAndLegalPrices holds the world where they bind.
 //
 // Requirement: FR-ORG-001, FR-ORG-051, FR-CFG-094
 //
@@ -65,6 +66,10 @@ func TestConfigOnly_InstitutionsFileBuildsAndRuns(t *testing.T) {
 	}
 	off := loadValidPack(t, packOne...)
 	on := loadPackBytes(t, []byte(institutionsPackDoc), packOne...)
+	bodies := on
+	m0 := *on.Modules.Institutions
+	m0.Rights, m0.Controls, m0.RateLimits = nil, nil, nil
+	bodies.Modules.Institutions = &m0
 	m := on.Modules.Institutions
 	if m == nil || len(m.Bodies) != 1 || len(m.Rights) != 2 || len(m.Controls) != 1 {
 		t.Fatalf("Modules.Institutions of the file = %+v, want the module on with one body, two rights and one control", m)
@@ -79,6 +84,7 @@ func TestConfigOnly_InstitutionsFileBuildsAndRuns(t *testing.T) {
 			a := runPack(t, on, spec)
 			b := runPack(t, on, spec)
 			base := runPack(t, off, spec)
+			round := runPack(t, bodies, spec)
 			if got := a.World.Config().Modules.Institutions; got == nil || got.Bodies[0].ID != "guild" {
 				t.Errorf("seed %d: World.Config().Modules.Institutions = %+v, want the body guild", seed, got)
 			}
@@ -88,12 +94,12 @@ func TestConfigOnly_InstitutionsFileBuildsAndRuns(t *testing.T) {
 			if !reflect.DeepEqual(a.Final, b.Final) || economysim.HashWorld(a.World) != economysim.HashWorld(b.World) {
 				t.Errorf("seed %d: two builds of the institutions world differ", seed)
 			}
-			if !reflect.DeepEqual(withoutConfigHash(a.Final), withoutConfigHash(base.Final)) {
-				t.Errorf("seed %d: the final snapshot with the module on differs from the one without it, want the same apart from the module's own outputs: no reader of a right exists yet", seed)
+			if !reflect.DeepEqual(withoutConfigHash(round.Final), withoutConfigHash(base.Final)) {
+				t.Errorf("seed %d: the final snapshot with the bodies only differs from the one without the module, want the same apart from the module's own outputs, the round alone moves nothing", seed)
 			}
 			for tick, s := range base.Samples {
-				if !reflect.DeepEqual(withoutConfigHash(a.Samples[tick]), withoutConfigHash(s)) {
-					t.Errorf("seed %d: the snapshot after tick %d differs with the module on, want the same apart from the module's own outputs", seed, tick)
+				if !reflect.DeepEqual(withoutConfigHash(round.Samples[tick]), withoutConfigHash(s)) {
+					t.Errorf("seed %d: the snapshot after tick %d differs with the bodies only, want the same apart from the module's own outputs", seed, tick)
 				}
 			}
 		})

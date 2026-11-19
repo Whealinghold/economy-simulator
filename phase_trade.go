@@ -198,6 +198,9 @@ func (w *World) submit(a *agent, region RegionID, in Intent) {
 		if w.sto != nil {
 			w.sto.roomFacts(w.ledger, a, o, &f)
 		}
+		if w.org != nil {
+			f.NotPermitted = w.org.orderBarred(a, region, o)
+		}
 		var ok bool
 		if reason, ok = b.admit(w.ledger, f, o); ok {
 			b.emitPlaced(&w.obs, o)
@@ -206,6 +209,9 @@ func (w *World) submit(a *agent, region RegionID, in Intent) {
 		}
 		if w.sto != nil {
 			w.sto.bidRejected(w.cellOf(region, a), reason)
+		}
+		if w.org != nil && reason == ReasonNotPermitted {
+			w.org.refusedOrder(a, region, o)
 		}
 	}
 	b.emitRejected(&w.obs, w.log, o, reason)
