@@ -175,3 +175,38 @@ func TestLoad_PolicyRejections(t *testing.T) {
 		t.Fatal("the path helper is wrong")
 	}
 }
+
+// TestLoad_PolicyHostileTicks verifies the loader on the tick names of a schedule that
+// no honest file writes: a tick past int64 is ErrWrongType at its path, and "05" and
+// "5" load as two steps at tick 5, which Validate rejects as a repeated (Lever, At)
+// (ErrDuplicateID), so the file cannot hold one step twice. A negative tick loads and
+// Validate rejects it as out of bounds.
+//
+// Requirement: FR-CFG-089, FR-PLC-004
+func TestLoad_PolicyHostileTicks(t *testing.T) {
+	t.Parallel()
+	base := minimal + "[modules.policy.actor.a]\njurisdiction = \"j\"\npolicy = \"schedule\"\nevery = 1\n" +
+		"[modules.policy.actor.a.lever.l]\nkind = \"flow\"\nflow = \"f\"\nmin = 0\nmax = 20000\n"
+	step := func(tick string) string {
+		return "[modules.policy.actor.a.schedule.l." + tick + "]\nbp = 10000\n"
+	}
+	if _, err := parseStrings(base + step("99999999999999999999")); err == nil ||
+		!hasError(err, economysim.ErrWrongType, []string{"modules", "policy", "actor", "a", "schedule", "l", "99999999999999999999"}) {
+		t.Errorf("Parse(tick past int64) errors = %s, want ErrWrongType at the tick", describe(err))
+	}
+	c, err := parseStrings(base + step("5") + step("05"))
+	if err != nil {
+		t.Fatalf("Parse(5 and 05) error = %v, want nil: the loader reads two steps", err)
+	}
+	if got := len(c.Modules.Policy.Actors[0].Schedule); got != 2 {
+		t.Fatalf("Parse(5 and 05) has %d steps, want 2", got)
+	}
+	for _, s := range c.Modules.Policy.Actors[0].Schedule {
+		if s.At != 5 {
+			t.Errorf("step At = %d, want 5", s.At)
+		}
+	}
+	if neg, err := parseStrings(base + step("-1")); err != nil || neg.Modules.Policy.Actors[0].Schedule[0].At != -1 {
+		t.Errorf("Parse(tick -1) = %+v, %v, want one step at -1 for Validate to reject", neg.Modules.Policy, err)
+	}
+}
