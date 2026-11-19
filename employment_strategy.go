@@ -234,7 +234,7 @@ func (v *AgentView) plannedHire(upkeep int64) plannedHire {
 	}
 	bid := v.hireBid(idx, net)
 	bill, fits := checked.Mul(bid, v.Recipes[idx].Duration)
-	if bid < 1 || !fits || bill < 1 || v.Money <= upkeep {
+	if bid < 1 || !fits || bill < 1 || upkeep < 0 || v.Money <= upkeep {
 		return plannedHire{}
 	}
 	return plannedHire{idx: idx, n: max(min(eb.MaxHires-eb.Hired, (v.Money-upkeep)/bill), 0)}
