@@ -76,16 +76,7 @@ func TestStep_RuinCauses(t *testing.T) {
 	w.infra.rebuild()
 	next := w.infra.next
 	facStep(t, w)
-	got := map[FacilityID]Cause{}
-	for _, e := range of[FacilityChanged](obs) {
-		if e.Kind == FacilityRuined {
-			got[e.Facility] = e.Cause
-		}
-	}
-	want := map[FacilityID]Cause{worn: CauseUse, last: CauseDecay}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("ruin causes = %v, want %v (seed %d)", got, want, facSeed)
-	}
+	checkRuinCauses(t, obs, worn, last)
 	if w.infra.index(worn) >= 0 || w.infra.index(last) >= 0 || w.infra.index(kept) < 0 {
 		t.Errorf("records after the step: worn %d last %d kept %d, want the two ruined removed and the other kept",
 			w.infra.index(worn), w.infra.index(last), w.infra.index(kept))
@@ -96,6 +87,27 @@ func TestStep_RuinCauses(t *testing.T) {
 	if w.infra.next != next {
 		t.Errorf("next facility ID = %d after the ruins, want %d: an ID is never reused", w.infra.next, next)
 	}
+	checkRuinEvents(t, obs, worn, last)
+}
+
+// checkRuinCauses checks the cause of each ruin event of TestStep_RuinCauses.
+func checkRuinCauses(t *testing.T, obs *evLog, worn, last FacilityID) {
+	t.Helper()
+	got := map[FacilityID]Cause{}
+	for _, e := range of[FacilityChanged](obs) {
+		if e.Kind == FacilityRuined {
+			got[e.Facility] = e.Cause
+		}
+	}
+	want := map[FacilityID]Cause{worn: CauseUse, last: CauseDecay}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ruin causes = %v, want %v (seed %d)", got, want, facSeed)
+	}
+}
+
+// checkRuinEvents checks the shape and the order of the ruin events of TestStep_RuinCauses.
+func checkRuinEvents(t *testing.T, obs *evLog, worn, last FacilityID) {
+	t.Helper()
 	for _, e := range of[FacilityChanged](obs) {
 		if e.Kind == FacilityRuined && (e.After != 0 || e.Effect != 0) {
 			t.Errorf("FacilityChanged %+v, want After 0 and Effect 0 for a ruin", e)
@@ -237,16 +249,7 @@ func TestStoreFacility_Pending(t *testing.T) {
 			for range 2 {
 				facStep(t, w)
 			}
-			if facRecord(w, id).installed || w.sto.count(owner, 0) != stores {
-				t.Fatalf("installed = %v, stores = %d, want pending and %d stores (seed %d)", facRecord(w, id).installed, w.sto.count(owner, 0), stores, facSeed)
-			}
-			lim := of[FacilityLimited](obs)
-			if len(lim) != 2 || lim[0].Pending != 1 || lim[0].Region != region {
-				t.Errorf("FacilityLimited = %+v, want one a tick with Pending 1 in region %d", lim, region)
-			}
-			if rows := w.facilityRows(); len(rows) != 1 || rows[0].Pending != 1 {
-				t.Errorf("rows = %+v, want Pending 1", rows)
-			}
+			checkStillPending(t, w, obs, id, region, owner, stores)
 			if tt.heal == nil {
 				return
 			}
@@ -256,6 +259,22 @@ func TestStoreFacility_Pending(t *testing.T) {
 				t.Errorf("after the cause went the facility is still pending, want it installed at the next step")
 			}
 		})
+	}
+}
+
+// checkStillPending checks that the facility is still pending after two steps with the
+// cause in place: no store added, one FacilityLimited a tick and one pending row.
+func checkStillPending(t *testing.T, w *World, obs *evLog, id FacilityID, region RegionID, owner AgentID, stores int) {
+	t.Helper()
+	if facRecord(w, id).installed || w.sto.count(owner, 0) != stores {
+		t.Fatalf("installed = %v, stores = %d, want pending and %d stores (seed %d)", facRecord(w, id).installed, w.sto.count(owner, 0), stores, facSeed)
+	}
+	lim := of[FacilityLimited](obs)
+	if len(lim) != 2 || lim[0].Pending != 1 || lim[0].Region != region {
+		t.Errorf("FacilityLimited = %+v, want one a tick with Pending 1 in region %d", lim, region)
+	}
+	if rows := w.facilityRows(); len(rows) != 1 || rows[0].Pending != 1 {
+		t.Errorf("rows = %+v, want Pending 1", rows)
 	}
 }
 
@@ -460,38 +479,52 @@ func TestStoreFacility_RoleChangeRuin(t *testing.T) {
 		if err := w.changeRole(0, &w.agents[m], Decision{Role: weaver, Cause: CauseReview}, false); err != nil {
 			t.Fatalf("changeRole error = %v, want nil", err)
 		}
-		for _, id := range ids[:2] {
-			if w.infra.index(id) >= 0 {
-				t.Errorf("observed %v: facility %d still exists, want the store facility ruined", observed, id)
-			}
-		}
-		if w.infra.index(ids[2]) < 0 || w.infra.index(pending) < 0 || facRecord(w, pending).installed {
-			t.Errorf("observed %v: the mill and the pending barn must stay, the pending one pending", observed)
-		}
-		if got := w.infra.installedOf(&w.agents[m], 0); got != 0 {
-			t.Errorf("observed %v: installed count = %d, want 0", observed, got)
-		}
-		if err := w.Audit(); err != nil {
-			t.Errorf("observed %v: Audit() = %v, want nil", observed, err)
-		}
+		checkRoleChangeTables(t, w, observed, m, ids, pending)
 		if !observed {
 			continue
 		}
-		var got []string
-		for _, e := range obs.events {
-			switch v := e.(type) {
-			case RoleChanged:
-				got = append(got, "role")
-			case StoreChanged:
-				got = append(got, "store")
-			case FacilityChanged:
-				got = append(got, string(v.Kind)+":"+string(v.Cause))
-			}
-		}
 		// Storage ends one store a barn (two StoreChanged events, after RoleChanged), then
 		// the two ruins follow in ascending ID.
-		if want := []string{"role", "store", "store", "ruined:role_changed", "ruined:role_changed"}; !slices.Equal(got, want) {
+		if got, want := roleChangeEvents(obs), []string{"role", "store", "store", "ruined:role_changed", "ruined:role_changed"}; !slices.Equal(got, want) {
 			t.Errorf("events of the change = %v, want %v", got, want)
 		}
 	}
+}
+
+// checkRoleChangeTables checks the tables after the role change of
+// TestStoreFacility_RoleChangeRuin: the store facilities gone, the mill and the pending
+// barn kept, no installed store left and the audit clean.
+func checkRoleChangeTables(t *testing.T, w *World, observed bool, m AgentID, ids []FacilityID, pending FacilityID) {
+	t.Helper()
+	for _, id := range ids[:2] {
+		if w.infra.index(id) >= 0 {
+			t.Errorf("observed %v: facility %d still exists, want the store facility ruined", observed, id)
+		}
+	}
+	if w.infra.index(ids[2]) < 0 || w.infra.index(pending) < 0 || facRecord(w, pending).installed {
+		t.Errorf("observed %v: the mill and the pending barn must stay, the pending one pending", observed)
+	}
+	if got := w.infra.installedOf(&w.agents[m], 0); got != 0 {
+		t.Errorf("observed %v: installed count = %d, want 0", observed, got)
+	}
+	if err := w.Audit(); err != nil {
+		t.Errorf("observed %v: Audit() = %v, want nil", observed, err)
+	}
+}
+
+// roleChangeEvents names the events of a role change in order: role, store, or the kind
+// and cause of a facility change.
+func roleChangeEvents(obs *evLog) []string {
+	var got []string
+	for _, e := range obs.events {
+		switch v := e.(type) {
+		case RoleChanged:
+			got = append(got, "role")
+		case StoreChanged:
+			got = append(got, "store")
+		case FacilityChanged:
+			got = append(got, string(v.Kind)+":"+string(v.Cause))
+		}
+	}
+	return got
 }
