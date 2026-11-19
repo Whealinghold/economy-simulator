@@ -16,6 +16,19 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if err := w.views.fillCore(v, a, &w.tk.vctx); err != nil {
 		return err
 	}
+	w.fillEarlyGroups(v, a, kind)
+	if w.sub != nil {
+		if err := w.sub.fillView(w, v, a, &w.tk.vctx); err != nil {
+			return err
+		}
+	}
+	w.fillLateGroups(v, a, kind)
+	return nil
+}
+
+// fillEarlyGroups is the module fillers of fillAgentView that come before the
+// subsistence group, in module order.
+func (w *World) fillEarlyGroups(v *AgentView, a *agent, kind viewKind) {
 	if w.demand != nil {
 		w.fillWants(v, a)
 	}
@@ -28,11 +41,11 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if kind == viewTrade {
 		w.fillTradeOnly(v, a)
 	}
-	if w.sub != nil {
-		if err := w.sub.fillView(w, v, a, &w.tk.vctx); err != nil {
-			return err
-		}
-	}
+}
+
+// fillLateGroups is the module fillers of fillAgentView that come after the
+// subsistence group, in module order.
+func (w *World) fillLateGroups(v *AgentView, a *agent, kind viewKind) {
 	w.fillBoard(v, a)
 	if w.sto != nil {
 		w.fillRoomView(v, a, kind)
@@ -40,7 +53,6 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if w.tenure != nil {
 		w.tenure.fillTenure(v, a)
 	}
-	return nil
 }
 
 // fillTradeOnly is the module fillers that are an input to Trade only: the
