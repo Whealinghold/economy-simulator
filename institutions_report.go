@@ -28,6 +28,10 @@ func (w *World) p72bInstitutions() {
 			}
 		}
 	}
+	if w.obs.supplied {
+		o.reportRights(w)
+		o.reportControls(w)
+	}
 }
 
 // reportCell reports one (region g, body b): the run of the Warn and, with an observer

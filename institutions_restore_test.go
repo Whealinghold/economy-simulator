@@ -83,7 +83,7 @@ func TestCheckpoint_InstitutionsLevelsAndSuspensionsRestore(t *testing.T) {
 // world built with fewer places than eligible households, what the round promises: the
 // members of a body never exceed its places or its eligible households, the waiting
 // households are the eligible less the members in every event, and the household count is
-// the one of the world without the module (nobody leaves for a place). The event is not
+// the one of the world with the bodies alone, no right and no legal price (nobody leaves for a place). The event is not
 // compared with the snapshot: it reports the round of P1.9a, the snapshot the end of the
 // tick, after the exits and entries of phase 7 (spec-institutions.md 11.1).
 //
@@ -105,11 +105,16 @@ func TestInvariants_InstitutionsMembership(t *testing.T) {
 	for _, seed := range seedList(invariantSeeds(institutionsWorldSeeds)) {
 		t.Run(fmt.Sprintf("seed %d", seed), func(t *testing.T) {
 			t.Parallel()
-			base := orgWaitingConfig()
-			base.Modules.Institutions = nil // the same world with only the module off
+			// The world of the bodies alone: the rights and the legal prices bind the
+			// economy since PR C, so the household count is compared with the world
+			// without the module only where the round is the module's one effect.
+			bodies := orgWaitingConfig()
+			bodies.Modules.Institutions.Rights, bodies.Modules.Institutions.Controls, bodies.Modules.Institutions.RateLimits = nil, nil, nil
+			base := bodies
+			base.Modules.Institutions = nil
 			off := newPackWorld(t, base, seed)
 			rec := &recorder{}
-			on := newPackWorld(t, orgWaitingConfig(), seed, economysim.WithObserver(rec))
+			on := newPackWorld(t, bodies, seed, economysim.WithObserver(rec))
 			for tick := 1; tick <= ticks; tick++ {
 				step(t, off, 1)
 				step(t, on, 1)

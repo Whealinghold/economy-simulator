@@ -463,3 +463,31 @@ Left for the supervisor (nothing in `doc/notes.md` or a spec was edited, because
 - N-244: the ORG leg is applied (the membership is a slice of the module, saved in tag 3's tail); the note is a standing rule for other modules too, so it stays open with an update line.
 - Spec 4.1.1 of `spec-institutions.md`: say that every lapse runs before any admission.
 - A note for PR D: `Held` and the slot setters fill what PR B built; the tests that plant state (`orgTablesToy`, the levels test) are to be replaced by the call's tests there.
+
+## PR C result (Phases 6 and 7)
+
+Rule tags read: architecture=645d155e21f440e7e94863d7, observability=9701798a5a03417c57f1a38a, testing=66af7645b01fef4e2796c367. No rule file, spec or note is edited, so no notes tag applies; the edits PR C owes are listed under "Left for the supervisor".
+
+Built: the rights of `produce`, `sell` and `buy` and the legal prices. `internal/clearing` gains the code `NotPermitted` (appended after `NoRoom`, checked after `NotTradable`), `Facts.NotPermitted`, `Cap` and `Floor`, and `AdmitClamp`, which replaces the limit between the settlement bounds and the funds row; `Admit` is its wrapper. The root reads a right at a start (`admitJob` and a trainee's request in `skillsWork`, `Who` and the own-use exemption), at an order (the fact `NotPermitted` of `submit`) and at row 5a of an offer and a take of the contract round (destination region). The book holds the module and reads its range at each admission, so the estate's ask and a counterparty's order are clamped too; `OrderPlaced`, the reservation and the entry carry the replaced limit. The contract round clamps an offer's ask after the checks and a take's bid between `overflow` and `insufficient_funds` (`takeFunds`). The credit seam became `rateCap(g, limit) (replaced, lowered)` and `institutions.rateLimit` fills it. `RightRefused` and `PriceControlled` are told at P7.2b from counts kept only under an observer. `golden/off/`, `golden/all/`, the pinned hash and `testdata/checkpoints/` are unchanged; no hash id, tag, note, event or position slot beyond the plan's was taken.
+
+Hooks used: H-4 (`admitJob`, `skillsWork`), H-5, H-6 (`submit`, `book.admit`, `codeReasons`), H-7 (rows 5a, the two clamps), H-8, H-9, and the H-3 half for `rateCap`. Not used: H-10 to H-14 (PR D).
+
+Deviations and choices the plan left open:
+
+- The task listed H-12 and H-13 (`skills_queue.go`) for PR C; the plan puts them in Phase 9 (PR D), and so does this PR.
+- `AdmitClamp` returns `(code, price, changed)`: the side of the order says whether the change is a lowering or a raising.
+- A clamp is counted only for an order that is admitted (an order refused for funds after the clamp is a rejection, counted by `OrderRejected`); likewise for a take and a request.
+- A refused start counts one in `RightRefused.Produce` for each request, not for each household.
+- A trainee's job is also read against a `produce` right, through one guarded call in `skillsWork` (a trainee's request does not pass `admitJob`): the trainer is tested as for `principal` whatever `Who` says, and the trainee is exempt from the executor test (spec 5.3.2). This is one more site than H-4 names.
+- `ReasonNotPermitted` is column -1 of the `RecipeRefused` tally (counted by `RightRefused`, as `no_title` is counted by `RentPaid`); it blocks an own-use start in the any-other slot of `blockedBy`, so the hashed shape does not change.
+- `book.admit` was split into `checkRoute` and `facts` by a pure move first (a refactor-first commit), and `takeRefusal` into `takeRefusal` and `takeFunds`, for the Lizard limit. Lizard does not parse `takeRefusal` and its neighbours in `contract.go` at all, so their CCN was counted by hand (10 and 5).
+- `contract.go` (1 015 non-comment lines), `subsistence.go` (579) and `event.go` were over 500 before; they took only the lines of the hooks.
+
+Tests by layer: unit (`internal/clearing`: the not_permitted row, the clamp rows, the order of the checks, the wrapper); world (internal: the start refusal and its order, `Who`, trainee, own use, the prohibition, no read at a completion, an order refused and its count, the estate exempt and clamped, the reservation, entry and event at the replaced limit, no rejection and no draw, `PriceControlled` counts, offer and take rows 5a and clamps, the rate limit of example C, the claim in force unchanged, a request never refused for the cap, allocation of every reader, the static check of the reader sites); integration (pack one over seeds: every trade inside the cap and inside the floor with the audit on, and the shortage signal of a binding cap). Run: `gofmt`, `go vet`, `staticcheck`, narrow `go test` of the touched tests through the slot guard, `go test -short -race ./internal/...`; not run: gate R, gate F, `check.sh`, `full.sh`, `gomu`, `golden/all`.
+
+Left for the supervisor (nothing in `doc/notes.md` or a spec was edited, since that needs the whole file read and a fresh tag):
+
+- A note: a clamp counts only an admitted order (spec 6.3.1 says "the count of the replaced orders").
+- A note: a trainee's request is read against a `produce` right at `skillsWork`, and `spec-production.md` 4.2 ("tested as the executor is") and `spec-institutions.md` 5.3.2 read differently; this PR follows 5.3.2.
+- A note: `RightRefused.Produce` counts requests, not households.
+- Spec 5.2 and `spec-clearing.md` 3.2.1 may say `AdmitClamp` returns one flag.

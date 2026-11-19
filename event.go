@@ -431,6 +431,12 @@ const (
 	// priced out of the let tier or its let executions were cut for rent (tenure
 	// module, spec-land.md 4.5.1, 5.4).
 	ReasonRentFunds Reason = "rent_funds"
+	// ReasonNotPermitted is a start or an order that a right in force bars the agent
+	// from: the right of the activity on the recipe or the commodity belongs to the
+	// members of a body the agent is not a member of, or to nobody (institutions module,
+	// spec-institutions.md 5.6). It is also a rejection reason of an order and of an offer
+	// or a take of the contract round.
+	ReasonNotPermitted Reason = "not_permitted"
 )
 
 // The reasons of the "work declined" Debug line that no start refusal covers

@@ -482,9 +482,13 @@ func (s *subsistence) noteStart(w *World, a *agent, cell int, recipe RecipeID, k
 // any other reason (spec-land.md 7.1.2, FR-LND-046). no_room is not in blockReasons yet: a longer
 // blockedBy changes the hashed shape of the state and so golden/all, which no module
 // PR moves (plan 3-sto Q3), so a household refused for room counts in the slot of any
-// other reason until the PR that moves golden/all appends it.
+// other reason until the PR that moves golden/all appends it. not_permitted is the one
+// refusal of the institutions module that counts, in the same slot: an own-use job is
+// exempt from a produce right, so it is refused only when OwnUseBound is set
+// (spec-institutions.md 5.5.2).
 func blocksOwnUse(reason Reason) bool {
-	return reason == ReasonNoEndowment || reason == ReasonNoRoom || reason == ReasonNoTitle || reason == ReasonRentFunds
+	return reason == ReasonNoEndowment || reason == ReasonNoRoom || reason == ReasonNoTitle || reason == ReasonRentFunds ||
+		reason == ReasonNotPermitted
 }
 
 // blockedStart counts an own-use request that the start refused for want of an

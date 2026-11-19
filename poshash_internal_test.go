@@ -128,6 +128,10 @@ var skipFields = []string{
 	// viewCtx.refs is World.refs again, assembled with the rest of the view context
 	// at the start of P2.5 and P3.2 (market.go refreshViewCtx).
 	"viewCtx.refs",
+	// The institutions module's counts of the refusals of a right and of the clamps of a
+	// legal price are allocated only when an observer is attached, cleared as P7.2b tells
+	// them, and not saved; order is the scratch of the events of one region.
+	"rightTable.refused", "legalTable.tally", "legalTable.rateTally", "legalTable.order",
 }
 
 // maxWalkDepth bounds the nesting of the walk; a deeper value is an error.
