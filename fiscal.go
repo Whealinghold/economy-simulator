@@ -92,6 +92,7 @@ type fiscalFlowState struct {
 	authority JurisdictionID
 	treasury  int // index into polity.tr of the authority's treasury
 	reason    ledger.Reason
+	resource  int // a payout's resource: -1 is money, else the commodity index
 	period    int64
 	shape     fiscal.Shape
 	window    fiscalWindow
@@ -129,6 +130,9 @@ type fiscalState struct {
 	regions int
 	agg     []fiscalAgg // flow position * regions + region
 	ran     []int       // the positions that ran at P1.7b, in event order
+	// receipts are the units of goods the payouts of the tick gave to households,
+	// valued and added to the welfare scratch at P6.3 (spec-fiscal.md 12.3); scratch.
+	receipts []fiscalReceipt
 	// scratch
 	payers  []fiscalPayer
 	dues    []int64
@@ -136,6 +140,8 @@ type fiscalState struct {
 	applied []int64
 	next    []carryPair
 	rec     []fiscal.Recipient
+	order   []int      // the active payouts, grouped by authority and resource
+	ent     []payEntry // the recipients of one group of payouts
 	cut     fiscal.Scratch
 }
 
@@ -169,6 +175,7 @@ func newFiscal(c *Config, p *polity) *fiscalState {
 		f := s.add(c, fkPayout, i, o.ID, o.Authority, o.Window)
 		f.period = flowPeriod(c, o.Per)
 		f.target = s.resolve(c, f.authority, o.Target)
+		f.resource = payoutResource(c, o)
 	}
 	for i, o := range m.Purchases {
 		s.add(c, fkPurchase, i, o.ID, o.Authority, o.Window)
@@ -179,6 +186,20 @@ func newFiscal(c *Config, p *polity) *fiscalState {
 	s.numberReasons(money)
 	s.agg = make([]fiscalAgg, len(s.flows)*s.regions)
 	return s
+}
+
+// payoutResource is the index of the commodity a payout gives, or -1 for money. A name
+// that is not defined is a violated invariant: the validator rejects it, and -1 would
+// pay money in its place.
+func payoutResource(c *Config, o Payout) int {
+	if o.Commodity == "" {
+		return -1
+	}
+	i := slices.IndexFunc(c.Commodities, func(x Commodity) bool { return x.ID == o.Commodity })
+	if i < 0 {
+		invariant("a payout names a commodity that is not defined: " + o.ID)
+	}
+	return i
 }
 
 // add appends the flow of a kind and index to the table and returns it, resolved
@@ -198,7 +219,7 @@ func (s *fiscalState) add(c *Config, k fiscalKind, i int, id, authority string, 
 		win.seasons = append(win.seasons, at)
 	}
 	s.flows = append(s.flows, fiscalFlowState{
-		id: id, kind: k, at: i, authority: j, treasury: int(s.pol.byJ[j]), window: win, period: 1, scale: wholeBP,
+		id: id, kind: k, at: i, authority: j, treasury: int(s.pol.byJ[j]), window: win, period: 1, scale: wholeBP, resource: -1,
 	})
 	return &s.flows[len(s.flows)-1]
 }
