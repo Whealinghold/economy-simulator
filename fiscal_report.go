@@ -46,9 +46,13 @@ func (w *World) reportFiscal(s *fiscalState, tick int64) {
 
 // flowApplied reports one flow in one region.
 func (w *World) flowApplied(f *fiscalFlowState, tick int64, region RegionID, a fiscalAgg) {
+	commodity := NoCommodity
+	if f.resource >= 0 {
+		commodity = CommodityID(f.resource)
+	}
 	if w.obs.supplied {
 		w.obs.deliver(FiscalFlowApplied{Tick: tick, Flow: f.id, Kind: f.kind.event(), Authority: f.authority, Region: region,
-			Class: FiscalClass(f.target.kind), Commodity: NoCommodity, Due: Money(a.due), Applied: Money(a.applied),
+			Class: FiscalClass(f.target.kind), Commodity: commodity, Due: Money(a.due), Applied: Money(a.applied),
 			Parties: a.parties, Short: a.short, Cut: a.cut, Headroom: a.headrm})
 	}
 	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {

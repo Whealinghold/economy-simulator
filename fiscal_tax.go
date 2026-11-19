@@ -8,12 +8,13 @@ import (
 // This file is the taxes of the fiscal module, P1.7b (spec-fiscal.md 5, 10.1;
 // a continuation file of fiscal.go, architecture.md 2.6): the taxes on households
 // and pools, then the remittances of subordinate treasuries. The payouts of the
-// position are the next step of the module. Nothing is drawn (FR-FIS-062).
+// position are fiscal_payout.go. Nothing is drawn (FR-FIS-062).
 
 // p17bFiscal is P1.7b (spec-world.md 6, spec-fiscal.md 5.3.1): the taxes whose
 // target is households or a pool in ascending flow ID, then the taxes whose target
 // is a treasury in ascending flow ID, so a subordinate authority remits what it
-// collected from its own households in the same tick (FR-FIS-022, 023). A flow
+// collected from its own households in the same tick (FR-FIS-022, 023), then the
+// payouts, from what the treasuries hold after them (fiscal_payout.go). A flow
 // outside its window or at scale 0 is skipped whole. The events follow, per flow in
 // the order it ran and per region ascending. A ledger refusal of an amount checked
 // against the balance and the headroom is a violated invariant.
@@ -30,6 +31,7 @@ func (w *World) p17bFiscal() {
 			}
 		}
 	}
+	w.runPayouts(s)
 	w.reportFiscal(s, tick)
 }
 
@@ -52,6 +54,7 @@ func (w *World) runTax(s *fiscalState, i int) {
 			if err := w.ledger.Transfer(p.account, to, a, f.reason); err != nil {
 				invariant("the ledger refused a tax's transfer: " + err.Error())
 			}
+			w.netCharge(f, p, a)
 		}
 		s.count(i, k)
 	}
@@ -65,32 +68,60 @@ func (w *World) runTax(s *fiscalState, i int) {
 // by what was collected: what a payer could not pay is forgiven.
 func (w *World) dueTax(s *fiscalState, f *fiscalFlowState) {
 	rule := f.rule(w.cfgFiscalTax(f))
-	old, next := f.carry, s.next[:0]
+	walk := w.walkCarries(f.carry, s.next[:0])
 	s.dues, s.take = s.dues[:0], s.take[:0]
-	j := 0
 	for k, p := range s.payers {
 		if k > 0 && p.account <= s.payers[k-1].account {
 			invariant("a fiscal flow's payers are not in ascending account order: " + f.id)
 		}
-		for ; j < len(old) && old[j].account < p.account; j++ {
-			next = w.keepCarry(next, old[j])
-		}
-		c := rule.StartCarry(int64(p.account))
-		if j < len(old) && old[j].account == p.account {
-			c = old[j].carry
-			j++
-		}
-		res, ok := rule.Due(p.weight, w.available(p.account), c)
+		res, ok := rule.Due(p.weight, w.available(p.account), walk.start(p.account, rule.StartCarry(int64(p.account))))
 		if !ok {
 			invariant("a tax's arithmetic left its validated bounds: " + f.id)
 		}
-		next = append(next, carryPair{account: p.account, carry: res.Carry})
+		walk.put(p.account, res.Carry)
 		s.dues, s.take = append(s.dues, res.Due), append(s.take, res.Collected)
 	}
-	for ; j < len(old); j++ {
-		next = w.keepCarry(next, old[j])
+	f.carry, s.next = walk.finish()
+}
+
+// carryWalk is the merge of a flow's saved pairs with the accounts it acts on, both
+// in ascending account ID: it builds the flow's next table in one pass.
+type carryWalk struct {
+	w         *World
+	old, next []carryPair
+	j         int
+}
+
+// walkCarries starts a merge of the pairs old into the table next, which is empty.
+func (w *World) walkCarries(old, next []carryPair) carryWalk {
+	return carryWalk{w: w, old: old, next: next}
+}
+
+// start returns the carry of the account: its pair if it has one, else initial. The
+// pairs of lower accounts are kept while open and dropped when closed.
+func (c *carryWalk) start(account int, initial int64) int64 {
+	for ; c.j < len(c.old) && c.old[c.j].account < account; c.j++ {
+		c.next = c.w.keepCarry(c.next, c.old[c.j])
 	}
-	f.carry, s.next = next, old[:0]
+	if c.j < len(c.old) && c.old[c.j].account == account {
+		c.j++
+		return c.old[c.j-1].carry
+	}
+	return initial
+}
+
+// put records the carry of the account after the tick.
+func (c *carryWalk) put(account int, carry int64) {
+	c.next = append(c.next, carryPair{account: account, carry: carry})
+}
+
+// finish keeps the pairs of the accounts above the last one acted on and returns the
+// new table and the old one emptied, to be reused as scratch.
+func (c *carryWalk) finish() (table, spare []carryPair) {
+	for ; c.j < len(c.old); c.j++ {
+		c.next = c.w.keepCarry(c.next, c.old[c.j])
+	}
+	return c.next, c.old[:0]
 }
 
 // cfgFiscalTax returns the tax the flow was built from.
