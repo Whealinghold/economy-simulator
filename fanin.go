@@ -53,6 +53,9 @@ func (w *World) fillLateGroups(v *AgentView, a *agent, kind viewKind) {
 	if w.tenure != nil {
 		w.tenure.fillTenure(v, a)
 	}
+	if w.employment.isHire() {
+		w.fillEmployment(v, a)
+	}
 }
 
 // fillTradeOnly is the module fillers that are an input to Trade only: the

@@ -313,7 +313,8 @@ func (w *World) p63Welfare() {
 		}
 		g, row := w.regionOf(a), w.roles.row(a.role)
 		k, ownUse, traded := w.welfare.workRead(i)
-		working, workHH, ownHH := workingTick(len(row.recipes) > 0, k, ownUse, traded, w.transport != nil && w.transport.isAway(a.id), a.weight)
+		working, workHH, ownHH := workingTick(len(row.recipes) > 0 || w.employment.worksByJob(a.role), k, ownUse, traded, w.transport != nil && w.transport.isAway(a.id), a.weight)
+		working = working || w.welfare.principalOf(i)
 		rec := w.welfare.record(i, a.weight, working, workHH, ownHH, w.oc.valued[int(g)*nc:(int(g)+1)*nc], row.upkeepIn(g))
 		a.history.Push(rec)
 		if a.history.AtBound() {

@@ -202,6 +202,7 @@ func (w *World) employmentCross() error {
 		e.grow(max(h.worker, h.employer))
 		e.workerOf[h.worker] = h.id + 1
 		e.hired[h.employer] += h.k
+		e.hiredN[h.employer]++
 		if e.hired[h.employer] > e.roles[w.agents[h.employer].role].maxHires {
 			return fmt.Errorf("%w: hire %d: employer %d holds more than MaxHires %d executions", ErrCheckpointCorrupt, h.id, h.employer, e.roles[w.agents[h.employer].role].maxHires)
 		}

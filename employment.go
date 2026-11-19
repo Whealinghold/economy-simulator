@@ -64,6 +64,7 @@ type employment struct {
 	hires    []hireRec
 	workerOf []HireID
 	hired    []int64
+	hiredN   []int64
 	open     []int64
 	free     []transit.Free
 	// The scratch of the labour round, rebuilt every tick and saved nowhere: the

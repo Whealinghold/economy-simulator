@@ -88,6 +88,22 @@ func (e *employment) hiresRecipe(principal *agent, rec RecipeID) bool {
 	return e.isHire() && e.roles[principal.role].on && slices.Contains(e.roles[principal.role].list, rec)
 }
 
+// worksByJob says a tick of the role is a working tick only by a job in progress, though
+// the role has no recipe: a Hireable role in the hire form. The clause of
+// spec-welfare-and-wages.md 4.3 for a role with no recipes ("it bought or sold in the
+// tick") does not apply to it (spec-employment.md 8.3.1). It is false when the module is
+// off and in the payroll form.
+func (e *employment) worksByJob(role RoleID) bool { return e.isHire() && e.hireable[role] }
+
+// wearer is the agent whose welfare record the wear of a start is charged to: the
+// employer of a hired job, whose tool it is (spec-employment.md 8.1), else the agent.
+func (e *employment) wearer(a *agent) AgentID {
+	if h := e.hireOfWorker(a.id); h != nil {
+		return h.employer
+	}
+	return a.id
+}
+
 // hireOfWorker returns the hire in progress of the agent as a worker, or nil.
 func (e *employment) hireOfWorker(id AgentID) *hireRec {
 	if !e.isHire() || id < 0 || int(id) >= len(e.workerOf) || e.workerOf[id] == 0 {
@@ -117,11 +133,20 @@ func (e *employment) hiredBy(id AgentID) int64 {
 	return e.hired[id]
 }
 
+// hiredCount is the hires the agent has open as an employer.
+func (e *employment) hiredCount(id AgentID) int64 {
+	if id < 0 || int(id) >= len(e.hiredN) {
+		return 0
+	}
+	return e.hiredN[id]
+}
+
 // grow makes the per-agent slices cover the agent slot id.
 func (e *employment) grow(id AgentID) {
 	for int(id) >= len(e.workerOf) {
 		e.workerOf = append(e.workerOf, 0)
 		e.hired = append(e.hired, 0)
+		e.hiredN = append(e.hiredN, 0)
 	}
 }
 
@@ -182,6 +207,7 @@ func (w *World) releaseWage(a *agent) {
 	h.paid += amount
 	w.welfare.addEarned(int(a.id), amount)
 	w.welfare.addWagePaid(int(h.employer), amount)
+	w.welfare.markPrincipal(int(h.employer))
 	t := w.employment.tallyOf(h.region, w.Tick())
 	t.paid += amount
 	t.householdTicks += a.job.executions
@@ -266,6 +292,7 @@ func (w *World) endHire(h *hireRec, cause Cause) {
 	rec := *h
 	e.workerOf[rec.worker] = 0
 	e.hired[rec.employer] -= rec.k
+	e.hiredN[rec.employer]--
 	e.open[rec.region]--
 	e.hires = slices.Delete(e.hires, i, i+1)
 	w.reportHireEnded(&rec, Money(v.Balance), cause)

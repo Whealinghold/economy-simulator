@@ -353,6 +353,7 @@ func (w *World) formHire(g RegionID, l *labourLane, h payroll.Hire) {
 	e.grow(max(worker.id, employer.id))
 	e.workerOf[worker.id] = rec.id + 1
 	e.hired[employer.id] += rec.k
+	e.hiredN[employer.id]++
 	e.open[g]++
 	w.withdrawOwnRequest(worker)
 	ask := jobAsk{recipe: rec.recipe, maximum: rec.k, k0: rec.k, set: true}
