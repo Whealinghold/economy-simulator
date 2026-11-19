@@ -46,7 +46,7 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351, N-353 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424, N-474, N-490 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424, N-474, N-490, N-512 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-388, N-438, N-475, N-492 |
@@ -57,7 +57,7 @@ PR description.
 | CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457, N-491, N-493, N-494, N-438, N-481, N-502 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398, N-472, N-484, N-503 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-445, N-500, N-501, N-502, N-503 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-445, N-500, N-501, N-502, N-503, N-510, N-511, N-512, N-513, N-514 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361, N-485 |
@@ -69,11 +69,11 @@ PR description.
 | INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-496 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436, N-471 |
-| LND | N-504, N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475, N-484 |
+| LND | N-504, N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475, N-484, N-513 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482 |
+| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482, N-510 |
 | ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-492, N-483, N-484 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
@@ -87,13 +87,13 @@ PR description.
 | SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
 | SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
-| STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375, N-388 |
+| STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375, N-388, N-513 |
 | STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485 |
 | SUB | N-121, N-228, N-268, N-244, N-426 |
 | TEC | N-358, N-359, N-360, N-361, N-384 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383 |
-| WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346, N-472, N-491 |
+| WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346, N-472, N-491, N-514 |
 | WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438, N-475, N-480 |
 
 ## Open notes
@@ -2822,6 +2822,36 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-emp PR 4.
 - **Note:** Step 2c (`dropHires`) runs before `dropClaims`, and `TestInterrupt_EmployerRemoved_*` proves the refund reached the employer's own account before the estate took it (`AgentBankrupted.Money` holds it). No test runs a removal with a claim against the employer, so that the waterfall of `spec-credit.md` 9.1 pays a creditor from the refunded escrow. The first change that has a credit pack with a hire world (the proof PR of EMP, or CRD's) adds it.
 
+### N-510 The LabourRound row of spec-observability 4.1 now names the refusal fields of spec-employment 15.1
+
+- **Areas:** EMP, OBS
+- **Raised:** 2026-11-19, plan 3-emp PR 5.
+- **Note:** `spec-observability.md` 4.1 listed eight of the seventeen formation refusal fields of `LabourRound`; `spec-employment.md` 15.1 lists all (the plan's Q4: declare all now). The row was widened to 15.1's list and order (the order of the checks of 5.5), and the event declares them all. `NotPermitted` (ORG) and `NoFacility`, `NotUnlocked`, `FacilityCap`, `NoTarget`, `StoreRefused`, `NothingToRepair` (CAP) have no module to fill them and stay 0; `TestLabourRound_RefusalFieldsByReason` asserts that, so the module that fills one changes that test.
+
+### N-511 The reason of the Warn "vacancies unfilled" is the commonest of the tick, not of the run
+
+- **Areas:** EMP
+- **Raised:** 2026-11-19, plan 3-emp PR 5.
+- **Note:** `spec-employment.md` 15.2.2 says the `reason` of the line is the commonest cause of the closing in the run. The run is saved as a count of ticks only (tag 24), so a tally of reasons over the run would be a second saved state to resume. The code reads the commonest reason of the tick the line is written at (the lower code on a tie); the counterpart `LabourRound.Employers[].Unfilled` and the refusal fields tell the same tick. If the run is wanted, the section gains a row per (region, role) and the format a bump is not needed (a new field of tag 24 before the first release).
+
+### N-512 The default strategy's offer, vacancies and planned hires: three readings the spec leaves open
+
+- **Areas:** EMP, AGT
+- **Raised:** 2026-11-19, plan 3-emp PR 5.
+- **Note:** (1) The reservation of 4.3.2 reads the recipe the work decision chose (the best that passes the halt and the food cap), not every executable recipe, so it is never above the value the agent would have earned. (2) `DefaultStrategy` posts nothing when the hires open in its region reach `MaxOpen` (the view carries `Open` and `MaxOpen` for that, 9.1), a gate 4.3.3 does not list. (3) `H*` of 9.2.1 is bounded by the establishment and the cash left after tier 1, not by the stock and the tools the employer is about to buy, since a bound by stock would never buy the first inputs; the inputs of the planned hires add the upkeep units once, as the own job's do (N-313).
+
+### N-513 The bounds of checks 8 and 11 of the labour round
+
+- **Areas:** EMP, LND, STO
+- **Raised:** 2026-11-19, plan 3-emp PR 5.
+- **Note:** Check 8 (`tenure.hireBound`) refuses `no_title` when by the rule of `spec-land.md` 4.5.1 no unit is open to the employer for one execution and `rent_funds` when its spendable money, less the bill of the vacancy already formed this round, is below the least rent summed over the recipe's titled draws (`leastRent`). Check 11 (`storage.roomFits`) asks the start's own bound (`boundExecutions`) for the executions already committed plus the block and refuses when it would cut them, with the employer as principal and the hired yield. Both are bounds: the ration, the rent and the room of P2.7 stay the authority (6.1.3).
+
+### N-514 A principal's tick of hired work is a working tick for the floor in every tick a wage is released
+
+- **Areas:** EMP, WEL
+- **Raised:** 2026-11-19, plan 3-emp PR 5.
+- **Note:** `spec-employment.md` 8.2.4 makes a tick in which the agent is the principal of a hired job in progress a working tick for the floor. The code marks it when a wage of the hire is released (P2.7 and P2.1), so the tick in which the last wage is paid counts and a tick between the formation at P2.5a and the start at P2.7 of a hire that starts nothing does not. The working household-ticks of the agent are its own executions only, as 8.2.4 says, so its observed wage is unchanged by hiring.
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2832,4 +2862,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 53db08bc5dc37ac488cbf586
+NOTES-TAG: 3d3e3d14952f54752aa24857
