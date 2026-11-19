@@ -265,3 +265,32 @@ func FuzzDecodeEmploymentSection(f *testing.F) {
 		_ = loadHireBody(w, body) // any body loads or fails; the next one clears what this one set
 	})
 }
+
+// TestEmployment_OffLeavesNoTrace verifies that with the module off, and with the
+// payroll form, the hire form leaves no trace: no section of tag 24 is expected, the
+// snapshot has no hire row and no employed or employing count, AgentState has no hire
+// group, and the world takes no open_hire refusal.
+//
+// Requirement: FR-EMP-001, FR-EMP-044
+func TestEmployment_OffLeavesNoTrace(t *testing.T) {
+	t.Parallel()
+	off := hireWorld(t, defaultHire(hireOpts{off: true}), nil)
+	stepN(t, off, 2)
+	s := errVal(off.Snapshot())
+	if len(s.Hires) != 0 || s.Roles[0].Employed != 0 || s.Roles[0].Employing != 0 {
+		t.Errorf("snapshot Hires %v, Employed %d, Employing %d, want none", s.Hires, s.Roles[0].Employed, s.Roles[0].Employing)
+	}
+	if st := errVal(off.Agent(AgentID(slotsOf(off, "farm")[0]))); st.HasEmployer || st.Employer != 0 || st.Hired != 0 {
+		t.Errorf("AgentState hire group = %v %d %d, want zero", st.HasEmployer, st.Employer, st.Hired)
+	}
+	payroll := off.cfg
+	payroll.Modules.Employment = &Employment{}
+	hire := hireWorld(t, defaultHire(hireOpts{}), nil).cfg
+	i := slices.IndexFunc(checkpointSections[:], func(s section) bool { return s.tag == 24 })
+	if i < 0 {
+		t.Fatalf("no row of tag 24 in checkpointSections")
+	}
+	if got := []bool{checkpointSections[i].present(&off.cfg), checkpointSections[i].present(&payroll), checkpointSections[i].present(&hire)}; !slices.Equal(got, []bool{false, false, true}) {
+		t.Errorf("section 24 present with the module off, with the payroll form, with the hire form = %v, want [false false true]", got)
+	}
+}
