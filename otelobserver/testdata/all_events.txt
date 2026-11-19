@@ -17,10 +17,12 @@ EstateOpened
 FacilityChanged
 HireEnded
 HireFormed
+LegalLevelSet
 LoanEnded
 LoanFormed
 LoanPassed
 MarketCleared
+MembershipChanged
 MerchantsPlanned
 MigrationReviewed
 MigrationStarted
@@ -36,6 +38,7 @@ OwnUseChanged
 PayrollPaid
 PopulationChanged
 PopulationScaled
+PriceControlled
 ProductionHalted
 RecipeAbandoned
 RecipeExecuted
@@ -43,8 +46,11 @@ RecipeRefused
 ReliefPaid
 RentPaid
 RentScaled
+RightRefused
+RightSuspensionSet
 RoleChanged
 RoomLimited
+RouteRiskScaled
 RumoursServed
 RunEnded
 RunStarted

@@ -49,7 +49,10 @@ type trip struct {
 	// s the haul units a carrying unit costs on the route.
 	ci   int
 	k, s int64
-	// rnet is the revenue per unit net of the cut and pacq the local price.
+	// loss is the expected loss of the route in basis points (RouteRow.LossBP).
+	loss int64
+	// rnet is the revenue per unit net of the cut and of the loss, and pacq the local
+	// price.
 	rnet, pacq int64
 	// q is the lot and n its carrying units; res is the test at q.
 	q, n int64
@@ -255,7 +258,7 @@ func (s *state) cargoLane(rows []economysim.RouteRow, c economysim.CommodityID, 
 		if !r.Has || md == nil || (s.stay && !md.Hired) {
 			continue
 		}
-		t := trip{dest: r.To, cargo: c, mode: md, ci: ci, k: r.Ticks, s: r.HaulPerUnit}
+		t := trip{dest: r.To, cargo: c, mode: md, ci: ci, k: r.Ticks, s: r.HaulPerUnit, loss: r.LossBP}
 		if s.eval(&t) {
 			s.keepBest(&t)
 		}
@@ -323,7 +326,7 @@ func (s *state) eval(t *trip) bool {
 	if t.mode.Hired {
 		cut = s.m.Params.ConsigneeCutBP
 	}
-	rnet, ok := merchant.Net(merchant.Cautious(int64(rho.Price), int64(rho.Mean)), cut, 0)
+	rnet, ok := merchant.Net(merchant.Cautious(int64(rho.Price), int64(rho.Mean)), cut, t.loss)
 	t.rnet, t.pacq = rnet, s.price(t.ci)
 	if !ok || t.rnet <= t.pacq {
 		n.NoMargin++

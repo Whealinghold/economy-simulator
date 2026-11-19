@@ -27,10 +27,7 @@ import (
 // and its validation with the storage module (plan 3-sto Phase 3, storesTarget in
 // storage_validate.go), but its step is not built: a flow that passes every rule is
 // still ErrModuleDependency until Phase 6.
-const (
-	targetStores   = "stores"
-	targetTreasury = "treasury"
-)
+const targetStores = "stores"
 
 // pairTolerance is the tolerance of the warning pair_unbalanced, in basis points
 // of the larger yearly total (spec-money-supply.md 12.2). It is a reporting rule
@@ -183,6 +180,7 @@ func (v *validator) flowTarget(base []string, f MoneyFlow) {
 	t := f.Target
 	tp := path(base, "target")
 	v.storeKeyKind(tp, t)
+	v.treasuryKeyKind(tp, t)
 	switch t.Kind {
 	case TargetHouseholds:
 		switch {
@@ -196,7 +194,7 @@ func (v *validator) flowTarget(base []string, f MoneyFlow) {
 		}
 	case TargetPool:
 		v.poolTarget(tp, t)
-	case targetStores, targetTreasury:
+	case targetStores, TargetTreasury:
 		v.unbuiltTarget(tp, f, base)
 	default:
 		v.rep.add(ErrOutOfBounds, path(tp, "kind"), t.Kind, "")
@@ -948,7 +946,7 @@ func (w *World) auditFlows() error {
 }
 
 // auditLaterModules is the audit of the modules built after the money flows, in module
-// order: the credit claims and the tenure titles.
+// order: the credit claims, the tenure titles and the loss share of the risk module.
 func (w *World) auditLaterModules() error {
 	if err := w.auditCredit(); err != nil {
 		return err
@@ -956,7 +954,13 @@ func (w *World) auditLaterModules() error {
 	if err := w.auditTenure(); err != nil {
 		return err
 	}
-	return w.auditInfrastructure()
+	if err := w.auditInfrastructure(); err != nil {
+		return err
+	}
+	if w.risk != nil {
+		return w.risk.audit(w)
+	}
+	return nil
 }
 
 // dropAgent drops the carries of a removed agent (spec-money-supply.md 14).

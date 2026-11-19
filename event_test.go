@@ -99,6 +99,20 @@ var declaredEvents = []economysim.Event{
 	economysim.FacilityChanged{},
 	economysim.HireFormed{},
 	economysim.HireEnded{},
+	economysim.RouteRiskScaled{},
+	economysim.MembershipChanged{},
+	economysim.RightRefused{},
+	economysim.PriceControlled{},
+	economysim.LegalLevelSet{},
+	economysim.RightSuspensionSet{},
+}
+
+// moduleGates are the gates of 4.1 (besides core and the two prefixes) whose events are
+// declared with their module.
+var moduleGates = []string{
+	"demand", "resources", "subsistence", "population", "transport", "information", "migration",
+	"merchant block", "merchants", "external", "employment", "storage", "credit", "technology",
+	"settlements", "tenure", "infrastructure", "risk", "institutions",
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -107,11 +121,10 @@ var declaredEvents = []economysim.Event{
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
 	"StoreLoss",
-	"RouteRiskScaled", "StoreRiskScaled",
+	"StoreRiskScaled",
 	"LabourRound",
 	"FacilityLimited", "FiscalFlowApplied",
-	"TreasuryOrdered", "MembershipChanged", "RightRefused", "PriceControlled",
-	"LegalLevelSet", "RightSuspensionSet", "SavingPlanned", "PolicyDecided",
+	"TreasuryOrdered", "SavingPlanned", "PolicyDecided",
 	"CoverFormed", "CoverEnded", "CoverRound", "CoverSettled",
 }
 
@@ -126,9 +139,7 @@ var deferredCore = map[string]string{}
 // has not appended the field to its declared event yet (D3 of the plan of
 // Stage 0). The change that appends one deletes its entry.
 var notBuiltFields = []string{
-	"ShipmentDispatched.Toll",     // fiscal module, FIS 16.1
-	"ShipmentDispatched.LossBP",   // risk module, RSK 14.1
-	"ShipmentArrived.AccountLost", // risk module, RSK 14.1
+	"ShipmentDispatched.Toll", // fiscal module, FIS 16.1
 }
 
 // eventRow is one row of the tables of spec-observability.md 4.1.
@@ -466,7 +477,7 @@ func TestEvents_CatalogueStaged(t *testing.T) {
 			t.Errorf("declared event %s is not a row of 4.1", n)
 			continue
 		}
-		if !strings.HasPrefix(row.gate, "core") && row.gate != "demand" && row.gate != "resources" && row.gate != "subsistence" && row.gate != "population" && row.gate != "transport" && row.gate != "information" && row.gate != "migration" && row.gate != "merchant block" && row.gate != "merchants" && row.gate != "external" && row.gate != "employment" && row.gate != "storage" && row.gate != "credit" && row.gate != "technology" && row.gate != "settlements" && row.gate != "tenure" && row.gate != "infrastructure" && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
+		if !strings.HasPrefix(row.gate, "core") && !slices.Contains(moduleGates, row.gate) && !strings.HasPrefix(row.gate, "money supply") && !strings.HasPrefix(row.gate, "estates") {
 			t.Errorf("declared event %s has gate %q in 4.1, want core: a module's event is declared with its module", n, row.gate)
 		}
 		if !rules[n] {

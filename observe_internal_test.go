@@ -279,6 +279,11 @@ var stepSites = []site{
 			w.p19Directives()
 		}
 	})},
+	{"P1.9a", noError(func(w *World) {
+		if w.org != nil {
+			w.p19aMembership()
+		}
+	})},
 	{"P2.1", noError((*World).p21Complete)},
 	{"P2.2", noError(func(w *World) {
 		if w.skills != nil {
@@ -308,6 +313,11 @@ var stepSites = []site{
 	{"P3.1", noError(func(w *World) {
 		if w.transport != nil {
 			w.p31Fix()
+		}
+	})},
+	{"P3.1a", noError(func(w *World) {
+		if w.risk != nil {
+			w.p31aCommon()
 		}
 	})},
 	{"P3.2", (*World).p32Trade},
@@ -374,6 +384,11 @@ var stepSites = []site{
 	{"P7.2a", noError(func(w *World) {
 		if w.set != nil {
 			w.p72aSettlement()
+		}
+	})},
+	{"P7.2b", noError(func(w *World) {
+		if w.org != nil {
+			w.p72bInstitutions()
 		}
 	})},
 	{"P8.1", (*World).p81Age},

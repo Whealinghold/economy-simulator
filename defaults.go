@@ -362,3 +362,9 @@ func DefaultRegionSettlement(region string) RegionSettlement {
 
 // DefaultInstitutions returns the module with nothing declared and OwnUseBound false.
 func DefaultInstitutions() Institutions { return Institutions{} }
+
+// The fiscal module (spec-fiscal.md 14) has no tunable and no default macro constant
+// (N-027): it has no flow unless the pack lists it, and the zero value of a field means
+// absent. An empty Per of a tax or a payout is PerTick and an empty Scope of a duty is
+// ScopeAny (Fiscal.canonical), and a flow's scale is state that starts at 10 000. Its
+// bounds are in bounds.go (MaxFiscalFlows, MaxDutyBP, MaxLimitBP).

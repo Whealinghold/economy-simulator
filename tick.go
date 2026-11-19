@@ -39,6 +39,7 @@ var positionList = [...]position{
 	{"P1.7a", "CRD", line},
 	{"P1.8", "EXT", line},
 	{"P1.9", "AGT", line},
+	{"P1.9a", "ORG", line},
 	{"P2.1", "PRO", line},
 	{"P2.2", "SKL", line},
 	{"P2.3", "RES", line},
@@ -50,6 +51,7 @@ var positionList = [...]position{
 	{"P2.8", "SUB", line},
 	{"P2.8a", "OBS", line},
 	{"P3.1", "TRN", line},
+	{"P3.1a", "RSK", line},
 	{"P3.2", "AGT", line},
 	{"P3.3", "MER", line},
 	{"P3.3a", "MER", line},
@@ -72,6 +74,7 @@ var positionList = [...]position{
 	{"P7.1", "SPN", line},
 	{"P7.2", "MIG", line},
 	{"P7.2a", "SET", line},
+	{"P7.2b", "ORG", line},
 	{"P8.1", "LED", line},
 	{"P8.2", "LED", line},
 	{"P8.3", "RES", line},
@@ -88,11 +91,10 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P0.3a",
-	"P1.3a", "P1.7b", "P1.9a",
+	"P1.3a", "P1.7b",
 	"P2.8b",
-	"P3.1a", "P3.3c", "P3.4a", "P3.6b", "P3.6c",
+	"P3.3c", "P3.4a", "P3.6b", "P3.6c",
 	"P4.1a",
-	"P7.2b",
 	"P8.1a", "P8.1b", "P8.3b",
 }
 
@@ -146,6 +148,9 @@ func (w *World) positionsFlows() error {
 	if w.integ.visit {
 		w.p19Directives()
 	}
+	if w.org != nil {
+		w.p19aMembership()
+	}
 	return w.positionsProduce()
 }
 
@@ -187,6 +192,9 @@ func (w *World) positionsProduce() error {
 func (w *World) positionsPlan() error {
 	if w.transport != nil {
 		w.p31Fix()
+	}
+	if w.risk != nil {
+		w.p31aCommon()
 	}
 	if err := w.p32Trade(); err != nil {
 		return err
@@ -244,8 +252,8 @@ func (w *World) positionsSettle() error {
 	return w.positionsTail()
 }
 
-// positionsTail is the part of the straight line from phase 5 to the settlement
-// review (P7.2a), split from positions to stay within the Lizard complexity limit
+// positionsTail is the part of the straight line from phase 5 to the migration of
+// P7.2, split from positions to stay within the Lizard complexity limit
 // (N-243). The position test reads it as part of the straight line, after
 // positionsSettle and in source order.
 func (w *World) positionsTail() error {
@@ -271,8 +279,21 @@ func (w *World) positionsTail() error {
 	if w.migration != nil {
 		w.p72Migration()
 	}
+	return w.positionsReview()
+}
+
+// positionsReview is the part of the straight line from the settlement review
+// (P7.2a) to the institutions of P7.2b, split from positionsTail to stay within the
+// Lizard complexity limit when the institutions module joined it (N-243, plan 3-org
+// Phase 4). The position test reads it as part of the straight line, after
+// positionsTail and before positionsEnd, in source order. It is named for the review of
+// P7.2a and P7.2b and is not the positionsClose of P8.3a to the audit.
+func (w *World) positionsReview() error {
 	if w.set != nil {
 		w.p72aSettlement()
+	}
+	if w.org != nil {
+		w.p72bInstitutions()
 	}
 	return w.positionsEnd()
 }
@@ -280,7 +301,7 @@ func (w *World) positionsTail() error {
 // positionsEnd is the end of the straight line, from the ageing of phase 8 to the
 // audit, split from positionsTail to stay within the Lizard complexity limit before
 // the risk module's P8.1a joins it (N-243). The position test reads it as part of
-// the straight line, after positionsTail and in source order.
+// the straight line, after positionsReview and in source order.
 func (w *World) positionsEnd() error {
 	if err := w.p81Age(); err != nil {
 		return err

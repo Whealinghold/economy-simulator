@@ -65,6 +65,7 @@ var reasonNames = [...]Reason{
 	ledger.WagePay:          ReasonWagePay,
 	ledger.Rent:             ReasonRent,
 	ledger.TitleSale:        ReasonTitleSale,
+	ledger.Loss:             ReasonLoss,
 	ledger.WageEscrow:       ReasonWageEscrow,
 	ledger.WageRefund:       ReasonWageRefund,
 }
@@ -109,6 +110,7 @@ func newLedger(cfg Config) (*ledger.Ledger, error) {
 		MaxQuantity: MaxQuantity,
 		Declared:    declared,
 		Flows:       classes,
+		Fiscal:      fiscalReasons(&cfg),
 		MaxClaims:   cfg.Modules.Credit.claimsLimit(),
 	})
 	if err != nil {
@@ -158,6 +160,9 @@ func moduleReasons(c *Config) [][]ledger.Reason {
 	}
 	if c.Modules.Tenure != nil {
 		m = append(m, []ledger.Reason{ledger.Rent, ledger.TitleSale})
+	}
+	if c.Modules.Risk != nil {
+		m = append(m, riskReasons())
 	}
 	return m
 }

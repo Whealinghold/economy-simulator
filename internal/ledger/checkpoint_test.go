@@ -848,7 +848,7 @@ var reasonNames = map[Reason]string{
 	EscrowIn: "escrow_in", EscrowOut: "escrow_out", EscrowRefund: "escrow_refund",
 	OutsideBudget: "outside_budget", OutsideUnspent: "outside_unspent", OutsideReceipts: "outside_receipts",
 	OutsideOffer: "outside_offer", OutsideUnsold: "outside_unsold", OutsidePurchases: "outside_purchases",
-	WagePay: "wage_pay", Rent: "rent", TitleSale: "title_sale",
+	WagePay: "wage_pay", Rent: "rent", TitleSale: "title_sale", Loss: "loss",
 	WageEscrow: "wage_escrow", WageRefund: "wage_refund",
 }
 
