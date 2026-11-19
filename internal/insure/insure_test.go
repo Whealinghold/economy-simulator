@@ -139,6 +139,7 @@ func TestSum_StoreHeldTimesShare(t *testing.T) {
 		{"truncates", 3_333, 2_083, true, maxMoney},
 		{"all", 10_000, 6_250, true, maxMoney},
 		{"negative share", -1, 0, false, maxMoney},
+		{"share above the basis", 10_001, 0, false, maxMoney},
 		{"held above the limit", 5_000, 0, false, 6_249},
 	}
 	for _, tt := range tests {

@@ -47,10 +47,11 @@ func SumAccount(held, value []int64, vehicle int, limit int64) (int64, bool) {
 // SumStore returns the sum insured of a store policy, trunc(Held * shareBP / 10 000)
 // with Held the sum of held * value over every holding of the insured's account and
 // the product in 128 bits (spec-insurance.md 6.3.3, FR-INS-021). ok is false on an
-// overflow of Held or a Held above limit, or for a negative share.
+// overflow of Held or a Held above limit, or for a share below 0 or above Basis (a
+// store share is 1 to 10 000, spec-insurance.md 5.1, so the sum never exceeds Held).
 func SumStore(held, value []int64, shareBP, limit int64) (sum int64, ok bool) {
 	total, ok := dot(held, value, -1, limit)
-	if !ok || shareBP < 0 {
+	if !ok || shareBP < 0 || shareBP > Basis {
 		return 0, false
 	}
 	return checked.MulDiv(total, shareBP, Basis)

@@ -32,7 +32,9 @@ type Form struct {
 	MaxPolicies int64
 	// Sum is the candidate's sum insured and MinSum the smallest sum formed.
 	Sum, MinSum int64
-	// Premium is the premium and PremiumOK whether it was computed within the bound.
+	// Premium is the premium and PremiumOK whether it was computed within the bound;
+	// with PremiumOK false Premium is ignored and Check returns Overflow once the
+	// earlier checks pass.
 	Premium   int64
 	PremiumOK bool
 	// Available is the insured's balance less what its orders reserved.
