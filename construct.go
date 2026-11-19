@@ -196,6 +196,7 @@ func (w *World) allocate() {
 	w.prod.res = w.res
 	w.prod.sto = w.sto
 	w.prod.tec = w.tec
+	w.prod.infra = w.infra
 	w.refused = newRefusalTally(regions, len(w.cfg.Recipes))
 	w.reads = newReadBuf(len(w.cfg.Commodities))
 	w.views = newViewScratch(&w.cfg, &w.roles, &w.recipes)

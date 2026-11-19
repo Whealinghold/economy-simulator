@@ -264,9 +264,17 @@ type productionScratch struct {
 	// roomCut is the executions the room took off the last maxExecutions (k0 less
 	// the executions the room allows), 0 when it cut none.
 	roomCut int64
+	// free is the scratch of freeOfNeeds, and facFree the executions the last
+	// maxExecutions would have started without the capacity of the needed classes (0 when
+	// the request did not ask for it): the infrastructure module's count of FacilityLimited.Cut.
+	free    []production.Limit
+	facFree int64
 	// tec is the technology module's state, nil when it is off: the technology term
 	// of the effective factor is read through it (techFactor).
 	tec *technology
+	// infra is the infrastructure module's state, nil when it is off: the facility limits of a
+	// start are read through it (spec-infrastructure.md 4.2.2), by the start and by the views.
+	infra *infrastructure
 
 	terms   []production.Term
 	wears   []production.Wear
@@ -345,26 +353,27 @@ const (
 	limitNoEndowment
 	limitNoTitle
 	limitRentFunds
+	// The limits of the infrastructure module (spec-infrastructure.md 4.2.2), appended: the
+	// code is the reason's name only, and the master order is the order of the list that
+	// limitList builds, not the value of the code.
+	limitNoFacility
+	limitNotUnlocked
+	limitFacilityCap
+	limitNoTarget
+	limitStoreRefused
+	limitNothingToRepair
 )
 
 func limitReason(code int) Reason {
-	switch code {
-	case limitZeroYield:
-		return ReasonZeroYield
-	case limitNoSite:
-		return ReasonNoSite
-	case limitNoTool:
-		return ReasonNoTool
-	case limitNoInput:
-		return ReasonNoInput
-	case limitNoEndowment:
-		return ReasonNoEndowment
-	case limitNoTitle:
-		return ReasonNoTitle
-	case limitRentFunds:
-		return ReasonRentFunds
+	// In the order of the codes above. An array literal, not a package-level table: the
+	// module keeps no mutable package state.
+	reasons := [...]Reason{ReasonZeroYield, ReasonNoSite, ReasonNoTool, ReasonNoInput, ReasonNoEndowment, ReasonNoTitle,
+		ReasonRentFunds, ReasonNoFacility, ReasonNotUnlocked, ReasonFacilityCap, ReasonNoTarget, ReasonStoreRefused,
+		ReasonNothingToRepair}
+	if code < 0 || code >= len(reasons) {
+		return ""
 	}
-	return ""
+	return reasons[code]
 }
 
 // startReq is one request to start a recipe (spec-production.md 4.2, 4.3).
@@ -395,6 +404,12 @@ type startReq struct {
 	// exec is the executor, whose weight, role and residues the room bound reads
 	// (storage module); nil reads no room.
 	exec *agent
+	// region is the region of the executor, where the facilities of the principal are read
+	// (spec-infrastructure.md 4.2.1); 0 for a request that reads no facility.
+	region RegionID
+	// fac is what the infrastructure module tells the start (spec-infrastructure.md 4.2.2);
+	// zero for a recipe with no clause and with the module off.
+	fac facilityCaps
 }
 
 // startResult is what a start tells the world. reason is set only when k is 0
@@ -422,6 +437,7 @@ type wearFact struct {
 // It reads the ledger and writes only the scratch.
 func (s *productionScratch) limitList(l *ledger.Ledger, q *startReq) error {
 	row := s.recipes.row(q.recipe)
+	s.infra.request(q)
 	s.limits = s.limits[:0]
 	yieldCap, yieldReason := yieldRefusal(s.cfg.Recipes[q.recipe].Sited, q.hasProfile, q.effective)
 	code := limitZeroYield
@@ -432,6 +448,7 @@ func (s *productionScratch) limitList(l *ledger.Ledger, q *startReq) error {
 	if err := s.appendToolLimits(l, q, row); err != nil {
 		return err
 	}
+	s.limits = appendNeedLimits(s.limits, q)
 	if err := s.appendInputLimits(l, q, row); err != nil {
 		return err
 	}
@@ -439,6 +456,7 @@ func (s *productionScratch) limitList(l *ledger.Ledger, q *startReq) error {
 		s.limits = append(s.limits, production.Limit{Cap: q.drawCap, Reason: limitNoEndowment})
 		s.limits = appendTenureLimits(s.limits, q)
 	}
+	s.limits = appendBuildLimits(s.limits, q)
 	return nil
 }
 
@@ -508,6 +526,7 @@ func (s *productionScratch) maxExecutions(l *ledger.Ledger, q *startReq) (k0 int
 	}
 	k, code := production.Count(q.weight, q.maximum, s.limits)
 	reason = limitReason(code)
+	s.facFree = s.freeOfNeeds(q)
 	s.roomCut = 0
 	if s.sto != nil {
 		k, reason = s.sto.boundExecutions(l, q, k, reason, &s.roomCut)
@@ -634,9 +653,12 @@ type completion struct {
 	recipe     RecipeID
 	executions int64
 	yield      int64
-	created    []int64
-	disposed   []int64
-	overflow   []int64
+	// principal is the owner of what the job made: a facility it builds is the principal's
+	// (spec-infrastructure.md 4.2.1). The job is cleared by the time the world reads this.
+	principal AgentID
+	created   []int64
+	disposed  []int64
+	overflow  []int64
 }
 
 // cutOutputs sorts the pending output of j into s.created, s.disposed and
@@ -706,7 +728,7 @@ func (s *productionScratch) complete(l *ledger.Ledger, j *job, account int, maxQ
 			}
 		}
 	}
-	c := completion{recipe: j.recipe, executions: j.executions, yield: j.yield, created: s.created, disposed: s.disposed, overflow: s.overflow}
+	c := completion{recipe: j.recipe, executions: j.executions, yield: j.yield, principal: j.principal, created: s.created, disposed: s.disposed, overflow: s.overflow}
 	j.clear()
 	return c
 }

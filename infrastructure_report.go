@@ -335,5 +335,8 @@ func (n *infrastructure) reportLimits() {
 func (n *infrastructure) clearTick() {
 	if n != nil {
 		clear(n.limits)
+		clear(n.used)
+		clear(n.ordered)
+		n.orderedAll = 0
 	}
 }
