@@ -168,7 +168,19 @@ func (n *infrastructure) repairCap(principal AgentID, region RegionID, rc *recip
 			missing += n.cls[f.class].durability - f.condition
 		}
 	}
-	return (missing + rc.units - 1) / rc.units
+	return upDiv(missing, rc.units)
+}
+
+// upDiv is a / b rounded up for a >= 0, without the overflow of a + b - 1; 0 for a b below 1.
+func upDiv(a, b int64) int64 {
+	if a <= 0 || b < 1 {
+		return 0
+	}
+	q := a / b
+	if a%b != 0 {
+		q++
+	}
+	return q
 }
 
 // appendNeedLimits appends limit 1 of 4.2.2, one per needed class, after the tools and before
@@ -273,6 +285,9 @@ func (n *infrastructure) refused(principal AgentID, region RegionID, recipe Reci
 func (n *infrastructure) refusalClass(principal AgentID, region RegionID, recipe RecipeID, reason Reason) (FacilityClassID, bool) {
 	switch reason {
 	case ReasonNoFacility:
+		if recipe < 0 || int(recipe) >= len(n.rec) || len(n.rec[recipe].needs) == 0 {
+			return 0, false // not a reason this recipe can give: count nothing rather than index past the clauses
+		}
 		rc := &n.rec[recipe]
 		for _, c := range rc.needs {
 			if n.facilityRoom(principal, region, c) <= 0 {
@@ -281,11 +296,21 @@ func (n *infrastructure) refusalClass(principal AgentID, region RegionID, recipe
 		}
 		return rc.needs[0], true
 	case ReasonNotUnlocked, ReasonFacilityCap, ReasonNoTarget, ReasonStoreRefused:
-		return n.rec[recipe].build, true
+		return n.clauseClass(recipe, func(rc *recipeClauses) FacilityClassID { return rc.build })
 	case ReasonNothingToRepair:
-		return n.rec[recipe].repair, true
+		return n.clauseClass(recipe, func(rc *recipeClauses) FacilityClassID { return rc.repair })
 	}
 	return 0, false
+}
+
+// clauseClass is the class a recipe's clause names, false for a recipe outside the
+// configuration or one with no such clause (the index is -1).
+func (n *infrastructure) clauseClass(recipe RecipeID, pick func(*recipeClauses) FacilityClassID) (FacilityClassID, bool) {
+	if recipe < 0 || int(recipe) >= len(n.rec) {
+		return 0, false
+	}
+	c := pick(&n.rec[recipe])
+	return c, c >= 0
 }
 
 // wear assigns k executions of a start to the owner's facilities of the class in the region,
@@ -392,7 +417,7 @@ func (n *infrastructure) completeRepair(principal AgentID, region RegionID, rc *
 	}
 	var left int64
 	n.placed, left = fcy.Distribute(n.placed, units, n.needs)
-	took := (units - left + rc.units - 1) / rc.units // the executions that restored something
+	took := upDiv(units-left, rc.units) // the executions that restored something
 	slices.SortFunc(n.placed, func(a, b fcy.Placement) int { return a.Ref - b.Ref })
 	for _, p := range n.placed {
 		f := &n.fac[n.index(FacilityID(p.Ref))]
