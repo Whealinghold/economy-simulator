@@ -3,6 +3,8 @@ package economysim
 import (
 	"bytes"
 	"encoding/binary"
+	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/ledger"
@@ -93,6 +95,62 @@ func TestHashConfig_InsuranceOffLeavesNoTrace(t *testing.T) {
 	}
 	if HashConfig(off) == HashConfig(insuranceHashConfig()) {
 		t.Error("HashConfig of the module off = that of the module on, want different")
+	}
+}
+
+// TestHash_InsuranceNilIsByteIdentical verifies, on the bytes, that a nil module and a
+// role with no block add nothing to the pairs: the bytes of the Modules row with the
+// module off equal those of the same row built without the field's neighbours moving,
+// the bytes of a role with no block are those of a role that never had the field, the
+// bytes of a role with a block are exactly those plus the block's pair at id 28 as the
+// last pair, and the canonical copy of a configuration with neither keeps both nil.
+//
+// Requirement: FR-INS-001, FR-INS-008
+//
+// Guard: the pinned hash of the all-off reference only proves the case it pins. This
+// proves the rule for any configuration: the module's id 18 and the block's id 28 are
+// written only when present, and never as an empty pair, so every existing hash and
+// checkpoint stays valid when a module is added (architecture.md 2.10.5).
+func TestHash_InsuranceNilIsByteIdentical(t *testing.T) {
+	t.Parallel()
+	neighbours := Modules{Infrastructure: &Infrastructure{}, Polity: &PolityConfig{}}
+	on := neighbours
+	on.Insurance = &Insurance{}
+	off, withModule := &encoder{}, &encoder{}
+	pairsModules(off, neighbours)
+	pairsModules(withModule, on)
+	empty := []byte{0, 18, 0, 0} // id 18 and the end of an empty module
+	at := bytes.Index(withModule.buf, empty)
+	if at < 0 || bytes.Contains(off.buf, empty) {
+		t.Fatalf("pairsModules: on = % x, off = % x, want the pair 0012 0000 only with the module on", withModule.buf, off.buf)
+	}
+	if rest := slices.Concat(withModule.buf[:at], withModule.buf[at+len(empty):]); !bytes.Equal(rest, off.buf) {
+		t.Errorf("pairsModules(module on) less its pair = % x, want the bytes with the module off % x", rest, off.buf)
+	}
+
+	plain := Role{ID: "r", Recipes: []string{"x"}, StartMoney: 5}
+	withBlock := plain
+	withBlock.Cover = &CoverTerms{Insure: &InsureTerms{MinLossBP: 1}}
+	p, q := &encoder{}, &encoder{}
+	pairsRole(p, plain, false, false)
+	pairsRole(q, withBlock, false, false)
+	block := &encoder{}
+	pairsCoverTerms(block, *withBlock.Cover)
+	want := slices.Concat(p.buf, []byte{0, 28}, block.buf, []byte{0, 0})
+	if !bytes.Equal(q.buf, want) {
+		t.Errorf("pairsRole(with block) = % x, want the bytes of the role with none, then id 28, the block % x and its end", q.buf, block.buf)
+	}
+	if bytes.HasSuffix(p.buf, []byte{0, 28, 0, 0}) {
+		t.Errorf("pairsRole(no block) = % x, want no pair at id 28", p.buf)
+	}
+
+	c := Config{Roles: []Role{plain}, Modules: neighbours}
+	cp := c.canonical()
+	if cp.Modules.Insurance != nil || cp.Roles[0].Cover != nil {
+		t.Errorf("canonical(no insurance) has Insurance %v and Cover %v, want both nil", cp.Modules.Insurance, cp.Roles[0].Cover)
+	}
+	if !reflect.DeepEqual(cp.Modules, c.Modules) {
+		t.Errorf("canonical(no insurance).Modules = %+v, want %+v", cp.Modules, c.Modules)
 	}
 }
 
