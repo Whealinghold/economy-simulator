@@ -1,6 +1,8 @@
 package economysim
 
 import (
+	"math"
+
 	"github.com/Whealinghold/economy-sim/internal/household"
 	"github.com/Whealinghold/economy-sim/internal/ordering"
 	"github.com/Whealinghold/economy-sim/internal/production"
@@ -55,8 +57,11 @@ type SavingTargetResult struct {
 // project's own inputs and tools as tier 2 (5.6.3); a read of saved state passes 0. A view
 // with no Saving group has the flat reserve as its target.
 func SavingTarget(v *AgentView, tier2 int64) SavingTargetResult {
-	cost, _ := v.upkeepCost()
-	pk := pickProject(v, v.reserveMoney(householdParams(&v.Tunables)), cost)
+	if v == nil {
+		return SavingTargetResult{}
+	}
+	reserve, upkeep := v.savingBasis()
+	pk := pickProject(v, reserve, upkeep)
 	return pk.target(tier2)
 }
 
@@ -64,9 +69,23 @@ func SavingTarget(v *AgentView, tier2 int64) SavingTargetResult {
 // that do, and whether there is one, with its benefit, cost, outlay and whether the
 // household is funded for it (spec 7.2, FR-SAV-042). It is a pure function of the view.
 func ChooseProject(v *AgentView) (ProjectChoice, bool) {
-	cost, _ := v.upkeepCost()
-	pk := pickProject(v, v.reserveMoney(householdParams(&v.Tunables)), cost)
+	if v == nil {
+		return ProjectChoice{}, false
+	}
+	reserve, upkeep := v.savingBasis()
+	pk := pickProject(v, reserve, upkeep)
 	return pk.choice, pk.chosen
+}
+
+// savingBasis is the flat reserve and the upkeep cost of one tick the rules read. An upkeep
+// cost that overflows is read as the largest value, as reserveMoney reads the reserve, so the
+// outlay saturates and no project is funded; the default's Trade makes no plan at all then.
+func (v *AgentView) savingBasis() (reserve, upkeep int64) {
+	cost, ok := v.upkeepCost()
+	if !ok {
+		return math.MaxInt64, math.MaxInt64
+	}
+	return v.reserveMoney(householdParams(&v.Tunables)), cost
 }
 
 // savingPick is what the choice of a project settles for one view: the figures of the
@@ -111,7 +130,7 @@ func pickProject(v *AgentView, reserve, upkeep int64) savingPick {
 	pk.first = v.firstProject()
 	pk.precaution = sav.Precaution(sv.Block.PrecautionShareBP, sv.Block.PrecautionCapTicks, upkeep, sv.Drawdown)
 	pk.floor = sav.Floor(reserve, pk.precaution)
-	if v.Hunger > 0 || v.Money < reserve || v.OwnUse {
+	if v.Hunger > 0 || v.Money < reserve || reserve == math.MaxInt64 || v.OwnUse { // the largest reserve is an overflow: survival binds
 		pk.bar = BarSurvival
 		return pk
 	}
@@ -234,6 +253,9 @@ func (e *projectEval) pick(pk *savingPick) {
 func (e *projectEval) weigh(r *RecipeView) (ProjectChoice, projectState) {
 	if r.Standing != "" {
 		return ProjectChoice{}, projectStanding
+	}
+	if len(r.Inputs) > MaxRecipeItems || len(r.Tools) > MaxRecipeItems {
+		return ProjectChoice{}, projectNoReturn // a validated recipe never is; a hand-built view can be
 	}
 	class := r.Builds.Class
 	if r.Repairs.On {
@@ -358,7 +380,10 @@ func (e *projectEval) lines(r *RecipeView, m int64) projectLines {
 	nt := 0
 	for _, t := range r.Tools {
 		c := e.v.centreOf(t.Commodity)
-		wear, _ := production.WearCost(production.Wear{Commodity: int(t.Commodity), WearPerUse: t.WearPerUse, Durability: t.Durability}, c)
+		wear, ok := production.WearCost(production.Wear{Commodity: int(t.Commodity), WearPerUse: t.WearPerUse, Durability: t.Durability}, c)
+		if !ok {
+			wear = math.MaxInt64 // a wear that cannot be priced is a cost no project passes
+		}
 		qty[n], centre[n] = 1, wear // the wear of a tool is a term of the cost; it is not held stock
 		n++
 		tq[nt], tc[nt], ts[nt] = 1, c, e.v.stockOf(t.Commodity)
@@ -484,8 +509,8 @@ func savingRequest(v *AgentView) (JobRequest, bool) {
 	if v.HasJob {
 		return JobRequest{}, false
 	}
-	cost, _ := v.upkeepCost()
-	pk := pickProject(v, v.reserveMoney(householdParams(&v.Tunables)), cost)
+	reserve, upkeep := v.savingBasis()
+	pk := pickProject(v, reserve, upkeep)
 	if !pk.chosen {
 		return JobRequest{}, false
 	}

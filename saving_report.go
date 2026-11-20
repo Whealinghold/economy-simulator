@@ -18,8 +18,8 @@ func (s *saving) logProject(v *AgentView) {
 	if !s.log.Enabled(ctx, slog.LevelDebug) {
 		return
 	}
-	cost, _ := v.upkeepCost()
-	pk := pickProject(v, v.reserveMoney(householdParams(&v.Tunables)), cost)
+	reserve, upkeep := v.savingBasis()
+	pk := pickProject(v, reserve, upkeep)
 	switch {
 	case pk.chosen:
 		res := pk.target(0)
