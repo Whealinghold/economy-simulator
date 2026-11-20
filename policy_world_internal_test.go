@@ -184,7 +184,10 @@ func TestPolicy_NeutralHoldAndIdle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Snapshot() error = %v, want nil", err)
 	}
-	sa.Modules, sb.Modules, sa.ConfigHash, sb.ConfigHash = nil, nil, [32]byte{}, [32]byte{}
+	if len(sb.Actors) != 0 || len(sa.Actors) != 2 {
+		t.Errorf("Actors = %d rows with hold actors, %d with the module off, want 2 and 0", len(sa.Actors), len(sb.Actors))
+	}
+	sa.Modules, sb.Modules, sa.ConfigHash, sb.ConfigHash, sa.Actors = nil, nil, [32]byte{}, [32]byte{}, nil
 	if !reflect.DeepEqual(sa, sb) {
 		t.Errorf("snapshots differ between a world with only hold actors and one with the module off")
 	}

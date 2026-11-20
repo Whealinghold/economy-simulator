@@ -153,16 +153,18 @@ type policyActor struct {
 	reads    bool
 	kind     policyKind
 	builtin  Policy      // the schedule or the rule built from the row; nil for the others
+	consumer Policy      // the registered policy of a consumer's actor; nil for the others
 	rule     *rulePolicy // the same value when the policy is a rule: the world reads what it held
 	levers   []policyLever
 	covered  []RegionID // the covered regions that are not outside nodes, ascending
 }
 
-// policyState is the state of the module, nil when it is off: the actors by ActorID
-// and the scratch the decisions reuse. Nothing in it is saved except what a later
-// section adds (the mailbox).
+// policyState is the state of the module, nil when it is off: the actors by ActorID, the
+// mailbox of each directed actor and the scratch the decisions reuse. The mailbox, by
+// ActorID and sorted by lever, is the only state that is saved (tag 32, policy_state.go).
 type policyState struct {
 	actors  []policyActor
+	mailbox [][]LeverSetting
 	scratch policyScratch
 }
 
@@ -174,7 +176,7 @@ func newPolicy(c *Config, pol *polity, g Graph, reg registry[Policy], outside []
 	if m == nil {
 		return nil
 	}
-	s := &policyState{actors: make([]policyActor, len(m.Actors))}
+	s := &policyState{actors: make([]policyActor, len(m.Actors)), mailbox: make([][]LeverSetting, len(m.Actors))}
 	for i := range m.Actors {
 		s.actors[i] = newPolicyActor(c, &m.Actors[i], pol.v, g, reg, outside)
 	}
@@ -195,6 +197,8 @@ func newPolicyActor(c *Config, a *PolicyActor, pol Polity, g Graph, reg registry
 	case kindRule:
 		out.rule = newRulePolicy(c, a)
 		out.builtin = out.rule
+	case kindConsumer:
+		out.consumer, _ = reg.find(a.Policy)
 	}
 	for _, r := range pol.Regions(j) {
 		if int(r) >= len(outside) || !outside[r] {
