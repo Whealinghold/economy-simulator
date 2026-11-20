@@ -566,10 +566,13 @@ func (v *validator) dearestItem(w *Want) int64 {
 // hasIncomeSource reports whether a role has an income other than its sales and
 // its starting money, for the warning class_without_income (spec-demand.md 10.2,
 // 7.3). The modules that pay a class exempt a role here: a money-supply grant
-// counts (moneyGrantsIncome); a fiscal payout, a title, an employer's hire and
+// counts (moneyGrantsIncome), and so does a Hireable role in a world with an
+// employer role, whose income is wages (paidWages); a fiscal payout, a title and
 // relief are not built, and each later income module appends its exemption in
 // its own change.
-func hasIncomeSource(c *Config, ro *Role) bool { return moneyGrantsIncome(c, ro) }
+func hasIncomeSource(c *Config, ro *Role) bool {
+	return moneyGrantsIncome(c, ro) || paidWages(c, ro)
+}
 
 // demandWarnings returns the seven warnings of the module (spec-demand.md 10.2,
 // FR-DEM-033), or nil when it is off. Like warnings it reads a configuration as

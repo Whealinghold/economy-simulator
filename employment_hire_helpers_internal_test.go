@@ -44,10 +44,11 @@ type hireOpts struct {
 	farmTools    int64
 	sited        bool // the recipe is sited and has no yield row: no_site
 	regions      int
-	handRecipe   bool  // the hand has the recipe too, so it has an own job to fall back on
-	handScale    int64 // households per hand agent, 0 for the world's scale
-	off          bool  // the module is off: no block, no Hireable role
-	ore          int64 // the resources module is on, the recipe draws 3 ore an execution and the region holds ore (0: off)
+	handRecipe   bool            // the hand has the recipe too, so it has an own job to fall back on
+	handScale    int64           // households per hand agent, 0 for the world's scale
+	off          bool            // the module is off: no block, no Hireable role
+	ore          int64           // the resources module is on, the recipe draws 3 ore an execution and the region holds ore (0: off)
+	edit         func(c *Config) // changes the configuration last, before the world is built
 }
 
 // hireWorld is a world of one raw commodity "grain" and two roles: "farm", an
@@ -90,6 +91,18 @@ func hireWorld(t testing.TB, o hireOpts, plan func(v *AgentView) JobRequest, opt
 		cfg.Groups = append(cfg.Groups, Group{Region: r.ID, Role: "farm", Households: o.farms}, Group{Region: r.ID, Role: "hand", Households: o.hands, Scale: o.handScale})
 	}
 	cfg.Modules.Employment = &Employment{Hire: true, MaxOpen: o.maxOpen}
+	o.shape(&cfg)
+	opts = append([]Option{WithSeed(1), WithAudit(), WithStrategy("script", &hireScript{plan: plan})}, opts...)
+	w, err := NewWorld(cfg, opts...)
+	if err != nil {
+		t.Fatalf("NewWorld() error = %v, want nil", err)
+	}
+	return w
+}
+
+// shape applies the options that change the configuration after it is built: the
+// resources module with its ore, the module off, and the caller's own edit, last.
+func (o hireOpts) shape(cfg *Config) {
 	if o.ore > 0 {
 		res := DefaultResource()
 		res.ID, res.Capacity = "ore", 1_000
@@ -100,12 +113,9 @@ func hireWorld(t testing.TB, o hireOpts, plan func(v *AgentView) JobRequest, opt
 	if o.off {
 		cfg.Modules.Employment, cfg.Roles[0].Employer, cfg.Roles[1].Hireable = nil, nil, false
 	}
-	opts = append([]Option{WithSeed(1), WithAudit(), WithStrategy("script", &hireScript{plan: plan})}, opts...)
-	w, err := NewWorld(cfg, opts...)
-	if err != nil {
-		t.Fatalf("NewWorld() error = %v, want nil", err)
+	if o.edit != nil {
+		o.edit(cfg)
 	}
-	return w
 }
 
 // hireRecipe is the recipe "tend" of the options: it takes 1 grain an execution with
