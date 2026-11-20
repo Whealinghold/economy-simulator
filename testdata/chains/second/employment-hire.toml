@@ -1,0 +1,15 @@
+# The employment module in its hire form on the second setting, the crater colony (architecture.md 9.4, spec-employment.md
+# 3 to 17). Layer it after second.toml and warm-second.toml. The module needs only configuration: the smelters are the
+# employers and post their own two recipes as the hire list, the drillers are the Hireable households, and no word of the
+# reference chain is in the document. A test double, not a design: every number is a placeholder (N-015, N-027).
+[modules.employment]
+hire = true
+
+[role.smelter.employer]
+recipes = [ "refine_wafer", "refine_solder" ]
+max_hires = 3
+worker_share_bp = 9000
+hire_yield_bp = 10000
+
+[role.driller]
+hireable = true
