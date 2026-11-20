@@ -53,7 +53,7 @@ PR description.
 | CFG | N-476, N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-494, N-496, N-483, N-461, N-522 |
 | CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444, N-471, N-480, N-500, N-502 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
-| CLR | N-113, N-137, N-241, N-457 |
+| CLR | N-541, N-544, N-113, N-137, N-241, N-457 |
 | CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457, N-491, N-493, N-494, N-438, N-481, N-502 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398, N-472, N-484, N-503 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
@@ -73,18 +73,18 @@ PR description.
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482, N-520 |
-| ORG | N-400, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-463, N-464, N-465, N-492, N-483, N-484 |
+| OBS | N-543, N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482, N-520 |
+| ORG | N-541, N-542, N-543, N-544, N-540, N-400, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-463, N-464, N-465, N-492, N-483, N-484 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
-| PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454, N-501 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460 |
+| PRO | N-542, N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454, N-501 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-540 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470, N-458, N-459, N-460, N-461 |
 | SAV | N-145, N-156, N-195, N-362, N-382, N-475, N-490, N-491, N-492, N-493, N-495, N-496 |
 | SCL | N-030, N-198, N-222, N-300, N-493 |
 | SET | N-404, N-140, N-192, N-268, N-348, N-365 |
-| SKL | N-464, N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
+| SKL | N-542, N-540, N-464, N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
 | SPN | N-463, N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375, N-388, N-524 |
@@ -2897,6 +2897,36 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-cap PR 4 (Phases 8 and 9).
 - **Note:** Limit 3 of `spec-infrastructure.md` 4.2.2 for a store class is `MaxStoresPerAgent` less the stores the agent owns, less its pending store facilities, less the facilities its builds ordered this tick (any class: the principal runs one job, so a hire is the only way it orders two kinds in a tick). A build of `k` stores is cut to what fits, and a store facility still pending counts against the room before it is installed. The pending count is read by a pass over the owner's facilities, at most `MaxFacilitiesPerAgent`.
 
+### N-540 ORG, SKL, REF: a `train` right is not neutral at places 0, so the inert overlay carries none
+
+- **Areas:** ORG, SKL, REF
+- **Raised:** 2026-11-20, plan 3-org PR E (ORG-S5, `scenario_org_inert_test.go`).
+- **Note:** a membership changes only at the round at P1.9a (FR-ORG-010, FR-ORG-013), so a household that becomes a cook in a tick (a completion or an entry at P7.1) is not a member when SKL places trainees at P7.1(c) and when the snapshot counts the places. With a `train` right in force `mayTrain` bars it for that tick, although `Places` 0 admits it at the next round. The world then differs from the world without the module from the first completions (seed 1: `Roles[0].PlacesTaken` 339 against 402 at tick 126, then `MoneyHouseholds` and `Agents`); without the `train` right the snapshots are identical at ticks 140 and 150, the body, the produce right and the zero-level controls being neutral. `overlay/institutions-inert.toml` therefore has no `train` right, as `spec-institutions.md` 14.3 says ("no right"), and `spec-reference-chain.md` 4.5 now says the same. `TestInstitutions_TrainRightNotNeutralAtZeroPlaces` pins the behaviour. A setting that wants a `train` right neutral at places 0 would change FR-ORG-013 (a household whose role changed this tick counts as a member where places are unlimited, or a round after P7.1(a)); that is the owner's call.
+
+### N-541 ORG, CLR: a clamp counts only an admitted order
+
+- **Areas:** ORG, CLR
+- **Raised:** 2026-11-20, plan 3-org PR C result (Phases 6 and 7), written in PR E.
+- **Note:** `spec-institutions.md` 6.3.1 says the count is "the count of the replaced orders". The code counts a clamp only for an order that is admitted: an order the funds row refuses after the clamp is a rejection, counted by `OrderRejected`, and a take or a request is counted likewise. A reader of `PriceControlled` must not add the refused orders to its counts. Say so in 6.3.1 or count the refused ones too; that is the owner's call.
+
+### N-542 ORG, SKL, PRO: a trainee's request is read against a `produce` right
+
+- **Areas:** ORG, SKL, PRO
+- **Raised:** 2026-11-20, plan 3-org PR C result (Phases 6 and 7), written in PR E.
+- **Note:** A trainee's request does not pass `admitJob`, so `skillsWork` makes one guarded call: the trainer is tested as for `principal` whatever `Who` says, and the trainee is exempt from the executor test. `spec-production.md` 4.2 ("tested as the executor is") and `spec-institutions.md` 5.3.2 read differently; the code follows 5.3.2. Align 4.2 with 5.3.2 or reject 5.3.2.
+
+### N-543 ORG, OBS: `RightRefused.Produce` counts requests, not households
+
+- **Areas:** ORG, OBS
+- **Raised:** 2026-11-20, plan 3-org PR C result (Phases 6 and 7), written in PR E.
+- **Note:** A refused start counts one in `RightRefused.Produce` for each request, not for each household, and the count is kept only under an observer. A household that asks again at the next tick counts again. Spec 11.1 should say "requests"; an indicator must not read the count as a number of households.
+
+### N-544 ORG, CLR: `AdmitClamp` returns three values
+
+- **Areas:** ORG, CLR
+- **Raised:** 2026-11-20, plan 3-org PR C result (Phases 6 and 7), written in PR E.
+- **Note:** `AdmitClamp` returns `(code, price, changed)`: the side of the order says whether the change is a lowering or a raising. `spec-institutions.md` 5.2 and `spec-clearing.md` 3.2.1 may say it returns one flag. Check both and align them to the code.
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2907,4 +2937,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: ae75e55fff444698df0c98a7
+NOTES-TAG: 549c3fb5d81e89f13203ac95
