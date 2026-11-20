@@ -88,13 +88,12 @@ func TestScenarioS121_Road(t *testing.T) {
 			capStep(t, w)
 		}
 		got := footTicks(t, built, cfg, "north", "south")
-		if want := int64(4); tick < 2 {
-			want = 5
-			if got != want {
-				t.Errorf("tick %d: journey %d with the road not completed, want 5", tick, got)
-			}
-		} else if got != want {
-			t.Errorf("tick %d: journey %d after the completing tick's P8.3b, want 4", tick, got)
+		want := int64(5)
+		if tick >= 2 {
+			want = 4
+		}
+		if got != want {
+			t.Errorf("tick %d: journey %d, want %d (the road completes at tick 2, its effect enters at that tick's P8.3b)", tick, got, want)
 		}
 	}
 	checkJourneys(t, cfg, none, planted, built)
