@@ -196,3 +196,31 @@ func TestCost_SavingWorkAndTradeZeroAllocs(t *testing.T) {
 		t.Errorf("AllocsPerRun(Work and Trade of a saver) = %v, want 0", got)
 	}
 }
+
+// TestLog_SavingOneLinePerAgentAndTick verifies that the Debug lines of the module are
+// logged once per decision: the rule runs three times in a tick (the Work view, the Trade
+// view and the default's Trade), but only the fill of the Trade view logs, so an agent has at
+// most one of "project chosen" and "project declined" in a tick.
+//
+// Requirement: FR-SAV-039
+func TestLog_SavingOneLinePerAgentAndTick(t *testing.T) {
+	t.Parallel()
+	recs, _, _ := savingLog(t)
+	type key struct{ tick, agent int64 }
+	seen := map[key]int{}
+	for _, r := range recs {
+		if r.Message != "project chosen" && r.Message != "project declined" {
+			continue
+		}
+		a := logAttrs(r)
+		seen[key{a[logkeys.Tick].Int64(), a[logkeys.Agent].Int64()}]++
+	}
+	if len(seen) == 0 {
+		t.Fatalf("project lines over 10 ticks = 0, want at least one")
+	}
+	for k, n := range seen {
+		if n != 1 {
+			t.Errorf("agent %d at tick %d has %d project lines, want 1", k.agent, k.tick, n)
+		}
+	}
+}
