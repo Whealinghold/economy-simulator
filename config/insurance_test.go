@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -172,5 +173,91 @@ func TestLoad_InsuranceShape(t *testing.T) {
 	neither, err := parseStrings(minimal + "[role.a.cover]\n")
 	if err != nil || !reflect.DeepEqual(neither.Roles[0].Cover, &economysim.CoverTerms{}) {
 		t.Errorf("Parse(empty cover table) = %+v, %v, want an empty non-nil block", neither.Roles, err)
+	}
+}
+
+// TestLoad_InsuranceEveryKeyRejectsAString verifies that each of the sixteen keys of the
+// module and of the two blocks, written as a string, is ErrWrongType at its own path:
+// no key is read by a path that skips the type check.
+//
+// Requirement: FR-INS-011, FR-CFG-091
+func TestLoad_InsuranceEveryKeyRejectsAString(t *testing.T) {
+	t.Parallel()
+	tables := []struct {
+		head string
+		path []string
+		keys []string
+	}{
+		{"[modules.insurance]", []string{"modules", "insurance"}, []string{"value_cap_bp", "payout_ticks", "min_sum", "max_policies", "max_cover_requests"}},
+		{"[role.a.cover.underwrite]", []string{"role", "a", "cover", "underwrite"}, []string{"loading_bp", "store_rate_bp", "cover_bp", "cap_bp", "share_bp"}},
+		{"[role.a.cover.insure]", []string{"role", "a", "cover", "insure"}, []string{"min_loss_bp", "ruin_share_bp", "max_loading_bp", "min_cover_bp", "store_share_bp", "max_store_rate_bp"}},
+	}
+	for _, tb := range tables {
+		for _, key := range tb.keys {
+			t.Run(key, func(t *testing.T) {
+				t.Parallel()
+				doc := minimal + tb.head + "\n" + key + " = \"1\"\n"
+				_, err := parseStrings(doc)
+				if !hasError(err, economysim.ErrWrongType, append(slices.Clone(tb.path), key)) {
+					t.Errorf("Parse(%s = \"1\") errors = %s, want ErrWrongType at %q", key, describe(err), key)
+				}
+			})
+		}
+	}
+}
+
+// TestLoad_InsurancePartialTableKeepsDefaults verifies that a [modules.insurance] table
+// that writes some keys keeps the two defaults of the others and leaves the three
+// required fields 0 when they are not written, and that a written key replaces its
+// default: the table is read over DefaultInsurance, key by key.
+//
+// Requirement: FR-INS-001, FR-INS-011
+func TestLoad_InsurancePartialTableKeepsDefaults(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		body string
+		want economysim.Insurance
+	}{
+		{"only the three required", "value_cap_bp = 7\nmin_sum = 8\nmax_policies = 9\n",
+			economysim.Insurance{ValueCapBP: 7, PayoutTicks: 1, MinSum: 8, MaxPolicies: 9, MaxCoverRequests: 4}},
+		{"only payout_ticks", "payout_ticks = 5\n", economysim.Insurance{PayoutTicks: 5, MaxCoverRequests: 4}},
+		{"only max_cover_requests", "max_cover_requests = 2\n", economysim.Insurance{PayoutTicks: 1, MaxCoverRequests: 2}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := parseStrings(minimal + "[modules.insurance]\n" + tt.body)
+			if err != nil || got.Modules.Insurance == nil || *got.Modules.Insurance != tt.want {
+				t.Errorf("Parse(%q).Modules.Insurance = %+v, %v, want %+v", tt.body, got.Modules.Insurance, err, tt.want)
+			}
+		})
+	}
+}
+
+// TestLoad_InsuranceBadShapeFailsValidate verifies the two halves of 4.2.1 end to end:
+// the file of a role with both blocks, and the file of a role with an empty cover table,
+// load, and the Config they give is refused by Validate with ErrCoverShape at the role's
+// block, so the rule is the validator's and no file can reach a world with a bad block.
+//
+// Requirement: FR-INS-010
+func TestLoad_InsuranceBadShapeFailsValidate(t *testing.T) {
+	t.Parallel()
+	under := "[role.a.cover.underwrite]\nloading_bp = 1\nstore_rate_bp = 1\ncover_bp = 1\ncap_bp = 1\nshare_bp = 1\n"
+	insure := "[role.a.cover.insure]\nmin_loss_bp = 1\nruin_share_bp = 1\nmax_loading_bp = 1\nmax_store_rate_bp = 1\nmin_cover_bp = 1\n"
+	for _, tc := range []struct{ name, doc string }{
+		{"both blocks", minimal + under + insure},
+		{"an empty cover table", minimal + "[role.a.cover]\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			c, err := parseStrings(tc.doc)
+			if err != nil {
+				t.Fatalf("Parse(%s) error = %v, want nil", tc.name, err)
+			}
+			if err := c.Validate(); !hasError(err, economysim.ErrCoverShape, []string{"roles", "a", "cover"}) {
+				t.Errorf("Validate(%s) errors = %s, want ErrCoverShape at roles.a.cover", tc.name, describe(err))
+			}
+		})
 	}
 }
