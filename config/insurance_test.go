@@ -92,8 +92,7 @@ func TestLoad_Insurance(t *testing.T) {
 // TestLoad_InsuranceOnAndOff verifies that a key-less [modules.insurance] table
 // switches the module on with the two defaults of spec-insurance.md 4.1.2 (a payout
 // due in 1 tick and 4 requests in a plan, the three required fields 0 for Validate to
-// refuse), that no table leaves it off, and that a field whose bound admits 0 loads as
-// 0 when written.
+// refuse), and that no table leaves it off.
 //
 // Requirement: FR-INS-001, FR-INS-011, FR-CFG-091
 func TestLoad_InsuranceOnAndOff(t *testing.T) {
@@ -105,6 +104,14 @@ func TestLoad_InsuranceOnAndOff(t *testing.T) {
 	if off, _ := parseStrings(minimal); off.Modules.Insurance != nil {
 		t.Errorf("Parse(minimal).Modules.Insurance = %+v, want nil: the module is off", off.Modules.Insurance)
 	}
+}
+
+// TestLoad_InsuranceZeroFields verifies that a field whose bound admits 0 loads as 0
+// when written.
+//
+// Requirement: FR-INS-011, FR-CFG-091
+func TestLoad_InsuranceZeroFields(t *testing.T) {
+	t.Parallel()
 	zero, err := parseStrings(minimal + "[role.a.cover.underwrite]\nloading_bp = 0\nstore_rate_bp = 0\n" +
 		"[role.b.cover.insure]\nmin_loss_bp = 0\nruin_share_bp = 0\nmax_loading_bp = 0\nmax_store_rate_bp = 0\n")
 	if err != nil {
