@@ -324,7 +324,8 @@ func (n *infrastructure) adopt(f facility) {
 // fillView sets the Facilities of a Work view: the agent's own facilities in the region of the
 // view, in ascending ID, at most MaxFacilitiesPerAgent (spec-infrastructure.md 9.1). The view is
 // built from the records, so a facility completed this tick is in it with its Capacity though its
-// effect enters the tables at P8.3b. A Trade view is unchanged. It is nil-safe and allocates
+// effect enters the tables at P8.3b. A Trade view is unchanged, except that the saving module asks for the Work form of it for
+// an agent whose role has a block (saving_view.go, spec-saving-and-investment.md 5.2.1). It is nil-safe and allocates
 // nothing beyond the scratch of the view.
 func (n *infrastructure) fillView(v *AgentView, a *agent, kind viewKind) {
 	if n == nil || kind != viewWork {
