@@ -228,7 +228,11 @@ func savingProjectWarnings(c *Config, lk lookup, m *Saving, ro *Role, p []string
 		return []Warning{{Path: p, Rule: "project_below_hurdle"}}
 	}
 	ratio, ok := checked.MulDiv(best.benefit, wholeBP, max(best.cost, 1))
-	if ok && m.HurdleSpreadBP < ratio-b.HurdleBP {
+	margin, mok := checked.Sub(ratio, b.HurdleBP)
+	if !mok {
+		margin = math.MaxInt64 // a hurdle below the bounds, unvalidated: the margin saturates
+	}
+	if ok && m.HurdleSpreadBP < margin {
 		return []Warning{{Path: p, Rule: "spread_below_margin"}}
 	}
 	return nil
