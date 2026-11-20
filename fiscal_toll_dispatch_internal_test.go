@@ -3,6 +3,8 @@ package economysim
 import (
 	"slices"
 	"testing"
+
+	"github.com/Whealinghold/economy-sim/internal/ledger"
 )
 
 // The tests of the toll at dispatch (spec-fiscal.md 7.4, plan 3-fis Phase 7): the check
@@ -201,5 +203,59 @@ func TestFiscal_TollAllocs(t *testing.T) {
 	run()
 	if n := testing.AllocsPerRun(5, run); n != 0 {
 		t.Errorf("AllocsPerRun(toll) = %v, want 0", n)
+	}
+}
+
+// TestFiscal_TollTreasuryFull verifies that a shipment whose toll a treasury cannot take
+// without passing MaxMoney is refused whole as overflow, with nothing changed, and that
+// a toll that fills the treasury exactly is charged.
+//
+// Arithmetic: the trip pays inland the ferry 4 and the coast the pier 7. With inland
+// at MaxMoney - 3 the headroom is 3, below 4: refused. At MaxMoney - 4 the headroom is
+// 4: the ferry fits and inland ends at MaxMoney.
+//
+// Guard: the transfer of step 3a would be refused by the ledger, which send treats as
+// a violated invariant (a panic); the check of row 22a has to refuse first.
+func TestFiscal_TollTreasuryFull(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		headroom int64
+		want     Reason
+	}{
+		{"headroom below the toll", 3, ReasonOverflow},
+		{"headroom equal to the toll", 4, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			w, rec := tollWorld(t, inlandBorder, ferryAndGate()...)
+			shipper := tollShipper(w)
+			boundary, ok := w.ledger.Boundary(ledger.Initial, ledger.Money)
+			if !ok {
+				t.Fatal("Boundary(initial, money) is not open")
+			}
+			if err := w.ledger.Transfer(boundary, w.polity.tr[1].account, MaxMoney-tt.headroom-treasuryMoney(t, w, 1), ledger.Initial); err != nil {
+				t.Fatalf("Transfer(initial) error = %v, want nil", err)
+			}
+			rec.events = nil
+			_, reason := ask(w, shipper, 0, footToIsle)
+			if reason != tt.want {
+				t.Fatalf("dispatch() reason = %q, want %q", reason, tt.want)
+			}
+			wantInland, wantShipper := int64(MaxMoney)-tt.headroom, int64(100)
+			if tt.want == "" {
+				wantInland, wantShipper = MaxMoney, 89
+			}
+			if got := treasuryMoney(t, w, 1); got != wantInland {
+				t.Errorf("inland holds %d, want %d", got, wantInland)
+			}
+			if got := heldMoney(t, w, shipper); got != wantShipper {
+				t.Errorf("shipper holds %d, want %d", got, wantShipper)
+			}
+			if r := of[ShipmentRejected](rec); (tt.want != "") != (len(r) == 1 && r[0].Reason == tt.want) {
+				t.Errorf("ShipmentRejected = %+v, want one with %q only for a refusal", r, tt.want)
+			}
+		})
 	}
 }

@@ -63,10 +63,14 @@ func (f *fiscalFlowState) acts(a, b RegionID, mode ModeID) bool {
 // in ascending ID that acts on it at the tick, with the due of each above 0 (7.2, 7.3):
 // floor(Amount * S * max(1, n) / 10^4), one truncation per crossing, and their total.
 // ok is false when a due or the total leaves int64, which TRN reports as the refusal
-// overflow.
+// overflow, and for a next-hop table that does not reach the destination within as many
+// hops as there are regions (not reachable from a valid graph: the walk must end).
 func (s *fiscalState) charges(w *World, dst []tollCharge, from, to RegionID, mode ModeID, n int64) (out []tollCharge, total int64, ok bool) {
 	tick, season := w.Tick(), w.tk.moment.Season
-	for cur := from; cur != to; {
+	for cur, hops := from, 0; cur != to; hops++ {
+		if hops >= len(w.cfg.Regions) {
+			return dst, 0, false
+		}
 		next, found := w.geo.next(cur, to)
 		if !found {
 			return dst, total, true // a route that has no path owes nothing: row 7 refuses it
