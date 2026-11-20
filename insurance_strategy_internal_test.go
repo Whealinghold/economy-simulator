@@ -333,3 +333,18 @@ func TestUnitValue_ReadsPriceBeforePosition(t *testing.T) {
 		t.Errorf("view UnitValue[grain] = %d, want 1500 (the last published price, under the cap)", got)
 	}
 }
+
+// TestPlan_CoverFieldsAreResetForTheNextAgent verifies that the plan the world reuses for
+// the next agent carries none of the last agent's cover requests or offer.
+//
+// Fix: PR C phase 4. The reset of the reused plan listed the credit fields and not the cover
+// fields, so a request of one agent was kept for the plan of every agent after it and the
+// round saw it again, refused as another agent's.
+func TestPlan_CoverFieldsAreResetForTheNextAgent(t *testing.T) {
+	t.Parallel()
+	var sc viewScratch
+	sc.plan.Cover, sc.plan.Store, sc.plan.Offer = []LaneCover{{}}, []StoreCover{{}}, []CoverOffer{{}}
+	if p := sc.tradePlan(); len(p.Cover)+len(p.Store)+len(p.Offer) != 0 {
+		t.Errorf("tradePlan() kept cover %+v, store %+v, offer %+v, want all empty", p.Cover, p.Store, p.Offer)
+	}
+}
