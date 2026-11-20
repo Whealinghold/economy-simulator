@@ -346,7 +346,10 @@ func TestSolveSteadyState_OverlaysSolve(t *testing.T) {
 	// tenure.toml titles the endowments of resources.toml, which `one` alone lacks, so it
 	// needs the module of that overlay (TestPacks_TenureOverlayLoadsAndSolves loads,
 	// validates and solves it over the layers it needs).
-	notOnOne := []string{"overhang.toml", "resources-five.toml", "resources-five-binding.toml", "merchants.toml", "merchants-three.toml", "chain-payroll.toml", "polity.toml", "polity-governed.toml", "second-skill.toml", "tenure.toml", "institutions.toml", "institutions-inert.toml"}
+	// risk.toml and risk-store.toml name the routes of the transport layers and the barn of the
+	// storage layers, which `one` alone lacks (the risk goldens load and validate them over the
+	// layers they need).
+	notOnOne := []string{"overhang.toml", "resources-five.toml", "resources-five-binding.toml", "merchants.toml", "merchants-three.toml", "chain-payroll.toml", "polity.toml", "polity-governed.toml", "second-skill.toml", "tenure.toml", "risk.toml", "risk-store.toml", "institutions.toml", "institutions-inert.toml"}
 	entries, err := os.ReadDir("testdata/chains/overlay")
 	if err != nil {
 		t.Fatalf("ReadDir(overlay) = %v", err)

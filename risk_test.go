@@ -11,7 +11,7 @@ import (
 
 // The tests of the risk module's configuration surface: its rows, bounds, shape
 // rules, warnings and canonical order (spec-risk.md 3.2, 12, 13, FR-RSK-001 to
-// 004, FR-CFG-089). The module has no world effect yet. The hash is in
+// 004, FR-CFG-089). The hash is in
 // risk_hash_internal_test.go and the loader in config/risk_test.go.
 
 // riskConfig returns transportConfig (two regions, edges of 40 in both directions
