@@ -2,6 +2,7 @@ package indicator_test
 
 import (
 	"errors"
+	"math"
 	"reflect"
 	"testing"
 
@@ -448,6 +449,12 @@ func TestTally_LabourRoundOutsideTheTablesIsStray(t *testing.T) {
 		{"negative refusal", economysim.LabourRound{Tick: 10, NoRoom: -1}},
 		{"negative role count", economysim.LabourRound{Tick: 10, Workers: []economysim.LabourRow{{Role: grower, Hired: -1}}}},
 		{"before the window", economysim.LabourRound{Tick: 9}},
+		{"hired past offered", economysim.LabourRound{Tick: 10, Offered: 2, Hired: 3}},
+		{"matched past offered", economysim.LabourRound{Tick: 10, Offered: 5, Hired: 3, NoVacancy: 3}},
+		{"matched sum would wrap", economysim.LabourRound{Tick: 10, Offered: math.MaxInt64, Hired: math.MaxInt64, NoVacancy: math.MaxInt64}},
+		{"role matched past offered", economysim.LabourRound{Tick: 10, Offered: 9, Workers: []economysim.LabourRow{{Role: grower, Offered: 1, Hired: 1, NoVacancy: 1}}}},
+		{"role repeated", economysim.LabourRound{Tick: 10, Offered: 2, Workers: []economysim.LabourRow{{Role: grower, Offered: 1}, {Role: grower, Offered: 1}}}},
+		{"roles descending", economysim.LabourRound{Tick: 10, Offered: 2, Workers: []economysim.LabourRow{{Role: baker, Offered: 1}, {Role: grower, Offered: 1}}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

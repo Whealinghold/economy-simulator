@@ -50,17 +50,35 @@ func labourRoleKey(r LabourRoleTally, k LabourRoleTally) int {
 }
 
 // labourRoundOK reports whether a LabourRound names a region and worker roles of the
-// window, carries no negative count and takes the step it belongs to; a bad one marks
-// the window stray.
+// window, in strictly ascending order, carries no negative count, never hires or leaves
+// unmatched more households than it offered and takes the step it belongs to; a bad one
+// marks the window stray.
 func (t *Tally) labourRoundOK(e economysim.LabourRound) bool {
-	ok := e.Region >= 0 && int(e.Region) < t.w.Regions && t.step(e.Tick) && t.labourCountsOK(e)
-	for _, r := range e.Workers {
-		ok = ok && r.Role >= 0 && int(r.Role) < t.w.Roles && t.nonneg(r.Offered, r.Hired, r.NoVacancy)
-	}
+	ok := e.Region >= 0 && int(e.Region) < t.w.Regions && t.step(e.Tick) && t.labourCountsOK(e) && matchedWithin(e.Offered, e.Hired, e.NoVacancy)
+	ok = ok && t.workersOK(e.Workers)
 	if !ok {
 		t.stray = true
 	}
 	return ok
+}
+
+// workersOK reports whether the worker rows name roles of the window in strictly
+// ascending order and each row's counts are non-negative and consistent.
+func (t *Tally) workersOK(rows []economysim.LabourRow) bool {
+	prev := economysim.RoleID(-1)
+	for _, r := range rows {
+		if r.Role <= prev || int(r.Role) >= t.w.Roles || !t.nonneg(r.Offered, r.Hired, r.NoVacancy) || !matchedWithin(r.Offered, r.Hired, r.NoVacancy) {
+			return false
+		}
+		prev = r.Role
+	}
+	return true
+}
+
+// matchedWithin reports whether hired and unmatched, both non-negative, fit in offered
+// without a sum that could wrap.
+func matchedWithin(offered, hired, noVacancy int64) bool {
+	return hired <= offered && noVacancy <= offered-hired
 }
 
 // labourCountsOK reports whether no count or sum of money of a LabourRound is negative.
