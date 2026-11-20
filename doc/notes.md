@@ -57,14 +57,14 @@ PR description.
 | CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457, N-491, N-493, N-494, N-438, N-481, N-502 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398, N-472, N-484, N-503 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-445, N-500, N-501, N-502, N-503, N-510, N-511, N-512, N-513, N-514, N-521 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-445, N-500, N-501, N-502, N-503, N-510, N-511, N-512, N-513, N-514, N-515, N-516, N-517, N-518, N-521 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361, N-485 |
 | EXT | N-108, N-112, N-113, N-214 |
 | FIS | N-504, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-475, N-483 |
 | GDS | N-039 |
-| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473 |
+| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473, N-515 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
 | INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484 |
@@ -78,7 +78,7 @@ PR description.
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348, N-527 |
 | PRO | N-542, N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454, N-501 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-525, N-540 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-525, N-540, N-516, N-517 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470, N-458, N-459, N-460, N-461 |
 | SAV | N-145, N-156, N-195, N-362, N-382, N-475, N-490, N-491, N-492, N-493, N-495, N-496 |
@@ -88,11 +88,11 @@ PR description.
 | SPN | N-463, N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375, N-388, N-513, N-524, N-526 |
-| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485, N-458 |
+| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485, N-458, N-517, N-518 |
 | SUB | N-121, N-228, N-268, N-244, N-426 |
 | TEC | N-358, N-359, N-360, N-361, N-384 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434, N-459 |
-| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383, N-522, N-523 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383, N-522, N-523, N-516 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346, N-472, N-491, N-514 |
 | WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438, N-475, N-480 |
 
@@ -2945,6 +2945,30 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-emp PR 5.
 - **Note:** `spec-employment.md` 8.2.4 makes a tick in which the agent is the principal of a hired job in progress a working tick for the floor. The code marks it when a wage of the hire is released (P2.7 and P2.1), so the tick in which the last wage is paid counts and a tick between the formation at P2.5a and the start at P2.7 of a hire that starts nothing does not. The working household-ticks of the agent are its own executions only, as 8.2.4 says, so its observed wage is unchanged by hiring.
 
+### N-515 `Employment` has no role split in its window form
+
+- **Areas:** EMP, IND
+- **Raised:** 2026-11-20, plan 3-emp PR 6.
+- **Note:** `spec-indicators.md` 9.1 row 24 asks for the paid household-ticks over the running households "by region and role". `LabourRound.HouseholdTicks` is a figure of the region (the rows by worker role carry `Offered`, `Hired` and `NoVacancy` only), so the preset gives the window rate by region, over the running households of the hireable roles of the region, and the boundary rate by (region, role) from `RoleRow.Employed`. A role split of the window needs `HouseholdTicks` in `LabourRow`, an appended count (architecture.md 2.10.5); no consumer asks for it yet. The row of the spec was edited to say so.
+
+### N-516 A world with the hire form on and nothing offered is not the world with it off
+
+- **Areas:** EMP, REF, VIA
+- **Raised:** 2026-11-20, plan 3-emp PR 6.
+- **Note:** EMP-S5 and FR-EMP-061 say the stream of a module on equals the module off. It holds for the draws, not for the state: on one-demand with every role silent, `CostAnchor` of the first market at tick 1 is 1 068 with the form on and 1 382 off, because an employer role with a hire list and a Hireable role change the cost anchor (`spec-viability.md` 4.7). `TestScenarioS101_ModuleTakesNoWordWithOrWithoutOffers` therefore reads the PCG after P2.5a and P2.8b, with and without offers, and no test compares the two worlds whole. A reader who wants "the module on is inert with no offers" must say which of the two he means.
+
+### N-517 One-demand with the hire form forms hires until about tick 250, and the closures by reason are all 0
+
+- **Areas:** EMP, REF, STY
+- **Raised:** 2026-11-20, plan 3-emp PR 6.
+- **Note:** S97 to S100 on one-demand (seeds 1 to 10): the last hire forms between ticks 225 and 293 and then the pack collapses (N-352), so the figures are read over the first 250 ticks and no band is asserted; the closed form of 11.2 is for a one-good circuit, which the pack is not (FR-EMP-062 is proved by `internal/employment` `TestCircuit_ClosedForm_*`). The positions closed for `employer_funds` and `no_input` are 0 in every run, because the default posts only what the employer's cash, stock and tools cover (FR-EMP-015), so `Unemployment.ByReason` is empty on the pack and its order and sums are tested on hand-built windows only. A pack where the default closes positions would need employers with less cash than the bill.
+
+### N-518 The arc elasticity of S98 is a ramp-up, not a supply elasticity
+
+- **Areas:** EMP, STY
+- **Raised:** 2026-11-20, plan 3-emp PR 6.
+- **Note:** S98 records the arc elasticity of the hired households to the wage between ticks 10 to 60 and 60 to 110 (EMP-A1). On one-demand both rise together in the ramp of the warm start (the wage from about 1 340 to 1 750, the hired households from about 22 to 52 a tick), so the value is large and positive (about 27 600 basis points), and it is the same with the work floor at 4 000 and at 0. It says nothing of the backward bend of the supply of the target-income rule (L14, EMP-A1). Measuring it needs a wage moved by a call (a grant or a shock) with the households' reservation held, which no scenario of this PR does; the item stays open for STY.
+
 ### N-540 ORG, SKL, REF: a `train` right is not neutral at places 0, so the inert overlay carries none
 
 - **Areas:** ORG, SKL, REF
@@ -2985,4 +3009,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: d9b58b5f7b6a3af417dfd0b4
+NOTES-TAG: 370cc56f860c379144703a4f
