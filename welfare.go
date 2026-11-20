@@ -86,6 +86,10 @@ type flows struct {
 	ownUse bool
 	jobSet bool
 	traded bool
+	// principal says the agent was the principal of a hired job in progress in the
+	// tick (spec-employment.md 8.2.4): a working tick for the floor, not a working
+	// household-tick.
+	principal bool
 }
 
 // costBuf holds the quantity and price slices that TickCost takes, so that
@@ -216,6 +220,13 @@ func (s *welfareScratch) markWorking(slot int, k int64, ownUse bool) {
 	}
 	f.k, f.ownUse, f.jobSet = k, ownUse, true
 }
+
+// markPrincipal says the agent was the principal of a hired job in progress in the
+// tick, set when a wage of the hire is released (spec-employment.md 8.2.4).
+func (s *welfareScratch) markPrincipal(slot int) { s.at(slot).principal = true }
+
+// principalOf says markPrincipal was called for the slot in the tick.
+func (s *welfareScratch) principalOf(slot int) bool { return s.at(slot).principal }
 
 // markTraded says the agent traded in the tick, from the settled trades.
 func (s *welfareScratch) markTraded(slot int) { s.at(slot).traded = true }

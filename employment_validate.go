@@ -84,6 +84,13 @@ func (v *validator) employmentRole(rb []string, r *Role, on, hire bool) {
 	}
 }
 
+// paidWages says the role is Hireable in a world with the employment module on and an
+// employer role, so its income is wages (spec-employment.md 3.1, spec-demand.md 10.2).
+// It reads the configuration as given and never fails.
+func paidWages(c *Config, ro *Role) bool {
+	return c.Modules.Employment != nil && ro.Hireable && slices.ContainsFunc(c.Roles, func(r Role) bool { return r.Employer != nil })
+}
+
 // hasHireFields says the block sets a field of the hire form.
 func hasHireFields(b *Employer) bool {
 	return len(b.Recipes) > 0 || b.MaxHires != 0 || b.WorkerShareBP != 0 || b.HireYieldBP != 0

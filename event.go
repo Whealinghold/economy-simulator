@@ -2147,6 +2147,61 @@ type HireEnded struct {
 
 func (HireEnded) isEvent() {}
 
+// LabourRound is emitted once per region and tick at P2.8b, in ascending RegionID
+// after ProductionHalted, in which the employment module is in the hire form and any
+// offer, vacancy or hire in progress was counted (spec-employment.md 15.1). It is an
+// aggregate, bounded by the regions and the roles of the configuration. Households and
+// household-ticks are sums of weights, positions are executions and money is in minor
+// units.
+type LabourRound struct {
+	Tick   int64
+	Region RegionID
+	// Offered, Hired and NoVacancy are the households offered, hired and left
+	// unmatched by the round; NotStarted the households of a hire whose job started
+	// nothing in the tick.
+	Offered, Hired, NoVacancy, NotStarted int64
+	// Posted, Filled and Unfilled are the positions posted, filled and left unfilled.
+	Posted, Filled, Unfilled int64
+	// OffersRefused and VacanciesRefused are the offers and vacancies the admission
+	// refused (spec-employment.md 5.2); Matched is the hires formed.
+	OffersRefused, VacanciesRefused, Matched int64
+	// The positions each formation check closed, in the order of the checks
+	// (spec-employment.md 5.5): TooMany (1), NotPermitted (2), NoSite and ZeroYield
+	// (3), NoTool (4), NoFacility (5), NoInput (6), NoEndowment (7), NoTitle and
+	// RentFunds (8), NotUnlocked, FacilityCap, NoTarget, StoreRefused and
+	// NothingToRepair (9 and 10), NoRoom (11) and EmployerFunds (12). The fields of a
+	// module that is not built stay 0.
+	TooMany, NotPermitted, NoSite, ZeroYield, NoTool, NoFacility, NoInput, NoEndowment    int64
+	NoTitle, RentFunds, NotUnlocked, FacilityCap, NoTarget, StoreRefused, NothingToRepair int64
+	NoRoom, EmployerFunds                                                                 int64
+	// WageBelowUnit is the pairs skipped for a wage below 1 and HouseholdTicks the
+	// working household-ticks paid in the tick.
+	WageBelowUnit, HouseholdTicks int64
+	// Paid is the wages released in the tick to workers whose hire is in the region,
+	// and Refunded the refunds of a cut start made to employers of the region.
+	Paid, Refunded Money
+	// Workers and Employers are the rows by worker role and by employer role, in
+	// ascending RoleID, for the roles that had a count.
+	Workers   []LabourRow
+	Employers []VacancyRow
+}
+
+func (LabourRound) isEvent() {}
+
+// LabourRow is the households of one worker role in a LabourRound: offered, hired and
+// left with no vacancy.
+type LabourRow struct {
+	Role                      RoleID
+	Offered, Hired, NoVacancy int64
+}
+
+// VacancyRow is the positions of one employer role in a LabourRound: posted, filled and
+// unfilled.
+type VacancyRow struct {
+	Role                     RoleID
+	Posted, Filled, Unfilled int64
+}
+
 // TraineeshipStarted is emitted when a place is filled from the queue and an
 // applicant becomes a trainee, in a region's entry step at P7.1(a), after the
 // completions of the step (spec-skill-barriers.md 4.7, 8.1; spec-observability.md
