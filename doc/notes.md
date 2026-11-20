@@ -74,17 +74,17 @@ PR description.
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
 | OBS | N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482 |
-| ORG | N-400, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-463, N-464, N-465, N-492, N-483, N-484 |
+| ORG | N-540, N-400, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-463, N-464, N-465, N-492, N-483, N-484 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454, N-501 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426 |
+| REF | N-540, N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470 |
 | SAV | N-145, N-156, N-195, N-362, N-382, N-475, N-490, N-491, N-492, N-493, N-495, N-496 |
 | SCL | N-030, N-198, N-222, N-300, N-493 |
 | SET | N-404, N-140, N-192, N-268, N-348, N-365 |
-| SKL | N-464, N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
+| SKL | N-540, N-464, N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
 | SPN | N-463, N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375, N-388 |
@@ -2835,6 +2835,12 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-emp PR 4.
 - **Note:** Step 2c (`dropHires`) runs before `dropClaims`, and `TestInterrupt_EmployerRemoved_*` proves the refund reached the employer's own account before the estate took it (`AgentBankrupted.Money` holds it). No test runs a removal with a claim against the employer, so that the waterfall of `spec-credit.md` 9.1 pays a creditor from the refunded escrow. The first change that has a credit pack with a hire world (the proof PR of EMP, or CRD's) adds it.
 
+### N-540 ORG, SKL, REF: a `train` right is not neutral at places 0, so the inert overlay carries none
+
+- **Areas:** ORG, SKL, REF
+- **Raised:** 2026-11-20, plan 3-org PR E (ORG-S5, `scenario_org_inert_test.go`).
+- **Note:** a membership changes only at the round at P1.9a (FR-ORG-010, FR-ORG-013), so a household that becomes a cook in a tick (a completion or an entry at P7.1) is not a member when SKL places trainees at P7.1(c) and when the snapshot counts the places. With a `train` right in force `mayTrain` bars it for that tick, although `Places` 0 admits it at the next round. The world then differs from the world without the module from the first completions (seed 1: `Roles[0].PlacesTaken` 339 against 402 at tick 126, then `MoneyHouseholds` and `Agents`); without the `train` right the snapshots are identical at ticks 140 and 150, the body, the produce right and the zero-level controls being neutral. `overlay/institutions-inert.toml` therefore has no `train` right, as `spec-institutions.md` 14.3 says ("no right"), and `spec-reference-chain.md` 4.5 now says the same. `TestInstitutions_TrainRightNotNeutralAtZeroPlaces` pins the behaviour. A setting that wants a `train` right neutral at places 0 would change FR-ORG-013 (a household whose role changed this tick counts as a member where places are unlimited, or a round after P7.1(a)); that is the owner's call.
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2845,4 +2851,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: a328693d6357d39f632bf880
+NOTES-TAG: 40b4ca13f285285f83aa0e7e
