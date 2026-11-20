@@ -55,6 +55,15 @@ func TestScenarioS125_Checkpoint(t *testing.T) {
 	if x, y := fmt.Sprintf("%+v", recA.events[mark:]), fmt.Sprintf("%+v", recB.events[1:]); x != y { // event 0 of the restored world is WorldRestored
 		t.Errorf("the events of the tail differ between the original and the restored world")
 	}
+	capSameState(t, a, b)
+	if n := capKinds(recB.events)["built/recipe"]; n != 1 {
+		t.Errorf("the restored world completed %d builds in the tail, want 1 (the job was in progress)", n)
+	}
+}
+
+// capSameState fails t unless the two worlds have equal snapshots and byte-equal checkpoints.
+func capSameState(t *testing.T, a, b *economysim.World) {
+	t.Helper()
 	sa, errA := a.Snapshot()
 	sb, errB := b.Snapshot()
 	if errA != nil || errB != nil {
@@ -65,8 +74,5 @@ func TestScenarioS125_Checkpoint(t *testing.T) {
 	}
 	if !bytes.Equal(mustMarshal(t, mustCheckpoint(t, a)), mustMarshal(t, mustCheckpoint(t, b))) {
 		t.Errorf("the checkpoints differ after %d ticks", capTail)
-	}
-	if n := capKinds(recB.events)["built/recipe"]; n != 1 {
-		t.Errorf("the restored world completed %d builds in the tail, want 1 (the job was in progress)", n)
 	}
 }
