@@ -772,6 +772,18 @@ type AgentState struct {
 	// at most MaxFacilitiesPerAgent; empty while the infrastructure module is off
 	// (spec-infrastructure.md 11.4).
 	Facilities []FacilityState
+
+	// Membership is the membership group of the institutions module: the zero value, no
+	// membership, while the module is off (spec-integration.md 4.7.2).
+	Membership Membership
+
+	// HasEmployer says the agent is a worker on a hire and Employer is the agent that
+	// hired it; Hired is the executions the agent has open as an employer. All are
+	// zero while the hire form of the employment module is off (spec-employment.md
+	// 6, spec-integration.md 4.7.2).
+	HasEmployer bool
+	Employer    AgentID
+	Hired       int64
 }
 
 // HoldingState is a commodity an agent holds: its units and the units of them that
@@ -839,6 +851,8 @@ func (w *World) Agent(id AgentID) (AgentState, error) {
 	w.fillModuleGroups(&st, a)
 	w.fillCreditState(&st, a)
 	w.fillFacilityState(&st, a)
+	w.fillMembership(&st, a)
+	w.fillHireState(&st, a)
 	return st, nil
 }
 

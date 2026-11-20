@@ -73,6 +73,7 @@ func (w *World) completeReady(g RegionID) error {
 		rec, a := &s.trainee[id], &w.agents[id]
 		headroom, noLimit := w.completionHeadroom(g, rec.role)
 		if skill.Complete(rec.served, w.cfg.Roles[rec.role].TrainingTicks, headroom, a.weight, noLimit) != skill.Done {
+			w.org.noteHeld(w, a, g, rec.role)
 			continue
 		}
 		d, from := Decision{Kind: DecideSwitch, Agent: a.id, Role: rec.role, Cause: CauseTraineeship}, a.role
@@ -82,6 +83,7 @@ func (w *World) completeReady(g RegionID) error {
 		if w.set != nil {
 			w.set.noteRoleMove(g, from, d.Role, a.weight)
 		}
+		w.org.noteRoleMove(g, from, d.Role, a.weight)
 	}
 	return nil
 }
@@ -109,9 +111,16 @@ type trainerSlot struct {
 // canTrain reports whether agent a may be the trainer of a place of its role: a
 // live household of weight 1 that is no trainee, waits in no queue (an applicant
 // that took a trainee would be a queued trainer, a state the checkpoint refuses,
-// and a trainer never applies) and is neither on a migration journey nor away
-// (spec-skill-barriers.md 4.1.1, 4.6.1).
+// and a trainer never applies), is neither on a migration journey nor away
+// (spec-skill-barriers.md 4.1.1, 4.6.1) and, where a train right is in force on its
+// role, is a member of the body that holds it (spec-institutions.md 5.7.1).
 func (w *World) canTrain(a *agent) bool {
+	return w.couldTrain(a) && w.org.mayTrain(a, w.regionOf(a))
+}
+
+// couldTrain is what canTrain says without a body: the household can be a trainer if no
+// train right closes the places of its role to it (spec-institutions.md 5.7.1, hook H-12).
+func (w *World) couldTrain(a *agent) bool {
 	return a.weight == 1 && !w.skills.isTrainee(a.id) && !w.skills.queued(a.id) && !w.onJourney(a) && !w.offStage(a)
 }
 
@@ -130,11 +139,12 @@ func (w *World) trainersOf(g RegionID, r RoleID) []trainerSlot {
 }
 
 // freest returns the index of the trainer with the fewest trainees, the lower ID
-// first, and false when every trainer holds max.
-func freest(trainers []trainerSlot, max int64) (int, bool) {
-	best := -1
+// first, and false when every trainer holds its most: the role's MaxTrainees, or the
+// least of it and its body's for a member (spec-institutions.md 5.7.3).
+func (w *World) freest(trainers []trainerSlot, g RegionID, r RoleID) (int, bool) {
+	best, roleMax := -1, w.cfg.Roles[r].MaxTrainees
 	for i, t := range trainers {
-		if t.held < max && (best < 0 || t.held < trainers[best].held) {
+		if t.held < w.org.trainerMax(&w.agents[t.id], g, roleMax) && (best < 0 || t.held < trainers[best].held) {
 			best = i
 		}
 	}
@@ -171,6 +181,7 @@ func (w *World) placeRole(g RegionID, r RoleID) {
 	} else if s.warnRun[s.cell(g, r)] == 0 {
 		return
 	}
+	w.org.noteTrain(w, g, r)
 	w.reportPlaces(g, r, stop, head)
 }
 
@@ -184,7 +195,7 @@ func (w *World) fillPlaces(g RegionID, r RoleID) (placeStop, AgentID) {
 	s, cell := w.skills, w.skills.cell(g, r)
 	trainers, gain := w.trainersOf(g, r), w.newGainer(g, r)
 	for i := 0; i < len(s.queue[cell]); {
-		at, free := freest(trainers, w.cfg.Roles[r].MaxTrainees)
+		at, free := w.freest(trainers, g, r)
 		if !free {
 			return placeNone, s.queue[cell][i].agent
 		}
@@ -321,7 +332,7 @@ func (w *World) fillRoleSkills(g RegionID) {
 	for r := range v.Roles {
 		if w.cfg.Roles[r].TrainingTicks > 0 {
 			v.Roles[r].QueueAhead = int64(len(s.queue[s.cell(g, RoleID(r))]))
-			v.Roles[r].MaxTrainees = w.cfg.Roles[r].MaxTrainees
+			v.Roles[r].MaxTrainees = w.org.viewMaxTrainees(g, RoleID(r), w.cfg.Roles[r].MaxTrainees)
 		}
 	}
 	for i := range v.Agents {

@@ -271,7 +271,7 @@ func (w *World) freeEscrowFault(used map[int]bool) string {
 // escrow in total and by destination region, and adds it to the money of the world
 // (spec-merchants.md 15.4, 9.6.3). It leaves the snapshot alone with the module off.
 func (w *World) snapshotContracts(s *Snapshot) {
-	w.snapshotHireEscrow(s) // the Escrow accounts of the hires are in the contract sector too (spec-employment.md 7.4.1)
+	w.snapshotHires(s) // the Escrow accounts of the hires are in the contract sector too (spec-employment.md 7.4.1)
 	if w.mer == nil || !w.mer.on {
 		return
 	}

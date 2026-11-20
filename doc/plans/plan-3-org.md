@@ -491,3 +491,33 @@ Left for the supervisor (nothing in `doc/notes.md` or a spec was edited, since t
 - A note: a trainee's request is read against a `produce` right at `skillsWork`, and `spec-production.md` 4.2 ("tested as the executor is") and `spec-institutions.md` 5.3.2 read differently; this PR follows 5.3.2.
 - A note: `RightRefused.Produce` counts requests, not households.
 - Spec 5.2 and `spec-clearing.md` 3.2.1 may say `AdmitClamp` returns one flag.
+
+## PR D result (Phases 8 and 9)
+
+Rule tags read: architecture=645d155e21f440e7e94863d7, observability=9701798a5a03417c57f1a38a, testing=66af7645b01fef4e2796c367. No rule file, spec or note is edited, so no notes tag applies; the edits PR D owes are listed under "Left for the supervisor".
+
+Built: the two slots (`SetLegalLevels`, `SetRightSuspensions`, the types `LegalLevel` and `RightSuspension`, `SlotState.LegalLevels` and `RightSuspensions`, the error order of 7.1.1, one rebuild of the resolved tables at the call, `LegalLevelSet` and `RightSuspensionSet` per changed key), the membership group (`AgentState.Membership`, the type `Membership{Member, Body}`), SKL's gates (the trainer is a member where a `train` right is in force, a member holds at most the least of its role's and its body's `MaxTrainees`, the applicant counts the eligible trainers only, `RightRefused.Train` is `min(f, a)` and the Debug line "place not open" names `not_member`), the held completion (`MembershipChanged.Held`), and the shared headroom (the least of the class limit and the body's places in the view of every role and in the slot of the completion). No hash id, tag, note, event or position slot beyond the plan's was taken; `golden/off/`, `golden/all/`, the pinned hash and `testdata/checkpoints/` are unchanged.
+
+Hooks used: H-10 (`SlotState`, `Slots`), H-11 (`AgentState.Membership`, `fillMembership`), H-12 (`canTrain`, `trainersOf`, `freest` and `skillsRoleRows` through `trainerMax`, `fillRoleSkills`, `skillsRoleRows`, `placeRole`), H-13 (`completeReady`: `noteHeld` and `noteRoleMove`), H-14 (`fillRoles`: `fillRoleBodies`), H-3 (the slot `skills.headroom`).
+
+Deviations and choices the plan left open:
+
+- `canTrain` is split into `couldTrain` (SKL's own test, unchanged) and `canTrain`, which adds the one guarded call `mayTrain`; `freest` becomes a method that asks `trainerMax` for each trainer's maximum; `trainerSlot` is unchanged, because the position hash walks the world by reflection and a new field of that scratch moved the skills golden.
+- The view's `MaxTrainees` is the least of the role's and the body's only where a `train` right is in force (every trainer is then a member); the snapshot's `Places` is exact for each trainer (N-464).
+- The count of households of a body is ORG's own scan, once for each (tick, region), kept exact by `noteRoleMove`, so a pack with ORG and no SET still has a body limit (Question 10); `completeReady` therefore has a second one-line call beside SET's.
+- `Held` is counted only under an observer and only where the body's own places are what is short (N-465). `Outcome` of `internal/institution` gains `Held`.
+- A restored world had no slot of the settlements module (`wireSeams` ran only in `construct`; N-462). Fixed after the supervisor's ruling: `wireSlots` (`settlements.go`) is called by construction and by `RestoreWorld`, and `TestRestore_SettlementsSlotsAreWired` fails without it. N-462 is therefore not a note.
+- The spawner's room is per role, so a body shared by several roles can be overshot in one entry step (N-463).
+- Not written: `TestPremium_CheckDReportedNotAsserted` (no premium check exists in the code to report; spec 5.7.5 is a row owed to SKL) and a separate spawner-level `TestEntryLimited_RoleCeilingIncludesBody` (the spawner reads the same `Headroom` and `NoLimit`; `TestRoleView_BodyHeadroom` and `TestPopulation_BirthsCappedByBody` pin the fields it reads). `TestCompletion_HeldWithoutHeadroom` is SKL's name, so ORG's tests are `TestOrgCompletion_*`.
+- The two tests of PR B that planted a level and a suspension now call the slots (N-401).
+
+Tests by layer: unit (`internal/institution`: `Outcome.Held` is a field of the struct the round compares); world (internal: the slot calls and their rebuilds, the refusal that changes nothing, the entry equal to the configured level, the membership group, the trainer test and the body's maximum, the filling to the body's limit, the count `min(f, a)`, the least of two limits with and without each module, the held completion and its order, the wiring after a restore, the allocation of every reader, the static check of the reader sites); integration (the errors of both calls in order, `ErrModuleOff` and `ErrInStep`, the slot state in a checkpoint and not in the hash, the fork at N with a call before the boundary, a run of the traineeship under a body with the audit and with and without an observer). Run: `gofmt`, `go vet`, `staticcheck`, `lizard`, the narrow tests above; the slot-guarded run of the golden, hash, position-hash, allocation, fork, checkpoint and glossary tests is recorded below; not run: gate R, gate F, `check.sh`, `full.sh`, `gomu`, `golden/all`.
+
+Left for the supervisor (nothing in `doc/notes.md` or a spec was edited, since that needs the whole file read and a fresh tag):
+
+- Settle N-401 (applied) and add three notes, numbers N-463 to N-465 (N-462 was fixed in code, see above, and its number stays unused):
+  - N-463 (ORG, SPN): the spawner's room is per role, so a body shared by several roles can be overshot in one entry step.
+  - N-464 (ORG, SKL): the expected wait counts the body's trainee limit only where a `train` right is in force.
+  - N-465 (ORG, OBS): `Held` and `Train` count each tick, `Held` only where the body's own places are short; both pressure, not households, and only under an observer.
+- `spec-institutions.md` 3.4.2: the count is ORG's own scan (not SET's scratch) and a second `noteRoleMove` keeps it; 5.7.2: `n_max` of the view is exact only with a `train` right; 4.5.2: `Held` counts a body-bound hold each tick.
+- `spec-integration.md` 4.7.2: the type of the group is `Membership`.
