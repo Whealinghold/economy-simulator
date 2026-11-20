@@ -78,13 +78,15 @@ func price(o *Offer, store bool) int64 {
 
 // eligible returns the pair's maximum payout and whether the offer is a candidate
 // for the candidate: not its own, its cover share at least the lowest asked, and room
-// for the pair's maximum payout (spec-insurance.md 7.3.2 step 1).
+// for the pair's maximum payout (spec-insurance.md 7.3.2 step 1). A pair whose maximum
+// payout rounds to 0 is not eligible: a policy that can pay nothing is not formed
+// (plan 3-ins, open item of PR C; the sentence of 7.3.2 is owed to the spec).
 func eligible(c *Candidate, o *Offer) (maxPayout int64, ok bool) {
 	if o.Party == c.Party || o.CoverBP < c.MinCover {
 		return 0, false
 	}
 	mp, ok := MaxPayout(o.CoverBP, c.Sum)
-	return mp, ok && o.Room >= mp
+	return mp, ok && mp >= 1 && o.Room >= mp
 }
 
 // fillCandidate matches one candidate against the ordered offers and reports whether
