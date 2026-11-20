@@ -456,6 +456,11 @@ type SlotState struct {
 	// StoreRiskScales are the store scales of the risk module that differ from 10 000,
 	// in (Region, Class) order.
 	StoreRiskScales []StoreRiskScale
+	// LegalLevels are the levels of the institutions module's controls and rate limits that
+	// differ from the configured ones, in ControlID order, and RightSuspensions the rights
+	// that are suspended, in RightID order.
+	LegalLevels      []LegalLevel
+	RightSuspensions []RightSuspension
 }
 
 // Slots returns a deep copy of the slots that hold a value other than their default
@@ -483,6 +488,7 @@ func (w *World) Slots() (SlotState, error) {
 	w.tenureSlots(&s)
 	w.creditSlots(&s)
 	w.riskSlots(&s)
+	w.orgSlots(&s)
 	return s, nil
 }
 

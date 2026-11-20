@@ -2,10 +2,14 @@ package economysim
 
 import (
 	"cmp"
+	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 
+	payroll "github.com/Whealinghold/economy-sim/internal/employment"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 	"github.com/Whealinghold/economy-sim/internal/transit"
 )
 
@@ -13,9 +17,9 @@ import (
 // 7), EMP: the hire record, the Escrow account of a hire, the release of the wage
 // a working tick at a time, the cut of a start, the end of a hire and the audit.
 // The labour round that forms a hire is employment_round.go and the reports are
-// employment_report.go. Interruptions (a removal, a role change, a move, a fall of
-// the worker's weight), the checkpoint section and the snapshot rows are later
-// PRs of the plan; a hire ends here by its completion or because nothing started.
+// employment_report.go. The interruptions of spec-employment.md 6.4 (a removal, a
+// role change, a move of the worker) and the open_hire refusal are the second half
+// of this file; the checkpoint section is in employment_report.go.
 
 // hireRole is the employer block of a role, resolved: the hire list in ascending
 // RecipeID, the establishment, the worker's share and the hired yield factor.
@@ -59,6 +63,7 @@ func (e *employment) initHire(c *Config) {
 	e.free = make([]transit.Free, len(c.Regions))
 	e.tally = make([]labourTally, len(c.Regions))
 	e.lanes = make([]labourLane, len(c.Regions))
+	e.unmatchedRun, e.unfilledRun = make([]int64, len(c.Regions)*len(c.Roles)), make([]int64, len(c.Regions)*len(c.Roles))
 	for i := range c.Roles {
 		b := c.Roles[i].Employer
 		if b == nil {
@@ -75,6 +80,13 @@ func (e *employment) initHire(c *Config) {
 
 // isHire says the world is in the hire form; it is false for a nil module.
 func (e *employment) isHire() bool { return e != nil && e.hire }
+
+// hiresRecipe says the job of recipe rec under the principal is one a hire can pay for:
+// the world is in the hire form and the principal's role has rec on its hire list. The
+// restore of a job reads it, as a hired worker's recipe is the employer's, not its own.
+func (e *employment) hiresRecipe(principal *agent, rec RecipeID) bool {
+	return e.isHire() && e.roles[principal.role].on && slices.Contains(e.roles[principal.role].list, rec)
+}
 
 // hireOfWorker returns the hire in progress of the agent as a worker, or nil.
 func (e *employment) hireOfWorker(id AgentID) *hireRec {
@@ -279,14 +291,33 @@ func (w *World) hiredRequest(q *startReq, a *agent, region RegionID) {
 	q.account, q.principal, q.effective, q.hasProfile = p.account, p.id, e, has
 }
 
-// snapshotHireEscrow adds the money held in the Escrow accounts of the open hires
-// to the contract sector of the snapshot: the total in escrow, the money of the
-// region and the money of the world (spec-employment.md 7.4.1).
-func (w *World) snapshotHireEscrow(s *Snapshot) {
+// HireRow is a hire in progress in the snapshot (spec-employment.md 15.4): a function
+// of the saved state. Region is the employer's, Households the executions of the job,
+// Ends the tick of its completion, TicksLeft the working ticks still to be paid,
+// Account the Escrow account and Held the money in it.
+type HireRow struct {
+	Hire             HireID
+	Region           RegionID
+	Employer, Worker AgentID
+	Recipe           RecipeID
+	Households       int64
+	Wage             Money
+	Formed, Ends     int64
+	TicksLeft        int64
+	Account          int
+	Held             Money
+}
+
+// snapshotHires adds the hires in progress to the snapshot: their rows, the money
+// held in their Escrow accounts to the contract sector (the total in escrow, the
+// money of the region and the money of the world, spec-employment.md 7.4.1), and the
+// households employed and employing to the role rows (15.4).
+func (w *World) snapshotHires(s *Snapshot) {
 	e := w.employment
 	if !e.isHire() {
 		return
 	}
+	nr := len(w.cfg.Roles)
 	for i := range e.hires {
 		h := &e.hires[i]
 		v, err := w.ledger.Account(h.escrow)
@@ -297,6 +328,13 @@ func (w *World) snapshotHireEscrow(s *Snapshot) {
 		s.Escrow = satMoney(s.Escrow, held, 0)
 		s.Regions[h.region].MoneyContract = satMoney(s.Regions[h.region].MoneyContract, held, 0)
 		s.Money = satMoney(s.Money, held, 0)
+		s.Hires = append(s.Hires, HireRow{
+			Hire: h.id, Region: h.region, Employer: h.employer, Worker: h.worker, Recipe: h.recipe, Households: h.k,
+			Wage: Money(h.wage), Formed: h.formed, Ends: h.formed + h.ticks - 1, TicksLeft: h.ticks - h.worked,
+			Account: h.escrow, Held: held,
+		})
+		s.Roles[int(h.region)*nr+int(w.agents[h.worker].role)].Employed += h.k
+		s.Roles[int(h.region)*nr+int(w.agents[h.employer].role)].Employing += h.k
 	}
 }
 
@@ -354,7 +392,11 @@ func (w *World) escrowFault(h *hireRec) string {
 	if msg := w.jobFault(h, left); msg != "" {
 		return msg
 	}
-	if want := h.wage * h.k * left; v.Balance < want {
+	want, ok := payroll.Bill(h.wage, left, h.k)
+	if !ok {
+		return fmt.Sprintf("the wages of %d ticks at %d for %d executions do not fit", left, h.wage, h.k)
+	}
+	if v.Balance < want {
 		return fmt.Sprintf("account %d holds %d, want at least %d", h.escrow, v.Balance, want)
 	}
 	return ""
@@ -374,4 +416,99 @@ func (w *World) jobFault(h *hireRec, left int64) string {
 		return fmt.Sprintf("its worker's job has %d ticks left, the hire has %d unpaid", job.remaining, left)
 	}
 	return ""
+}
+
+// openHire is the name of the region_bound refusal of the module (spec-regions.md
+// 6.5.2, spec-employment.md 6.5.1). Its instance key is the hire ID.
+const openHire = "open_hire"
+
+// holds reports whether the agent is the employer of an open hire that skip does not
+// name by instance (spec-employment.md 6.5.1). A worker is never held: its job is
+// abandoned when its account changes region and the hire ends with it.
+func (e *employment) holds(a *agent, skip []string) bool {
+	if e.hiredBy(a.id) == 0 {
+		return false
+	}
+	for i := range e.hires {
+		if h := &e.hires[i]; h.employer == a.id && !skipHas(skip, openHire, int64(h.id)) {
+			return true
+		}
+	}
+	return false
+}
+
+// dropHires is step 2c of a removal (spec-agents.md 3.6, spec-employment.md 6.5.2),
+// after the titles and before the creditors' waterfall: the hire of the agent as a
+// worker ends first (worker_left; its job was abandoned at step 1), then each hire
+// of the agent as an employer in ascending hire ID. It is a no-op with the hire form
+// off and draws nothing.
+func (w *World) dropHires(a *agent) {
+	w.endHireOfWorker(a, CauseWorkerLeft)
+	w.endHiresOf(a, CauseEmployerLeft)
+}
+
+// endHireOfWorker ends the hire of the agent as a worker with the cause, the
+// remainder of the escrow back to the employer. The worker's job is the caller's:
+// it was abandoned before this call, in the order of spec-employment.md 6.5.2.
+func (w *World) endHireOfWorker(a *agent, cause Cause) {
+	if h := w.employment.hireOfWorker(a.id); h != nil {
+		w.endHire(h, cause)
+	}
+}
+
+// endHiresOf ends every hire of the agent as an employer, in ascending hire ID: the
+// worker's job is abandoned with principal_left, the remainder of the escrow returns
+// to the employer's own account (so that a creditor's waterfall sees it) and the
+// hire ends with the cause (spec-employment.md 6.4).
+func (w *World) endHiresOf(a *agent, cause Cause) {
+	e := w.employment
+	if !e.isHire() || e.hiredBy(a.id) == 0 {
+		return
+	}
+	for i := 0; i < len(e.hires); {
+		h := &e.hires[i]
+		if h.employer != a.id {
+			i++
+			continue
+		}
+		if wk := &w.agents[h.worker]; wk.hasJob() {
+			w.abandonJob(wk, h.region, ReasonPrincipalLeft)
+		}
+		w.endHire(h, cause) // the record leaves the list: index i now holds the next hire
+	}
+}
+
+// hiredReweighed follows a fall of the weight of the worker a, whose job was just
+// re-weighed (spec-production.md 5.4): the executions of the hire become those of the
+// job, so the executions the employer holds open, the wages still owed and the
+// Households of HireEnded are those of the job, and a restore may read them from it.
+// The job is not abandoned and the remainder of the escrow returns with the end
+// (spec-employment.md 6.4). A weight that rises changes nothing.
+func (w *World) hiredReweighed(a *agent) {
+	h := w.employment.hireOfWorker(a.id)
+	if h == nil || !a.hasJob() || a.job.executions >= h.k {
+		return
+	}
+	w.employment.hired[h.employer] -= h.k - a.job.executions
+	h.k = a.job.executions
+	// No event reports a fall of a hire: HireEnded.Households is the only trace, and
+	// it differs from HireFormed.Households without this line saying why.
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "hire reweighed",
+			slog.Int64(logkeys.Agent, int64(a.id)), slog.Int64(logkeys.Households, h.k))
+	}
+}
+
+// fillHireState sets the employment group of the state of agent a: the employer of
+// the hire it works on, and the executions it holds open as an employer. It sets
+// nothing with the hire form off.
+func (w *World) fillHireState(st *AgentState, a *agent) {
+	e := w.employment
+	if !e.isHire() {
+		return
+	}
+	if h := e.hireOfWorker(a.id); h != nil {
+		st.HasEmployer, st.Employer = true, h.employer
+	}
+	st.Hired = e.hiredBy(a.id)
 }

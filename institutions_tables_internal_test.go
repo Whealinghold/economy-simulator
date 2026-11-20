@@ -110,16 +110,18 @@ func TestResolve_SuspendedKeyOpen(t *testing.T) {
 	w, _ := orgWorld(t, orgTablesToy())
 	o := w.org
 	inland := orgRight(t, w, "sell_inland")
-	o.rights.suspended[inland] = true
-	o.resolve()
+	if err := w.SetRightSuspensions([]RightSuspension{{Right: inland, Suspended: true}}); err != nil {
+		t.Fatalf("SetRightSuspensions() error = %v, want nil", err)
+	}
 	if id, ok := o.rightIn(actSell, 0, orgA); ok {
 		t.Errorf("rightIn(sale in a, suspended) = %d, true, want none and no fall back to the crown", id)
 	}
 	if id, ok := o.rightIn(actSell, 0, orgB); !ok || id != orgRight(t, w, "sell_crown") {
 		t.Errorf("rightIn(sale in b) = %d, %v, want sell_crown", id, ok)
 	}
-	o.rights.suspended[inland] = false
-	o.resolve()
+	if err := w.SetRightSuspensions([]RightSuspension{{Right: inland}}); err != nil {
+		t.Fatalf("SetRightSuspensions(lift) error = %v, want nil", err)
+	}
 	if id, ok := o.rightIn(actSell, 0, orgA); !ok || id != inland {
 		t.Errorf("rightIn(sale in a, lifted) = %d, %v, want sell_inland", id, ok)
 	}
@@ -173,16 +175,18 @@ func TestRange_LevelsInForceFeedTheRange(t *testing.T) {
 	t.Parallel()
 	w, _ := orgWorld(t, orgTablesToy())
 	o := w.org
-	o.legal.capBP[0], o.legal.floorBP[0] = 15_000, 5_000
-	o.resolve()
+	if err := w.SetLegalLevels([]LegalLevel{{Control: 0, CapBP: 15_000, FloorBP: 5_000}}); err != nil {
+		t.Fatalf("SetLegalLevels() error = %v, want nil", err)
+	}
 	if capPrice, floor, _, _ := o.rangeOf(orgB, 0); capPrice != 150 || floor != 50 {
 		t.Errorf("rangeOf(b, grain) at the new levels = %d, %d, want 150, 50", capPrice, floor)
 	}
 	if rows := o.legalRows(); !slices.Equal(rows, []LegalRow{{Control: 0, CapBP: 15_000, FloorBP: 5_000}}) {
 		t.Errorf("legalRows() = %v, want the one control that differs", rows)
 	}
-	o.legal.capBP[0], o.legal.floorBP[0] = 12_000, 8_000
-	o.resolve()
+	if err := w.SetLegalLevels([]LegalLevel{{Control: 0, CapBP: 12_000, FloorBP: 8_000}}); err != nil {
+		t.Fatalf("SetLegalLevels(the configured level) error = %v, want nil", err)
+	}
 	if capPrice, floor, _, _ := o.rangeOf(orgB, 0); capPrice != 120 || floor != 80 {
 		t.Errorf("rangeOf(b, grain) back at the configured levels = %d, %d, want 120, 80", capPrice, floor)
 	}

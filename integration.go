@@ -385,6 +385,7 @@ func (w *World) Relocate(id AgentID, to RegionID) error {
 	if a.hasJob() {
 		w.abandonJob(a, from, ReasonRegionChanged)
 	}
+	w.endHireOfWorker(a, CauseWorkerMoved) // nil-safe: a worker's hire ends with the job it paid for
 	// moveAgent drops the own-use floor of the old region itself, the second step a
 	// departing migrant takes (spec-migration.md 8.2).
 	if err := w.moveAgent(a, to, CauseConsumer); err != nil {

@@ -222,6 +222,40 @@ func TestPacks_D2OverlayTakesTheRawMarkerOff(t *testing.T) {
 	}
 }
 
+// skippedOverPackOne reports whether a layered file names modules or regions that pack one
+// alone lacks, so the scan leaves it to the test that loads it over the layers it needs.
+func skippedOverPackOne(f string) bool {
+	// The five-region overlays of the resources module name regions that pack one
+	// lacks; TestOverlays_ResourcesSizedFromTheSolver validates them over five.
+	if strings.HasSuffix(f, "-five.toml") || strings.HasSuffix(f, "-five-binding.toml") {
+		return true
+	}
+	// The merchants overlays name the transport and information modules, the haul
+	// commodity and the carrier chain that pack one does not carry;
+	// TestPacks_MerchantsOverlayLoads validates them over their own layers.
+	if strings.HasPrefix(f, "overlay/merchants") {
+		return true
+	}
+	// The risk overlays name the routes of the transport layers and the barn of the storage
+	// layers, which pack one alone lacks; the risk goldens and TestGolden_RiskProbeExercisesStrikes
+	// load and validate them over the layers they need.
+	if strings.HasPrefix(f, "overlay/risk") {
+		return true
+	}
+	// The polity overlays name the five regions of the warm five, which pack one
+	// lacks; TestScenarioS112_Neutral loads and validates them over it.
+	if strings.HasPrefix(f, "overlay/polity") {
+		return true
+	}
+	// The tenure overlay titles the endowments of the resources overlay, which pack
+	// one alone lacks; TestPacks_TenureOverlayLoadsAndSolves validates it over the
+	// layers it needs.
+	if f == "overlay/tenure.toml" {
+		return true
+	}
+	return false
+}
+
 // TestPacks_OnlyD1ToD5AreNotViable verifies that, layered over `one` and its
 // warm start, every overlay file that loads at this stage still validates, so
 // the loops that skip a pack that stops validating (role_pack_test.go,
@@ -251,26 +285,7 @@ func TestPacks_OnlyD1ToD5AreNotViable(t *testing.T) {
 	var notViable []string
 	loaded := 0
 	for _, f := range files {
-		// The five-region overlays of the resources module name regions that pack one
-		// lacks; TestOverlays_ResourcesSizedFromTheSolver validates them over five.
-		if strings.HasSuffix(f, "-five.toml") || strings.HasSuffix(f, "-five-binding.toml") {
-			continue
-		}
-		// The merchants overlays name the transport and information modules, the haul
-		// commodity and the carrier chain that pack one does not carry;
-		// TestPacks_MerchantsOverlayLoads validates them over their own layers.
-		if strings.HasPrefix(f, "overlay/merchants") {
-			continue
-		}
-		// The polity overlays name the five regions of the warm five, which pack one
-		// lacks; TestScenarioS112_Neutral loads and validates them over it.
-		if strings.HasPrefix(f, "overlay/polity") {
-			continue
-		}
-		// The tenure overlay titles the endowments of the resources overlay, which pack
-		// one alone lacks; TestPacks_TenureOverlayLoadsAndSolves validates it over the
-		// layers it needs.
-		if f == "overlay/tenure.toml" {
+		if skippedOverPackOne(f) {
 			continue
 		}
 		cfg, err := config.LoadFS(fsys, "base.toml", "one.toml", "warm-one.toml", f)

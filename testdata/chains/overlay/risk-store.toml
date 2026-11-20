@@ -1,0 +1,12 @@
+# The risk module on the stores of pack one (plan 3-rsk phase 8, spec-risk.md 16, 18.2, spec-reference-chain.md 4.5): one
+# store row of the class barn, which overlay/storage.toml gives the growers. Layer it after the pack and
+# overlay/storage.toml (a store row needs the storage module and the class): base.toml, one.toml, warm-one.toml,
+# overlay/storage.toml, this file. A test double, not a design: every number is a placeholder (N-015, N-027).
+#
+# A unit row: each grower's barn draws for itself every tick (P8.1a), and a strike takes 2 000 of 10 000 of the stored
+# fraction of the account, so a barn that holds goods loses part of them. The common row of a store class is built in
+# Go by the scenarios that need it (a class has one row, so a unit row and a common row of the barn cannot both be here).
+
+[modules.risk.store.north.barn]
+strike_bp = 1500
+severity_bp = 2000
