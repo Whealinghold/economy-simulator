@@ -28,6 +28,15 @@ func withoutMembership(events []economysim.Event) []economysim.Event {
 	})
 }
 
+// withoutCreated drops WorldCreated, whose hash, names and module summary are the module's own
+// outputs (spec-institutions.md 14.3).
+func withoutCreated(events []economysim.Event) []economysim.Event {
+	return slices.DeleteFunc(slices.Clone(events), func(e economysim.Event) bool {
+		_, ok := e.(economysim.WorldCreated)
+		return ok
+	})
+}
+
 // TestScenarioORG5_InertOverlayIsNeutral verifies ORG-S5 (S141): the five with
 // overlay/institutions-inert.toml (a body with places 0, a produce right, two
 // controls with both levels 0) against the same five without the module (the cook's course kept), seeds 1 to
@@ -60,7 +69,7 @@ func TestScenarioORG5_InertOverlayIsNeutral(t *testing.T) {
 		if got, want := orgModuleOutputs(with.Final), orgModuleOutputs(without.Final); !reflect.DeepEqual(got, want) {
 			t.Errorf("seed %d: final snapshot differs from the world without the module beyond its own outputs", seed)
 		}
-		if got, want := withoutMembership(with.Events), without.Events; !reflect.DeepEqual(got, want) {
+		if got, want := withoutCreated(withoutMembership(with.Events)), withoutCreated(without.Events); !reflect.DeepEqual(got, want) {
 			t.Errorf("seed %d: %d events beyond the module's differ from the %d of the world without it", seed, len(got), len(want))
 		}
 	}
