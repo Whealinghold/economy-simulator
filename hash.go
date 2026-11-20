@@ -314,14 +314,15 @@ func pairsSeasonYield(e *encoder, s SeasonYield) {
 	e.num(2, s.BP)
 }
 
-// pairsRole writes the pairs of a Role: ids 1 to 28. Label is presentation only
+// pairsRole writes the pairs of a Role: ids 1 to 29. Label is presentation only
 // and has no id. Informed 19 is the information module's and is a pair only
 // while it is on (informationOn) and the flag is true; Fixed 20 is the migration
 // module's, on the same terms (migrationOn); MerchantFeeShare 21 and Merchant 22
 // are the merchants', pairs only when the block is non-nil; Hireable 23 is a pair
 // only when true and Employer 24 only when non-nil (the employment module's);
-// Credit 25 only when non-nil (the credit module's); Cover 28 only when non-nil (the
-// insurance module's).
+// Credit 25 only when non-nil (the credit module's); Needs 26 and Ceiling 27
+// are text pairs; Cover 28 only when non-nil (the insurance module's); Saver 29 only
+// when non-nil (the saving module's).
 func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	e.text(1, r.ID)
 	e.texts(2, r.Recipes)
@@ -365,6 +366,11 @@ func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	if r.Cover != nil {
 		e.id(28) // written even when empty: a non-nil block is a cover role
 		pairsCoverTerms(e, *r.Cover)
+		e.end()
+	}
+	if r.Saver != nil {
+		e.id(29) // written even when every field is zero: a non-nil block is a saver role
+		pairsSaver(e, *r.Saver)
 		e.end()
 	}
 }
@@ -588,9 +594,9 @@ func pairsLastModules(e *encoder, m Modules) {
 	pairsTailModules(e, m)
 }
 
-// pairsTailModules writes the pairs of the modules of ids 19, 20, 21, 22, 24 and 25
-// of Modules, after those pairsLastModules writes (a continuation for the Lizard
-// limit).
+// pairsTailModules writes the pairs of the modules of ids 19, 20, 21, 22 and 23 of
+// Modules, after those pairsLastModules writes, then those of pairsEndModules (a
+// continuation for the Lizard limit).
 func pairsTailModules(e *encoder, m Modules) {
 	if m.Polity != nil {
 		e.id(19)
@@ -612,6 +618,42 @@ func pairsTailModules(e *encoder, m Modules) {
 		pairsPolicy(e, *m.Policy)
 		e.end()
 	}
+	if m.Saving != nil {
+		e.id(23)
+		pairsSaving(e, *m.Saving)
+		e.end()
+	}
+	pairsEndModules(e, m)
+}
+
+// pairsSaving writes the pairs of a Saving: SafetyTicks 1, HurdleSpreadBP 2 and
+// CommitBandBP 3, each only when non-zero, so the pointer is the whole of a zero module's
+// contribution (spec-config.md 8.2.2).
+func pairsSaving(e *encoder, m Saving) {
+	e.num(1, m.SafetyTicks)
+	e.num(2, m.HurdleSpreadBP)
+	e.num(3, m.CommitBandBP)
+}
+
+// pairsSaver writes the pairs of a Saver block: PrecautionShareBP 1, PrecautionCapTicks 2,
+// HurdleBP 3, PaybackTicks 4, RepairBelowBP 5 and Worth 6, the rows in class-ID order (the
+// canonical copy sorts them). A ProjectWorth has Class 1, PerTick 2 and Count 3.
+func pairsSaver(e *encoder, b Saver) {
+	e.num(1, b.PrecautionShareBP)
+	e.num(2, b.PrecautionCapTicks)
+	e.num(3, b.HurdleBP)
+	e.num(4, b.PaybackTicks)
+	e.num(5, b.RepairBelowBP)
+	encodeList(e, 6, b.Worth, func(e *encoder, w ProjectWorth) {
+		e.text(1, w.Class)
+		e.num(2, w.PerTick)
+		e.num(3, w.Count)
+	})
+}
+
+// pairsEndModules writes the pairs of the modules of ids 24 and 25 of Modules, after
+// those pairsTailModules writes (a continuation for the Lizard limit).
+func pairsEndModules(e *encoder, m Modules) {
 	if m.Technology != nil {
 		e.id(24)
 		pairsTechnology(e, *m.Technology)
