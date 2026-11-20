@@ -57,6 +57,7 @@ func (w *World) fillTradeOnly(v *AgentView, a *agent) {
 	if w.credit != nil {
 		w.fillCreditView(v, a)
 	}
+	w.fillCoverView(v, a) // nil-safe: a role with no cover block gets no group
 }
 
 // viewKind says which call a view is built for: the rumours of the information
@@ -90,6 +91,7 @@ func (w *World) checkTradePlan(a *agent, p *TradePlan) {
 		w.checkRoomPlan(a, p)
 	}
 	w.checkCreditPlan(a, p) // nil-safe: with the module off a request or an offer is only a Debug line
+	w.checkCoverPlan(a, p)  // nil-safe: the same for a cover request or offer
 }
 
 // removeAgent is the one removal path of an agent (spec-agents.md 3.6,

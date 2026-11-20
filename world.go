@@ -125,6 +125,8 @@ type World struct {
 	sto *storage
 	// credit is the state of the credit module, nil when it is off (credit.go).
 	credit *credit
+	// insurance is the state of the insurance module, nil when it is off (insurance.go).
+	insurance *insurance
 	// tec is the state of the technology module, nil when it is off
 	// (technology.go).
 	tec *technology

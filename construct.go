@@ -161,6 +161,7 @@ func (w *World) allocate() {
 		w.sto.world = w
 	}
 	w.credit = newCredit(&w.cfg)
+	w.insurance = newInsurance(&w.cfg)
 	w.set = newSettlements(&w.cfg)
 	w.tenure = newTenure(&w.cfg)
 	if w.tenure != nil {

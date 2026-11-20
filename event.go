@@ -2897,3 +2897,47 @@ type PolicyDecided struct {
 }
 
 func (PolicyDecided) isEvent() {}
+
+// The reasons of the insurance module (spec-insurance.md 5.2): the first failing check of
+// a request or an offer at the admission of the cover round, in the order of the table.
+// ReasonTooManyRequests, ReasonDuplicate, ReasonInArrears and ReasonExposure are the
+// reasons above that the table shares. ReasonInsuranceOff is a Debug line only, never
+// counted.
+const (
+	// ReasonInsuranceOff is a cover request or offer submitted while Modules.Insurance
+	// is absent.
+	ReasonInsuranceOff Reason = "insurance_off"
+	// ReasonNotInsuredRole is a cover request of an agent whose role has no Insure block.
+	ReasonNotInsuredRole Reason = "not_insured_role"
+	// ReasonNotUnderwriter is a cover offer of an agent whose role has no Underwrite block.
+	ReasonNotUnderwriter Reason = "not_underwriter"
+	// ReasonInvalidCover is a request with a cover share, a limit or a share outside its
+	// bound.
+	ReasonInvalidCover Reason = "invalid_cover"
+	// ReasonInvalidOffer is an offer with a liability below MinSum, a cover share or a
+	// rate outside its bound.
+	ReasonInvalidOffer Reason = "invalid_offer"
+	// ReasonUnknownLane is a lane request whose mode is not configured or whose
+	// destination is not a region, is the agent's own region or is an outside node.
+	ReasonUnknownLane Reason = "unknown_lane"
+	// ReasonNoStore is a store request of an agent that owns no store, or with the storage
+	// module off.
+	ReasonNoStore Reason = "no_store"
+)
+
+// CoverKind is the kind of a cover policy, a closed set (spec-insurance.md 3.1).
+type CoverKind string
+
+const (
+	// CoverRoute is the policy of the goods of one shipment dispatched in the tick.
+	CoverRoute CoverKind = "route"
+	// CoverStore is the policy of the goods an agent holds in its region, for one tick.
+	CoverStore CoverKind = "store"
+)
+
+// NoShipment is the shipment of a store policy: it has none. NoMode is the mode of a
+// store policy. A store policy's destination is NoRegion.
+const (
+	NoShipment ShipmentID = -1
+	NoMode     ModeID     = -1
+)

@@ -291,3 +291,15 @@ const (
 	Actors  = "actors"
 	Levers  = "levers"
 )
+
+// The keys of the insurance module (spec-insurance.md 15.2): a cover policy ID and its
+// sum, premium and payout in minor units, and the counts of underwriters and of insured
+// agents in the construction summary.
+const (
+	CoverPolicy  = "cover_policy"
+	Sum          = "sum"
+	Premium      = "premium"
+	Payout       = "payout"
+	Underwriters = "underwriters"
+	Insured      = "insured"
+)
