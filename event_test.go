@@ -109,6 +109,7 @@ var declaredEvents = []economysim.Event{
 	economysim.PriceControlled{},
 	economysim.LegalLevelSet{},
 	economysim.RightSuspensionSet{},
+	economysim.PolicyDecided{},
 }
 
 // moduleGates are the gates of 4.1 (besides core and the two prefixes) whose events are
@@ -116,7 +117,7 @@ var declaredEvents = []economysim.Event{
 var moduleGates = []string{
 	"demand", "resources", "subsistence", "population", "transport", "information", "migration",
 	"merchant block", "merchants", "external", "employment", "storage", "credit", "technology",
-	"settlements", "tenure", "infrastructure", "risk", "fiscal", "institutions",
+	"settlements", "tenure", "infrastructure", "risk", "fiscal", "institutions", "policy",
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -125,7 +126,7 @@ var moduleGates = []string{
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
 	"LabourRound",
-	"TreasuryOrdered", "SavingPlanned", "PolicyDecided",
+	"TreasuryOrdered", "SavingPlanned",
 	"CoverFormed", "CoverEnded", "CoverRound", "CoverSettled",
 }
 

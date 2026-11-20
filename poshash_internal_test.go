@@ -506,6 +506,10 @@ func creditOn(w *World) bool { return w.credit != nil }
 // world records no line for them.
 func fiscalOn(w *World) bool { return w.fiscal != nil }
 
+// policyOn is the guard of the row of the policy module (P0.3a, plan 3-plc): an off world
+// records no line for it.
+func policyOn(w *World) bool { return w.policy != nil }
+
 // noErr adapts a position method with no error result.
 func noErr(f func(*World)) func(*World) error {
 	return func(w *World) error { f(w); return nil }
@@ -518,6 +522,7 @@ func noErr(f func(*World)) func(*World) error {
 var replayRows = []replayRow{
 	{id: "begin", covers: []string{"P0.1", "P0.2a", "P0.3"}, run: (*World).beginStep},
 	{id: "P0.2", run: noErr((*World).p02)},
+	{id: "P0.3a", run: noErr((*World).p03aPolicy), on: policyOn},
 	{id: "P1.1", run: (*World).p11Moment},
 	{id: "P1.2", run: noErr((*World).p12Anchors)},
 	{id: "P1.3", run: noErr((*World).p13Arrivals), on: transportOn},
@@ -872,7 +877,7 @@ func TestReplayRows_Guard(t *testing.T) {
 	if err := checkReplayRows(); err != nil {
 		t.Fatalf("checkReplayRows error = %v, want nil", err)
 	}
-	if err := checkRows(slices.Delete(slices.Clone(replayRows), 2, 3)); err == nil || !strings.Contains(err.Error(), "P1.1") {
+	if err := checkRows(slices.Delete(slices.Clone(replayRows), 3, 4)); err == nil || !strings.Contains(err.Error(), "P1.1") {
 		t.Errorf("checkRows with P1.1 missing error = %v, want one naming P1.1", err)
 	}
 	if err := checkRows(append(slices.Clone(replayRows), replayRow{id: "P9.9", run: noErr((*World).p02)})); err == nil {
