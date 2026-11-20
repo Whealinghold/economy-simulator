@@ -96,8 +96,20 @@ func shipperPack(t testing.TB) (economysim.Config, []economysim.Option) {
 func shipperPackOn(t testing.TB, layers []string) (economysim.Config, []economysim.Option) {
 	t.Helper()
 	cfg := loadValidPack(t, layers...)
+	s := shipperOf(t, cfg)
+	cfg.Modules.Transport.Modes[modeFootID].Speed = 50
+	for i := range cfg.Roles {
+		cfg.Roles[i].Strategy = "ship"
+	}
+	return cfg, []economysim.Option{economysim.WithStrategy("ship", s)}
+}
+
+// shipperOf returns the scripted shipper of a pack with the transport overlay of pack two:
+// the carriers ship, to the first household of the other region that is not a carrier.
+func shipperOf(t testing.TB, cfg economysim.Config) shipper {
+	t.Helper()
 	rec := &recorder{}
-	if _, err := economysim.NewWorld(cfg, economysim.WithObserver(rec)); err != nil {
+	if _, err := economysim.NewWorld(cfg, economysim.WithObserver(rec), economysim.WithStrategy("ship", shipper{})); err != nil {
 		t.Fatalf("NewWorld() error = %v, want nil", err)
 	}
 	carrier := slices.IndexFunc(cfg.Roles, func(r economysim.Role) bool { return r.ID == "carrier" })
@@ -115,12 +127,7 @@ func shipperPackOn(t testing.TB, layers []string) (economysim.Config, []economys
 			seen[a.Region], first[a.Region] = true, a.Agent
 		}
 	}
-	cfg.Modules.Transport.Modes[modeFootID].Speed = 50
-	for i := range cfg.Roles {
-		cfg.Roles[i].Strategy = "ship"
-	}
-	s := shipper{first: first, shipEvery: 7, role: economysim.RoleID(carrier), staple: economysim.CommodityID(staple)}
-	return cfg, []economysim.Option{economysim.WithStrategy("ship", s)}
+	return shipper{first: first, shipEvery: 7, role: economysim.RoleID(carrier), staple: economysim.CommodityID(staple)}
 }
 
 // TestDeterminism_Transport verifies, for the module-alone pack with and without the
