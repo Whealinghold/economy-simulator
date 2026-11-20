@@ -314,13 +314,14 @@ func pairsSeasonYield(e *encoder, s SeasonYield) {
 	e.num(2, s.BP)
 }
 
-// pairsRole writes the pairs of a Role: ids 1 to 25. Label is presentation only
+// pairsRole writes the pairs of a Role: ids 1 to 28. Label is presentation only
 // and has no id. Informed 19 is the information module's and is a pair only
 // while it is on (informationOn) and the flag is true; Fixed 20 is the migration
 // module's, on the same terms (migrationOn); MerchantFeeShare 21 and Merchant 22
 // are the merchants', pairs only when the block is non-nil; Hireable 23 is a pair
 // only when true and Employer 24 only when non-nil (the employment module's);
-// Credit 25 only when non-nil (the credit module's).
+// Credit 25 only when non-nil (the credit module's); Cover 28 only when non-nil (the
+// insurance module's).
 func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	e.text(1, r.ID)
 	e.texts(2, r.Recipes)
@@ -361,6 +362,11 @@ func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	}
 	e.text(26, r.Needs)
 	e.text(27, r.Ceiling)
+	if r.Cover != nil {
+		e.id(28) // written even when empty: a non-nil block is a cover role
+		pairsCoverTerms(e, *r.Cover)
+		e.end()
+	}
 }
 
 // pairsRegion writes the pairs of a Region: ids 1 to 7. Label is presentation
@@ -555,9 +561,9 @@ func pairsEmployer(e *encoder, b Employer) {
 	e.num(5, b.HireYieldBP)
 }
 
-// pairsLastModules writes the pairs of the modules of ids 15, 16, 17, 19, 20, 21, 24 and 25 of
-// Modules, after those pairsLaterModules writes (a continuation for the Lizard
-// limit).
+// pairsLastModules writes the pairs of the modules of ids 15, 16, 17 and 18 of Modules,
+// after those pairsLaterModules writes, then those of pairsTailModules (a
+// continuation for the Lizard limit).
 func pairsLastModules(e *encoder, m Modules) {
 	if m.Credit != nil {
 		e.id(15)
@@ -574,6 +580,18 @@ func pairsLastModules(e *encoder, m Modules) {
 		pairsInfrastructure(e, *m.Infrastructure)
 		e.end()
 	}
+	if m.Insurance != nil {
+		e.id(18)
+		pairsInsurance(e, *m.Insurance)
+		e.end()
+	}
+	pairsTailModules(e, m)
+}
+
+// pairsTailModules writes the pairs of the modules of ids 19, 20, 21, 22, 24 and 25
+// of Modules, after those pairsLastModules writes (a continuation for the Lizard
+// limit).
+func pairsTailModules(e *encoder, m Modules) {
 	if m.Polity != nil {
 		e.id(19)
 		pairsPolity(e, *m.Polity)
@@ -601,6 +619,43 @@ func pairsLastModules(e *encoder, m Modules) {
 	}
 	if m.Estates != nil {
 		e.id(25)
+		e.end()
+	}
+}
+
+// pairsInsurance writes the pairs of an Insurance: ValueCapBP 1, PayoutTicks 2,
+// MinSum 3, MaxPolicies 4, MaxCoverRequests 5 (spec-config.md 8.2.2). The module has
+// no list, so there is no canonical order.
+func pairsInsurance(e *encoder, m Insurance) {
+	e.num(1, m.ValueCapBP)
+	e.num(2, m.PayoutTicks)
+	e.num(3, m.MinSum)
+	e.num(4, m.MaxPolicies)
+	e.num(5, m.MaxCoverRequests)
+}
+
+// pairsCoverTerms writes the pairs of a CoverTerms: Underwrite 1 and Insure 2, each
+// written when non-nil even if every field is zero. An UnderwriteTerms has LoadingBP 1,
+// StoreRateBP 2, CoverBP 3, CapBP 4 and ShareBP 5; an InsureTerms has MinLossBP 1,
+// RuinShareBP 2, MaxLoadingBP 3, MinCoverBP 4, StoreShareBP 5 and MaxStoreRateBP 6.
+func pairsCoverTerms(e *encoder, c CoverTerms) {
+	if u := c.Underwrite; u != nil {
+		e.id(1)
+		e.num(1, u.LoadingBP)
+		e.num(2, u.StoreRateBP)
+		e.num(3, u.CoverBP)
+		e.num(4, u.CapBP)
+		e.num(5, u.ShareBP)
+		e.end()
+	}
+	if s := c.Insure; s != nil {
+		e.id(2)
+		e.num(1, s.MinLossBP)
+		e.num(2, s.RuinShareBP)
+		e.num(3, s.MaxLoadingBP)
+		e.num(4, s.MinCoverBP)
+		e.num(5, s.StoreShareBP)
+		e.num(6, s.MaxStoreRateBP)
 		e.end()
 	}
 }

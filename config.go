@@ -190,6 +190,14 @@ type Modules struct {
 	// Modules.Polity with at least one jurisdiction. Its hash id is 22, whatever its
 	// place in this struct.
 	Policy *PolicyConfig
+	// Insurance is the insurance module: single-event cover of a cargo in transit and
+	// of goods in store against the losses of the risk module, priced from the expected
+	// loss and paid by an underwriter, the unpaid part a payout claim
+	// (spec-insurance.md). Nil is off; non-nil is on, even when no role has a block (a
+	// module with no cover block does nothing). It needs Modules.Risk and Modules.Credit;
+	// route cover needs Modules.Transport and store cover Modules.Storage. Its hash id
+	// is 18, whatever its place in this struct.
+	Insurance *Insurance
 }
 
 // Credit is the configuration of the credit module (spec-credit.md 4.1, 14). Its
@@ -250,6 +258,82 @@ type BorrowTerms struct {
 	// SlackTicks is the ticks added to the horizon of the borrower's gap, 0 to
 	// MaxCreditTerm.
 	SlackTicks int64
+}
+
+// Insurance is the configuration of the insurance module (spec-insurance.md 4.1,
+// 13). Its presence switches the module on. Every field is a placeholder (N-015,
+// N-027): ValueCapBP, MinSum and MaxPolicies have no default and must be set,
+// PayoutTicks and MaxCoverRequests default as stated.
+type Insurance struct {
+	// ValueCapBP is the most a unit's value may be of its effective reference price, in
+	// basis points, 1 to MaxValueCapBP (spec-insurance.md 6.2). Required.
+	ValueCapBP int64
+	// PayoutTicks is the ticks from an unpaid payout's formation to its due tick, 1 to
+	// MaxCreditTerm. The default (DefaultInsurance) is 1.
+	PayoutTicks int64
+	// MinSum is the smallest sum insured of a policy, in minor units, 1 to MaxMoney.
+	// Required.
+	MinSum int64
+	// MaxPolicies is the most policies open at once, 1 to MaxOpenPolicies. Required.
+	MaxPolicies int64
+	// MaxCoverRequests is the most cover requests in one plan, 1 to
+	// MaxCoverRequestsBound. The default (DefaultInsurance) is 4.
+	MaxCoverRequests int64
+}
+
+// CoverTerms is the insurance block of a role, a pointer of Role: nil means the role
+// does not deal in cover, and exactly one of Underwrite and Insure is set
+// (spec-insurance.md 4.2). It needs Modules.Insurance. It is hashed when non-nil, even
+// when empty.
+type CoverTerms struct {
+	// Underwrite is the block of a role whose households post offers.
+	Underwrite *UnderwriteTerms
+	// Insure is the block of a role whose households post requests.
+	Insure *InsureTerms
+}
+
+// UnderwriteTerms is what an underwriter posts and keeps (spec-insurance.md 4.2). It
+// is hashed when non-nil, even when every field is zero.
+type UnderwriteTerms struct {
+	// LoadingBP is route cover: the premium as a share of the expected payout, in basis
+	// points, 0 to MaxLoadingBound; 10 000 is fair. 0 is a free cover, is written to a
+	// hash and is never a default: a file that omits it is ErrMissingField.
+	LoadingBP int64
+	// StoreRateBP is store cover: the premium for one tick, in basis points of the sum
+	// insured, 0 to MaxStoreRateBound. Never a default: a file that omits it is
+	// ErrMissingField.
+	StoreRateBP int64
+	// CoverBP is the share of a loss value it pays, 1 to 10 000.
+	CoverBP int64
+	// CapBP is the most its open liability may be of its available money, in basis
+	// points, 1 to MaxCapBound; it may exceed 10 000.
+	CapBP int64
+	// ShareBP is the share of its free capacity it offers in one tick, 1 to 10 000.
+	ShareBP int64
+}
+
+// InsureTerms is what an insured asks for and accepts (spec-insurance.md 4.2). It is
+// hashed when non-nil, even when every field is zero.
+type InsureTerms struct {
+	// MinLossBP is route cover: it buys on a lane whose expected loss is at least this,
+	// 0 to 10 000. 0 asks for no route cover (a store-only insured). Never a default:
+	// a file that omits it is ErrMissingField.
+	MinLossBP int64
+	// RuinShareBP is route cover: it buys when the cargo's value is at least this
+	// share of its money, 0 to MaxRuinBound. Never a default: a file that omits it is
+	// ErrMissingField.
+	RuinShareBP int64
+	// MaxLoadingBP is the highest loading it accepts, 0 to MaxLoadingBound. Never a
+	// default: a file that omits it is ErrMissingField.
+	MaxLoadingBP int64
+	// MinCoverBP is the least share of a loss it accepts, 1 to 10 000.
+	MinCoverBP int64
+	// StoreShareBP is store cover: the share of its held value it insures each tick, 0
+	// to 10 000. 0 buys none.
+	StoreShareBP int64
+	// MaxStoreRateBP is the highest store rate it accepts, 0 to MaxStoreRateBound.
+	// Never a default: a file that omits it is ErrMissingField.
+	MaxStoreRateBP int64
 }
 
 // Infrastructure is the configuration of the infrastructure module
@@ -440,6 +524,33 @@ func (m *Credit) canonical() *Credit {
 		return nil
 	}
 	out := *m
+	return &out
+}
+
+// canonical returns a copy of the module, nil for nil. It has no list to sort.
+func (m *Insurance) canonical() *Insurance {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	return &out
+}
+
+// canonical returns a copy of the block with a copy of each sub-block, nil for nil,
+// so a change of the consumer's Config after construction moves no role block.
+func (c *CoverTerms) canonical() *CoverTerms {
+	if c == nil {
+		return nil
+	}
+	out := *c
+	if c.Underwrite != nil {
+		u := *c.Underwrite
+		out.Underwrite = &u
+	}
+	if c.Insure != nil {
+		s := *c.Insure
+		out.Insure = &s
+	}
 	return &out
 }
 
@@ -1816,6 +1927,10 @@ type Role struct {
 	// (spec-settlements.md 6.4.2). Empty is none. It needs Modules.Settlements and a
 	// limit some class carries. Its hash id is 27.
 	Ceiling string
+	// Cover is the insurance block: non-nil makes the role an underwriter or an
+	// insured (spec-insurance.md 4.2), exactly one of Underwrite and Insure. It needs
+	// Modules.Insurance and is hashed when non-nil, even when empty. Its hash id is 28.
+	Cover *CoverTerms
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string
@@ -1996,6 +2111,7 @@ func (c Config) canonical() Config {
 		r.Merchant = r.Merchant.canonical()
 		r.Employer = r.Employer.canonical()
 		r.Credit = r.Credit.canonical()
+		r.Cover = r.Cover.canonical()
 	}
 	out.Regions = sortedBy(c.Regions, func(a, b Region) int { return cmp.Compare(a.ID, b.ID) })
 	for i := range out.Regions {
@@ -2042,6 +2158,7 @@ func (c Config) canonical() Config {
 	out.Modules.Tenure = c.Modules.Tenure.canonical()
 	out.Modules.Risk = c.Modules.Risk.canonical()
 	out.Modules.Infrastructure = c.Modules.Infrastructure.canonical()
+	out.Modules.Insurance = c.Modules.Insurance.canonical()
 	out.Modules.Institutions = c.Modules.Institutions.canonical()
 	out.Modules.Fiscal = c.Modules.Fiscal.canonical(c.Calendar.Seasons)
 	out.Modules.Policy = c.Modules.Policy.canonical()

@@ -28,6 +28,7 @@ var byName = map[string]ledger.Reason{
 	"outside_offer": ledger.OutsideOffer, "outside_unsold": ledger.OutsideUnsold, "outside_purchases": ledger.OutsidePurchases,
 	"wage_pay": ledger.WagePay, "rent": ledger.Rent, "title_sale": ledger.TitleSale, "loss": ledger.Loss,
 	"wage_escrow": ledger.WageEscrow, "wage_refund": ledger.WageRefund,
+	"premium": ledger.Premium, "payout": ledger.Payout,
 }
 
 // notBuilt lists the reasons of the starting registry that a module owns and
@@ -36,7 +37,6 @@ var byName = map[string]ledger.Reason{
 var notBuilt = []string{
 	"want_consumption",
 	"escrow_in", "escrow_out", "escrow_refund",
-	"premium", "payout",
 }
 
 // specRow is one parsed row of the registry table of spec-ledger.md 7.2.
@@ -540,6 +540,35 @@ func TestWageEscrowAndRefund_AgentEscrowMoneyOnly(t *testing.T) {
 		for a := ledger.KindAgent; a <= ledger.KindBoundary; a++ {
 			for b := ledger.KindAgent; b <= ledger.KindBoundary; b++ {
 				want := a == rw.from && b == rw.to
+				if got := ledger.Allowed(rw.reason, false, a, b); got != want {
+					t.Errorf("Allowed(%s, money, %d, %d) = %v, want %v", rw.name, a, b, got, want)
+				}
+			}
+		}
+	}
+}
+
+// TestLedger_PremiumPayoutPairing verifies the registry rows of premium (the insured
+// to the underwriter) and payout (the underwriter to the insured) of the insurance
+// module (spec-insurance.md 9.1): internal transfers of money between two agents, no
+// faucet, no sink, no goods and no other pairing, so any other pairing is refused.
+//
+// Requirement: FR-INS-002, FR-INS-003
+func TestLedger_PremiumPayoutPairing(t *testing.T) {
+	t.Parallel()
+	for _, rw := range []struct {
+		name   string
+		reason ledger.Reason
+	}{{"premium", ledger.Premium}, {"payout", ledger.Payout}} {
+		if class, ok := ledger.ClassOf(rw.reason, false); !ok || class != ledger.Internal {
+			t.Errorf("ClassOf(%s, money) = %v, %v, want an internal row", rw.name, class, ok)
+		}
+		if _, ok := ledger.ClassOf(rw.reason, true); ok {
+			t.Errorf("ClassOf(%s, goods) has a row, want money only", rw.name)
+		}
+		for a := ledger.KindAgent; a <= ledger.KindBoundary; a++ {
+			for b := ledger.KindAgent; b <= ledger.KindBoundary; b++ {
+				want := a == ledger.KindAgent && b == ledger.KindAgent
 				if got := ledger.Allowed(rw.reason, false, a, b); got != want {
 					t.Errorf("Allowed(%s, money, %d, %d) = %v, want %v", rw.name, a, b, got, want)
 				}
