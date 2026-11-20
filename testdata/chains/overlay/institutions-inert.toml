@@ -1,8 +1,10 @@
 # The institutions module declared and inert on the warm five (spec-institutions.md 13.5 and 14.3, ORG-S5, N-399): the
-# same body, rights and controls as overlay/institutions.toml with places 0 (no limit) and both levels 0 (no control), so
+# same body, produce right and controls as overlay/institutions.toml with places 0 (no limit) and both levels 0 (no control), so
 # that scenario ORG-S5 asserts that everything but the module's own outputs equals the world without it: its names table,
 # hash, Snapshot.Modules, construction line, MembershipChanged events and Snapshot.Bodies rows. The skilled role is the
-# cook, with the same course as the other overlay. Placeholders (N-015, N-027).
+# cook, with the same course as the other overlay. It carries no train right: a household that becomes a cook in a tick is
+# a member only from the next round (FR-ORG-010, FR-ORG-013), so a train right changes who trains whom even with places 0
+# (N-540). Placeholders (N-015, N-027).
 # Layer it after the pack and the polity overlay: base.toml, lines.toml, five.toml, warm-five.toml,
 # overlay/polity.toml, this file.
 
@@ -23,12 +25,6 @@ label = "the cooks' guild"
 body = "guild"
 activity = "produce"
 subject = "prepare"
-region = "centre"
-
-[modules.institutions.right.teach]
-body = "guild"
-activity = "train"
-subject = "cook"
 region = "centre"
 
 [modules.institutions.control.assize_a]
