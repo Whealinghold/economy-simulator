@@ -364,3 +364,20 @@ Reviewed once with the plan-review skill before commit (one pass, inline: a sing
 - Observability: pass; the event, the Debug lines and the snapshot rows are specified, no Warn in a tick.
 - Compatibility: pass; every change to a core type is an appended field at its off value. One finding, minor, applied: the PR split now says PR 3 onwards is blocked on CAP's PR 4 and 5.
 - Spec findings the plan records rather than hides: the funding-tick contradiction (N-490), the unspecified drawdown overflow (N-491), the stale `economysim.limit` sentence (N-495).
+
+## PR 3 result (Phases 4 and 5, branch `s3-sav-3`)
+
+Built: `AgentView.Saving` (`SavingView`, `SavingClass`) and the appended `RecipeView` fields `Needs`, `Builds` (`BuildView`), `Repairs` (`RepairView`) and `Standing`, filled for a role with a `Saver` block by one nil-safe call (`saving.fillView`, `saving_view.go`) after CAP's filler in `fillLateGroups`; the Trade view gets CAP's `Facilities` for such a role. `saving.go` holds the state (tables and scratch, no saved state) and `newSaving`. `saving_strategy.go` holds `SavingTarget(v, tier2)`, `ChooseProject(v)`, the bars, and the three guarded calls of `DefaultStrategy` (H-5 the target in the spend cap, H-6 a funded project as the planned recipe, H-7 the request); `saving_report.go` the two `Debug` lines; `event.go` the `SavingBar` constants; `welfare.Cumulative` and the keys `goal` and `buffer`. `TradeWith` is at CCN 9 and `strategy_default.go` at 436 non-comment lines. No golden, pinned hash or checkpoint moved.
+
+Differences from the plan, each decided in the plan's direction:
+
+- The nil-safe call is in `fillLateGroups` after the infrastructure filler, not at the end of `fillAgentView`: the same effect and no change of CCN.
+- `newSaving` is called in the module block of `construct.go` beside the infrastructure module, because it needs no agent.
+- `SavingView` has two fields the plan did not list, `Records` and `Surplus` (the `n` and `C_n` of the reach test, 5.6.5), and `SavingClass` has `Name`, because a `Worth` row names its class by string.
+- D9: the choice is not cached in the group. `planProject` keeps it in `tradeCtx` for one Trade call and `Work` evaluates it once; the pure rule stays a function of the view, so a wrapper that changes `Saving.Block` is obeyed. PR 4 decides how the counts of the event read it.
+- The `Debug` lines are logged by the world where it builds the Trade view (`saving_report.go`), because the strategy has no logger; the rule is the same pure one.
+- `tradeCtx.jobs` makes the project's inputs be bought for `m` executions and not `InputJobs` of them (5.6.4).
+- The request of 5.7 is the spec's literal one: a household that holds the inputs (`MaxExecutions` at least 1) asks for the build whether or not it is funded for the outlay. The end-to-end test shows a household with its inputs in stock starting at once.
+- Two PR 2 tests asserted that a role with a block is ignored; they now assert it for the module on with no block (FR-SAV-001), and the snapshot's list of modules is left out of the comparison.
+
+Not done, with the reason: `not_unlocked` is exercised at the rule only (no settlements fixture in the infrastructure pack; CAP derives it); the world-level counting-source test of FR-SAV-002 (`TestSaving_TakesNoDraw`) is covered by the equal-words test of the Trade plan; INS PR C (`AgentView.Insurance`, `DefaultCover`) is not on `phase-3`, so its hooks were not merged, and the saving calls are placed away from the end of `Trade` so the two merge as text.
