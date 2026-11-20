@@ -193,7 +193,9 @@ Goal: policies are formed and told; nothing is settled yet (a route policy stays
 
 **PR C holds Phases 4 and 5.** The round has no settlement yet, so a world with the module on and a block forms policies and **ends none** until PR D; PR C's tests read the open list and the events. If PR C passes 3 000 lines, split at the Phase 4 and 5 boundary (4: the plan surface; 5: the round).
 
-**Open item for PR C (spec question): a zero maximum payout.** `insure.Match` treats a pair whose `MaxPayout` rounds to 0 (a small `Sum` at a small `CoverBP`) as eligible, because its room test is `Room >= 0`, so a policy of maximum payout 0 can form and pay nothing. `Check` stops it only when the sum or the premium is below the minimum. RECOMMENDATION: a zero `MaxPayout` means no payout and no fill: `eligible` refuses the pair and the spec says so in 7.3.2 (the spec decides; PR A changes no code).
+**Decided and built in PR C: a zero maximum payout.** `insure.Match` used to treat a pair whose `MaxPayout` rounds to 0 (a small `Sum` at a small `CoverBP`) as eligible, because its room test is `Room >= 0`, so a policy of maximum payout 0 could form and pay nothing. `eligible` now refuses the pair (`mp >= 1`), as the plan recommended: a zero `MaxPayout` means no payout and no fill. The sentence of spec-insurance.md 7.3.2 step 1 is owed and is not edited here: a spec edit needs `doc/notes.md` read in full and its tag quoted (AGENTS.md), which this stage excluded.
+
+**Names taken in PR C.** `AgentView.Cover` is already the subsistence group's ticks of upkeep held in stock, so the insurance group is `AgentView.Insurance` (type `CoverView` as planned). `DefaultCover(v, p)` appends the requests and then the offer, as `DefaultCredit` does, over the pure rules `DefaultOffer(v, bids)`; the default `Trade` and the merchant call it after their orders and their trip, not inside `TradeWith`. The store policies of a tick end at the entry of the next round until PR D adds P8.1b.
 
 ### Phase 6: settlement, the claim, the removal, the welfare term (PR D)
 
