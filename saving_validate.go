@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"math"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/checked"
@@ -410,7 +411,11 @@ func savingTargetExceedsMoney(c *Config, lk lookup, m *Saving) bool {
 		if ro == nil {
 			continue
 		}
-		money += g.Households * int64(ro.StartMoney)
+		held, hok := checked.Mul(g.Households, int64(ro.StartMoney))
+		if !hok {
+			held = math.MaxInt64 // saturate: no target of the same configuration can pass it unseen
+		}
+		money = satAdd(money, held)
 		if ro.Saver == nil {
 			continue
 		}
@@ -424,9 +429,13 @@ func savingTargetExceedsMoney(c *Config, lk lookup, m *Saving) bool {
 		}
 		floor := saving.Floor(reserve, 0)
 		if pr, found := bestSavingProjectIn(c, lk, m, ro, g.Region); found {
-			floor += pr.outlay
+			floor = satAdd(floor, pr.outlay)
 		}
-		target += g.Households * floor
+		need, nok := checked.Mul(g.Households, floor)
+		if !nok {
+			return true
+		}
+		target = satAdd(target, need)
 	}
 	return target > money
 }

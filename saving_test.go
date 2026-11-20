@@ -160,6 +160,7 @@ func savingWorthCases(field savingField) []fieldCase {
 				c.Modules.Infrastructure = nil
 				for _, r := range []string{"build_mill", "repair_mill"} {
 					recipeOf(c, r).Builds, recipeOf(c, r).Repairs = nil, nil
+					recipeOf(c, r).Outputs = []economysim.Output{{Commodity: "staple", Quantity: 1, CostShare: 10_000}}
 				}
 				recipeOf(c, "grind").Needs = nil
 			}),
