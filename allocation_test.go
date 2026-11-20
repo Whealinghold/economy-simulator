@@ -51,6 +51,13 @@ const tenureStepAllocBaseline = 72
 // (NFR-CRD-001, TestCredit_AllocsPerRun). Raising it is a reviewed change (rule 8.2).
 const creditStepAllocBaseline = 94
 
+// infrastructureStepAllocBaseline is the allocation limit of a Step of pack one with the infrastructure
+// module on (overlay/infrastructure.toml: 60 mills that decay, wear and are ruined): the off world's 70,
+// since the step, the limits of a start and the wear work in the module's slices and scratch (NFR-CAP-002,
+// TestInfrastructure_StepAllocsPerRun). Measured under -race at 50 ticks, seed 1. Raising it is a reviewed
+// change (rule 8.2).
+const infrastructureStepAllocBaseline = 70
+
 // riskStepAllocBaseline and riskStoreStepAllocBaseline are the same measure for the risk module alone
 // on: pack two with its trade and transport overlays and overlay/risk.toml (a unit row and a common
 // row each way, so P3.1a takes its words every tick), and pack one with overlay/storage.toml and
@@ -88,8 +95,9 @@ func TestStep_AllocationsStayAtTheBaseline(t *testing.T) {
 		{"one", packOne, stepAllocBaseline, false},
 		{"one+faucet-sunk", packOneFaucetSunk, moneyStepAllocBaseline, false},
 		{"one+external-agent", packOne, externalAgentStepAllocBaseline, true},
-		{"one+storage", packOneStorage, storageStepAllocBaseline, false}, // NFR-STO-002: the off world's figure, see the constant
-		{"one+credit", packOneCredit, creditStepAllocBaseline, false},    // NFR-CRD-001: the settlement and the round work in scratch
+		{"one+storage", packOneStorage, storageStepAllocBaseline, false},                      // NFR-STO-002: the off world's figure, see the constant
+		{"one+credit", packOneCredit, creditStepAllocBaseline, false},                         // NFR-CRD-001: the settlement and the round work in scratch
+		{"one+infrastructure", packOneInfrastructure, infrastructureStepAllocBaseline, false}, // NFR-CAP-002: the step and the wear work in scratch
 		{"one+resources+tenure", append(slices.Clone(packOneResources), "overlay/tenure.toml"), tenureStepAllocBaseline, false},
 		{"two+transport", packTwoTransport, twoTransportStepAllocBase, false},
 		{"two+transport+risk", packTwoRisk, riskStepAllocBaseline, false},               // NFR-RSK-001: P3.1a and the dispatch work in scratch
