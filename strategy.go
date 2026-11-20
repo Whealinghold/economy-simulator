@@ -432,6 +432,11 @@ type RecipeView struct {
 	// of the draw times the rent of the endowment (spec-land.md 4.6.2); 0 while the
 	// tenure module is off.
 	Rent int64
+	// Hired is the effective yield of a hired execution of this recipe, in basis points:
+	// Effective with HireYieldBP in the place of the full yield, for a recipe on the
+	// agent's hire list in the hire form of the employment module, 0 for any other
+	// (spec-employment.md 9.1).
+	Hired int64
 }
 
 // BeliefTunables is the group of the fifteen belief parameters that
@@ -570,6 +575,13 @@ type AgentView struct {
 	// for the call (spec-storage.md 6.1.1). Limited is false with the storage module
 	// off and for an agent with no room.
 	Room RoomState
+	// Hireable says the agent's role is Hireable in the hire form of the employment
+	// module, so its offer is read (spec-employment.md 9.1); HasEmployer says Employer
+	// is the employer group of the agent's role. Both are false while the module is off
+	// or in its payroll form.
+	Hireable    bool
+	HasEmployer bool
+	Employer    EmployerView
 	// scratch is the working arrays of DefaultStrategy.Trade, set by the world's
 	// filler and nil in a view built by hand, for which Trade allocates its own
 	// (spec-agents.md 6.4.1; NFR-AGT-001 binds the world's views only).

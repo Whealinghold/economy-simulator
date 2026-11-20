@@ -52,6 +52,7 @@ var positionList = [...]position{
 	{"P2.7", "PRO", line},
 	{"P2.8", "SUB", line},
 	{"P2.8a", "OBS", line},
+	{"P2.8b", "EMP", line},
 	{"P3.1", "TRN", line},
 	{"P3.1a", "RSK", line},
 	{"P3.2", "AGT", line},
@@ -97,7 +98,6 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P1.3a",
-	"P2.8b",
 	"P3.3c", "P3.4a", "P3.6b",
 	"P8.1b",
 }
@@ -191,6 +191,9 @@ func (w *World) positionsProduce() error {
 		w.p28OwnUse()
 	}
 	w.p28aHalted()
+	if w.employment != nil {
+		w.p28bLabour()
+	}
 	return w.positionsPlan()
 }
 
