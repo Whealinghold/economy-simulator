@@ -96,3 +96,87 @@ func TestCanonical_SavingCopiesAndSortsWorth(t *testing.T) {
 		t.Error("canonical of a nil module or block is not nil")
 	}
 }
+
+// TestHash_ModuleIdsInOrder verifies that the pairs of the modules of ids 15 to 25 are
+// written in id order, whatever the order of the struct: the encoding of all eleven
+// together is the encoding of each alone, joined from id 15 to id 25, and a Modules with
+// none of them writes nothing. The ids pair with the continuation functions
+// (pairsLastModules 15 to 22, pairsTailModules 23, pairsEndModules 24 and 25), which the
+// Lizard split moves around.
+//
+// Requirement: FR-CFG-096
+//
+// Guard: a split of pairsModules that moves a block into the wrong continuation would
+// reorder the pairs and change the hash of every configuration with both modules on,
+// though each module alone would still hash the same.
+func TestHash_ModuleIdsInOrder(t *testing.T) {
+	t.Parallel()
+	setters := []func(m *Modules){
+		func(m *Modules) { m.Credit = &Credit{} },                 // 15
+		func(m *Modules) { m.Risk = &Risk{} },                     // 16
+		func(m *Modules) { m.Infrastructure = &Infrastructure{} }, // 17
+		func(m *Modules) { m.Insurance = &Insurance{} },           // 18
+		func(m *Modules) { m.Polity = &PolityConfig{} },           // 19
+		func(m *Modules) { m.Fiscal = &Fiscal{} },                 // 20
+		func(m *Modules) { m.Institutions = &Institutions{} },     // 21
+		func(m *Modules) { m.Policy = &PolicyConfig{} },           // 22
+		func(m *Modules) { m.Saving = &Saving{} },                 // 23
+		func(m *Modules) { m.Technology = &Technology{} },         // 24
+		func(m *Modules) { m.Estates = &Estates{} },               // 25
+	}
+	encode := func(m Modules) []byte {
+		e := &encoder{}
+		pairsModules(e, m)
+		return e.buf
+	}
+	if got := encode(Modules{}); len(got) != 0 {
+		t.Fatalf("pairsModules(Modules{}) = % x, want nothing", got)
+	}
+	var all Modules
+	var want []byte
+	for i, set := range setters {
+		var one Modules
+		set(&one)
+		alone := encode(one)
+		wantID := binary.BigEndian.AppendUint16(nil, uint16(15+i))
+		if len(alone) < 2 || !bytes.HasPrefix(alone, wantID) {
+			t.Fatalf("pairsModules with module %d alone = % x, want it to start with id %d", 15+i, alone, 15+i)
+		}
+		want = append(want, alone...)
+		set(&all)
+	}
+	if got := encode(all); !bytes.Equal(got, want) {
+		t.Errorf("pairsModules(ids 15 to 25) = % x, want the modules alone joined in id order % x", got, want)
+	}
+}
+
+// TestHash_NilSavingWritesNothing verifies that with no saving module and no Saver
+// block the encoding carries neither id 23 of Modules nor id 29 of Role, and that the
+// canonical copy keeps both nil: a configuration that does not use the module hashes
+// and copies as it did before the module existed (the pinned hash of the reference
+// configuration is the end-to-end proof, in hash_test.go).
+//
+// Requirement: FR-CFG-096, FR-SAV-001
+//
+// Guard: a pointer that is written when nil, or a canonical copy that turns nil into an
+// empty module, would move every existing hash and checkpoint.
+func TestHash_NilSavingWritesNothing(t *testing.T) {
+	t.Parallel()
+	e := &encoder{}
+	pairsModules(e, Modules{Policy: &PolicyConfig{}, Technology: &Technology{}})
+	with := &encoder{}
+	pairsModules(with, Modules{Policy: &PolicyConfig{}, Saving: &Saving{}, Technology: &Technology{}})
+	if len(with.buf) != len(e.buf)+4 {
+		t.Errorf("pairsModules with an empty module is %d bytes, want %d (the nil module's %d plus the empty pair 0017 0000)", len(with.buf), len(e.buf)+4, len(e.buf))
+	}
+	c := Config{Roles: []Role{{ID: "a"}}}
+	cp := c.canonical()
+	if cp.Modules.Saving != nil || cp.Roles[0].Saver != nil {
+		t.Errorf("canonical of a nil module and block = %v, %v, want both nil", cp.Modules.Saving, cp.Roles[0].Saver)
+	}
+	r := &encoder{}
+	pairsRole(r, Role{ID: "a"}, false, false)
+	if bytes.Contains(r.buf, binary.BigEndian.AppendUint16(nil, 29)) {
+		t.Errorf("pairsRole of a role with no block = % x, want no id 29", r.buf)
+	}
+}
