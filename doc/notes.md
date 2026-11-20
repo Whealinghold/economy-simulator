@@ -62,7 +62,7 @@ PR description.
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361, N-485 |
 | EXT | N-108, N-112, N-113, N-214 |
-| FIS | N-504, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-475, N-483 |
+| FIS | N-505, N-506, N-504, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-475, N-483 |
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
@@ -91,8 +91,8 @@ PR description.
 | STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485, N-458 |
 | SUB | N-121, N-228, N-268, N-244, N-426 |
 | TEC | N-358, N-359, N-360, N-361, N-384 |
-| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434, N-459 |
-| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383, N-522, N-523 |
+| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434, N-459, N-505 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383, N-522, N-523, N-505 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346, N-472, N-491 |
 | WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438, N-475, N-480 |
 
@@ -2813,6 +2813,18 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-fis PR 4 observability review.
 - **Note:** `spec-fiscal.md` 8.2 and 8.4.3 named only the `MaxMoney` headroom as a cut at a recipient. The code (`fiscal_payout.go`, `room`) also caps an in-kind payout at the units the free store room of a household with a room limit can hold (mass and bulk, `spec-storage.md` 4.1.3), because the ledger would refuse the credit with `ErrNoRoom`. The unpaid remainder stays in the treasury and is counted in `FiscalFlowApplied.Headroom` (not `Cut`, which is the pro rata cut of a short treasury); 8.4.3 now says so. The owner accepted this on 2026-11-19. Still open: no rule makes the recipient or the pack see that a payout was refused for room, other than that count; if a pack wants the payout to wait, that is a new rule, not this note.
 
+### N-505 The viability lanes and the merchant's fee-share test do not count a toll
+
+- **Areas:** FIS, VIA, TRN
+- **Raised:** 2026-11-20, plan 3-fis PR 5, `transport_lanes.go`, `strategy/merchant_ship.go`.
+- **Note:** A toll (`spec-fiscal.md` 7) is counted in one place of the merchant: the haul ceiling of `spec-merchants.md` 5.6 subtracts `n * Toll` from the gross margin (`RouteRow.Toll`). The cost of carriage `C` of the fee-share test (5.5) and the lanes that `transport_lanes.go` hands to the viability solver (`Lane`: labour and `LossBP`) do not include it, so a pack with a toll sees the viability gate and the merchant's pass test overrate a lane that crosses a border; the trip is then not made by its own haul bid (the ceiling falls below 1) or is refused at dispatch (`toll_unaffordable`), not rejected at the test. Left open for VIA and MER: add the toll of a carrying unit to a lane only if a pack shows the gap.
+
+### N-506 The Parties of a toll counts a shipper once for each flow for each shipment
+
+- **Areas:** FIS
+- **Raised:** 2026-11-20, plan 3-fis PR 5, `fiscal_toll.go`.
+- **Note:** `spec-fiscal.md` 16.1 defines `Parties` as the payers with a due, as the sum of weights. A toll has no per-tick payer list, only the shipments of P3.2(c) and P3.3, so `chargeToll` adds the shipper's weight once for each flow for each shipment: a household that sends two shipments across one border in a tick is counted twice in `Parties` of that toll. The count of distinct shippers would need a per-tick set. Left open for FIS: say so in 16.1 or count distinct shippers, whichever the first consumer of `Parties` needs.
+
 ### N-500 The checkpoint section of tag 24 saves the wages paid
 
 - **Areas:** EMP, CHK
@@ -2901,4 +2913,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 00706acf449ea4849a9ecbc2
+NOTES-TAG: c3d1eafc98fffe7f89eea584
