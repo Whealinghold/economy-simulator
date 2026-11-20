@@ -66,7 +66,7 @@ PR description.
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
-| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-496 |
+| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-494, N-496 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436, N-471 |
 | LND | N-504, N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475, N-484 |
@@ -81,7 +81,7 @@ PR description.
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470, N-458, N-459, N-460, N-461 |
-| SAV | N-145, N-156, N-195, N-362, N-382, N-475, N-490, N-491, N-492, N-493, N-495, N-496 |
+| SAV | N-145, N-156, N-195, N-362, N-382, N-475, N-490, N-491, N-492, N-493, N-495, N-496, N-497 |
 | SCL | N-030, N-198, N-222, N-300, N-493 |
 | SET | N-404, N-140, N-192, N-268, N-348, N-365 |
 | SKL | N-464, N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
@@ -2789,11 +2789,11 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-saving-and-investment.md` 4.1.4 and open question 3.
 - **Note:** The drawdown is `O(window)` per agent with a block and per view, so twice a tick, with no cache. `BenchmarkDrawdown` (PR 1) measured 17.6 microseconds and no allocation at `MaxWelfareWindow` 3 650, which is a cost of 35 microseconds a tick for an agent at the longest window and 1 microsecond at the default of 30. A per-tick cache or a running form needs state and is built only if a scenario at scale shows a cost. Left open for SCL.
 
-### N-494 Two config tests use `modules.saving` as an unbuilt module
+### N-494 Two config tests use `modules.insurance` as an unbuilt module
 
-- **Areas:** CFG, CODE
-- **Raised:** 2026-11-19, plan 3-sav PR 1, `config/config_test.go` and `config/demand_test.go`.
-- **Note:** Both tests use `[modules.saving]` as "a module that is not built". When PR 2 of plan 3-sav builds the module they need another unbuilt module, or the test of an unknown key. Left open for PR 2.
+- **Areas:** CFG, INS, CODE
+- **Raised:** 2026-11-19, plan 3-sav PR 1, `config/config_test.go` and `config/demand_test.go`; updated 2026-11-20, plan 3-sav PR 2.
+- **Note:** Both tests use `[modules.<name>]` as "a module that is not built". PR 2 of plan 3-sav built `saving`, so they now use `insurance`, the last module that is not built. When INS builds it no module is left unbuilt: the two cases then test an unknown key of a made-up module name. Left open for INS.
 
 ### N-495 The `economysim.limit` sentence of `spec-saving-and-investment.md` 12.3 was false
 
@@ -2806,6 +2806,12 @@ PR description.
 - **Areas:** CFG, INS, SAV
 - **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-config.md` 8.2.2.
 - **Note:** The hash ids of the `Role` fields are 28 for `Cover` (insurance) and 29 for `Saver`, reserved in one edit so that the order in which the two modules are built cannot make them collide. INS takes 28 when it is built. Left open for INS.
+
+### N-497 The warnings of the saving module that read prices judge a weight of 1 that holds nothing
+
+- **Areas:** SAV, CODE
+- **Raised:** 2026-11-20, plan 3-sav PR 2, `saving_validate.go`, `spec-saving-and-investment.md` 11.2.
+- **Note:** `project_below_hurdle`, `spread_below_margin` and `saving_target_exceeds_money` are pure functions of the configuration, so they value the best build project of a role at the reference prices of the regions it has a group in, for a household of weight 1 that holds no facility, with the yield of a recipe as written (no yield profile, season, technology, draw rent or belief) and the precaution at 0 (the drawdown is state). The last sums, over the groups, the households times the reserve plus the outlay of the role's best build project, against the households times `StartMoney` of every group. A repair is not valued (it needs a facility held). The spec words are loose on both points; settle them in 11.2 when STY runs the first pack. Left open.
 
 ### N-504 An in-kind payout to a store-limited household stops at its free store room
 
@@ -2901,4 +2907,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 00706acf449ea4849a9ecbc2
+NOTES-TAG: ae295d863d490b8f466db58e

@@ -356,7 +356,7 @@ with the slice (`vision.md` section 4).
 | `fiscal.go`, `internal/fiscal` (plan 3-fis, status: plan written; PR 1 in development) | FIS | POL, MON, CLR, TRN, EXT, LED, WEL, CAL, CHK, OBS, INT, MER, STO, EST |
 | `institutions.go`, `internal/institution` (plan 3-org, status: plan written; PR A merged; PR B in development; six continuation files `institutions_validate.go`, `institutions_warn.go`, `institutions_round.go`, `institutions_rights.go`, `institutions_legal.go`, `institutions_report.go`) | ORG | POL, SKL, SET |
 | `policy.go`, `internal/policy` (`Policy`, `WithPolicy`, `DirectPolicy`; plan 3-plc, status: plan written; PR A in development; seven continuation files `policy_validate.go`, `policy_reach.go`, `policy_warn.go`, `policy_view.go`, `policy_apply.go`, `policy_builtin.go`, `policy_state.go`) | PLC | POL, FIS, INT |
-| `saving.go`, `internal/saving` (plan 3-sav, status: plan written; PR 1 in development; four continuation files `saving_validate.go`, `saving_view.go`, `saving_strategy.go`, `saving_report.go`) | SAV | CAP, WEL |
+| `saving.go`, `internal/saving` (plan 3-sav, status: plan written; PR 1 merged, PR 2 (the configuration surface) in development; four continuation files `saving_validate.go`, `saving_view.go`, `saving_strategy.go`, `saving_report.go`) | SAV | CAP, WEL |
 | `technology.go`, `internal/technology` | TEC | PRO, REG, CAL (plan 3-tec; PRs A and B merged, PR C developed on `s3-tec-c`: tag 33, golden, S149 to S154; gates pending) |
 
 Each ships as a stage 2 module does. The checkpoint tag of each is appended
