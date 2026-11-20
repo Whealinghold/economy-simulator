@@ -133,6 +133,13 @@ const (
 	// are declared rows, open no boundary account and are no faucet and no sink.
 	WageEscrow
 	WageRefund
+	// Premium is the money an insured pays an underwriter for a policy at its
+	// formation (spec-insurance.md 9.1): agent to agent. Payout is the money an
+	// underwriter pays an insured for the loss of a policy at its settlement:
+	// agent to agent. Both are declared rows with their pinned codes 30 and 31, open
+	// no boundary account and are no faucet and no sink.
+	Premium
+	Payout
 	// NumReasons is the number of reasons the ledger knows.
 	NumReasons
 )
@@ -267,6 +274,11 @@ var table = [NumReasons][2]row{
 	// loss is a goods sink from a Transit or an agent account to the boundary
 	// (spec-risk.md 7.1, spec-ledger.md 7.2): no money form and no estate form.
 	Loss: {thingGoods: {true, Sink, setTransit | setAgent, setBoundary, false, true, 36}},
+	// premium runs from the insured to the underwriter and payout from the
+	// underwriter to the insured, both between agents (spec-insurance.md 9.1): money
+	// only, no estate, the rows 30 and 31 of the table.
+	Premium: {thingMoney: {true, Internal, setAgent, setAgent, false, true, 30}},
+	Payout:  {thingMoney: {true, Internal, setAgent, setAgent, false, true, 31}},
 }
 
 // isDeclared reports whether reason r is a declared reason: one whose row a

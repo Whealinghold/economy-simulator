@@ -280,6 +280,15 @@ func (s *storage) boundExecutions(l *ledger.Ledger, q *startReq, k0 int64, reaso
 	return k, reason
 }
 
+// roomFits says the principal's room holds the output of k executions of the request, as
+// the start would bound them: the check of a hire at formation (spec-employment.md 5.5,
+// check 11). A principal that is not limited always fits.
+func (s *storage) roomFits(l *ledger.Ledger, q *startReq, k int64) bool {
+	var cut int64
+	got, _ := s.boundExecutions(l, q, k, "", &cut)
+	return got >= k
+}
+
 // recipeInputs lists the inputs of a recipe as quantities with the size of a unit, in
 // a scratch the next call overwrites.
 func (s *storage) recipeInputs(recipe RecipeID) []room.Item {

@@ -606,6 +606,29 @@ const (
 	MaxOpenClaims = 1_000_000
 )
 
+// The bounds of the insurance module (spec-insurance.md 13). All are placeholders
+// (N-015, N-027). Insurance.PayoutTicks reuses MaxCreditTerm.
+const (
+	// MaxValueCapBP is the largest cap on a unit's value, ten times the reference
+	// price: a larger cap is a typing error, and the product with MaxPrice fits int64.
+	MaxValueCapBP = 100_000
+	// MaxLoadingBound is the largest loading, ten times the fair premium; with
+	// MaxMoney, 10 000 and 10 000 the premium product fits 128 bits.
+	MaxLoadingBound = 100_000
+	// MaxStoreRateBound is the largest store rate for one tick: the whole sum insured.
+	MaxStoreRateBound = 10_000
+	// MaxCapBound is the largest cap on an underwriter's open liability, ten times
+	// its money: a leverage above it is a typing error.
+	MaxCapBound = 100_000
+	// MaxRuinBound is the largest ruin share, ten times the household's money.
+	MaxRuinBound = 100_000
+	// MaxOpenPolicies is the most policies open at once, the bound of
+	// Insurance.MaxPolicies.
+	MaxOpenPolicies = 1_000_000
+	// MaxCoverRequestsBound is the most requests in one plan: the loop of a plan.
+	MaxCoverRequestsBound = 64
+)
+
 // The bounds of the tenure module (spec-land.md 10). All are placeholders (N-015,
 // N-027).
 const (

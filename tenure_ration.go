@@ -498,11 +498,44 @@ func (t *tenure) payRent(c *tenureCount, x rentStart, lessor AgentID, units int6
 	}
 }
 
+// hireBound is check 8 of the labour round for a block of m executions of recipe by the
+// principal in region, as bounds (spec-land.md 4.7.2): ReasonNoTitle when by the rule of
+// 4.5.1 no unit of the stock is open to the principal for even one execution, and
+// ReasonRentFunds when its money, less spent, cannot pay the least rent the block could
+// owe over its draws; "" when neither holds. The stock is the snapshot of P2.3, which the
+// check of no_endowment has passed for m executions.
+func (t *tenure) hireBound(principal AgentID, region RegionID, recipe RecipeID, m, spent int64) Reason {
+	r := t.world.res
+	var rent int64
+	for _, d := range r.drawsOf[recipe] {
+		cell := r.cellOf(region, d.resource)
+		if !t.titled(cell) {
+			continue
+		}
+		if t.open(cell, principal) < d.quantity {
+			return ReasonNoTitle
+		}
+		least, fits := t.leastRent(principal, cell, m, d.quantity)
+		if !fits {
+			return ReasonRentFunds
+		}
+		var sum int64
+		if sum, fits = checked.Add(rent, least); !fits {
+			return ReasonRentFunds
+		}
+		rent = sum
+	}
+	if rent > max(t.spendable(principal)-spent, 0) {
+		return ReasonRentFunds
+	}
+	return ""
+}
+
 // leastRent is the least rent a job of executions executions of draw units could owe on an
 // endowment: the rent in force on the units left after the principal's own entitlement and
 // the whole commons (spec-land.md 4.7.2), 0 when its own entitlement covers the draw. The
-// formation of a hire (EMP) will call it as a bound; ok is false when the product does not
-// fit.
+// formation of a hire (EMP, hireBound) calls it as a bound; ok is false when the product
+// does not fit.
 func (t *tenure) leastRent(principal AgentID, cell int, executions, draw int64) (int64, bool) {
 	var commons int64
 	if cell < len(t.rt.commons) {

@@ -125,11 +125,15 @@ func (v *AgentView) reserveMoney(p household.Params) int64 {
 // agent's beliefs (7.1.4): the non-discard outputs at the effective yield, the
 // inputs, and the wear of the tools by production.WearCost (D90). ok is false
 // on overflow.
-func (v *AgentView) recipeNet(r *RecipeView) (int64, bool) {
+func (v *AgentView) recipeNet(r *RecipeView) (int64, bool) { return v.recipeNetAt(r, r.Effective) }
+
+// recipeNetAt is recipeNet at the yield effective, which a hire's value is taken at
+// (spec-employment.md 4.3.3).
+func (v *AgentView) recipeNetAt(r *RecipeView, effective int64) (int64, bool) {
 	var n household.Net
 	for _, o := range r.Outputs {
 		if !o.Discard {
-			n.Output(o.Quantity, r.Effective, v.centreOf(o.Commodity))
+			n.Output(o.Quantity, effective, v.centreOf(o.Commodity))
 		}
 	}
 	for _, in := range r.Inputs {

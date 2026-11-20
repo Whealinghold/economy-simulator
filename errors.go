@@ -625,6 +625,15 @@ var (
 	ErrCreditShape = errors.New("credit block has the wrong shape")
 )
 
+// The sentinels of the insurance module (spec-insurance.md 14.1, FR-INS-010). The
+// module reuses ErrOutOfBounds, ErrModuleDependency, ErrReasonCollision,
+// ErrMissingField, ErrUnknownRole, ErrDuplicateID and ErrModuleOff.
+var (
+	// ErrCoverShape is a CoverTerms with both Underwrite and Insure, or with neither: a
+	// role underwrites or insures, never both.
+	ErrCoverShape = errors.New("cover block has the wrong shape")
+)
+
 // The sentinels of the tenure module (spec-land.md 9.4, 11.1, FR-LND-038). The module
 // reuses ErrModuleDependency, ErrUnknownRegion, ErrUnknownResource, ErrUnknownRole,
 // ErrOutsideNode, ErrDuplicateID, ErrOutOfBounds, ErrReasonCollision, ErrOverflow,

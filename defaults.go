@@ -252,6 +252,12 @@ const DefaultMerchantFeeShare = 5_000
 // tunable of spec-merchants.md 13: at most 1 000 contracts open (N-015, N-027).
 func DefaultMerchants() Merchants { return Merchants{MaxOpen: 1_000} }
 
+// DefaultInsurance returns the insurance module with the two defaults of
+// spec-insurance.md 4.1.2: a payout claim due one tick after its formation and at
+// most four cover requests in a plan. ValueCapBP, MinSum and MaxPolicies have no
+// default, so the value does not validate until the caller sets them (N-015, N-027).
+func DefaultInsurance() Insurance { return Insurance{PayoutTicks: 1, MaxCoverRequests: 4} }
+
 // DefaultMerchant returns a merchant block with the placeholder tunables of
 // spec-merchants.md 13 (N-015, N-027): a lot of one carrying unit, a fee share
 // spread of 2 500, a rumour acted on up to 2 ticks old, a tick away costing one
