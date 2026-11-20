@@ -47,19 +47,7 @@ func TestViews_CoverGroupOnlyForARoleWithABlock(t *testing.T) {
 	w, _ := newInsWorld(t, insConfig(defaultInsure(), defaultUnderwrite()), nil)
 	t.Run("an insured has the Insure block only", func(t *testing.T) {
 		t.Parallel()
-		ins := viewOf(t, w, insHome)
-		if ins.Insurance == nil || ins.Insurance.Insure == nil || ins.Insurance.Underwrite != nil {
-			t.Fatalf("insured's group = %+v, want an Insure block only", ins.Insurance)
-		}
-		if g := ins.Insurance; g.MinSum != 10 || g.MaxCoverRequests != 4 || g.ValueCapBP != 20_000 || g.Money != ins.Money {
-			t.Errorf("insured's figures = %+v, want MinSum 10, MaxCoverRequests 4, ValueCapBP 20000 and the money of the view", g)
-		}
-		if got := ins.Insurance.UnitValue; len(got) != len(w.cfg.Commodities) || got[flour] != 3_000 || got[grain] != 1_000 {
-			t.Errorf("unit values = %v, want flour 3000 and grain 1000 of %d commodities", got, len(w.cfg.Commodities))
-		}
-		if len(ins.Insurance.LaneLoss) != len(ins.Routes) {
-			t.Errorf("LaneLoss has %d rows, want one for each of the %d routes", len(ins.Insurance.LaneLoss), len(ins.Routes))
-		}
+		checkInsuredView(t, w, viewOf(t, w, insHome))
 	})
 	t.Run("an underwriter has the Underwrite block and a capacity", func(t *testing.T) {
 		t.Parallel()
@@ -78,6 +66,28 @@ func TestViews_CoverGroupOnlyForARoleWithABlock(t *testing.T) {
 			t.Errorf("a role with no cover block has the group %+v, want nil", v.Insurance)
 		}
 	})
+}
+
+// checkInsuredView fails the test unless v is the view of an insured of insConfig: the
+// Insure block only, the module's figures, the unit values and one lane loss for each route.
+func checkInsuredView(t *testing.T, w *World, v *AgentView) {
+	t.Helper()
+	g := v.Insurance
+	if g == nil || g.Insure == nil || g.Underwrite != nil {
+		t.Fatalf("insured's group = %+v, want an Insure block only", g)
+	}
+	if got, want := []int64{g.MinSum, g.MaxCoverRequests, g.ValueCapBP, g.Money}, []int64{10, 4, 20_000, v.Money}; !slices.Equal(got, want) {
+		t.Errorf("insured's MinSum, MaxCoverRequests, ValueCapBP and Money = %v, want %v", got, want)
+	}
+	if len(g.UnitValue) != len(w.cfg.Commodities) {
+		t.Fatalf("%d unit values, want one for each of the %d commodities", len(g.UnitValue), len(w.cfg.Commodities))
+	}
+	if got, want := []int64{g.UnitValue[flour], g.UnitValue[grain]}, []int64{3_000, 1_000}; !slices.Equal(got, want) {
+		t.Errorf("unit values of flour and grain = %v, want %v", got, want)
+	}
+	if len(g.LaneLoss) != len(v.Routes) {
+		t.Errorf("LaneLoss has %d rows, want one for each of the %d routes", len(g.LaneLoss), len(v.Routes))
+	}
 }
 
 // coverView is a hand-built view of an insured at home with 100 000 money, a route to
