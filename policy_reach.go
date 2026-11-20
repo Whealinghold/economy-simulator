@@ -390,6 +390,21 @@ func policyLeverEdges(pol Polity, g Graph, j, other JurisdictionID) []EdgeID {
 	return slices.Compact(out)
 }
 
+// policyEdgeIDs returns the edges an edge lever of jurisdiction j holds, in ascending
+// EdgeID: the group an Against expands to, or the one edge (From, To) (spec-policy.md
+// 3.4.3). The lever is valid, so its names are found. The world resolves its levers
+// with it at construction, and the validator reads the keys through it.
+func policyEdgeIDs(pol Polity, g Graph, j JurisdictionID, l Lever) []EdgeID {
+	if l.Against != "" {
+		other, _ := pol.Lookup(l.Against)
+		return policyLeverEdges(pol, g, j, other)
+	}
+	from, _ := g.Lookup(l.From)
+	to, _ := g.Lookup(l.To)
+	e, _ := g.Edge(from, to)
+	return []EdgeID{e.ID}
+}
+
 // leverKeys returns the keys a lever holds as comparable text, in ascending key order:
 // the flow ID, the edge IDs, or the transit triple (spec-policy.md 3.4.4, 3.5.2).
 func (k *policyCheck) leverKeys(j JurisdictionID, l Lever) []string {
@@ -399,19 +414,12 @@ func (k *policyCheck) leverKeys(j JurisdictionID, l Lever) []string {
 	case LeverTransit:
 		return []string{"transit:" + l.From + ">" + l.To + ":" + l.Mode}
 	}
-	if l.Against != "" {
-		other, _ := k.pol.Lookup(l.Against)
-		edges := policyLeverEdges(k.pol, k.g, j, other)
-		out := make([]string, len(edges))
-		for x, e := range edges {
-			out[x] = "edge:" + itoa(int(e))
-		}
-		return out
+	edges := policyEdgeIDs(k.pol, k.g, j, l)
+	out := make([]string, len(edges))
+	for x, e := range edges {
+		out[x] = "edge:" + itoa(int(e))
 	}
-	from, _ := k.g.Lookup(l.From)
-	to, _ := k.g.Lookup(l.To)
-	e, _ := k.g.Edge(from, to)
-	return []string{"edge:" + itoa(int(e.ID))}
+	return out
 }
 
 // keys is ErrTooMany for an Against that expands to more than MaxLeverKeys, ErrDuplicateID

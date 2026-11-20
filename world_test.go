@@ -251,6 +251,7 @@ func TestNewWorld_HashAndOptions(t *testing.T) {
 		{"WithClearing", named, []economysim.Option{economysim.WithClearing("mine", nopClearing{})}, true},
 		{"WithStrategy", base, []economysim.Option{economysim.WithStrategy("mine", economysim.DefaultStrategy{})}, false},
 		{"WithSpawner", base, []economysim.Option{economysim.WithSpawner("mine", economysim.DefaultSpawner{})}, false},
+		{"WithPolicy", base, []economysim.Option{economysim.WithPolicy("mine", economysim.HoldPolicy{})}, false},
 	}
 	var covered []string
 	for _, tt := range tests {
