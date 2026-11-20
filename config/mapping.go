@@ -374,6 +374,12 @@ func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Policy = l.policy(ps)
 		ps.finish()
 	}
+	l.tailModules(m, cfg)
+}
+
+// tailModules reads the tables of saving and insurance, in that order (a continuation of
+// lastModules for the Lizard limit).
+func (l *loader) tailModules(m *tbl, cfg *economysim.Config) {
 	if ss := m.sub("saving"); ss != nil {
 		cfg.Modules.Saving = savingModule(ss)
 		ss.finish()
