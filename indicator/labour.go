@@ -65,9 +65,11 @@ func Unemployment(w Window) (UnemploymentResult, error) {
 	if err = res.sums(w); err != nil {
 		return UnemploymentResult{}, err
 	}
-	res.ByReason, err = refusalRows(w)
+	if res.ByReason, err = refusalRows(w); err != nil {
+		return UnemploymentResult{}, err
+	}
 	res.Warnings = clampWarning(res.Warnings, res.Total.Rate)
-	return res, err
+	return res, nil
 }
 
 // unemploymentRate fills the rate of a row.
@@ -202,9 +204,11 @@ func WageBill(w Window, g GDPResult) (WageBillResult, error) {
 		paid.addInt(measure.FromInt64(int64(l.Paid)))
 		refunded.addInt(measure.FromInt64(int64(l.Refunded)))
 	}
-	err := res.finish(g, paid, refunded)
+	if err := res.finish(g, paid, refunded); err != nil {
+		return WageBillResult{}, err
+	}
 	res.Warnings = clampWarning(res.Warnings, res.Realm.Share, res.Realm.ShareCash)
-	return res, err
+	return res, nil
 }
 
 // wageRow is the wage row of a region: the GDP row of the region gives the value added.

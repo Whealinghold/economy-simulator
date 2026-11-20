@@ -69,8 +69,10 @@ func Employment(w Window, cfg economysim.Config, closing economysim.Snapshot) (E
 	if res.Rows, err = employmentRows(w, cfg, closing); err != nil {
 		return EmploymentResult{}, err
 	}
-	err = res.window(w, cfg)
-	return res, err
+	if err = res.window(w, cfg); err != nil {
+		return EmploymentResult{}, err
+	}
+	return res, nil
 }
 
 // employmentRows reads the role rows of the closing snapshot of the hireable and the
