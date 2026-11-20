@@ -237,9 +237,12 @@ func TestCheckpoint_PolicyRefusesCorrupt(t *testing.T) {
 		{"body ends inside a row", good[:len(good)-1]},
 		{"trailing byte", append(slices.Clone(good), 0)},
 	} {
-		if _, err := loadPolicyBody(t, tc.body); !errors.Is(err, codec.ErrMalformed) {
-			t.Errorf("%s: loadPolicy() error = %v, want a malformed body", tc.name, err)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if _, err := loadPolicyBody(t, tc.body); !errors.Is(err, codec.ErrMalformed) {
+				t.Errorf("loadPolicy() error = %v, want a malformed body", err)
+			}
+		})
 	}
 }
 
