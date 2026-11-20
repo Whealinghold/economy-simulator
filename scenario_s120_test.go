@@ -84,6 +84,9 @@ func TestScenarioS120_SiteAndRepair(t *testing.T) {
 			if with.repaired < 1 || with.kinds["repaired/recipe"] != int(with.repaired) {
 				t.Errorf("repaired: %d repair executions, %d repaired events, want at least one, and one event for each", with.repaired, with.kinds["repaired/recipe"])
 			}
+			if without.prepared > 125 {
+				t.Errorf("unrepaired: %d executions of prepare, want 125 or fewer (starts refused after the ruin)", without.prepared)
+			}
 			if with.prepared <= without.prepared {
 				t.Errorf("executions of prepare: %d with repair, %d without, want more with", with.prepared, without.prepared)
 			}

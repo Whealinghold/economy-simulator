@@ -59,9 +59,10 @@ func footTicks(t *testing.T, w *economysim.World, cfg economysim.Config, from, t
 // AddFacilities and built by a directed cook of the north with a 3-tick recipe. Exact: the
 // 100-long edge takes 5 ticks on foot with no road and 4 with it (F = 16 000), in both
 // directions; the edge between the south and the far south is not speeded; the built road
-// changes no journey in the tick it is completed (the effect enters the table at the next
-// P8.3b, FR-CAP-016) and gives the planted road's journey after it; the world with no road
-// never changes. The free-rider comparison and a shipment in flight are not in this test: the
+// changes no journey before its completion (a 3-tick recipe, so the ticks 0 and 1 read 5) and
+// gives the planted road's journey from the completing tick on: the effect enters the table at
+// that tick's P8.3b, after every position that could read it (FR-CAP-016); the world with no
+// road never changes. The free-rider comparison and a shipment in flight are not in this test: the
 // shipment in flight is proved by TestRoute_BothEdges and the price gap is a report of the
 // calibration platform.
 //
@@ -87,8 +88,13 @@ func TestScenarioS121_Road(t *testing.T) {
 			capStep(t, w)
 		}
 		got := footTicks(t, built, cfg, "north", "south")
-		if tick < 2 && got != 5 {
-			t.Errorf("tick %d: journey %d with the road not completed, want 5", tick, got)
+		if want := int64(4); tick < 2 {
+			want = 5
+			if got != want {
+				t.Errorf("tick %d: journey %d with the road not completed, want 5", tick, got)
+			}
+		} else if got != want {
+			t.Errorf("tick %d: journey %d after the completing tick's P8.3b, want 4", tick, got)
 		}
 	}
 	checkJourneys(t, cfg, none, planted, built)
