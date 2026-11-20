@@ -50,7 +50,7 @@ PR description.
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
 | CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-388, N-438, N-475, N-492, N-520, N-521, N-522, N-523, N-524 |
-| CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-494, N-496, N-483, N-461, N-522 |
+| CFG | N-476, N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-494, N-496, N-483, N-461, N-522 |
 | CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444, N-471, N-480, N-500, N-502 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241, N-457 |
@@ -66,7 +66,7 @@ PR description.
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
-| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-496 |
+| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436, N-471 |
 | LND | N-504, N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475, N-484 |
@@ -2531,6 +2531,12 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-ins R5.
 - **Note:** `fillAgentView` and `arrive` are at CCN 10 and the callers of P1.3, P3.3b and the phase 8 tail may reach 10 with one more call. Whichever module lands first makes the refactor-first split of the shared function; the others rebase onto it. The order of the tail is P8.1, P8.1a, P8.1b, P8.2, then P8.3a to P8.3c, and of the removal steps 2d, 2e, 2f, 2g.
 
+### N-476 Two insurance warnings read the configuration alone
+
+- **Areas:** INS, CFG
+- **Raised:** 2026-11-19, plan 3-ins PR B, `spec-insurance.md` 14.2.
+- **Note:** `cover_no_insured` is raised from the roles alone: a consumer's strategy that could request cover is not known to `Config`, so the warning says only that no role has an `Insure` block (informational, as CRD's `credit_no_borrower`). `cover_below_minimum` has no shipment in the configuration to size, so it reads the households' `StartMoney` as the bound of a first cargo: it is raised when `MinSum` is above the `StartMoney` of every insured role. Both are placeholders (N-015). The paths of the field errors are `roles.<id>.cover.<block>.<key>`, as `roles.<id>.credit` is, not the `role.<id>` of the spec's example. Left open for a reader of a later run (the sum of a real planned shipment) and for the spec to say so.
+
 ## Read receipt
 
 ### N-358 A gain is not a recipe
@@ -2803,9 +2809,9 @@ PR description.
 
 ### N-496 `Role.Cover` 28 and `Role.Saver` 29 are reserved
 
-- **Areas:** CFG, INS, SAV
+- **Areas:** CFG, SAV
 - **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-config.md` 8.2.2.
-- **Note:** The hash ids of the `Role` fields are 28 for `Cover` (insurance) and 29 for `Saver`, reserved in one edit so that the order in which the two modules are built cannot make them collide. INS takes 28 when it is built. Left open for INS.
+- **Note:** The hash ids of the `Role` fields are 28 for `Cover` (insurance) and 29 for `Saver`, reserved in one edit so that the order in which the two modules are built cannot make them collide. INS took 28 when it was built (plan 3-ins PR B: `pairsRole` writes `Cover` at id 28). Left open for SAV, which takes 29.
 
 ### N-504 An in-kind payout to a store-limited household stops at its free store room
 
@@ -2901,4 +2907,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 00706acf449ea4849a9ecbc2
+NOTES-TAG: ae75e55fff444698df0c98a7

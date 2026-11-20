@@ -325,6 +325,12 @@ const (
 	// Transit or an agent account to the boundary (spec-risk.md 7.1), reserved as a
 	// money flow ID while the risk module is on.
 	ReasonLoss Reason = "loss"
+	// ReasonPremium is the money an insured pays an underwriter for a policy at its
+	// formation, and ReasonPayout the money an underwriter pays an insured for the
+	// loss of a policy (spec-insurance.md 9.1): internal transfers of money, agent
+	// to agent, no faucet and no sink. Both are reserved words for a money flow ID.
+	ReasonPremium Reason = "premium"
+	ReasonPayout  Reason = "payout"
 )
 
 // The declared ledger reasons of the external module, six rows declared while
@@ -2866,3 +2872,28 @@ type RightSuspensionSet struct {
 }
 
 func (RightSuspensionSet) isEvent() {}
+
+// PolicyDecided is emitted at P0.3a once per due policy actor whose decision has any count
+// above zero, after the slot events of its application (spec-policy.md 12.1). It is
+// never emitted for an actor that returned nothing and held nothing for a reason, and never
+// for hold. It is emitted only with the policy module on. Every field is an int64 or an ID.
+type PolicyDecided struct {
+	Tick int64
+	// Actor is the policy actor and Jurisdiction the jurisdiction it is attached to.
+	Actor        ActorID
+	Jurisdiction JurisdictionID
+	// Entries is the count of entries the policy returned, and Applied, Unchanged,
+	// NotHeld, Duplicate and NoClose are what became of them: Entries is their sum. Applied
+	// counts the levers a key of which changed, Unchanged the entries that left every key as
+	// it was, NotHeld the lever IDs outside the actor's levers, Duplicate the second entry
+	// for a lever and NoClose the closings the lever may not make.
+	Entries, Applied, Unchanged, NotHeld, Duplicate, NoClose int64
+	// Clamped and Stepped count the entries whose number the bounds cut and the step limit
+	// cut; an entry may be both.
+	Clamped, Stepped int64
+	// InBand and NoReading are the reactions of a rule that returned no entry: the reading
+	// was inside the rest band, or the gauge was undefined.
+	InBand, NoReading int64
+}
+
+func (PolicyDecided) isEvent() {}

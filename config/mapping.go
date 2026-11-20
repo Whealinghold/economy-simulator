@@ -374,6 +374,10 @@ func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Policy = l.policy(ps)
 		ps.finish()
 	}
+	if is := m.sub("insurance"); is != nil {
+		cfg.Modules.Insurance = insuranceModule(is)
+		is.finish()
+	}
 }
 
 // fiscal reads [modules.fiscal] (spec-config.md 6.2, spec-fiscal.md 3.1, 18): a flow of
@@ -739,6 +743,50 @@ func creditTerms(t *tbl) *economysim.CreditTerms {
 	return &c
 }
 
+// insuranceModule reads [modules.insurance] (spec-config.md 6.2, spec-insurance.md
+// 4.1): the five keys of the module over DefaultInsurance, so that payout_ticks and
+// max_cover_requests take their defaults when absent. A key-less table switches the
+// module on, and the other keys are optional here: the bounds of Validate say
+// value_cap_bp, min_sum and max_policies must be set.
+func insuranceModule(t *tbl) *economysim.Insurance {
+	m := economysim.DefaultInsurance()
+	readInts(t, []intField{
+		{"value_cap_bp", &m.ValueCapBP}, {"payout_ticks", &m.PayoutTicks},
+		{"min_sum", &m.MinSum}, {"max_policies", &m.MaxPolicies},
+		{"max_cover_requests", &m.MaxCoverRequests},
+	})
+	return &m
+}
+
+// coverTerms reads the table [role.<id>.cover] (spec-insurance.md 4.2): the sub-tables
+// underwrite and insure, each a block of its own, so that layers merge by key. A field
+// whose bound admits 0 and that has no default is required in a block that is written:
+// a file that omits it is ErrMissingField, since a missing one must never be a silent
+// free cover or no cover (FR-INS-011). A table with neither sub-table is an empty
+// block, which Validate refuses with ErrCoverShape.
+func coverTerms(t *tbl) *economysim.CoverTerms {
+	var c economysim.CoverTerms
+	if us := t.sub("underwrite"); us != nil {
+		var u economysim.UnderwriteTerms
+		us.need("loading_bp", integer(us, "loading_bp", &u.LoadingBP))
+		us.need("store_rate_bp", integer(us, "store_rate_bp", &u.StoreRateBP))
+		readInts(us, []intField{{"cover_bp", &u.CoverBP}, {"cap_bp", &u.CapBP}, {"share_bp", &u.ShareBP}})
+		us.finish()
+		c.Underwrite = &u
+	}
+	if is := t.sub("insure"); is != nil {
+		var s economysim.InsureTerms
+		is.need("min_loss_bp", integer(is, "min_loss_bp", &s.MinLossBP))
+		is.need("ruin_share_bp", integer(is, "ruin_share_bp", &s.RuinShareBP))
+		is.need("max_loading_bp", integer(is, "max_loading_bp", &s.MaxLoadingBP))
+		is.need("max_store_rate_bp", integer(is, "max_store_rate_bp", &s.MaxStoreRateBP))
+		readInts(is, []intField{{"min_cover_bp", &s.MinCoverBP}, {"store_share_bp", &s.StoreShareBP}})
+		is.finish()
+		c.Insure = &s
+	}
+	return &c
+}
+
 // storage reads [modules.storage] (spec-config.md 6.2.1, spec-storage.md 12.5): the
 // base room as [base] (keys mass, bulk), a role row as [role.<id>] (key stores, and
 // a [role.<id>.base] table), and a class as [class.<id>] (keys mass, bulk, needs,
@@ -985,6 +1033,10 @@ func (l *loader) role(id string, t *tbl) economysim.Role {
 	t.text("ceiling", &r.Ceiling)
 	if cs := t.sub("credit"); cs != nil {
 		r.Credit = creditTerms(cs)
+		cs.finish()
+	}
+	if cs := t.sub("cover"); cs != nil {
+		r.Cover = coverTerms(cs)
 		cs.finish()
 	}
 	t.text("label", &r.Label)

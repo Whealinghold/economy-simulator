@@ -225,6 +225,15 @@ func (w *World) Region(g RegionID) (RegionState, error) {
 	if _, err := w.prepareAnchors(); err != nil {
 		return RegionState{}, fmt.Errorf("Region: %w", err)
 	}
+	return w.regionStateOf(g)
+}
+
+// regionStateOf is the body of Region after its guard, its region check and the
+// preparation of the cost anchors: the state of the known region g at the boundary.
+// The policy actors' view calls it inside a step (P0.3a), where Region would return
+// ErrInStep, after one prepareAnchors for the pass (spec-policy.md 5.4, plan 3-plc D6).
+// It draws no random number and changes no saved state.
+func (w *World) regionStateOf(g RegionID) (RegionState, error) {
 	nr, nc, n := len(w.cfg.Roles), len(w.cfg.Commodities), len(w.cfg.Regions)
 	s := Snapshot{Regions: make([]RegionRow, n), Roles: make([]RoleRow, n*nr), Markets: make([]MarketRow, n*nc)}
 	acc := newSnapAcc(nc, len(w.cfg.Recipes))
