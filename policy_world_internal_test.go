@@ -260,7 +260,7 @@ func reachedTypes(typ reflect.Type, seen map[reflect.Type]bool) []string {
 // Requirement: FR-PLC-091, FR-PLC-035
 func TestPolicy_NoIndicatorImport(t *testing.T) {
 	t.Parallel()
-	files := []string{"policy.go", "policy_validate.go", "policy_reach.go", "policy_warn.go", "policy_view.go", "policy_apply.go", "policy_builtin.go"}
+	files := []string{"policy.go", "policy_validate.go", "policy_reach.go", "policy_warn.go", "policy_view.go", "policy_apply.go", "policy_builtin.go", "policy_state.go"}
 	fset := token.NewFileSet()
 	for _, name := range files {
 		f, err := parser.ParseFile(fset, name, nil, parser.ImportsOnly)
