@@ -2,7 +2,6 @@ package economysim_test
 
 import (
 	"errors"
-	"reflect"
 	"slices"
 	"testing"
 
@@ -108,18 +107,17 @@ func TestValidate_HireableNeedsTheModule(t *testing.T) {
 	}
 }
 
-// TestHirePack_FormIsInertAtRunTime is the config-level integration test of the
-// overlay: the same seed on one-demand and on one-demand with the hire form gives
-// the same money, prices and population after 3 steps, while the two
-// configurations hash differently. The hire form is data in this PR; a hook that
-// changed the stream of a world with the form on would show here.
+// TestHirePack_DefaultStrategyHires is the config-level integration test of the overlay:
+// one-demand with the hire form, run with the default strategy and the audit, forms
+// hires (the default's offers and vacancies meet), while the same seed on one-demand
+// alone forms none and the two configurations hash differently. Every hire's wage lies
+// in [Reserve, Bid] and the audit holds at every tick.
 //
-// Requirement: FR-EMP-079
+// Requirement: FR-EMP-013, FR-EMP-015, FR-EMP-021
 //
-// Guard: the form must not change a run until the round exists (plan 3-emp,
-// Phase 3 exit check); a payroll hook that fired for the hire form would move
-// the money.
-func TestHirePack_FormIsInertAtRunTime(t *testing.T) {
+// Guard: before the default strategy offered and posted (plan 3-emp, Phase 6) the form
+// was inert at run time; this pins that the form now acts, and only with the form.
+func TestHirePack_DefaultStrategyHires(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
 		t.Skip("integration test, skipped with -short")
@@ -129,28 +127,30 @@ func TestHirePack_FormIsInertAtRunTime(t *testing.T) {
 	if economysim.HashConfig(base) == economysim.HashConfig(hire) {
 		t.Fatalf("HashConfig(one-demand) == HashConfig(one-demand + hire), want different")
 	}
-	run := func(cfg economysim.Config) economysim.Snapshot {
-		w, err := economysim.NewWorld(cfg, economysim.WithSeed(1))
+	run := func(cfg economysim.Config) (formed int) {
+		w, err := economysim.NewWorld(cfg, economysim.WithSeed(1), economysim.WithAudit(),
+			economysim.WithObserver(economysim.ObserverFunc(func(e economysim.Event) {
+				if h, ok := e.(economysim.HireFormed); ok {
+					formed++
+					if int64(h.Wage) < int64(h.Reserve) || int64(h.Wage) > int64(h.Bid) {
+						t.Errorf("HireFormed %d: Wage = %d, want within [Reserve %d, Bid %d]", h.Hire, h.Wage, h.Reserve, h.Bid)
+					}
+				}
+			})))
 		if err != nil {
 			t.Fatalf("NewWorld() = %v, want nil", err)
 		}
-		for range 3 {
+		for range 10 {
 			if err := w.Step(); err != nil {
 				t.Fatalf("Step() = %v, want nil", err)
 			}
 		}
-		s, err := w.Snapshot()
-		if err != nil {
-			t.Fatalf("Snapshot() = %v, want nil", err)
-		}
-		return s
+		return formed
 	}
-	a, b := run(base), run(hire)
-	if a.ConfigHash == b.ConfigHash {
-		t.Errorf("Snapshot.ConfigHash is the same with and without the hire form, want it to see the form")
+	if got := run(base); got != 0 {
+		t.Errorf("hires formed on one-demand = %d, want 0 (no employment module)", got)
 	}
-	a.ConfigHash = b.ConfigHash // the one field that must differ
-	if !reflect.DeepEqual(a, b) {
-		t.Errorf("Snapshot(hire form) != Snapshot(off) after 3 steps, want equal but for ConfigHash: the form is data only")
+	if got := run(hire); got == 0 {
+		t.Errorf("hires formed on one-demand + hire overlay = 0, want some: the default strategy offers and posts")
 	}
 }

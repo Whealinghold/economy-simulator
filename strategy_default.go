@@ -78,8 +78,11 @@ type tradeCtx struct {
 	bp    beliefs.Params
 	rows  []tradeRow
 	rstar int
-	ws    *wantScratch
-	trip  []TripInput
+	// hire is the plan of an employer's hires for the next tick (spec-employment.md
+	// 9.2.1): n is 0 for every other agent.
+	hire plannedHire
+	ws   *wantScratch
+	trip []TripInput
 	// room is the room of a limited agent's Trade: nil for an agent with none.
 	room tradeRoom
 }
@@ -118,10 +121,14 @@ func beliefParamsOf(t *BeliefTunables) beliefs.Params {
 func (DefaultStrategy) Work(v *AgentView, _ *rand.Rand) JobRequest {
 	buf := workReportBuf{noList: true}
 	workReport(v, &buf)
-	if buf.chosen < 0 {
-		return JobRequest{NoJob: true}
+	req := JobRequest{NoJob: true}
+	if buf.chosen >= 0 {
+		req = JobRequest{Recipe: v.Recipes[buf.chosen].Recipe, Executions: buf.executions}
 	}
-	return JobRequest{Recipe: v.Recipes[buf.chosen].Recipe, Executions: buf.executions}
+	if v.Hireable || v.HasEmployer {
+		employmentWork(v, &buf, &req)
+	}
+	return req
 }
 
 // Revise applies the belief update of spec-beliefs.md 5 to the outcome with the
@@ -182,6 +189,7 @@ func (DefaultStrategy) TradeWith(v *AgentView, rng *rand.Rand, p *TradePlan, tri
 	t.rstar = -1
 	if trip == nil {
 		t.rstar = t.plannedRecipe()
+		t.hire = v.plannedHire(cost)
 	}
 	t.scaleToRoom(&sc.trade.room)
 	for i := range v.Commodities {
@@ -237,18 +245,12 @@ func (s *sum) add(x int64, ok bool) {
 // inputs and tools of the next job when it starts next tick (StartsIn is 1).
 // ok is false on overflow.
 func (t *tradeCtx) jobTerm(c CommodityID) (int64, bool) {
-	r, v := &t.v.Recipes[t.rstar], t.v
-	if v.StartsIn != 1 {
+	if t.v.StartsIn != 1 {
 		return 0, true
 	}
 	var j sum
-	for _, in := range r.Inputs {
-		if in.Commodity == c {
-			jobs, ok1 := checked.Mul(t.par.InputJobs, v.Weight)
-			n, ok2 := checked.Mul(jobs, in.Quantity)
-			j.add(n, ok1 && ok2)
-		}
-	}
+	t.ownInputs(&j, c)
+	t.hireInputs(&j, c)
 	if j.v > 0 {
 		// The work rule keeps the next tick's upkeep out of the inputs (7.1.6), so
 		// a job needs that upkeep in stock besides the inputs (N-313).
@@ -256,12 +258,37 @@ func (t *tradeCtx) jobTerm(c CommodityID) (int64, bool) {
 			j.add(u, ok)
 		}
 	}
-	for _, tl := range r.Tools {
-		if tl.Commodity == c {
-			j.add(v.Weight, true)
+	t.ownTools(&j, c)
+	t.hireTools(&j, c)
+	return j.v, !j.bad
+}
+
+// ownInputs adds to j the units of c the planned recipe needs for the weight (7.3);
+// nothing when no recipe is planned.
+func (t *tradeCtx) ownInputs(j *sum, c CommodityID) {
+	if t.rstar < 0 {
+		return
+	}
+	for _, in := range t.v.Recipes[t.rstar].Inputs {
+		if in.Commodity == c {
+			jobs, ok1 := checked.Mul(t.par.InputJobs, t.v.Weight)
+			n, ok2 := checked.Mul(jobs, in.Quantity)
+			j.add(n, ok1 && ok2)
 		}
 	}
-	return j.v, !j.bad
+}
+
+// ownTools adds to j the items of c the planned recipe needs as tools, one for each
+// household of the weight; nothing when no recipe is planned.
+func (t *tradeCtx) ownTools(j *sum, c CommodityID) {
+	if t.rstar < 0 {
+		return
+	}
+	for _, tl := range t.v.Recipes[t.rstar].Tools {
+		if tl.Commodity == c {
+			j.add(t.v.Weight, true)
+		}
+	}
 }
 
 // outputTerm returns OutTgt_c of the commodity for the planned recipe (7.3): the
@@ -284,11 +311,14 @@ func (t *tradeCtx) jobAndOutput(c CommodityID) (job, out int64, ok bool) {
 		job, ok = t.tripTerm(c)
 		return job, 0, ok
 	}
-	if t.rstar < 0 {
+	if t.rstar < 0 && t.hire.n < 1 {
 		return 0, 0, true
 	}
 	job, ok1 := t.jobTerm(c)
-	out, ok2 := t.outputTerm(c)
+	ok2 := true
+	if t.rstar >= 0 {
+		out, ok2 = t.outputTerm(c)
+	}
 	return job, out, ok1 && ok2
 }
 
@@ -372,6 +402,9 @@ func (t *tradeCtx) purposeOf(c CommodityID, job int64, isUpkeep bool) Purpose {
 				return PurposeTool
 			}
 		}
+	}
+	if p, ok := t.hirePurpose(c, job); ok {
+		return p
 	}
 	if isUpkeep {
 		return PurposeUpkeep

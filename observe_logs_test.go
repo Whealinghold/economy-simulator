@@ -97,10 +97,10 @@ func warnRows(t *testing.T) map[int]warnRow {
 
 // builtWarnRows are the rows of 7.3 that the slice emits: configuration warning,
 // households unfed, price beliefs at bound, work floor binding, role extinct,
-// entry unfunded, group below floor, recipe output disposed, tenure refusal, welfare record
-// clamped. The test fails when another row's message is written, since the
+// entry unfunded, group below floor, recipe output disposed, labour unmatched, vacancies
+// unfilled, tenure refusal, welfare record clamped. The test fails when another row's message is written, since the
 // message set below is built from them.
-var builtWarnRows = []int{1, 2, 3, 4, 6, 7, 8, 19, 22, 26}
+var builtWarnRows = []int{1, 2, 3, 4, 6, 7, 8, 19, 20, 21, 22, 26}
 
 // knownMessages is every message the library may write: the quoted names of 7.2,
 // 7.3 and 7.5 of the spec.
@@ -325,8 +325,27 @@ func resolves(tok string, types map[string]reflect.Type, cur *reflect.Type) bool
 		return has
 	}
 	*cur = ty
-	_, has := ty.FieldByName(field)
-	return !dotted || has
+	return !dotted || hasFieldPath(ty, field)
+}
+
+// hasFieldPath reports whether the dotted path of fields exists from ty, a field written
+// with a trailing [] (Workers[]) being followed into the element of its slice.
+func hasFieldPath(ty reflect.Type, path string) bool {
+	for _, part := range strings.Split(path, ".") {
+		name, slice := strings.CutSuffix(part, "[]")
+		f, has := ty.FieldByName(name)
+		if !has {
+			return false
+		}
+		ty = f.Type
+		if slice {
+			if ty.Kind() != reflect.Slice {
+				return false
+			}
+			ty = ty.Elem()
+		}
+	}
+	return true
 }
 
 // unresolved returns the tokens of the counterpart column of a row that do not
@@ -500,7 +519,7 @@ func logScenarios() []scenario {
 	for _, c := range warnCases() {
 		list = append(list, c.scenario)
 	}
-	list = append(list, storageLogScenario(), tenureLogScenario())
+	list = append(list, storageLogScenario(), tenureLogScenario(), hireLogScenario())
 	return append(list, scenario{name: "warm one", ticks: 3, cfg: func(t *testing.T) economysim.Config {
 		return loadPack(t, "base.toml", "one.toml", "warm-one.toml")
 	}})

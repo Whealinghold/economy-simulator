@@ -22,15 +22,17 @@ import (
 // The reasons of the formation checks that a Check of the round returns
 // (spec-employment.md 5.5), numbered from payroll.ReasonCheck in the order of the
 // spec. The checks of the modules not built yet (2 not_permitted, 5 and 9 and 10
-// of the infrastructure module, 8 of the tenure module, 11 of the storage module)
-// are named slots: the order of the table is fixed here and the row is added where
-// its module is.
+// of the infrastructure module) are named slots: the order of the table is fixed
+// here and the row is added where its module is; their counts in LabourRound stay 0.
 const (
 	lrZeroYield     = payroll.ReasonCheck + iota // check 3
 	lrNoSite                                     // check 3
 	lrNoTool                                     // check 4
 	lrNoInput                                    // check 6
 	lrNoEndowment                                // check 7
+	lrNoTitle                                    // check 8, the tenure module
+	lrRentFunds                                  // check 8, the tenure module
+	lrNoRoom                                     // check 11, the storage module
 	lrEmployerFunds                              // check 12
 	numLabourReasons
 )
@@ -45,6 +47,9 @@ var labourReasons = [numLabourReasons]Reason{
 	lrNoTool:               ReasonNoTool,
 	lrNoInput:              ReasonNoInput,
 	lrNoEndowment:          ReasonNoEndowment,
+	lrNoTitle:              ReasonNoTitle,
+	lrRentFunds:            ReasonRentFunds,
+	lrNoRoom:               ReasonNoRoom,
 	lrEmployerFunds:        ReasonEmployerFunds,
 }
 
@@ -271,6 +276,9 @@ func (w *World) formationCheck(o payroll.Offer, v payroll.Vacancy, wage int64, _
 	if reason := w.stockFault(x, o.Households); reason != 0 {
 		return reason, payroll.CloseFit
 	}
+	if w.roomFault(x, o.Households) {
+		return lrNoRoom, payroll.CloseFit
+	}
 	bill, ok := payroll.Bill(wage, v.Duration, o.Households)
 	if !ok || bill > x.money-x.spent {
 		return lrEmployerFunds, payroll.CloseFit
@@ -280,9 +288,9 @@ func (w *World) formationCheck(o payroll.Offer, v payroll.Vacancy, wage int64, _
 	return payroll.ReasonNone, payroll.CloseFit
 }
 
-// stockFault is checks 4, 6 and 7 for a block of m executions of the vacancy x, in
-// that order: the tools, the inputs, the draws on an endowment. It returns the code
-// of the first that fails, or 0.
+// stockFault is checks 4, 6, 7 and 8 for a block of m executions of the vacancy x, in
+// that order: the tools, the inputs, the draws on an endowment and its tenure. It
+// returns the code of the first that fails, or 0.
 func (w *World) stockFault(x *vacancyPost, m int64) int {
 	need, row := x.committed+m, w.recipes.row(x.recipe)
 	account := w.agents[x.employer].account
@@ -297,10 +305,45 @@ func (w *World) stockFault(x *vacancyPost, m int64) int {
 			return lrNoInput
 		}
 	}
-	if w.res != nil && w.drawFault(x, m) {
+	if w.res == nil {
+		return 0
+	}
+	if w.drawFault(x, m) {
 		return lrNoEndowment
 	}
+	return w.tenureFault(x, m)
+}
+
+// tenureFault is check 8 for a block of m executions of x: the bounds of the tenure
+// module on the draws of the recipe (spec-employment.md 5.5, spec-land.md 4.7.2), as
+// a code, or 0 with the module off. The bill already formed this round is spent
+// before the least rent is asked of the employer's money.
+func (w *World) tenureFault(x *vacancyPost, m int64) int {
+	if w.tenure == nil {
+		return 0
+	}
+	switch w.tenure.hireBound(x.employer, w.regionOf(&w.agents[x.employer]), x.recipe, m, x.spent) {
+	case ReasonNoTitle:
+		return lrNoTitle
+	case ReasonRentFunds:
+		return lrRentFunds
+	}
 	return 0
+}
+
+// roomFault is check 11 for a block of m executions of x: with the storage module on,
+// the room of the employer's store, for the executions already committed to it plus m,
+// does not hold the output of all of them (spec-employment.md 5.5). The start of P2.7
+// is the authority; this only avoids a hire that the start would cut.
+func (w *World) roomFault(x *vacancyPost, m int64) bool {
+	if w.sto == nil {
+		return false
+	}
+	employer := &w.agents[x.employer]
+	region := w.regionOf(employer)
+	q := startReq{recipe: x.recipe, account: employer.account, principal: employer.id, weight: employer.weight,
+		effective: w.hiredEffective(region, x.recipe, w.employment.roles[employer.role].yieldBP), exec: employer}
+	return !w.sto.roomFits(w.ledger, &q, x.committed+m)
 }
 
 // unreserved is the units of a commodity an account holds that no reservation
@@ -353,6 +396,7 @@ func (w *World) formHire(g RegionID, l *labourLane, h payroll.Hire) {
 	e.grow(max(worker.id, employer.id))
 	e.workerOf[worker.id] = rec.id + 1
 	e.hired[employer.id] += rec.k
+	e.hiredN[employer.id]++
 	e.open[g]++
 	w.withdrawOwnRequest(worker)
 	ask := jobAsk{recipe: rec.recipe, maximum: rec.k, k0: rec.k, set: true}

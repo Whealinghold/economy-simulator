@@ -320,6 +320,11 @@ var stepSites = []site{
 		}
 	})},
 	{"P2.8a", noError((*World).p28aHalted)},
+	{"P2.8b", noError(func(w *World) {
+		if w.employment != nil {
+			w.p28bLabour()
+		}
+	})},
 	{"P3.1", noError(func(w *World) {
 		if w.transport != nil {
 			w.p31Fix()
