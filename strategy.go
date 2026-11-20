@@ -437,6 +437,33 @@ type RecipeView struct {
 	// agent's hire list in the hire form of the employment module, 0 for any other
 	// (spec-employment.md 9.1).
 	Hired int64
+	// Needs are the site classes the recipe needs, by class ID in canonical order; Builds
+	// and Repairs are its clauses, with On false for a recipe that has none (spec-
+	// infrastructure.md 4.1.1). Standing is the first refusal of 4.2.2 other than no_input
+	// and no_tool that would apply were the inputs and the tools held, or empty, for a
+	// recipe with a clause (spec-saving-and-investment.md 5.2.2). All four are set only
+	// for an agent whose role has a saving block: a strategy of any other role sees them
+	// empty. Needs is a scratch copy valid for the call only.
+	Needs    []FacilityClassID
+	Builds   BuildView
+	Repairs  RepairView
+	Standing Reason
+}
+
+// BuildView is the Builds clause of a recipe as a view shows it: the class a completion
+// creates a facility of and the far end of a route (NoRegion for every other class).
+type BuildView struct {
+	On     bool
+	Class  FacilityClassID
+	Toward RegionID
+}
+
+// RepairView is the Repairs clause of a recipe as a view shows it: the class a
+// completion restores and the condition units one execution restores.
+type RepairView struct {
+	On    bool
+	Class FacilityClassID
+	Units int64
 }
 
 // BeliefTunables is the group of the fifteen belief parameters that
@@ -582,10 +609,48 @@ type AgentView struct {
 	Hireable    bool
 	HasEmployer bool
 	Employer    EmployerView
+	// Saving is the saving group of the Work and Trade views, present only for an agent
+	// whose role has a Saver block and nil for every other (spec-saving-and-investment.md
+	// 5.2). It is a scratch copy valid for the call only.
+	Saving *SavingView
 	// scratch is the working arrays of DefaultStrategy.Trade, set by the world's
 	// filler and nil in a view built by hand, for which Trade allocates its own
 	// (spec-agents.md 6.4.1; NFR-AGT-001 binds the world's views only).
 	scratch *viewScratch
+}
+
+// SavingView is the saving group of the view of an agent whose role has a Saver block
+// (spec-saving-and-investment.md 5.2.1): plain values the world fills, valid for the call
+// only. A strategy MUST NOT keep a slice in it or write to it.
+type SavingView struct {
+	// Block is a copy of the role's Saver block, its Worth rows included.
+	Block Saver
+	// SafetyTicks, HurdleSpreadBP and CommitBandBP are the module's values.
+	SafetyTicks, HurdleSpreadBP, CommitBandBP int64
+	// Drawdown is the deepest fall from a running peak of the cumulative income less cost
+	// in the agent's window (4.1.1), computed by the world from the ring. Records is the
+	// number of records of the ring and Surplus the cumulative income less cost over them
+	// (C_n of 5.6.5): the reach test reads both.
+	Drawdown, Records, Surplus int64
+	// Facilities are the agent's own facilities in its region in ascending FacilityID, in the
+	// Trade view as well as the Work view, built from the records (5.2.1).
+	Facilities []FacilityView
+	// Classes are the classes a Builds or Repairs clause of the role's recipes names, in
+	// ascending FacilityClassID.
+	Classes []SavingClass
+}
+
+// SavingClass is one facility class a project of the role builds or repairs: the numbers
+// the rule needs from the class (spec-saving-and-investment.md 5.2.1).
+type SavingClass struct {
+	// Class is the class and Name its ID as the configuration writes it, which a Worth row
+	// names.
+	Class FacilityClassID
+	Name  string
+	// Kind is "site", "route", "ground" or "store".
+	Kind string
+	// Durability, Decay, WearPerUse and Capacity are the class's.
+	Durability, Decay, WearPerUse, Capacity int64
 }
 
 // InboundRow is the units of one commodity on the way to an agent and the earliest

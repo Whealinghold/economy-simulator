@@ -1869,8 +1869,9 @@
 //     role whose households save for a purpose and invest, and the row that states what a whole
 //     facility of a class is worth to the role per tick (spec-saving-and-investment.md 3.2).
 //     The word investment means a build or a repair only. SavingView is the group of the view
-//     that carries the block, the drawdown, the facilities and the classes; SavingState is the
-//     result of the query Saving; SavingTargetResult and ProjectChoice are the results of the
+//     that carries the block, the drawdown, the facilities and the classes, each class a
+//     SavingClass; BuildView and RepairView are the clauses of a recipe in its view;
+//     SavingState is the result of the query Saving; SavingTargetResult and ProjectChoice are the results of the
 //     two pure rules SavingTarget and ChooseProject; SavingBar names the four bars (no return,
 //     standing, unreachable, survival); SavingPlanned is the event of the counts.
 //   - Savings target, floor of the target, goal: S* is the floor plus the goal and replaces

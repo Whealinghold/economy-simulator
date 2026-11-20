@@ -57,6 +57,7 @@ func (w *World) fillLateGroups(v *AgentView, a *agent, kind viewKind) {
 		w.fillEmployment(v, a)
 	}
 	w.infra.fillView(v, a, kind)
+	w.saving.fillView(v, a, kind) // nil-safe, after the infrastructure filler it reads: a role with no block gets no group
 }
 
 // fillTradeOnly is the module fillers that are an input to Trade only: the

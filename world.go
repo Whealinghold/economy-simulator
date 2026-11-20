@@ -139,6 +139,8 @@ type World struct {
 	risk *risk
 	// org is the state of the institutions module, nil when it is off (institutions.go).
 	org *institutions
+	// saving is the state of the saving module, nil when it is off (saving.go).
+	saving *saving
 	// integ is what INT keeps (integration.go).
 	integ integrationState
 	// firstHousehold is the agent ID of the first household: the number of

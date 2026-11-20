@@ -174,6 +174,7 @@ func (w *World) allocate() {
 		}
 		w.infra.wire(w)
 	}
+	w.saving = newSaving(&w.cfg, &w.roles, w.infra)
 	w.registerBounds()
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
@@ -406,6 +407,7 @@ func modulesOn(c *Config) []string {
 		{"fiscal", m.Fiscal != nil},
 		{"institutions", m.Institutions != nil},
 		{"policy", m.Policy != nil},
+		{"saving", m.Saving != nil},
 	}
 	on := []string{}
 	for _, t := range table {
