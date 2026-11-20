@@ -523,6 +523,11 @@ type AgentView struct {
 	// the role draws on none (spec-resources.md 5.5.1). No other region's endowment
 	// is in a view.
 	Endowments []EndowmentView
+	// Facilities are the agent's own facilities in its region, in ascending FacilityID, at
+	// most MaxFacilitiesPerAgent: nil when the infrastructure module is off, in a Trade
+	// view and when the agent has none there (spec-infrastructure.md 9.1). A facility made
+	// at P2.1 is in it in the same tick, though its effect enters the tables at P8.3b.
+	Facilities []FacilityView
 	// OwnUse says the agent is in the own-use mode and OwnUseJobs is the own-use
 	// jobs it has started in a row; Cover and Secure are the ticks of upkeep it
 	// holds in stock and the ticks stock and money secure, at this moment;
@@ -701,4 +706,21 @@ func (d Directed) LoadState(version uint32, state []byte) error {
 		return fmt.Errorf("directed has no state to load: version %d with %d bytes", version, len(state))
 	}
 	return nil
+}
+
+// FacilityView is one facility of the agent's, as Work sees it (spec-infrastructure.md 9.1).
+// It is plain data: a strategy reads a facility's condition to decide to repair or to build,
+// and the recipes' MaxExecutions already include every limit the world will apply.
+type FacilityView struct {
+	ID    FacilityID
+	Class FacilityClassID
+	// To is the far end of a route facility with a target, NoRegion for every other facility.
+	To RegionID
+	// Condition is the wear units left and Durability the class's.
+	Condition, Durability int64
+	// Capacity is cap(f), the executions a tick a site serves at its condition (3.3.2), 0 for
+	// the other kinds.
+	Capacity int64
+	// Installed says, for a store facility, that its store has been given to the owner.
+	Installed bool
 }

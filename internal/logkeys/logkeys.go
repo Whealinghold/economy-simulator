@@ -238,6 +238,10 @@ const (
 	Condition       = "condition"
 )
 
+// Executions is a count of executions of a recipe (int64), in the Debug line of the
+// infrastructure module for a build or repair that did nothing at its completion.
+const Executions = "executions"
+
 // Rent is money per unit of an endowment, in minor units (int64), and Share a share
 // in basis points (int64), as the share of a title or of a strike, in the lines of
 // the tenure module.

@@ -443,6 +443,25 @@ const (
 	// spec-institutions.md 5.6). It is also a rejection reason of an order and of an offer
 	// or a take of the contract round.
 	ReasonNotPermitted Reason = "not_permitted"
+	// ReasonNoFacility is a start that needs a site class the principal holds no usable
+	// facility of in its region, or whose capacity this tick is used up (infrastructure
+	// module, spec-infrastructure.md 4.2.2 limit 1).
+	ReasonNoFacility Reason = "no_facility"
+	// ReasonNotUnlocked is a build of a class whose settlement flag the region's class does
+	// not carry (spec-infrastructure.md 4.2.2 limit 2, 8).
+	ReasonNotUnlocked Reason = "not_unlocked"
+	// ReasonFacilityCap is a build that the room for facilities of the principal or of the
+	// world bounds to nothing (spec-infrastructure.md 4.2.2 limit 3).
+	ReasonFacilityCap Reason = "facility_cap"
+	// ReasonNoTarget is a build of a route with no such edge, or of a ground improvement
+	// where the endowment has no effective capacity (spec-infrastructure.md 4.2.2 limit 4).
+	ReasonNoTarget Reason = "no_target"
+	// ReasonStoreRefused is a build of a store that the dry run of addStore refuses for
+	// the principal (spec-infrastructure.md 4.2.2 limit 5, 5.4.1).
+	ReasonStoreRefused Reason = "store_refused"
+	// ReasonNothingToRepair is a repair of a class of which the principal has no
+	// facility with condition missing in its region (spec-infrastructure.md 4.2.2 limit 6).
+	ReasonNothingToRepair Reason = "nothing_to_repair"
 )
 
 // The reasons of the "work declined" Debug line that no start refusal covers

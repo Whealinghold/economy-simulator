@@ -32,7 +32,7 @@ func TestRefusalTally_EdgeCells(t *testing.T) {
 	}{
 		{"first index past the counters", 2, ReasonNotOnRole, "invariant"},
 		{"far past the counters", 9, ReasonNotOnRole, "invariant"},
-		{"uncounted reason", 0, Reason("no_facility"), "no_facility, which the first slice does not count"},
+		{"uncounted reason", 0, ReasonHasStore, "has_store, which the first slice does not count"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
