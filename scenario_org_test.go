@@ -90,8 +90,8 @@ func meanPrice(trades []economysim.TradeExecuted) int64 {
 // TestScenarioORG1_PriceCapLifted verifies ORG-S1 (S137) on pack one: a cap on the staple at
 // 80, 100 and 120 % of the reference price, lifted at tick 30, over seeds 1 to
 // scenarioSeedCount(), with the audit on. Asserted: every trade before the lift is at or below
-// the cap, the run conserves (the audit would fail the step) and the cap, once lifted, binds
-// nothing (no PriceControlled after the lift is not asserted: the count is reported). Reported
+// the cap, the run conserves (the audit would fail the step) and nothing more: that the lift
+// takes effect (no PriceControlled after it) is not asserted, the count is only reported. Reported
 // by Logf: the trades and their mean price before and after, the unmatched bid units under the
 // cap and the orders clamped.
 //

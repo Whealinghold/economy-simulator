@@ -60,8 +60,8 @@ func TestScenarioORG5_InertOverlayIsNeutral(t *testing.T) {
 		if got, want := orgModuleOutputs(with.Final), orgModuleOutputs(without.Final); !reflect.DeepEqual(got, want) {
 			t.Errorf("seed %d: final snapshot differs from the world without the module beyond its own outputs", seed)
 		}
-		if got, want := len(withoutMembership(with.Events)), len(without.Events); got != want {
-			t.Errorf("seed %d: %d events beyond the module's, want %d", seed, got, want)
+		if got, want := withoutMembership(with.Events), without.Events; !reflect.DeepEqual(got, want) {
+			t.Errorf("seed %d: %d events beyond the module's differ from the %d of the world without it", seed, len(got), len(want))
 		}
 	}
 }
