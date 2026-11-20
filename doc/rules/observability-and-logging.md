@@ -211,6 +211,7 @@ constants in an internal package and reused. The standard keys are:
 | `trainer`, `served` | `trainer`: the agent ID of a trainee's trainer; `served`: the ticks of a traineeship served (`int64`), in the line "traineeship ended" |
 | `outcomes`, `previous` | `outcomes`: a count of order outcomes (`int64`), the denominator of the "price beliefs at bound" line; `previous`: a price in minor units (`int64`), the centre of a belief before an update (`price` is the one after) |
 | `cut`, `headroom` | counts of households (the sum of weights, `int64`), in the `Debug` line of a fiscal flow: those paid less than their due because the treasury was short, and those paid less than the share they were left because the recipient had no room |
+| `exempt` | a count of trades (`int64`), in the `Debug` line of a fiscal flow: the trades of a duty whose payer side is a pseudo-agent (an estate, a counterparty or a treasury), in no base |
 
 Add a key to this table in the same PR that introduces it. Prices, money and
 quantities are logged as the integers they are (architecture.md 3.5), with
@@ -983,4 +984,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 1ab23c7e5f83dafe13120131
+RULE-TAG: f33dfae634ae3b8a056802f8
