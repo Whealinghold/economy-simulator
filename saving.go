@@ -1,6 +1,8 @@
 package economysim
 
 import (
+	"log/slog"
+
 	"github.com/Whealinghold/economy-sim/internal/welfare"
 )
 
@@ -19,8 +21,10 @@ import (
 // it is saved or hashed: the tables are derived from the configuration at construction,
 // the scratch is rewritten for every view.
 type saving struct {
-	// module is the module's configuration of the world's canonical Config.
+	// module is the module's configuration of the world's canonical Config and log the
+	// world's logger, which the Debug lines of the Trade view go to.
 	module *Saving
+	log    *slog.Logger
 	// infra is the infrastructure module the clauses and the classes are read from; nil
 	// when it is off, in which case a role has no project and the buffer only.
 	infra *infrastructure
@@ -49,11 +53,11 @@ type savingRole struct {
 
 // newSaving resolves the tables of a canonical configuration that passed Validate, or
 // returns nil when the module is off. It reads no agent and takes no draw.
-func newSaving(c *Config, rt *roleTable, infra *infrastructure) *saving {
+func newSaving(c *Config, rt *roleTable, infra *infrastructure, log *slog.Logger) *saving {
 	if c.Modules.Saving == nil {
 		return nil
 	}
-	s := &saving{module: c.Modules.Saving, infra: infra, roles: make([]savingRole, len(c.Roles))}
+	s := &saving{module: c.Modules.Saving, log: log, infra: infra, roles: make([]savingRole, len(c.Roles))}
 	if m := c.Modules.Infrastructure; m != nil {
 		for i := range m.Classes {
 			s.names = append(s.names, m.Classes[i].ID)

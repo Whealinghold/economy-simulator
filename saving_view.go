@@ -30,6 +30,9 @@ func (s *saving) fillView(v *AgentView, a *agent, kind viewKind) {
 	sv.Classes = s.classes[:len(s.classes):len(s.classes)]
 	s.fillClauses(v, a)
 	v.Saving = sv
+	if kind == viewTrade {
+		s.logProject(v)
+	}
 }
 
 // fillDrawdown sets the drawdown of the agent's ring and the figures the reach test reads:

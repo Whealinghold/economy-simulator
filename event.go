@@ -2952,3 +2952,23 @@ type PolicyDecided struct {
 }
 
 func (PolicyDecided) isEvent() {}
+
+// SavingBar is the reason a household has no project chosen (spec-saving-and-investment.md
+// 5.5, 12.3): a constant of a closed set, the value of reason in the Debug line "project
+// declined" and of the metric attribute economysim.bar. A household with a project chosen,
+// with a job of a project in progress or with no project recipe has none, "".
+type SavingBar string
+
+// The four bars. They are not values of economysim.reason or of economysim.limit.
+const (
+	// BarNoReturn is a household that weighed a project and none passed or had a value.
+	BarNoReturn SavingBar = "no_return"
+	// BarStanding is a household none of whose projects was weighed because the world would
+	// refuse the start for a reason buying inputs does not cure (spec 5.5.1).
+	BarStanding SavingBar = "standing"
+	// BarUnreachable is a household with a project that passed and was not reachable (5.6.5).
+	BarUnreachable SavingBar = "unreachable"
+	// BarSurvival is a household barred by hunger, money below the reserve or the own-use
+	// mode (5.5.5).
+	BarSurvival SavingBar = "survival"
+)
