@@ -14,16 +14,36 @@ import (
 // in insurance_report.go. The settlement of a policy (P1.3a, P8.1b, step 2f) and the
 // checkpoint section come with the later changes of the plan.
 
+// coverPolicy is one cover (spec-insurance.md 3.3), the record of what was fixed at formation.
+// A route policy is open from P3.3c of the tick of dispatch until its shipment arrives; a
+// store policy lives inside one tick.
+type coverPolicy struct {
+	id                   int64
+	kind                 CoverKind
+	insured, underwriter AgentID
+	// shipment is the shipment a route policy covers and NoShipment for a store.
+	shipment ShipmentID
+	// sum is the sum insured, maxPayout the most the policy pays, coverBP the cover share
+	// and premium what was paid, all fixed at formation; formed is the tick of formation.
+	sum, maxPayout, coverBP, premium, formed int64
+}
+
 // insurance is the state of the insurance module, nil when Config.Modules.Insurance is
 // nil. The policies are the module's own state (spec-insurance.md 3.3, 16): the agent
 // type holds none of it (N-128).
 type insurance struct {
 	// cfg is the module's configuration of the world's canonical Config.
 	cfg *Insurance
+	// next is the ID of the next policy, issued in order of formation and never reused.
+	next int64
+	// open are the route policies in ascending ID, the ones in flight between two ticks;
+	// stores are the store policies of the tick, which no position ends yet.
+	open, stores []coverPolicy
+	// byShipment is the ID of the route policy of a shipment, read by lookup only.
+	byShipment map[ShipmentID]int64
 	// liability is, by agent ID, the sum of the maximum payouts of the open policies the
 	// agent underwrites, and insured the number of open route policies it holds as the
-	// insured. Both are derived from the policy lists and grow with the agent IDs; no
-	// policy is formed yet, so both are empty.
+	// insured. Both are derived from the policy lists and grow with the agent IDs.
 	liability, insured []int64
 	// vs is the storage of the group of the view and round the requests, offers and counts
 	// of the cover round. Both are scratch, never saved.
@@ -37,7 +57,10 @@ func newInsurance(c *Config) *insurance {
 	if c.Modules.Insurance == nil {
 		return nil
 	}
-	return &insurance{cfg: c.Modules.Insurance}
+	n := len(c.Regions)
+	in := &insurance{cfg: c.Modules.Insurance, byShipment: map[ShipmentID]int64{}}
+	in.round.lanes, in.round.counts = make([]coverLane, n), make([]coverCount, n)
+	return in
 }
 
 // insuranceReasons returns the ledger reasons the insurance module declares: the premium
@@ -48,6 +71,10 @@ func newInsurance(c *Config) *insurance {
 func insuranceReasons() []ledger.Reason {
 	return []ledger.Reason{ledger.Premium, ledger.Payout}
 }
+
+// openCount is the number of policies open now: the route policies in flight and the
+// store policies formed this tick (the count MaxPolicies limits).
+func (in *insurance) openCount() int64 { return int64(len(in.open) + len(in.stores)) }
 
 // policiesOf is the number of open route policies an agent holds as the insured.
 func (in *insurance) policiesOf(id AgentID) int64 {
@@ -64,6 +91,44 @@ func (in *insurance) liabilityOf(id AgentID) int64 {
 		return 0
 	}
 	return in.liability[id]
+}
+
+// covered reports whether the shipment already has a route policy.
+func (in *insurance) covered(s ShipmentID) bool {
+	_, ok := in.byShipment[s]
+	return ok
+}
+
+// add appends a policy just formed to its list and the indexes. A route policy joins the
+// list in ID order because the IDs rise with formation.
+func (in *insurance) add(p coverPolicy) {
+	in.liability = bump(in.liability, p.underwriter, p.maxPayout)
+	if p.kind == CoverStore {
+		in.stores = append(in.stores, p)
+		return
+	}
+	in.insured = bump(in.insured, p.insured, 1)
+	in.byShipment[p.shipment] = p.id
+	in.open = append(in.open, p)
+}
+
+// bump adds d to the entry of an agent, growing the slice to hold it.
+func bump(s []int64, id AgentID, d int64) []int64 {
+	for int(id) >= len(s) {
+		s = append(s, 0)
+	}
+	s[id] += d
+	return s
+}
+
+// dropStores ends the store policies of the tick without a payout: their liability leaves
+// the underwriters. It is the entry of the next round until the settlement at P8.1b ends
+// them in their own tick (plan 3-ins PR D).
+func (in *insurance) dropStores() {
+	for i := range in.stores {
+		in.liability[in.stores[i].underwriter] -= in.stores[i].maxPayout
+	}
+	in.stores = in.stores[:0]
 }
 
 // payoutOwed is the principal an agent owes as a debtor on claims of origin payout

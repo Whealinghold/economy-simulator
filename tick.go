@@ -58,6 +58,7 @@ var positionList = [...]position{
 	{"P3.3", "MER", line},
 	{"P3.3a", "MER", line},
 	{"P3.3b", "CRD", line},
+	{"P3.3c", "INS", line},
 	{"P3.4", "EST", line},
 	{"P3.5", "EXT", line},
 	{"P3.6", "INF", line},
@@ -96,7 +97,7 @@ var positionList = [...]position{
 var notBuiltPositions = [...]string{
 	"P1.3a",
 	"P2.8b",
-	"P3.3c", "P3.4a", "P3.6b", "P3.6c",
+	"P3.4a", "P3.6b", "P3.6c",
 	"P4.1a",
 	"P8.1b",
 }
@@ -224,6 +225,9 @@ func (w *World) positionsTrade() error {
 	}
 	if w.credit != nil {
 		w.p33bRound()
+	}
+	if w.insurance != nil {
+		w.p33cCoverRound()
 	}
 	if err := w.p34Estates(); err != nil {
 		return err

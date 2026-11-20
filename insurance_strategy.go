@@ -187,11 +187,14 @@ func (w *World) checkCoverPlan(a *agent, p *TradePlan) {
 		return
 	}
 	rd := &in.round
+	seq := 0 // the number of the request in this plan, lanes then the store request
 	for _, l := range p.Cover {
-		rd.reqs = append(rd.reqs, coverRequest{agent: a.id, seq: len(rd.reqs), lane: l})
+		rd.reqs = append(rd.reqs, coverRequest{agent: a.id, seq: seq, lane: l})
+		seq++
 	}
 	for _, s := range p.Store {
-		rd.reqs = append(rd.reqs, coverRequest{agent: a.id, seq: len(rd.reqs), store: true, sc: s})
+		rd.reqs = append(rd.reqs, coverRequest{agent: a.id, seq: seq, store: true, sc: s})
+		seq++
 	}
 	for _, o := range p.Offer {
 		rd.offs = append(rd.offs, coverOffer{agent: a.id, o: o})

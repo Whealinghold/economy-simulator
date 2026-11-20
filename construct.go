@@ -407,6 +407,7 @@ func modulesOn(c *Config) []string {
 		{"fiscal", m.Fiscal != nil},
 		{"institutions", m.Institutions != nil},
 		{"policy", m.Policy != nil},
+		{"insurance", m.Insurance != nil},
 	}
 	on := []string{}
 	for _, t := range table {
@@ -528,5 +529,5 @@ func (w *World) summaryLater(attrs []slog.Attr) []slog.Attr {
 	if w.infra != nil {
 		attrs = append(attrs, slog.Int(logkeys.FacilityClasses, len(w.infra.cls)), slog.Int(logkeys.Facilities, len(w.infra.fac)))
 	}
-	return w.policySummary(w.orgSummary(attrs))
+	return w.insuranceSummary(w.policySummary(w.orgSummary(attrs)))
 }

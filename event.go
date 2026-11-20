@@ -2941,3 +2941,57 @@ const (
 	NoShipment ShipmentID = -1
 	NoMode     ModeID     = -1
 )
+
+// CoverFormed is emitted once per cover formed at P3.3c, in formation order, after the
+// premium moved (spec-insurance.md 15.1). A store policy has NoShipment, NoMode and
+// NoRegion for its shipment, mode and destination. Policy is the policy's ID, issued in
+// order of formation.
+type CoverFormed struct {
+	Tick int64
+	// Policy is the cover policy's ID and Kind its kind.
+	Policy int64
+	Kind   CoverKind
+	// Insured and Underwriter are the two parties, Region the insured's region and
+	// UnderwriterRegion the underwriter's, which the lane of the round makes equal.
+	Insured, Underwriter AgentID
+	Region               RegionID
+	UnderwriterRegion    RegionID
+	// Shipment, Mode and To are the shipment a route policy covers, its mode and its
+	// destination.
+	Shipment ShipmentID
+	Mode     ModeID
+	To       RegionID
+	// Sum is the sum insured, MaxPayout the most the policy pays, Premium what the insured
+	// paid, RateBP the premium as basis points of the sum for the report, and CoverBP the
+	// share of a loss value the underwriter bears.
+	Sum, MaxPayout, Premium Money
+	RateBP, CoverBP         int64
+}
+
+func (CoverFormed) isEvent() {}
+
+// CoverRound is emitted once per region and tick at P3.3c, in ascending RegionID after the
+// last CoverFormed, in which a request or an offer was submitted for it; never when all its
+// counts are 0 (spec-insurance.md 15.1). It is an aggregate bounded by the regions.
+type CoverRound struct {
+	Tick   int64
+	Region RegionID
+	// Requests and Offers are the admitted ones, RequestsRefused and OffersRefused the
+	// refused ones with any reason but insurance_off. InArrears and Exposure are the parts of
+	// OffersRefused with those reasons.
+	Requests, Offers, RequestsRefused, OffersRefused int64
+	InArrears, Exposure                              int64
+	// Candidates are the policies asked for that were found, Formed those formed, Sum and
+	// Premium their sum insured and premium, and Unfilled the sum of the candidates not
+	// covered at the end.
+	Candidates, Formed int64
+	Sum, Premium       Money
+	Unfilled           Money
+	// NoShipment counts requests with no candidate, NoRisk candidates on a lane with no
+	// expected loss, NoOffer candidates no offer covered, BelowMinimum, Funds and Overflow
+	// the failures of a fill by reason, TooMany the lanes that reached MaxPolicies, and
+	// ValueCapped the units valued at the cap.
+	NoShipment, NoRisk, NoOffer, BelowMinimum, Funds, TooMany, Overflow, ValueCapped int64
+}
+
+func (CoverRound) isEvent() {}
