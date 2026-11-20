@@ -244,6 +244,11 @@ func noError(f func(*World)) func(*World) error {
 // keeps it complete.
 var stepSites = []site{
 	{"P0.2", noError((*World).p02)},
+	{"P0.3a", noError(func(w *World) {
+		if w.policy != nil {
+			w.p03aPolicy()
+		}
+	})},
 	{"P1.1", (*World).p11Moment},
 	{"P1.2", noError((*World).p12Anchors)},
 	{"P1.3", noError(func(w *World) {

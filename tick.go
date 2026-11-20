@@ -29,6 +29,7 @@ var positionList = [...]position{
 	{"P0.2", "LED", line},
 	{"P0.2a", "OBS", bracket}, // the construction bucket, in beginStep
 	{"P0.3", "OBS", bracket},  // TickStarted, in beginStep
+	{"P0.3a", "PLC", line},
 	{"P1.1", "CAL", line},
 	{"P1.2", "PRO", line},
 	{"P1.3", "TRN", line},
@@ -94,7 +95,6 @@ var positionList = [...]position{
 // that has a call and on a position of the table that is neither here nor in
 // positionList.
 var notBuiltPositions = [...]string{
-	"P0.3a",
 	"P1.3a",
 	"P3.3c", "P3.4a", "P3.6b", "P3.6c",
 	"P4.1a",
@@ -114,6 +114,9 @@ var notBuiltPositions = [...]string{
 // injected, are tested.
 func (w *World) positions() error {
 	w.p02()
+	if w.policy != nil {
+		w.p03aPolicy()
+	}
 	if err := w.p11Moment(); err != nil {
 		return err
 	}
