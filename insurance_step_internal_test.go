@@ -164,3 +164,55 @@ func TestLog_ConstructionSummaryInsurance(t *testing.T) {
 		t.Errorf("modulesOn = %v, want insurance named", got)
 	}
 }
+
+// TestInsurance_MetricsDerivable verifies FR-INS-073 for the instruments the round can
+// feed (rule table 5.3.1): policies by kind, premium, liability, refused and limited are
+// folded from CoverFormed and CoverRound alone, and agree with the world. The instruments
+// of CoverSettled and CoverEnded are Phase 6's.
+//
+// Arithmetic: the one policy of the worked round has premium 1 600 and maximum payout
+// 6 400 (the liability of the backer); the miller's offer is refused (not an underwriter),
+// so refused is 1 and no `cover_limit` counts.
+//
+// Requirement: FR-INS-073
+func TestInsurance_MetricsDerivable(t *testing.T) {
+	t.Parallel()
+	w, rec := newInsWorld(t, insConfig(defaultInsure(), defaultUnderwrite()), nil)
+	insDispatch(t, w, insHome, 8)
+	planCover(w, insHome, coachLane)
+	planOffer(w, insBacker, fairOffer)
+	planOffer(w, insHome, fairOffer) // not an underwriter: refused
+	w.p33cCoverRound()
+	policies, premium, liability, refused, limited := foldCoverMetrics(rec)
+	if policies[CoverRoute] != 1 || policies[CoverStore] != 0 || premium != 1_600 || refused != 1 {
+		t.Errorf("policies %v, premium %d, refused %d from the events, want one route policy, 1600 and 1", policies, premium, refused)
+	}
+	if got := w.insurance.liabilityOf(insBacker); liability != got {
+		t.Errorf("liability folded from CoverFormed = %d, world = %d, want equal", liability, got)
+	}
+	for k, n := range limited {
+		if n != 0 {
+			t.Errorf("limited[%s] = %d, want 0 in a round with no limit reached", k, n)
+		}
+	}
+}
+
+// foldCoverMetrics folds the instruments of rule table 5.3.1 that CoverFormed and
+// CoverRound feed: policies by kind, premium, liability, refused and limited by cover_limit.
+func foldCoverMetrics(rec *evLog) (policies map[CoverKind]int64, premium, liability, refused int64, limited map[string]int64) {
+	formed, rounds := coverEvents(rec)
+	policies, limited = map[CoverKind]int64{}, map[string]int64{}
+	for _, f := range formed {
+		policies[f.Kind]++
+		premium += int64(f.Premium)
+		liability += int64(f.MaxPayout)
+	}
+	for _, r := range rounds {
+		refused += r.RequestsRefused + r.OffersRefused
+		for k, n := range map[string]int64{"in_arrears": r.InArrears, "exposure": r.Exposure, "no_risk": r.NoRisk,
+			"no_offer": r.NoOffer, "below_minimum": r.BelowMinimum, "funds": r.Funds, "too_many": r.TooMany, "overflow": r.Overflow} {
+			limited[k] += n
+		}
+	}
+	return policies, premium, liability, refused, limited
+}
