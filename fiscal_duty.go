@@ -160,7 +160,9 @@ func (w *World) runDuty(s *fiscalState, i int) {
 // depend on the order of the trades (spec-fiscal.md 6.2.2, FR-FIS-032).
 func (s *fiscalState) gatherDuty(w *World, f *fiscalFlowState) {
 	d := &f.duty
-	slices.SortFunc(d.trades, func(a, b dutyTrade) int { return int(a.payer) - int(b.payer) })
+	// The key is the account, the order the carry merge and checkAscending need; the
+	// agent ID breaks no tie, since an account belongs to one agent.
+	slices.SortFunc(d.trades, func(a, b dutyTrade) int { return w.agents[a.payer].account - w.agents[b.payer].account })
 	s.payers, s.bases = s.payers[:0], s.bases[:0]
 	for k := range d.trades {
 		t := d.trades[k]
