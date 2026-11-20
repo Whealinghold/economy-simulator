@@ -73,6 +73,10 @@ const (
 	// store row (spec-risk.md 6.2, 11.2). It has no draw until the store side of the
 	// module is built.
 	siteRiskStore uint64 = 0x85E20986FA93C736
+	// sitePolicy keys D17: tick, id the ActorID. A consumer's Policy keys it once per
+	// due actor, before its Decide; the built-in policies take no word and never key
+	// (spec-policy.md 7.3, plan 3-plc D11, N-480).
+	sitePolicy uint64 = 0x2E0AE131A3008963
 )
 
 // stream is the one random source of a world (architecture.md 7.3, ADR 0008):
