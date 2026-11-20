@@ -4,12 +4,14 @@ import (
 	"cmp"
 	"fmt"
 	"slices"
+
+	"github.com/Whealinghold/economy-sim/internal/codec"
 )
 
 // This file is the state of the policy module that a call or a checkpoint touches
-// (spec-policy.md 8.4, 9.1, 12.3): the mailbox of a directed actor, DirectPolicy that fills
-// it and the rows of Snapshot.Actors. The levers' values are not here: they are the
-// owners' slots.
+// (spec-policy.md 8.4, 9.1, 12.3, 13): the mailbox of a directed actor, DirectPolicy that
+// fills it, the rows of Snapshot.Actors and the checkpoint section of tag 32. The
+// levers' values are not here: they are the owners' slots.
 
 // PolicyDirective is the whole content of one actor's mailbox.
 type PolicyDirective struct {
@@ -133,4 +135,81 @@ func (w *World) snapshotActors(s *Snapshot) {
 	for i := range p.actors {
 		s.Actors[i] = ActorRow{Actor: ActorID(i), Jurisdiction: p.actors[i].j, Pending: int64(len(p.mailbox[i]))}
 	}
+}
+
+// savePolicy is tag 32 (spec-checkpoint.md 4.2, spec-policy.md 13): for each directed actor
+// with a non-empty mailbox, in ascending ActorID, the actor, the count of settings and each
+// setting in ascending lever as the lever, the value and the closed flag. There is no count
+// of actors: the section ends with its last row, and a world with no directive pending
+// writes nothing. The due ticks, the key lists and the levers' values are not saved.
+func (w *World) savePolicy(cw *codec.Writer) error {
+	for i, m := range w.policy.mailbox {
+		if len(m) == 0 {
+			continue
+		}
+		cw.U(uint64(i))
+		cw.Count(len(m))
+		for _, s := range m {
+			cw.U(unsigned(s.Lever))
+			cw.U(unsigned(s.BP))
+			cw.B(s.Closed)
+		}
+	}
+	return nil
+}
+
+// loadPolicy reads tag 32: the rows strictly ascending by actor, each an existing directed
+// actor with at least one setting, the settings strictly ascending by lever, each lever in
+// range, each value inside [Min, Max] of the lever and the closed flag only on a lever that
+// may close (spec-policy.md 13.2). Anything else is ErrCheckpointCorrupt.
+func (w *World) loadPolicy(_ *restoreCtx, r *codec.Reader) error {
+	p := w.policy
+	prev, started := uint64(0), false
+	for r.Err() == nil && r.Remaining() > 0 {
+		id := r.Strict(prev, started)
+		prev, started = id, true
+		if r.Err() != nil {
+			return nil
+		}
+		if id >= uint64(len(p.actors)) || p.actors[id].kind != kindDirected {
+			r.Failf("policy mailbox of actor %d, which is not a directed actor", id)
+			return nil
+		}
+		p.mailbox[id] = readMailbox(r, &p.actors[id], int(id), p.mailbox[id][:0])
+	}
+	return nil
+}
+
+// readMailbox reads the settings of one row of tag 32 into m and returns it.
+func readMailbox(r *codec.Reader, a *policyActor, id int, m []LeverSetting) []LeverSetting {
+	n := r.Count(3)
+	if n == 0 && r.Err() == nil {
+		r.Failf("policy mailbox of actor %d has no setting", id)
+	}
+	for k := 0; k < n && r.Err() == nil; k++ {
+		m = append(m, readSetting(r, a, id, m))
+	}
+	return m
+}
+
+// readSetting reads one setting of a row of tag 32 and checks it against the lever it
+// names: the lever above the last of prev, the value inside [Min, Max] and Closed only on a
+// lever that may close.
+func readSetting(r *codec.Reader, a *policyActor, id int, prev []LeverSetting) LeverSetting {
+	lever := r.Index(uint64(len(a.levers)))
+	if r.Err() != nil {
+		return LeverSetting{}
+	}
+	l := &a.levers[lever]
+	bp := r.Bounded("policy mailbox value", l.max)
+	closed := r.B()
+	switch {
+	case len(prev) > 0 && LeverID(lever) <= prev[len(prev)-1].Lever:
+		r.Failf("policy mailbox of actor %d: lever %d is not above the one before it", id, lever)
+	case bp < l.min:
+		r.Failf("policy mailbox of actor %d: value %d of lever %d is below its minimum %d", id, bp, lever, l.min)
+	case closed && !l.mayClose:
+		r.Failf("policy mailbox of actor %d: lever %d is closed but may not close", id, lever)
+	}
+	return LeverSetting{Lever: LeverID(lever), BP: bp, Closed: closed}
 }
