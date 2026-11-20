@@ -55,8 +55,11 @@ func TestScenarioS125_Checkpoint(t *testing.T) {
 	if x, y := fmt.Sprintf("%+v", recA.events[mark:]), fmt.Sprintf("%+v", recB.events[1:]); x != y { // event 0 of the restored world is WorldRestored
 		t.Errorf("the events of the tail differ between the original and the restored world")
 	}
-	sa, _ := a.Snapshot()
-	sb, _ := b.Snapshot()
+	sa, errA := a.Snapshot()
+	sb, errB := b.Snapshot()
+	if errA != nil || errB != nil {
+		t.Fatalf("Snapshot() errors = %v, %v, want nil", errA, errB)
+	}
 	if !reflect.DeepEqual(sa, sb) {
 		t.Errorf("the snapshots differ after %d ticks", capTail)
 	}
