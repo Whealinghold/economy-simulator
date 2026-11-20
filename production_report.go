@@ -67,8 +67,10 @@ func refusalColumn(reason Reason) int {
 		return refusedNoRoom
 	case ReasonNoTitle, ReasonRentFunds:
 		return -1 // counted by the tenure module in RentPaid, not here (spec-land.md 13.1)
-	case ReasonNotPermitted:
-		return -1 // counted by the institutions module in RightRefused, not here (spec-institutions.md 5.6.3)
+	case ReasonNotPermitted, ReasonNoFacility, ReasonNotUnlocked, ReasonFacilityCap, ReasonNoTarget, ReasonStoreRefused, ReasonNothingToRepair:
+		// counted by the institutions module in RightRefused (spec-institutions.md 5.6.3) and by the
+		// infrastructure module in FacilityLimited (spec-infrastructure.md 14.1), not here
+		return -1
 	default:
 		panic("economysim: invariant violated: refusal of a start under the reason " + string(reason) + ", which the first slice does not count")
 	}

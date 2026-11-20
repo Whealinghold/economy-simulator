@@ -581,6 +581,7 @@ func (s *viaSolve) finish() (SteadyState, error) {
 		return SteadyState{}, err
 	}
 	st := SteadyState{Table: table, Report: s.rep}
+	st.Report.FacilityDecay = facilityDecay(s.m.c)
 	for _, p := range s.progs {
 		st.Programmes = append(st.Programmes, s.result(p))
 	}

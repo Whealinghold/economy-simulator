@@ -52,6 +52,10 @@ type facility struct {
 	condition int64
 	built     int64
 	installed bool
+	// tabCond, tabCap and served are derived and never saved: the condition and the capacity
+	// of a site as the effect table holds them, which order and bound the wear of a tick, and
+	// the executions the starts of the tick put on it (5.1.3). rebuild sets them.
+	tabCond, tabCap, served int64
 }
 
 // facClass is the derived form of a FacilityClass: the kind and numbers, and the
@@ -106,6 +110,19 @@ type infrastructure struct {
 	// region * classes + class, kept only under an observer and cleared at P8.6; never
 	// saved (spec-infrastructure.md 14.1).
 	limits []facilityLimit
+	// rec are the clauses of each recipe by RecipeID. used counts the executions the starts
+	// of the tick put on a (principal, site class), ordered the facilities the builds of
+	// the tick will make by principal and orderedAll in all: the second evaluation of the
+	// limits of a start reads them (4.2.2). Cleared at P8.6, never saved, used by lookup only.
+	rec        []recipeClauses
+	used       map[ownerClass]int64
+	ordered    map[AgentID]int64
+	orderedAll int64
+	// scratch, placed and needs are the working slices of the wear and the repair, sized at
+	// construction so that neither allocates in the tick.
+	scratch []fcy.Fac
+	placed  []fcy.Placement
+	needs   []fcy.Need
 }
 
 // facilityLimit is the counts of one (region, class) cell for FacilityLimited.
@@ -123,6 +140,9 @@ func newInfrastructure(c *Config, set *settlements) *infrastructure {
 		cls: make([]facClass, len(m.Classes)), next: 1, regions: len(c.Regions),
 		byOwner: map[AgentID][]FacilityID{}, installed: map[ownerClass]int{}, site: map[siteKey]int64{},
 		limits: make([]facilityLimit, len(c.Regions)*len(m.Classes)),
+		rec:    clausesOf(c), used: map[ownerClass]int64{}, ordered: map[AgentID]int64{},
+		scratch: make([]fcy.Fac, 0, MaxFacilitiesPerAgent), placed: make([]fcy.Placement, 0, MaxFacilitiesPerAgent),
+		needs: make([]fcy.Need, 0, MaxFacilitiesPerAgent),
 	}
 	if c.Modules.Transport != nil {
 		n.modes = len(c.Modules.Transport.Modes)
