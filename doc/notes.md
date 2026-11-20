@@ -48,8 +48,8 @@ PR description.
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351, N-353 |
 | AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424, N-474, N-490, N-512, N-521 |
 | BEL | N-042, N-043, N-230, N-245 |
-| CAL | N-030 |
-| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-388, N-438, N-475, N-492, N-520, N-521, N-522, N-523, N-524 |
+| CAL | N-030, N-527 |
+| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-388, N-438, N-475, N-492, N-520, N-521, N-522, N-523, N-524, N-525, N-526, N-527 |
 | CFG | N-476, N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-494, N-496, N-483, N-461, N-522 |
 | CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444, N-471, N-480, N-500, N-502 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
@@ -76,9 +76,9 @@ PR description.
 | OBS | N-543, N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482, N-510, N-520 |
 | ORG | N-541, N-542, N-543, N-544, N-540, N-400, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-463, N-464, N-465, N-492, N-483, N-484 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485 |
-| POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
+| POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348, N-527 |
 | PRO | N-542, N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454, N-501 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-540, N-516, N-517 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-525, N-540, N-516, N-517 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470, N-458, N-459, N-460, N-461 |
 | SAV | N-145, N-156, N-195, N-362, N-382, N-475, N-490, N-491, N-492, N-493, N-495, N-496 |
@@ -87,7 +87,7 @@ PR description.
 | SKL | N-542, N-540, N-464, N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
 | SPN | N-463, N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
-| STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375, N-388, N-513, N-524 |
+| STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375, N-388, N-513, N-524, N-526 |
 | STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485, N-458, N-517, N-518 |
 | SUB | N-121, N-228, N-268, N-244, N-426 |
 | TEC | N-358, N-359, N-360, N-361, N-384 |
@@ -2897,6 +2897,24 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-cap PR 4 (Phases 8 and 9).
 - **Note:** Limit 3 of `spec-infrastructure.md` 4.2.2 for a store class is `MaxStoresPerAgent` less the stores the agent owns, less its pending store facilities, less the facilities its builds ordered this tick (any class: the principal runs one job, so a hire is the only way it orders two kinds in a tick). A build of `k` stores is cut to what fits, and a store facility still pending counts against the room before it is installed. The pending count is read by a pass over the owner's facilities, at most `MaxFacilitiesPerAgent`.
 
+### N-525 `overlay/infrastructure.toml` carries the site only
+
+- **Areas:** CAP, REF
+- **Raised:** 2026-11-20, plan 3-cap PR 5 (Phase 10).
+- **Note:** The row of `spec-reference-config.md` 4.5 for `overlay/infrastructure.toml` says the file also carries a route class and a ground class "where a scenario uses them". The file has the site class and the initial rows only. S121 and S123 add the route and the ground class as an extra TOML layer over the layers they need (`loadPackBytes`). The row should say "the site; the route and ground classes are layered by the scenario" when REF is next edited, or the file should gain them if a second scenario needs them.
+
+### N-526 No store facility pending at the pack level
+
+- **Areas:** CAP, STO
+- **Raised:** 2026-11-20, plan 3-cap PR 5 (Phase 10).
+- **Note:** Storage gives the room at once and no public call produces an owner that cannot take the store, so no pack-level scenario reaches a store facility still pending. That leg is proved only by `TestFork_Infrastructure_Build` and `TestStoreFacility_Pending`. If STO later lets an owner lack room at completion, add a pack-level scenario.
+
+### N-527 The drain of S123 does not bind the draw
+
+- **Areas:** CAP, CAL, POP
+- **Raised:** 2026-11-20, plan 3-cap PR 5 (Phase 10).
+- **Note:** On pack one the capacity a drain adds to the arable endowment never binds the draw, so the households with and without the drain are equal in every run and S123 reports them without comparing them. A ground class whose drain binds needs the calibration platform to choose its numbers; until then nothing proves that the drained capacity reaches the population draw.
+
 ### N-510 The LabourRound row of spec-observability 4.1 now names the refusal fields of spec-employment 15.1
 
 - **Areas:** EMP, OBS
@@ -2991,4 +3009,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 46893e662c8c5fc0bde29240
+NOTES-TAG: 370cc56f860c379144703a4f
