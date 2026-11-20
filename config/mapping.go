@@ -374,6 +374,10 @@ func (l *loader) lastModules(m *tbl, cfg *economysim.Config) {
 		cfg.Modules.Policy = l.policy(ps)
 		ps.finish()
 	}
+	if ss := m.sub("saving"); ss != nil {
+		cfg.Modules.Saving = savingModule(ss)
+		ss.finish()
+	}
 }
 
 // fiscal reads [modules.fiscal] (spec-config.md 6.2, spec-fiscal.md 3.1, 18): a flow of
@@ -702,6 +706,39 @@ func (l *loader) technology(t *tbl) *economysim.Technology {
 	return &m
 }
 
+// savingModule reads [modules.saving] over DefaultSaving (spec-config.md 6.2,
+// spec-saving-and-investment.md 3.2.1): the keys safety_ticks, hurdle_spread_bp and
+// commit_band_bp. A key-less table switches the module on with the defaults.
+func savingModule(t *tbl) *economysim.Saving {
+	m := economysim.DefaultSaving()
+	readInts(t, []intField{
+		{"safety_ticks", &m.SafetyTicks}, {"hurdle_spread_bp", &m.HurdleSpreadBP},
+		{"commit_band_bp", &m.CommitBandBP},
+	})
+	return &m
+}
+
+// saverBlock reads [role.<id>.saver] over DefaultSaver (spec-saving-and-investment.md
+// 3.2.1): the keys precaution_share_bp, precaution_cap_ticks, hurdle_bp, payback_ticks
+// and repair_below_bp, and the rows [[role.<id>.saver.worth]] with the keys class,
+// per_tick and count. A key-less table is an inert block with the defaults.
+func saverBlock(t *tbl) *economysim.Saver {
+	b := economysim.DefaultSaver()
+	readInts(t, []intField{
+		{"precaution_share_bp", &b.PrecautionShareBP}, {"precaution_cap_ticks", &b.PrecautionCapTicks},
+		{"hurdle_bp", &b.HurdleBP}, {"payback_ticks", &b.PaybackTicks},
+		{"repair_below_bp", &b.RepairBelowBP},
+	})
+	t.rows("worth", func(e *tbl) {
+		var w economysim.ProjectWorth
+		e.need("class", e.text("class", &w.Class))
+		e.need("per_tick", integer(e, "per_tick", &w.PerTick))
+		e.need("count", integer(e, "count", &w.Count))
+		b.Worth = append(b.Worth, w)
+	})
+	return &b
+}
+
 // creditModule reads [modules.credit] (spec-config.md 6.2, spec-credit.md 4.1): the
 // four keys of the module. A key-less table switches the module on, and every key is
 // optional here: the bounds of Validate say MinPrincipal and MaxClaims must be set.
@@ -986,6 +1023,10 @@ func (l *loader) role(id string, t *tbl) economysim.Role {
 	if cs := t.sub("credit"); cs != nil {
 		r.Credit = creditTerms(cs)
 		cs.finish()
+	}
+	if ss := t.sub("saver"); ss != nil {
+		r.Saver = saverBlock(ss)
+		ss.finish()
 	}
 	t.text("label", &r.Label)
 	return r

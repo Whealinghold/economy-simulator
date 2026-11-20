@@ -368,3 +368,20 @@ func DefaultInstitutions() Institutions { return Institutions{} }
 // absent. An empty Per of a tax or a payout is PerTick and an empty Scope of a duty is
 // ScopeAny (Fiscal.canonical), and a flow's scale is state that starts at 10 000. Its
 // bounds are in bounds.go (MaxFiscalFlows, MaxDutyBP, MaxLimitBP).
+
+// DefaultSaving returns the tunables of the saving module with their defaults
+// (spec-saving-and-investment.md 10.2): two ticks of safety, a hurdle spread of
+// 20 000 basis points and a commit band of 2 000. Every default is a placeholder
+// (N-015, N-027). The loader starts from it; a configuration built in Go states every
+// field, so a 0 is the value 0.
+func DefaultSaving() Saving {
+	return Saving{SafetyTicks: 2, HurdleSpreadBP: 20_000, CommitBandBP: 2_000}
+}
+
+// DefaultSaver returns a saver block with the defaults of spec-saving-and-investment.md
+// 10.2: no buffer (PrecautionShareBP 0) capped at 30 ticks, a hurdle of 15 000 basis
+// points, a payback horizon of 180 ticks and a repair gate of 5 000. Worth has no
+// default. Every default is a placeholder (N-015, N-027).
+func DefaultSaver() Saver {
+	return Saver{PrecautionCapTicks: 30, HurdleBP: 15_000, PaybackTicks: 180, RepairBelowBP: 5_000}
+}

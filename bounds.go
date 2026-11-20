@@ -729,3 +729,34 @@ const (
 	// Span, so the product of an error and a move fits in 128 bits.
 	MaxMoveBP = 100_000
 )
+
+// The bounds of the saving module (spec-saving-and-investment.md 10.2). All are
+// placeholders (N-015, N-027), chosen so that every product of the spec fits in 128 bits
+// (spec-saving-and-investment.md 11.3).
+const (
+	// MaxSafetyTicks is the most SafetyTicks: a margin of ticks of upkeep, not a plan.
+	MaxSafetyTicks = 100
+	// MaxPrecautionShareBP is the most PrecautionShareBP: up to twice the worst hole;
+	// more is a hoard by design.
+	MaxPrecautionShareBP = 20_000
+	// MaxPrecautionCapTicks is the most PrecautionCapTicks: a few years of upkeep,
+	// below the largest effective window.
+	MaxPrecautionCapTicks = 1_000
+	// MaxHurdleBP is the most HurdleBP: a return of up to ten times the cost.
+	MaxHurdleBP = 100_000
+	// MaxHurdleSpreadBP is the most HurdleSpreadBP: the same width as MaxHurdleBP.
+	MaxHurdleSpreadBP = 100_000
+	// MaxCommitBandBP is the most CommitBandBP: half of the hurdle at most is given up.
+	MaxCommitBandBP = 5_000
+	// MaxPaybackTicks is the most PaybackTicks: a hundred years of a 365-tick year; the
+	// facility's own life binds earlier.
+	MaxPaybackTicks = 36_500
+	// MaxWorthRows is the most Worth rows of a role: a few classes per role.
+	MaxWorthRows = 16
+	// MaxWorthPerTick is the most PerTick of a Worth row, so that PerTick * PaybackTicks
+	// stays within MaxMoney.
+	MaxWorthPerTick = MaxMoney / MaxPaybackTicks
+	// MaxWorthCount is the most Count of a Worth row: a few facilities of a class per
+	// household; MaxFacilitiesPerAgent binds beyond it.
+	MaxWorthCount = 16
+)

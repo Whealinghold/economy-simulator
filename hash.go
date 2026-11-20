@@ -361,6 +361,12 @@ func pairsRole(e *encoder, r Role, informationOn, migrationOn bool) {
 	}
 	e.text(26, r.Needs)
 	e.text(27, r.Ceiling)
+	// Id 28 is reserved for Role.Cover (insurance, N-496).
+	if r.Saver != nil {
+		e.id(29) // written even when every field is zero: a non-nil block is a saver role
+		pairsSaver(e, *r.Saver)
+		e.end()
+	}
 }
 
 // pairsRegion writes the pairs of a Region: ids 1 to 7. Label is presentation
@@ -555,8 +561,8 @@ func pairsEmployer(e *encoder, b Employer) {
 	e.num(5, b.HireYieldBP)
 }
 
-// pairsLastModules writes the pairs of the modules of ids 15, 16, 17, 19, 20, 21 and 22 of
-// Modules, after those pairsLaterModules writes (a continuation for the Lizard
+// pairsLastModules writes the pairs of the modules of ids 15, 16, 17, 19, 20, 21, 22 and 23
+// of Modules, after those pairsLaterModules writes (a continuation for the Lizard
 // limit).
 func pairsLastModules(e *encoder, m Modules) {
 	if m.Credit != nil {
@@ -594,7 +600,37 @@ func pairsLastModules(e *encoder, m Modules) {
 		pairsPolicy(e, *m.Policy)
 		e.end()
 	}
+	if m.Saving != nil {
+		e.id(23)
+		pairsSaving(e, *m.Saving)
+		e.end()
+	}
 	pairsTailModules(e, m)
+}
+
+// pairsSaving writes the pairs of a Saving: SafetyTicks 1, HurdleSpreadBP 2 and
+// CommitBandBP 3, each only when non-zero, so the pointer is the whole of a zero module's
+// contribution (spec-config.md 8.2.2).
+func pairsSaving(e *encoder, m Saving) {
+	e.num(1, m.SafetyTicks)
+	e.num(2, m.HurdleSpreadBP)
+	e.num(3, m.CommitBandBP)
+}
+
+// pairsSaver writes the pairs of a Saver block: PrecautionShareBP 1, PrecautionCapTicks 2,
+// HurdleBP 3, PaybackTicks 4, RepairBelowBP 5 and Worth 6, the rows in class-ID order (the
+// canonical copy sorts them). A ProjectWorth has Class 1, PerTick 2 and Count 3.
+func pairsSaver(e *encoder, b Saver) {
+	e.num(1, b.PrecautionShareBP)
+	e.num(2, b.PrecautionCapTicks)
+	e.num(3, b.HurdleBP)
+	e.num(4, b.PaybackTicks)
+	e.num(5, b.RepairBelowBP)
+	encodeList(e, 6, b.Worth, func(e *encoder, w ProjectWorth) {
+		e.text(1, w.Class)
+		e.num(2, w.PerTick)
+		e.num(3, w.Count)
+	})
 }
 
 // pairsTailModules writes the pairs of the modules of ids 24 and 25 of Modules, after

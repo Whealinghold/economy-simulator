@@ -775,3 +775,12 @@ var (
 	// (spec-policy.md 9.1.2).
 	ErrUnknownLever = errors.New("unknown policy lever")
 )
+
+// The sentinels of the saving module (spec-saving-and-investment.md 11.1). They are root
+// sentinels matched with errors.Is (N-075). The module reuses ErrOutOfBounds,
+// ErrModuleDependency, ErrUnknownFacilityClass and ErrDuplicateID.
+var (
+	// ErrNotSaver is the query Saving for an agent whose role has no Saver block
+	// (spec-saving-and-investment.md 7.3).
+	ErrNotSaver = errors.New("agent's role has no saver block")
+)
