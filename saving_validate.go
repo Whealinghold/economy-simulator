@@ -101,14 +101,17 @@ func (v *validator) savingDependencies() bool {
 func (v *validator) savingWorth() bool {
 	n := len(v.rep.errs)
 	inf := v.c.Modules.Infrastructure
+	if inf == nil {
+		return true
+	}
+	known := make(map[string]bool, len(inf.Classes)) // a membership test only
+	for _, cl := range inf.Classes {
+		known[cl.ID] = true
+	}
 	for i := range v.c.Roles {
 		ro := &v.c.Roles[i]
-		if ro.Saver == nil || inf == nil {
+		if ro.Saver == nil {
 			continue
-		}
-		known := make(map[string]bool, len(inf.Classes)) // a membership test only
-		for _, cl := range inf.Classes {
-			known[cl.ID] = true
 		}
 		seen := make(map[string]bool, len(ro.Saver.Worth)) // a membership test only
 		for _, w := range ro.Saver.Worth {
@@ -236,18 +239,10 @@ func savingProjectWarnings(c *Config, lk lookup, m *Saving, ro *Role, p []string
 // one. A project whose benefit is 0 is still a project: it fails the test.
 func bestSavingProject(c *Config, lk lookup, m *Saving, ro *Role) (savingProject, bool) {
 	var best savingProject
-	var bestAt int64
 	found := false
 	for _, region := range savingRegions(c, ro) {
-		for n, id := range ro.Recipes {
-			rc := lk.recipe[id]
-			if rc == nil || rc.Builds == nil {
-				continue
-			}
-			pr, ok := valueSavingProject(c, lk, m, ro, region, rc)
-			if ok && (!found || saving.Better(savingCandidate(pr, int64(n)), savingCandidate(best, bestAt))) {
-				best, bestAt, found = pr, int64(n), true
-			}
+		if pr, ok := bestSavingProjectIn(c, lk, m, ro, region); ok && (!found || saving.Better(savingCandidate(pr, 0), savingCandidate(best, 0))) {
+			best, found = pr, true
 		}
 	}
 	return best, found
