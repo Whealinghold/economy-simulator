@@ -1144,13 +1144,13 @@ configuration):
 |------|-----------|------|------------|--------|
 | `economysim.policy.decisions` | Counter | `{decision}` | `economysim.actor` | `PolicyDecided` (one per event) |
 | `economysim.policy.entries` | Counter | `{entry}` | `economysim.actor`, `economysim.entry_outcome` | `PolicyDecided` (`Applied`, `Unchanged`, `NotHeld`, `Duplicate`, `NoClose`) |
-| `economysim.policy.cut` | Counter | `{entry}` | `economysim.actor`, `economysim.cut` | `PolicyDecided` (`Clamped`, `Stepped`) |
-| `economysim.policy.held` | Counter | `{reaction}` | `economysim.actor`, `economysim.hold` | `PolicyDecided` (`InBand`, `NoReading`) |
+| `economysim.policy.cut` | Counter | `{entry}` | `economysim.actor`, `economysim.policy_cut` | `PolicyDecided` (`Clamped`, `Stepped`) |
+| `economysim.policy.held` | Counter | `{reaction}` | `economysim.actor`, `economysim.policy_hold` | `PolicyDecided` (`InBand`, `NoReading`) |
 
 12.4.2. **New attributes** (closed sets, so bounded): `economysim.actor` (the actors of
 the configuration), `economysim.entry_outcome` (`applied`, `unchanged`, `not_held`,
-`duplicate`, `no_close`), `economysim.cut` (`clamped`, `stepped`) and `economysim.hold`
-(`in_band`, `no_reading`). For the first consumer's size (one actor) the instruments are
+`duplicate`, `no_close`), `economysim.policy_cut` (`clamped`, `stepped`) and
+`economysim.policy_hold` (`in_band`, `no_reading`), the names of the rule tables 5.3 and 5.4.1. For the first consumer's size (one actor) the instruments are
 1, 5, 2 and 2 series; an actor adds that many.
 
 ### 12.5 What an observer can rebuild
@@ -1726,17 +1726,24 @@ observability, 090 to 093 state and determinism), and a gap is not a removed req
 
 ## 20. Where this lives in the code
 
-Nothing is written; this is the proposed layout for the first code, checked against
-architecture.md 2.6 and `AGENTS.md`.
+The layout of the code, as built (architecture.md 2.6 and `AGENTS.md` list the same files;
+the files marked later are built by the pull request that needs them):
 
-- `policy.go` (root): the types `PolicyConfig`, `PolicyActor`, `Lever`, `LeverKind`,
-  `ScheduleStep`, `Reaction`, `Gauge`, `ActorID`, `LeverID`, `PolicyView`, `LeverView`,
-  `Settings`, `LeverSetting` and `PolicyDirective`; the interface `Policy`, `HoldPolicy` and the
-  unexported built-ins `schedulePolicy`, `rulePolicy` and `directedPolicy` with their assertions; the position P0.3a; the
-  event `PolicyDecided` (in `event.go`); the sentinels `ErrPolicyShape`, `ErrLeverNotInReach`,
-  `ErrLeverShared`, `ErrUnknownPolicy`, `ErrUnknownActor` and `ErrUnknownLever` (in
-  `errors.go`); `WithPolicy` in `option.go`; `DirectPolicy` in `integration.go`. One file per
-  concept.
+- `policy.go` (root, the module file): the types `ActorID`, `LeverID`, `PolicyView`,
+  `LeverView`, `Settings` and `LeverSetting`; the interface `Policy` and `HoldPolicy`; the
+  state `policyState`, its construction `newPolicy` (the keys of each lever, resolved once,
+  D7), the due test and the position P0.3a (`p03aPolicy`); the name check `ErrUnknownPolicy`;
+  and `WithPolicy` in `option.go`. The configuration types `PolicyConfig`, `PolicyActor`,
+  `Lever`, `LeverKind`, `ScheduleStep`, `Reaction` and `Gauge` are in `config.go`, the event
+  `PolicyDecided` and `CausePolicy` in `event.go`, the sentinels in `errors.go`.
+- Continuation files, each with the area code of the module: `policy_validate.go`,
+  `policy_reach.go` and `policy_warn.go` (the sixteen errors and nine warnings of 11);
+  `policy_view.go` (what an actor reads: the lever readings, the treasury, the region states
+  and the view); `policy_apply.go` (the checks' call, the three change lists, the order of
+  6.4.2, `PolicyDecided` and the `Debug` lines); `policy_builtin.go` (the unexported
+  `schedulePolicy` and `rulePolicy` with their assertions); later: `policy_state.go` (the
+  mailbox of `directed`, `DirectPolicy`, `Snapshot.Actors`, tag 32) with `directedPolicy`.
+  `DirectPolicy` is delegated from `integration.go`.
 - `internal/policy/` (standard library only, primitive slices, no root type, architecture.md
   2.9): the schedule's value function, the rule's step with the 128-bit product and the
   truncation, the four gauges over primitive rows, the checks and the two cuts, and the due

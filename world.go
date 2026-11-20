@@ -119,6 +119,8 @@ type World struct {
 	polity *polity
 	// fiscal is the state of the fiscal module, nil when it is off (fiscal.go).
 	fiscal *fiscalState
+	// policy is the state of the policy module, nil when it is off (policy.go).
+	policy *policyState
 	// sto is the state of the storage module, nil when it is off (storage.go).
 	sto *storage
 	// credit is the state of the credit module, nil when it is off (credit.go).
@@ -325,7 +327,7 @@ func buildShell(cfg Config, o options) (*World, error) {
 		log:     o.logger,
 		audit:   o.audit,
 		ext:     ext,
-		reg:     registrations{clearings: o.clearings, strategies: o.strategies, spawners: o.spawners},
+		reg:     registrations{clearings: o.clearings, strategies: o.strategies, spawners: o.spawners, policies: o.policies},
 		ledger:  l,
 		recipes: newRecipeTable(&c),
 		roles:   newRoleTable(&c),
@@ -366,6 +368,9 @@ func resolveExtensions(c *Config, o *options) (extensions, error) {
 		ext.extras = append(ext.extras, st)
 	}
 	if ext.spawner, err = resolveSpawner(o, c.World.Spawner, []string{"world", "spawner"}); err != nil {
+		return extensions{}, err
+	}
+	if err := checkPolicyNames(c, o); err != nil {
 		return extensions{}, err
 	}
 	return ext, nil
