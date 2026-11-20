@@ -12,8 +12,7 @@ import (
 
 // This file is the validation of the saving module (spec-saving-and-investment.md 11;
 // the continuation file of saving.go, architecture.md 2.6): the rules of 11.1 that
-// Validate checks and the eight warnings of 11.2. The module adds no behaviour yet: a
-// configuration with the module on builds a world that ignores it.
+// Validate checks and the eight warnings of 11.2.
 
 // savingModulePath is the path of the module in a configuration.
 var savingModulePath = []string{"modules", "saving"}
