@@ -2813,11 +2813,11 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-fis PR 4 observability review.
 - **Note:** `spec-fiscal.md` 8.2 and 8.4.3 named only the `MaxMoney` headroom as a cut at a recipient. The code (`fiscal_payout.go`, `room`) also caps an in-kind payout at the units the free store room of a household with a room limit can hold (mass and bulk, `spec-storage.md` 4.1.3), because the ledger would refuse the credit with `ErrNoRoom`. The unpaid remainder stays in the treasury and is counted in `FiscalFlowApplied.Headroom` (not `Cut`, which is the pro rata cut of a short treasury); 8.4.3 now says so. The owner accepted this on 2026-11-19. Still open: no rule makes the recipient or the pack see that a payout was refused for room, other than that count; if a pack wants the payout to wait, that is a new rule, not this note.
 
-### N-505 The viability lanes and the merchant's fee-share test do not count a toll
+### N-505 The viability lanes do not count a toll
 
 - **Areas:** FIS, VIA, TRN
 - **Raised:** 2026-11-20, plan 3-fis PR 5, `transport_lanes.go`, `strategy/merchant_ship.go`.
-- **Note:** A toll (`spec-fiscal.md` 7) is counted in one place of the merchant: the haul ceiling of `spec-merchants.md` 5.6 subtracts `n * Toll` from the gross margin (`RouteRow.Toll`). The cost of carriage `C` of the fee-share test (5.5) and the lanes that `transport_lanes.go` hands to the viability solver (`Lane`: labour and `LossBP`) do not include it, so a pack with a toll sees the viability gate and the merchant's pass test overrate a lane that crosses a border; the trip is then not made by its own haul bid (the ceiling falls below 1) or is refused at dispatch (`toll_unaffordable`), not rejected at the test. Left open for VIA and MER: add the toll of a carrying unit to a lane only if a pack shows the gap.
+- **Note:** A toll (`spec-fiscal.md` 7) is counted by the merchant in three places: the cost of carriage `C` of the fee-share test (`spec-merchants.md` 5.4, 5.5; `n * Toll`, every mode), the cash `other` the lot is sized with (6.2.1 item 2) and the haul ceiling (5.6). The lanes that `transport_lanes.go` hands to the viability solver (`Lane`: labour and `LossBP`) do not include it, so a pack with a toll sees the viability gate overrate a lane that crosses a border; the trip is then not made by the merchant's own test or is refused at dispatch (`toll_unaffordable`). Left open for VIA: add the toll of a carrying unit to a lane only if a pack shows the gap.
 
 ### N-506 The Parties of a toll counts a shipper once for each flow for each shipment
 
@@ -2913,4 +2913,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: c3d1eafc98fffe7f89eea584
+NOTES-TAG: f0a479934b348a818036b22c
