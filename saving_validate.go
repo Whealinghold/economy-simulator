@@ -346,9 +346,15 @@ func savingInputs(lk lookup, region string, rc *Recipe) (inputs, tools int64, ok
 			return 0, 0, false
 		}
 		net.Cost(w)
-		tools += price
+		var tok bool
+		if tools, tok = checked.Add(tools, price); !tok {
+			return 0, 0, false
+		}
 	}
 	cost, ok := net.Value()
+	if cost == math.MinInt64 {
+		return 0, 0, false
+	}
 	return -cost, tools, ok
 }
 
@@ -419,7 +425,7 @@ func savingTargetExceedsMoney(c *Config, lk lookup, m *Saving) bool {
 		if !hok {
 			held = math.MaxInt64 // saturate: no target of the same configuration can pass it unseen
 		}
-		money = satAdd(money, held)
+		money = satAdd64(money, held)
 		if ro.Saver == nil {
 			continue
 		}
@@ -433,13 +439,13 @@ func savingTargetExceedsMoney(c *Config, lk lookup, m *Saving) bool {
 		}
 		floor := saving.Floor(reserve, 0)
 		if pr, found := bestSavingProjectIn(c, lk, m, ro, g.Region); found {
-			floor = satAdd(floor, pr.outlay)
+			floor = satAdd64(floor, pr.outlay)
 		}
 		need, nok := checked.Mul(g.Households, floor)
 		if !nok {
 			return true
 		}
-		target = satAdd(target, need)
+		target = satAdd64(target, need)
 	}
 	return target > money
 }
@@ -448,11 +454,12 @@ func savingTargetExceedsMoney(c *Config, lk lookup, m *Saving) bool {
 func bestSavingProjectIn(c *Config, lk lookup, m *Saving, ro *Role, region string) (savingProject, bool) {
 	var best savingProject
 	found := false
-	for _, id := range ro.Recipes {
+	var bestAt int64
+	for n, id := range ro.Recipes {
 		if rc := lk.recipe[id]; rc != nil && rc.Builds != nil {
 			pr, ok := valueSavingProject(c, lk, m, ro, region, rc)
-			if ok && (!found || pr.outlay > best.outlay) {
-				best, found = pr, true
+			if ok && (!found || saving.Better(savingCandidate(pr, int64(n)), savingCandidate(best, bestAt))) {
+				best, bestAt, found = pr, int64(n), true
 			}
 		}
 	}

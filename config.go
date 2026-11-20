@@ -218,7 +218,8 @@ type Saving struct {
 // Saver is the saving block of a role, a pointer of Role: nil means the role has the
 // reserve of spec-agents.md 7.4 and no project (spec-saving-and-investment.md 3.2.1,
 // 10.2). It needs Modules.Saving and is hashed when non-nil, even when every field is
-// zero, because an inert block opts a role into the measure. Start from DefaultSaver.
+// zero (the hash does not judge the bounds: Validate needs HurdleBP and PaybackTicks
+// above 0). Start from DefaultSaver.
 type Saver struct {
 	// PrecautionShareBP is the share of the drawdown held as a buffer, 0 to
 	// MaxPrecautionShareBP; 0 is none. Its hash id is 1.
