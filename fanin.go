@@ -40,6 +40,7 @@ func (w *World) fillAgentView(v *AgentView, a *agent, kind viewKind) error {
 	if w.tenure != nil {
 		w.tenure.fillTenure(v, a)
 	}
+	w.infra.fillView(v, a, kind)
 	return nil
 }
 

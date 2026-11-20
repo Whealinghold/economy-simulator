@@ -346,6 +346,9 @@ func (b *builder) takeInputs() error {
 		if err := b.checkTools(a, row); err != nil {
 			return err
 		}
+		if err := w.infra.warmJob(a); err != nil {
+			return err
+		}
 		// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
 		// refusal of the world's own accounts, which a valid configuration cannot cause
 		// and no test can inject from the root (D190); the branch only wraps and returns

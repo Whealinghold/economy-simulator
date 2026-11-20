@@ -21,7 +21,9 @@ func (n *infrastructure) rebuild() {
 		f := &n.fac[i]
 		switch c := &n.cls[f.class]; c.kind {
 		case kindSite:
-			n.site[siteKey{f.owner, f.region, f.class}] += n.eff(f)
+			e := n.eff(f)
+			n.site[siteKey{f.owner, f.region, f.class}] += e
+			f.tabCond, f.tabCap, f.served = f.condition, e, 0
 		case kindRoute:
 			n.addRoute(f, c)
 		case kindGround:

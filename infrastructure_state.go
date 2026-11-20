@@ -320,3 +320,31 @@ func (n *infrastructure) adopt(f facility) {
 		n.installed[ownerClass{f.owner, f.class}]++
 	}
 }
+
+// fillView sets the Facilities of a Work view: the agent's own facilities in the region of the
+// view, in ascending ID, at most MaxFacilitiesPerAgent (spec-infrastructure.md 9.1). The view is
+// built from the records, so a facility completed this tick is in it with its Capacity though its
+// effect enters the tables at P8.3b. A Trade view is unchanged. It is nil-safe and allocates
+// nothing beyond the scratch of the view.
+func (n *infrastructure) fillView(v *AgentView, a *agent, kind viewKind) {
+	if n == nil || kind != viewWork {
+		return
+	}
+	rows := v.scratch.facilities[:0]
+	for _, id := range n.byOwner[a.id] {
+		f := &n.fac[n.index(id)]
+		if f.region != v.Region || len(rows) == MaxFacilitiesPerAgent {
+			continue
+		}
+		c := &n.cls[f.class]
+		fv := FacilityView{ID: f.id, Class: f.class, To: f.to, Condition: f.condition, Durability: c.durability, Installed: f.installed}
+		if c.kind == kindSite {
+			fv.Capacity = n.eff(f)
+		}
+		rows = append(rows, fv)
+	}
+	v.scratch.facilities = rows
+	if len(rows) > 0 {
+		v.Facilities = rows[:len(rows):len(rows)]
+	}
+}
