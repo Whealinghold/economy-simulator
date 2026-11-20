@@ -120,8 +120,8 @@ const (
 // (spec-transport.md 5.4). ReasonUnknownRegion, ReasonSameRegion,
 // ReasonUnknownCommodity, ReasonInvalidQuantity, ReasonInsufficientStock and
 // ReasonOverflow, above, are the others of the table. The reasons of the modules
-// that are not built (has_store, outside_destination, consignee_full,
-// toll_unaffordable) join with their modules.
+// that are not built (has_store, outside_destination, consignee_full) join with
+// their modules.
 const (
 	// ReasonTooManyRequests is the request number MaxDispatchPerTick + 1 or later of
 	// a plan.
@@ -172,6 +172,9 @@ const (
 	// ReasonUnprovisioned is a self-carried request after which the traveller would
 	// be unfed on the way.
 	ReasonUnprovisioned Reason = "unprovisioned"
+	// ReasonTollUnaffordable is a shipment request whose total toll is above the
+	// shipper's available money, with the fiscal module on (spec-fiscal.md 7.4).
+	ReasonTollUnaffordable Reason = "toll_unaffordable"
 )
 
 // The reasons a job ends without output (spec-production.md 14.1).
@@ -1546,6 +1549,10 @@ type ShipmentDispatched struct {
 	Units, HaulUnits int64
 	// Lines is what is shipped, by commodity.
 	Lines []Amount
+	// Toll is the total toll the shipper paid at the dispatch, in minor units (the
+	// fiscal module, spec-fiscal.md 7.4): 0 for no toll or with the module off. It
+	// stands before LossBP as the row of spec-observability.md 4.1 lists it.
+	Toll Money
 	// LossBP is the share of every commodity of the cargo a strike takes at the
 	// arrival, fixed at the dispatch by the risk module (spec-risk.md 4.1, 14.1): 0
 	// for no strike or with the module off.

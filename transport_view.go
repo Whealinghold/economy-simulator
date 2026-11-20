@@ -111,7 +111,7 @@ func (w *World) buildRoutes() {
 			for m := range modes {
 				ticks, haul, ok := w.travel(RegionID(g), RegionID(to), ModeID(m))
 				has := ok && !w.isOutsideNode(RegionID(to))
-				v.routes[g] = append(v.routes[g], RouteRow{To: RegionID(to), Mode: ModeID(m), Has: has, Ticks: ticks, HaulPerUnit: haul, LossBP: w.risk.viewLoss(RegionID(g), RegionID(to), ModeID(m), has)})
+				v.routes[g] = append(v.routes[g], RouteRow{To: RegionID(to), Mode: ModeID(m), Has: has, Ticks: ticks, HaulPerUnit: haul, LossBP: w.risk.viewLoss(RegionID(g), RegionID(to), ModeID(m), has), Toll: w.viewToll(RegionID(g), RegionID(to), ModeID(m), has)})
 			}
 		}
 	}
