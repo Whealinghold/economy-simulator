@@ -680,6 +680,7 @@ func buildFieldCases() []fieldCase {
 	add(tenureFieldCases()...)
 	add(riskFieldCases()...)
 	add(infrastructureFieldCases()...)
+	add(insuranceFieldCases()...)
 	add(institutionsFieldCases()...)
 	add(policyFieldCases()...)
 

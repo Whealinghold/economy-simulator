@@ -1192,10 +1192,10 @@ by the configuration. The thresholds are placeholders.
 |---------|-----------|
 | `no_cover_roles` | `Modules.Insurance` is present and no role has a block |
 | `cover_no_underwriter` | a role has an `Insure` block and no role has an `Underwrite` block: no request can be filled |
-| `cover_no_insured` | a role has an `Underwrite` block and no role has an `Insure` block, and no consumer strategy is registered that could request: the offers are never used (informational, as CRD's) |
+| `cover_no_insured` | a role has an `Underwrite` block and no role has an `Insure` block, and no consumer strategy is registered that could request: the offers are never used (informational, as CRD's; the configuration cannot see a strategy, so it is raised from the roles alone, N-476) |
 | `cover_without_risk` | no route row of `Modules.Risk` (for an insured with `MinLossBP` above 0) or no store row (for `StoreShareBP`) exists: nothing can be lost, so nothing is ever paid |
 | `loading_above_limits` | the lowest `LoadingBP` of any underwriter exceeds the highest `MaxLoadingBP` of any insured: no route cover can form |
-| `cover_below_minimum` | the sum insured of the smallest planned shipment of the reference programme is below `MinSum` for every insured role |
+| `cover_below_minimum` | the sum insured of the smallest planned shipment of the reference programme is below `MinSum` for every insured role (the configuration holds no shipment, so it reads `StartMoney` as the bound of a first cargo: `MinSum` above the `StartMoney` of every insured role, N-476) |
 | `underwriter_without_income` | an underwriter role with no recipe and no money flow that targets it: its income is premiums, which need an insured |
 | `underwriter_cap_above_money` | `CapBP` above 10 000 on a role whose `StartMoney` less its upkeep is the whole of its capital: it can commit more than it holds (leverage; informational) |
 | `claims_below_policies` | `Modules.Credit.MaxClaims` is below `MaxPolicies`: a shortfall can be dropped (8.4.2) |

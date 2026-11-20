@@ -477,7 +477,7 @@ func (w *World) noteStarted(a *agent, region RegionID, ask *jobAsk, q *startReq,
 		w.sub.noteStart(w, a, int(region)*len(w.cfg.Roles)+int(a.role), ask.recipe, res.k)
 	}
 	for _, f := range w.prod.wear {
-		w.welfare.addWear(int(a.id), f.commodity, f.items, f.units)
+		w.welfare.addWear(int(w.employment.wearer(a)), f.commodity, f.items, f.units)
 	}
 	w.welfare.markWorking(int(a.id), res.k, w.sub.ownJob(w, a))
 	if w.sto != nil {
