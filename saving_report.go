@@ -11,8 +11,10 @@ import (
 // (spec-saving-and-investment.md 12.2): "project chosen" with the goal and the buffer, or
 // "project declined" with the bar, or for a standing refusal the world's reason of
 // spec-infrastructure.md 4.2.2. The strategy has no logger, so the world logs it where it
-// builds the view; the rule is the pure one, so the line cannot disagree with what the
-// default does. It runs only when Debug is enabled, takes no draw and changes nothing.
+// builds the view; the rule is the pure one. The goal is the project's goal before the plan's
+// tier 2 spend, which only Trade knows and nets from it (savingTarget), so it can be larger
+// than the goal the spend cap reads in a tick that plans the project. It runs only when Debug
+// is enabled, takes no draw and changes nothing.
 func (s *saving) logProject(v *AgentView) {
 	ctx := context.Background()
 	if !s.log.Enabled(ctx, slog.LevelDebug) {

@@ -130,3 +130,26 @@ func TestPick_EqualProjectsChooseTheLowerRecipe(t *testing.T) {
 		}
 	}
 }
+
+// TestLines_HeldValueSaturates verifies that the held value of a project, the sum of the held
+// value of its inputs and of its tools, saturates at the largest int64 when both terms do, and
+// does not wrap to a negative number.
+//
+// Fix: review of PR 3 (final stage). The two terms were added with a plain +, so a view with a
+// stock and a centre large enough for both to saturate gave a negative held value, and the goal
+// and the funding of the project read it as unfunded or uncommitted.
+//
+// Arithmetic: the build recipe needs 30 timber and one tool; with 100 timber, one tool and a
+// centre of the largest int64 for both, min(100, 30) * max and min(1, 1) * max both saturate at
+// max, and max + max overflows.
+func TestLines_HeldValueSaturates(t *testing.T) {
+	t.Parallel()
+	v := millView(100)
+	v.Commodities[1] = cview(mTimber, 100, math.MaxInt64, 0)
+	v.Commodities[6] = cview(mTool, 1, math.MaxInt64, 0)
+	v.Recipes[rBuild].Tools = []RecipeTool{{Commodity: mTool, WearPerUse: 1, Durability: 1}}
+	e := projectEval{v: v, sv: v.Saving}
+	if got := e.lines(&v.Recipes[rBuild], 1).held; got != math.MaxInt64 {
+		t.Errorf("lines(build, 1).held = %d, want %d (saturated)", got, int64(math.MaxInt64))
+	}
+}

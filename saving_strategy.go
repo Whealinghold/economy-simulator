@@ -179,15 +179,14 @@ const (
 // projectTally counts the verdicts of the projects of one view and keeps the best that
 // passed and is reachable.
 type projectTally struct {
-	standing, noReturn, unreachable, projects int
-	best                                      ProjectChoice
-	found                                     bool
+	standing, noReturn, unreachable int
+	best                            ProjectChoice
+	found                           bool
 }
 
 // take adds the verdict on a project to the tally (5.5.4: the best by benefit over cost,
 // a repair before a build, then the lower recipe ID).
 func (t *projectTally) take(ch ProjectChoice, st projectState) {
-	t.projects++
 	switch st {
 	case projectStanding:
 		t.standing++
@@ -394,7 +393,7 @@ func (e *projectEval) lines(r *RecipeView, m int64) projectLines {
 	return projectLines{
 		inputs:  sav.Inputs(m, qty[:n], centre[:n]),
 		toolBuy: sav.ToolBuy(m, ts[:nt], tc[:nt]),
-		held:    sav.HeldValue(m, qty[:len(r.Inputs)], stock[:len(r.Inputs)], centre[:len(r.Inputs)]) + sav.HeldValue(m, tq[:nt], ts[:nt], tc[:nt]),
+		held:    satAdd64(sav.HeldValue(m, qty[:len(r.Inputs)], stock[:len(r.Inputs)], centre[:len(r.Inputs)]), sav.HeldValue(m, tq[:nt], ts[:nt], tc[:nt])),
 	}
 }
 
