@@ -358,7 +358,10 @@ func (w *World) coverValues(g RegionID) {
 
 // coverInts returns s with length n and every entry 0, reusing its storage.
 func coverInts(s []int64, n int) []int64 {
-	s = append(s[:0], make([]int64, max(0, n-cap(s)))...)[:n]
+	if cap(s) < n {
+		return make([]int64, n)
+	}
+	s = s[:n]
 	clear(s)
 	return s
 }
