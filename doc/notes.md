@@ -2860,6 +2860,7 @@ PR description.
 - **Areas:** RSK, CFG
 - **Raised:** 2026-11-19, plan 3-rsk PR D (S129), `spec-risk.md` 6.3.
 - **Note:** A (region, class) key has one row, so the common variant of the barn of pack one cannot sit beside its unit row in one overlay. S129 builds the common variant in Go. Nothing is owed unless a golden needs both.
+
 ### N-520 `FacilityLimited.Cut` and `Refused` are counted once per request, where it fails
 
 - **Areas:** CAP, OBS
@@ -2900,4 +2901,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 5f83d5e161671eaf75f2b81c
+NOTES-TAG: 00706acf449ea4849a9ecbc2
