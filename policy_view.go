@@ -120,9 +120,9 @@ func (w *World) policyAnchors(pass *policyPass) bool {
 // policyView builds the view of actor id: the levers by LeverID with the limits and
 // the current value of each, the treasury, and with ReadsRegions the state of each
 // covered region. The levers' rows and the inputs of the checks are written to the
-// scratch in one pass (s.levers, s.state). Levers is that scratch, not a copy: only the
-// built-in policies are decided here and none keeps the view, so D16's zero allocation holds;
-// the change that decides a consumer's policy must hand it a copy (FR-PLC-025). It reports false when the view cannot be built.
+// scratch in one pass (s.levers, s.state). Levers is that scratch, not a copy, so that D16's
+// zero allocation holds for the built-ins, which keep no view; a consumer's policy is given a
+// copy by policySettings (FR-PLC-025). It reports false when the view cannot be built.
 func (w *World) policyView(id ActorID, a *policyActor, pass *policyPass) (PolicyView, bool) {
 	if !w.policyMoment(pass) {
 		return PolicyView{}, false

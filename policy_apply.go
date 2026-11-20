@@ -42,22 +42,38 @@ type policyScratch struct {
 }
 
 // policyDecide is the decision of one due actor: the view, the policy, the checks and the
-// application. A hold actor was skipped by the caller. An actor of a consumer's policy or of
-// a directed one has no decision until the change that adds them (the consumer's draws
-// and the mailbox), so it does nothing here.
+// application. A hold actor was skipped by the caller, and a directed actor with an empty
+// mailbox returns nothing (spec-policy.md 8.4.1), so it builds no view.
 func (w *World) policyDecide(id ActorID, a *policyActor, pass *policyPass) {
-	if a.builtin == nil {
+	if a.kind == kindDirected && len(w.policy.mailbox[id]) == 0 {
 		return
 	}
 	v, ok := w.policyView(id, a, pass)
 	if !ok {
 		return
 	}
-	set := a.builtin.Decide(v, nil)
+	set := w.policySettings(id, a, v)
 	tally := w.policyCheck(set)
 	w.policyWrite(a)
 	hold := a.heldCounts()
 	w.policyReport(id, a, tally, hold)
+}
+
+// policySettings is what the actor's policy returns for the view v. A consumer's policy
+// gets a copy of the levers' rows, because the view's slice is the world's scratch
+// (FR-PLC-025), and the stream of its key (sitePolicy, tick, ActorID), the one word it may
+// draw from (D17); a built-in takes no draw and never keys. A directed actor's settings are
+// its mailbox, which is emptied whatever the checks make of it.
+func (w *World) policySettings(id ActorID, a *policyActor, v PolicyView) Settings {
+	switch a.kind {
+	case kindDirected:
+		return w.policy.takeMailbox(id)
+	case kindConsumer:
+		v.Levers = slices.Clone(v.Levers)
+		w.rnd.keyed(sitePolicy, v.Tick, int64(id))
+		return a.consumer.Decide(v, w.rnd.rnd)
+	}
+	return a.builtin.Decide(v, nil)
 }
 
 // policyCheck converts the returned settings to entries, runs the checks against the

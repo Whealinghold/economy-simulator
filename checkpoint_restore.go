@@ -188,7 +188,7 @@ type extRecord struct {
 }
 
 // kindsOfExtension is the number of kinds an entry may have: the strategy, the
-// spawner, the clearing and the reserved policy (spec-checkpoint.md 4.2.4).
+// spawner, the clearing and the policy (spec-checkpoint.md 4.2.4).
 const kindsOfExtension = 4
 
 // readExtensions reads tag 34: the entries in strictly ascending (kind, name).
