@@ -1400,7 +1400,8 @@ class ID, `facilities` and `facility_classes`, counts in the construction summar
 |-------|---------|------------|------|
 | `Info` | "world created" gains `facility_classes`, `facilities` and the module name `infrastructure` in `modules` | | once, at construction |
 | `Warn` | the warnings of 13.2 | `rule`, `path` | once each at construction |
-| `Debug` | "facility built", "facility repaired", "facility ruined", "facility installed" (constant messages) | `tick`, `facility`, `facility_class`, `agent`, `condition` | per transition, guarded by `Enabled` |
+| `Debug` | "facility built", "facility repaired", "facility ruined", "facility installed" (constant messages) | `tick`, `facility`, `facility_class`, `agent`, `condition`, `cause` (so a ruin by `decay` is told from one by `use` without an observer) | per transition, guarded by `Enabled` |
+| `Debug` | "facility executions voided" | `tick`, `region`, `facility_class`, `executions` | per completion that voided executions (4.3.4), guarded; the count of `FacilityLimited.Voided` exists only under an observer |
 | `Debug` | "facility start refused" | `tick`, `agent`, `recipe`, `reason` | per refusal, guarded |
 
 No `Info` and no `Warn` is emitted inside the tick: `FacilityLimited` is the counter

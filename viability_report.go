@@ -269,6 +269,11 @@ type Report struct {
 	// duals under the employment module, with the reason (spec-viability.md 5.6);
 	// nil with the module off.
 	PayrollInfeasible []PayrollRecord
+	// FacilityDecay lists, ascending, the facility classes whose Decay or WearPerUse is
+	// above 0: the programme holds no decay and no repair, so a facility of such a class has
+	// no steady state unless the chain has a repair loop (spec-infrastructure.md 13.4). It is
+	// informational and nil with the module off.
+	FacilityDecay []string
 }
 
 // normalise puts every list of the report in ascending region then commodity or
