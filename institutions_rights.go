@@ -1,9 +1,12 @@
 package economysim
 
 import (
+	"context"
+	"log/slog"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/institution"
+	"github.com/Whealinghold/economy-sim/internal/logkeys"
 )
 
 // This file is the resolved rights of the institutions module (spec-institutions.md
@@ -324,4 +327,107 @@ func (o *institutions) contractRefusal(a *agent, own, at RegionID, activity int,
 // (spec-institutions.md 5.2.1, 6.7.1). It refuses nothing with the module off.
 func ckOfferRight(w *World, a *agent, s *submittedOffer, _ int) Reason {
 	return w.org.contractRefusal(a, w.regionOf(a), s.o.To, actSell, s.o.Commodity)
+}
+
+// reasonNotMember is the Debug reason of "place not open": a household of a role with a
+// train right in force that is not a member of the holder body has no place for a trainee
+// (spec-institutions.md 11.2). It is a rule constant of the log line and no event field
+// (architecture.md 9.6).
+const reasonNotMember Reason = "not_member"
+
+// mayTrain reports whether household a, in region g, may hold a place for a trainee: the
+// activity train is open on its role there, or a is a member of the body that holds the
+// right in force (spec-institutions.md 5.7.1, hook H-12). A prohibition opens no place. It is
+// true for a nil module, so the traineeship is SKL's alone with the module off.
+func (o *institutions) mayTrain(a *agent, g RegionID) bool {
+	if o == nil {
+		return true
+	}
+	id, ok := o.rightIn(actTrain, int(a.role), g)
+	return !ok || !o.outsider(id, a, g)
+}
+
+// trainerMax is the most trainees household a, in region g, may hold: the role's MaxTrainees,
+// or the least of it and its body's when a is a member of a body whose MaxTrainees is set
+// (spec-institutions.md 5.7.3, hook H-12). It does not end a traineeship in progress: a trainer
+// above the new maximum has no free place and keeps its trainees.
+func (o *institutions) trainerMax(a *agent, g RegionID, roleMax int64) int64 {
+	if o == nil {
+		return roleMax
+	}
+	b := o.bodyOf[int(g)*o.nroles+int(a.role)]
+	if b < 0 || !o.isMember(int(a.id), a.role, g, int(b)) {
+		return roleMax
+	}
+	if m := o.m.Bodies[b].MaxTrainees; m > 0 {
+		return min(roleMax, m)
+	}
+	return roleMax
+}
+
+// viewMaxTrainees is the MaxTrainees of the view of role r in region g, from which an
+// applicant's expected wait counts the places (spec-skill-barriers.md 4.9): the least of the
+// role's and its body's where a train right is in force, since every trainer is then a member,
+// and the role's own otherwise (spec-institutions.md 5.7.2, 5.7.3).
+func (o *institutions) viewMaxTrainees(g RegionID, r RoleID, roleMax int64) int64 {
+	if o == nil {
+		return roleMax
+	}
+	b := o.bodyOf[int(g)*o.nroles+int(r)]
+	if _, ok := o.rightIn(actTrain, int(r), g); !ok || b < 0 {
+		return roleMax
+	}
+	if m := o.m.Bodies[b].MaxTrainees; m > 0 {
+		return min(roleMax, m)
+	}
+	return roleMax
+}
+
+// noteTrain counts the places a train right closes in the entry step of region g for role r
+// (hook H-12, spec-institutions.md 5.6.3): with a right in force, f is the free places, under
+// the role's own MaxTrainees, of the households of the role that the right keeps from training,
+// a the applicants still queued after the filling, and the count is min(f, a), one a place. A
+// closed craft with no queue counts none. The count exists only for RightRefused, and the Debug
+// line "place not open" is written once for the pair, naming the applicant at the head of the
+// queue, when the log is enabled; with neither, nothing is read.
+func (o *institutions) noteTrain(w *World, g RegionID, r RoleID) {
+	if o == nil {
+		return
+	}
+	id, ok := o.rightIn(actTrain, int(r), g)
+	s := w.skills
+	queue := s.queue[s.cell(g, r)]
+	if !ok || len(queue) == 0 {
+		return
+	}
+	ctx := context.Background()
+	debug := w.log.Enabled(ctx, slog.LevelDebug)
+	if o.rights.refused == nil && !debug {
+		return
+	}
+	n := min(o.closedPlaces(w, g, r), int64(len(queue)))
+	if n == 0 {
+		return
+	}
+	if o.rights.refused != nil {
+		o.rights.refused[int(g)*len(o.m.Rights)+int(id)] += n
+	}
+	if debug {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "place not open", slog.Int64(logkeys.Agent, int64(queue[0].agent)),
+			slog.Int64(logkeys.Role, int64(r)), slog.Int64(logkeys.Region, int64(g)), slog.String(logkeys.Reason, string(reasonNotMember)))
+	}
+}
+
+// closedPlaces is the free places, under the role's own MaxTrainees, of the households of role
+// r in region g that could train but for the right: the f of spec-institutions.md 5.6.3.
+func (o *institutions) closedPlaces(w *World, g RegionID, r RoleID) int64 {
+	var free int64
+	roleMax := w.cfg.Roles[r].MaxTrainees
+	for i := w.firstHousehold; i < len(w.agents); i++ {
+		a := &w.agents[i]
+		if a.weight >= 1 && a.role == r && w.regionOf(a) == g && w.couldTrain(a) && !o.mayTrain(a, g) {
+			free = satAdd64(free, max(roleMax-w.skills.held(a.id), 0))
+		}
+	}
+	return free
 }

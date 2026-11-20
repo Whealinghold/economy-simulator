@@ -146,6 +146,7 @@ func (w *World) finishJob(a *agent, region RegionID) {
 	if w.obs.supplied {
 		w.obs.deliver(w.prod.recipeExecuted(nil, nil, nil, w.Tick(), a.id, region, &c, w.cfg.Recipes[c.recipe].Duration))
 	}
+	w.infra.completed(region, &c)
 	if w.sub != nil {
 		w.sub.completed(w, a, int(region)*len(w.cfg.Roles)+int(a.role), &c)
 	}
@@ -304,7 +305,7 @@ func (w *World) admitJob(a *agent, region RegionID, req JobRequest) {
 		invariant("the ledger refused the count of a request: " + err.Error())
 	}
 	if k0 < 1 {
-		w.refuse(a, region, req.Recipe, reason)
+		w.refuseFor(q.principal, a, region, req.Recipe, reason)
 		return
 	}
 	ask := jobAsk{recipe: req.Recipe, maximum: req.Executions, k0: w.committedK0(k0), set: true}
@@ -325,7 +326,7 @@ func (w *World) startReq(a *agent, region RegionID, recipe RecipeID, maximum int
 		invariant("the effective yield does not fit after validation")
 	}
 	q := startReq{recipe: recipe, account: a.account, principal: a.id, weight: a.weight,
-		maximum: maximum, effective: e, hasProfile: has, exec: a}
+		maximum: maximum, effective: e, hasProfile: has, exec: a, region: region}
 	if w.skills != nil {
 		w.traineeRequest(&q, a, region)
 	}
@@ -339,6 +340,20 @@ func (w *World) startReq(a *agent, region RegionID, recipe RecipeID, maximum int
 // started" behind Enabled and, under the flag, one count in the refusal tally. A
 // recipe outside the configuration has no row in the tally and is only logged.
 func (w *World) refuse(a *agent, region RegionID, recipe RecipeID, reason Reason) {
+	// No count of the capacity's cut: the last maxExecutions was for another request.
+	w.refuseCut(a.id, a, region, recipe, reason, 0)
+}
+
+// refuseFor is refuse for a request whose principal is not the executor (a hired start: the
+// employer's facilities are the ones that were full), so the module counts the refusal against
+// the principal's class.
+func (w *World) refuseFor(principal AgentID, a *agent, region RegionID, recipe RecipeID, reason Reason) {
+	w.refuseCut(principal, a, region, recipe, reason, w.prod.facCut)
+}
+
+// refuseCut is refuseFor with the executions the capacity took off the refused request.
+func (w *World) refuseCut(principal AgentID, a *agent, region RegionID, recipe RecipeID, reason Reason, cut int64) {
+	w.infra.refused(a.id, principal, region, recipe, reason, cut)
 	if w.sto != nil {
 		w.sto.refusedStart(w.cellOf(region, a), reason)
 		if reason == ReasonNoRoom {
@@ -431,7 +446,7 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 			w.tenure.refused(res.reason)
 		}
 		w.hiredNotStarted(a)
-		w.refuse(a, region, ask.recipe, res.reason)
+		w.refuseFor(q.principal, a, region, ask.recipe, res.reason)
 		if w.sub != nil {
 			w.sub.blockedStart(w, a, int(region)*len(w.cfg.Roles)+int(a.role), ask.recipe, res.reason)
 		}
@@ -451,6 +466,7 @@ func (w *World) startJob(a *agent, region RegionID, ask *jobAsk) error {
 // endowments, the own-use count, the wear of the tools, the working ticks and the
 // pledge of the storage module.
 func (w *World) noteStarted(a *agent, region RegionID, ask *jobAsk, q *startReq, res startResult) {
+	w.infra.started(region, q, res.k, w.prod.facCut)
 	if w.res != nil {
 		w.takeDraws(ask.first, ask.draws, res.k)
 	}

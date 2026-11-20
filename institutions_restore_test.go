@@ -36,8 +36,8 @@ func orgUvarints(vs ...uint64) []byte {
 //
 // Requirement: FR-ORG-033, FR-ORG-038, FR-ORG-044
 //
-// Guard: slot calls that set a level or a suspension are not built yet, so no other test
-// reaches the accepting side of the two readers; a decoder that kept a level in the wrong
+// Guard: the slot calls make the same state, but through the encoder; a body written by hand
+// reaches the accepting side of the two readers alone; a decoder that kept a level in the wrong
 // row or dropped a suspension would pass every refusal test and fail here.
 func TestCheckpoint_InstitutionsLevelsAndSuspensionsRestore(t *testing.T) {
 	t.Parallel()

@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/institution"
@@ -253,4 +254,127 @@ func (o *institutions) controlEvent(tick int64, g RegionID, r controlRef) PriceC
 	e := PriceControlled{Tick: tick, Region: g, Control: ControlID(r.control), Commodity: k, Bids: t.Lowered, Asks: t.Raised, Units: t.Units}
 	*t = institution.Tally{}
 	return e
+}
+
+// LegalLevel is the entry of the slot SetLegalLevels (spec-institutions.md 7.1): the level
+// of a control or a rate limit, named by its ControlID, in basis points. A control has a cap
+// and a floor of 0 to MaxBasisPoints, 0 for none, with the floor at most the cap when both
+// are set. A rate limit has a cap of 0 to MaxCreditRateBP and no floor.
+type LegalLevel struct {
+	Control        ControlID
+	CapBP, FloorBP int64
+}
+
+// RightSuspension is the entry of the slot SetRightSuspensions (spec-institutions.md 7.1):
+// whether a right, named by its RightID, is suspended. A suspended right leaves its key open
+// and no outer right is consulted (5.4.3).
+type RightSuspension struct {
+	Right     RightID
+	Suspended bool
+}
+
+// SetLegalLevels sets the level of controls and rate limits (the institutions module,
+// spec-institutions.md 7.1): the ranges of the market, the contract round and the credit
+// round are rebuilt at the call, so an order is admitted at the new level from the next
+// step, and a claim already in force keeps its rate. An entry equal to the configured level
+// restores it. It returns ErrInStep, ErrWorldFailed, ErrModuleOff, then for the first entry
+// that fails ErrUnknownControl, ErrOutOfBounds or ErrDuplicateID; a refused call changes
+// nothing. It emits LegalLevelSet for each changed control in ascending ControlID, after the
+// whole call is applied. FR-ORG-036.
+func (w *World) SetLegalLevels(changes []LegalLevel) error {
+	if err := w.enter("SetLegalLevels", "institutions", w.org != nil); err != nil {
+		return err
+	}
+	o := w.org
+	keys, err := slotKeys(changes, o.checkLevel, "control")
+	if err != nil {
+		return fmt.Errorf("SetLegalLevels: %w", err)
+	}
+	l := &o.legal
+	var events []LegalLevelSet
+	for _, i := range inKeyOrder(keys) {
+		c := changes[i]
+		k := int(c.Control)
+		if l.capBP[k] == c.CapBP && l.floorBP[k] == c.FloorBP {
+			continue
+		}
+		events = append(events, LegalLevelSet{Tick: w.Tick(), Control: c.Control,
+			CapBefore: l.capBP[k], CapAfter: c.CapBP, FloorBefore: l.floorBP[k], FloorAfter: c.FloorBP})
+		l.capBP[k], l.floorBP[k] = c.CapBP, c.FloorBP
+	}
+	if len(events) > 0 {
+		o.resolve()
+	}
+	slotNote(w, "legal levels set", events)
+	return nil
+}
+
+// checkLevel is check 4 of spec-integration.md 3.2 for an entry of SetLegalLevels, in the
+// order of spec-institutions.md 7.1.1: a control that is configured, then the bounds of its
+// levels. It returns the key of the entry.
+func (o *institutions) checkLevel(i int, c LegalLevel) (int64, error) {
+	if c.Control < 0 || int(c.Control) >= len(o.legal.ids) {
+		return 0, argError(ErrUnknownControl, itoa(int(c.Control)), "", entry("changes", i), "control")
+	}
+	k := int(c.Control)
+	switch {
+	case o.legal.isRate[k] && c.FloorBP != 0:
+		return 0, argError(ErrOutOfBounds, itoa(int(c.FloorBP)), "no floor on a rate limit", entry("changes", i), "floor_bp")
+	case o.legal.isRate[k] && (c.CapBP < 0 || c.CapBP > MaxCreditRateBP):
+		return 0, argError(ErrOutOfBounds, itoa(int(c.CapBP)), "MaxCreditRateBP", entry("changes", i), "cap_bp")
+	case !o.levelsInBound(k, c.CapBP, c.FloorBP):
+		return 0, argError(ErrOutOfBounds, fmt.Sprintf("%d, %d", c.CapBP, c.FloorBP), "MaxBasisPoints, floor at most cap", entry("changes", i), "cap_bp")
+	}
+	return int64(c.Control), nil
+}
+
+// SetRightSuspensions suspends rights or lifts their suspension (the institutions module,
+// spec-institutions.md 7.1): the resolved rights are rebuilt at the call, so a start or an
+// order is tested without a suspended right from the next step. It returns ErrInStep,
+// ErrWorldFailed, ErrModuleOff, then for the first entry that fails ErrUnknownRight or
+// ErrDuplicateID; a refused call changes nothing. It emits RightSuspensionSet for each
+// changed right in ascending RightID, after the whole call is applied. FR-ORG-037.
+func (w *World) SetRightSuspensions(changes []RightSuspension) error {
+	if err := w.enter("SetRightSuspensions", "institutions", w.org != nil); err != nil {
+		return err
+	}
+	o := w.org
+	keys, err := slotKeys(changes, func(i int, c RightSuspension) (int64, error) {
+		if c.Right < 0 || int(c.Right) >= len(o.rights.suspended) {
+			return 0, argError(ErrUnknownRight, itoa(int(c.Right)), "", entry("changes", i), "right")
+		}
+		return int64(c.Right), nil
+	}, "right")
+	if err != nil {
+		return fmt.Errorf("SetRightSuspensions: %w", err)
+	}
+	var events []RightSuspensionSet
+	for _, i := range inKeyOrder(keys) {
+		c := changes[i]
+		if o.rights.suspended[c.Right] != c.Suspended {
+			o.rights.suspended[c.Right] = c.Suspended
+			events = append(events, RightSuspensionSet{Tick: w.Tick(), Right: c.Right, Suspended: c.Suspended})
+		}
+	}
+	if len(events) > 0 {
+		o.resolve()
+	}
+	slotNote(w, "right suspensions set", events)
+	return nil
+}
+
+// orgSlots adds the levels and the suspensions that differ from the configuration to the
+// slot list, in ascending ControlID and RightID, the order tag 31 saves them in; it is empty
+// with the module off (spec-integration.md 5.3, spec-institutions.md 12.2).
+func (w *World) orgSlots(s *SlotState) {
+	o := w.org
+	if o == nil {
+		return
+	}
+	for _, r := range o.legalRows() {
+		s.LegalLevels = append(s.LegalLevels, LegalLevel(r))
+	}
+	for _, id := range o.suspendedRows() {
+		s.RightSuspensions = append(s.RightSuspensions, RightSuspension{Right: id, Suspended: true})
+	}
 }

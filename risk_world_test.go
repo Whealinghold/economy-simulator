@@ -10,10 +10,13 @@ import (
 	economysim "github.com/Whealinghold/economy-sim"
 )
 
-// The tests of what a world does with the risk module on before the module has
-// a behaviour (plan 3-rsk, PR A: phases 1 to 3 build rows, bounds, hash and
-// loader, and no position reads them). Plan 3-rsk phase 4 replaces them with the
-// neutrality test at probability 0 (FR-RSK-005) and the golden of the module.
+// The tests of what a world does with the risk module on when nothing is exposed to a
+// strike: the packs below have no shipment on the road and no store that holds goods, so
+// the module takes no word of a unit row and its common rows are the only draws that meet
+// no cargo (FR-RSK-034). They began as the PR A tests of rows that nothing read; the
+// module now has positions (plan 3-rsk phases 4 to 6), and the neutrality at probability 0
+// (FR-RSK-005) and the golden of the module are in risk_dispatch_internal_test.go and
+// risk_golden_test.go.
 
 // riskRun runs a world of c for ticks steps from seed and returns every event
 // after WorldCreated, in order, and the final snapshot with its configuration
@@ -65,15 +68,15 @@ func withoutLoss(t *testing.T, snap economysim.Snapshot) economysim.Snapshot {
 // built from a configuration with the risk module on (two route rows, two store
 // rows, one of each common) is accepted by NewWorld, runs, hashes differently
 // from the same configuration with the module off, and emits the same events and
-// ends in the same snapshot as that configuration but for the boundary accounts of loss, because no position reads the
-// rows yet.
+// ends in the same snapshot as that configuration but for the boundary accounts of loss,
+// because nothing is exposed: the pack runs no shipment (its strategies send none) and
+// no store holds goods, so no strike has a cargo or a stored load to take.
 //
-// Guard: PR A lands rows that nothing reads. If a later change made them read
-// before the module's positions exist, or let a row leak into the core's
-// draws, a configuration with the module on would change a run that the module
-// is not meant to touch. The events and the snapshot are compared with
-// reflect.DeepEqual, and the test fails for nothing if the run is empty, so it
-// checks the run had events.
+// Guard: a row of a module that is on must change a run only where something is exposed.
+// If a common row's word, kept for the tick, or a unit row without exposure, let a strike
+// reach the core's draws or its events, a configuration with the module on would change a
+// run it has no cargo in. The events and the snapshot are compared with reflect.DeepEqual,
+// and the test fails for nothing if the run is empty, so it checks the run had events.
 //
 // Requirement: FR-RSK-001
 func TestRisk_OnWorldBuildsAndRunsLikeOff(t *testing.T) {
@@ -141,13 +144,12 @@ severity_bp = 5000
 // alone and with no Go code specific to the module, that a risk table layered on
 // pack two with its trade, transport and storage overlays loads, validates with
 // no risk warning, builds a world, runs 40 ticks and ends where the pack without
-// the table ends, on the events and the snapshot (the module reads nothing in PR
-// A), while its hash differs and the rows are in the loaded configuration.
+// the table ends, on the events and the snapshot (nothing is exposed: no shipment, no
+// stored load), while its hash differs and the rows are in the loaded configuration.
 //
-// This is the end-to-end path of the feature as it stands: file, loader,
-// validator, hash and constructor. The behaviour at dispatch and arrival is
-// phases 4 to 8 of plan 3-rsk, and they replace the comparison with the module's
-// golden. A row naming a mode or class the layers lack would fail the load
+// This is the end-to-end path of the configuration: file, loader, validator, hash and
+// constructor. The behaviour at dispatch, arrival and in stores is in the module's goldens
+// and scenarios (risk_golden_test.go, scenario_s126_test.go to scenario_s131_test.go). A row naming a mode or class the layers lack would fail the load
 // here, so the test also pins that the shipped overlays carry what a risk file
 // needs.
 //

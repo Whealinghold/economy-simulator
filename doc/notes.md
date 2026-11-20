@@ -46,18 +46,18 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351, N-353 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424, N-474, N-490, N-512 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424, N-474, N-490, N-512, N-521 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030 |
-| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-388, N-438, N-475, N-492 |
-| CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-494, N-496, N-483 |
+| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-388, N-438, N-475, N-492, N-520, N-521, N-522, N-523, N-524 |
+| CFG | N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-494, N-496, N-483, N-461, N-522 |
 | CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444, N-471, N-480, N-500, N-502 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
 | CLR | N-113, N-137, N-241, N-457 |
 | CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457, N-491, N-493, N-494, N-438, N-481, N-502 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398, N-472, N-484, N-503 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-445, N-500, N-501, N-502, N-503, N-510, N-511, N-512, N-513, N-514 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-445, N-500, N-501, N-502, N-503, N-510, N-511, N-512, N-513, N-514, N-521 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361, N-485 |
@@ -73,26 +73,26 @@ PR description.
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482, N-510 |
-| ORG | N-400, N-401, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-492, N-483, N-484 |
+| OBS | N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482, N-510, N-520 |
+| ORG | N-400, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-463, N-464, N-465, N-492, N-483, N-484 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
 | PRO | N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454, N-501 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
-| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470 |
+| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470, N-458, N-459, N-460, N-461 |
 | SAV | N-145, N-156, N-195, N-362, N-382, N-475, N-490, N-491, N-492, N-493, N-495, N-496 |
 | SCL | N-030, N-198, N-222, N-300, N-493 |
 | SET | N-404, N-140, N-192, N-268, N-348, N-365 |
-| SKL | N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
-| SPN | N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
+| SKL | N-464, N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
+| SPN | N-463, N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
-| STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375, N-388, N-513 |
-| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485 |
+| STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375, N-388, N-513, N-524 |
+| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485, N-458 |
 | SUB | N-121, N-228, N-268, N-244, N-426 |
 | TEC | N-358, N-359, N-360, N-361, N-384 |
-| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434 |
-| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383 |
+| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434, N-459 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383, N-522, N-523 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346, N-472, N-491, N-514 |
 | WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438, N-475, N-480 |
 
@@ -2348,6 +2348,8 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-cap PR 2 (observability review), plan Q3.
 - **Note:** CAP defers its five instruments to one adapter PR after Stage 3 (plan 3-cap Q3; `FacilityChanged` is in the adapter's `ignoredEvents` until then). The catalogue rows (`observability-and-logging.md` 5.3, 5.3.1) and the derivation test (`TestFacility_MetricsDerivable`, PR 4) exist, so the adapter PR needs only the code. It must: (1) feed `economysim.facility.count` from `FacilityChanged` (+1 `added` and `built`, -1 `ruined`) and seed it from the `Facilities` rows of the `WorldRestored` snapshot; (2) feed `limited` and `refused` from `FacilityLimited` (PR 3); (3) feed the gauges `pending` and `condition` from `RecordSnapshot` rows; (4) intern `Names.FacilityClasses` and add the attribute values `economysim.facility_class` and `economysim.facility_limit` (`cut`, `voided`); (5) take `FacilityChanged` and `FacilityLimited` out of `ignoredEvents`. One more candidate, not in the catalogue: a counter `economysim.facility.ruined` by `economysim.cause` (`decay`, `use`, `owner_removed`; closed set, bounded). `count` alone cannot say why capital fell, and a ruin by use against one by decay points at different faults. The adapter PR decides it with the catalogue edit; no core change is needed.
 - **Update (2026-11-19, plan 3-cap PR 3, observability review of `FacilityLimited`):** the deferral is real (`FacilityChanged` and `FacilityLimited` are in the adapter's `ignoredEvents`) and every instrument above derives from an event or snapshot row that exists. Three things for the adapter PR. (a) `FacilityLimited.Pending` is a level re-counted every tick while a store facility stays pending, so it must not feed a counter (a facility pending for five ticks would count five times); `economysim.facility.pending` is the snapshot gauge, and the field in the event only tells a debugger which cell is stuck in that tick. (b) `FacilityLimited.Served` is not fed to any instrument: the event is absent when `Cut`, `Refused`, `Voided` and `Pending` are all 0, so a counter of `Served` would undercount exactly the quiet ticks and a ratio `limited / served` would read high. Utilisation is `economysim.recipe.executions` by recipe, which has no such gap. (c) One candidate for RES, not in the catalogue: a counter `economysim.endowment.lost` (`{unit}`, by `economysim.resource` and `economysim.region`) from the `Lost` of `EndowmentChanged` and of `EndowmentAdjusted`. P8.3b is a new source of lost units (the ground clamp when a ground facility decays or is ruined, kind `facility`), and today the only trace is the fall of `economysim.endowment.stock`, which cannot be told from a draw or from a shock. The identity of `spec-resources.md` 6.4 (stock = start - drawn + regenerated - lost) then closes on the metrics alone. Bounded by resources and regions; the adapter PR decides it with the catalogue edit. PR 4 counts `Served`, `Cut`, `Refused` and `Voided`; until then the two instruments `limited` and `refused` read 0.
+- **Update (2026-11-19, plan 3-cap PR 4):** `TestFacility_MetricsDerivable` exists: the count by (class, region) folded from `FacilityChanged` equals the snapshot rows, and `FacilityLimited` now carries `Served`, `Cut`, `Refused` and `Voided`, so `limited` and `refused` read real values. The deferral stands.
+- **Update (2026-11-19, plan 3-cap PR 4, observability review):** the deferral stands; nothing is added to the catalogue now. What PR 4 makes derivable, for the adapter PR to decide with the catalogue edit, all bounded and from events or rows that exist. (a) `economysim.facility.ruined` (above) by `economysim.cause`: `FacilityChanged` `ruined` now carries `decay` and `use` from P8.3b and `role_changed` from a role change, so the use-against-decay split is real. (b) Wear is not an event (a decay that ruins nothing changes no transition, `spec-infrastructure.md` 14.1), so "wear by outcome" has two parts: the ruins above, and the fall of the `economysim.facility.condition` gauge between snapshots; no counter of worn units is derivable without a field, and none is wanted. (c) Limit refusals by class are `FacilityLimited.Refused` by class, already `economysim.facility.refused`; the reason of each refusal (`no_facility`, `not_unlocked`, `facility_cap`, `no_target`, `store_refused`, `nothing_to_repair`) is on `RecipeRefused` (`economysim.recipe.refused`, by `economysim.reason`), which is the one place that splits `refused` by reason, so the adapter adds no attribute to `refused`. (d) Builds completed are `FacilityChanged` `built` and repairs `repaired` (both with cause `recipe`); builds and repairs voided are `FacilityLimited.Voided`, already `limited` by `voided`. A counter of builds completed by class is a candidate only if a dashboard needs the rate: `count` is a level and cannot show builds against ruins per interval. The Debug line "facility executions voided" and the `cause` of the four facility lines give a logger-only run what the events give an observer.
 
 ### N-388 Storage's `ended` list exists only under an observer
 
@@ -2412,12 +2414,6 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-org PR A review, `spec-institutions.md` 10.1.
 - **Note:** `Institutions.canonical` hashes `Roles`, `Regions` and `Jurisdictions` of a body in the order given, so two configurations that list the same set in another order, or twice, hash differently and resolve the same tables. The spec is silent on a repeated entry. The CFG owner decides between rejecting a duplicate (a sentinel and a row of 10.1), sorting the lists in `canonical`, or leaving it. Nothing in ORG depends on the answer.
 
-### N-401 ORG: the tests that plant state are replaced by the call's tests in PR D
-
-- **Areas:** ORG
-- **Raised:** 2026-11-18, plan 3-org PR B.
-- **Note:** PR B builds the resolved rights and ranges, the levels in force and the suspensions, and saves them in tag 31, but nothing sets a level or a suspension before PR D. `MembershipChanged.Held` is 0 until PR D. Until then `orgTablesToy` and the levels test plant the state in the module's fields. PR D replaces them with tests of `SetLegalLevels` and `SetRightSuspended` and of the held completion, and removes the planting.
-
 ### N-402 CHK: `hashWorld` of a restored world differs from the uninterrupted one
 
 - **Areas:** CHK, CODE
@@ -2442,6 +2438,7 @@ PR description.
 - **Raised:** 2026-11-18, observability review of plan 3-org PR B (instruments deferred by plan question 8).
 - **Note:** the adapter change (`otelobserver/`, no core change) builds, in this order: (1) `economysim.body.waiting`, a gauge from `Bodies[].Eligible - Members` per body and region: the only metric that shows a body with a queue, the counterpart of the `Warn` "body has waiting households", which fires on the tenth tick of a run and at every tenth after, so a short queue leaves no trace in logs; (2) `economysim.body.members`, a gauge from `Bodies[].Members`, so a drop to 0 (all lapsed) is seen next to `body.waiting`; (3) `economysim.membership.lapsed` is NOT proposed: `MembershipChanged.LapsedRole`, `LapsedRegion`, `Skipped` and `Barred` are cumulative per tick and bounded, so add them as attributes of one counter only if a dashboard needs the cause, and not before; (4) `economysim.right.refusals` and `economysim.control.clamped` from `RightRefused` and `PriceControlled`, which PR C and PR D emit, so they are built after those events exist. Fold the rows once with `TestEvents_MetricsDerivable` as the check, and remove the five entries of `ignoredEvents` in the same change. Series: bodies times regions for the two gauges (bounded by the configuration).
 - **Update (2026-11-19, plan 3-org PR C observability review):** the two counters of (4) are derivable from the events as built (`TestEvents_RightRefusalsMatchRejectedOrders` shows the order counts agree), and the adapter change must keep five facts, each a reading rule and not a new instrument: (a) a refused order is counted twice on purpose, by `economysim.right.refusals` (activity `sell` or `buy`) and by `economysim.market.orders.rejected` (reason `not_permitted`), so a panel must not add them; an offer or a take refused for a right is also in `economysim.contract.refused` for the same reason; (b) a start refused for a right is counted only by `economysim.right.refusals` (activity `produce` or `train`), never by `economysim.recipe.refused` or `economysim.production.halted` (`refusalColumn` returns -1), so a "why did production not start" panel adds `right.refusals` to `recipe.refused`; (c) a rate limit is a `PriceControlled` with `Commodity` `NoCommodity`, `Asks` 0 and `Units` 0, so `economysim.control.clamped` counts it as `side` `bid` (a borrower's request lowered), and a control of a rate limit never has `side` `ask`; (d) `PriceControlled.Units` is not fed to any instrument: the volume that a cap or a floor touched is not proposed (the order count and `MarketCleared` unmatched units are the shortage signal) and is added only if a dashboard needs it, as `economysim.control.units` with the same attributes (no new series); (e) the `Debug` lines of a start refused and an order rejected exist (reason `not_permitted`) and no `Debug` line is written for a clamped limit, because `PriceControlled` per (region, control) and the clamped limit on `OrderPlaced` tell it.
+- **Update (2026-11-19, plan 3-org PR D observability review):** the adapter change reads the train right, the held completion and the headroom as follows, and adds no instrument beyond (1) to (4) except the one candidate in (g). (f) `economysim.right.refusals` with activity `train` is fed by `RightRefused.Train` and needs nothing new; it is `min(f, a)` per (region, right) per tick, so a waiting queue counts again each tick (N-465), and its description says "pressure, not households". (g) Candidate, built only if a dashboard needs it: `economysim.membership.held`, a Counter in `{household}` by `economysim.body` and `economysim.region`, from `MembershipChanged.Held`. Use: a trainee that finished its ticks and cannot complete stays a trainee, takes a trainer's place and counts nothing in `body.members` or `body.waiting`, so a body whose places are full of its own households shows the stuck pipeline only here. It counts a trainee each tick it stays held, and only where the body's own places are short (N-465), so a rising rate with a flat `body.members` is the signal and the value is not a household count. No new attribute and no new series beyond bodies times regions. (h) Headroom limits are not proposed as an instrument: the headroom of a role is a view field and no snapshot row, `Held` is blind to a hold by the class limit alone, and a gauge of a headroom per role would be a new snapshot field for a figure the spawner already reads. The class-limit hold, and which of the two limits holds a trainee, are told by the `Debug` line "completion held" (reason `body_places` or `class_limit`, log-only values of `reason`), written in the PR D observability review; an operator looks for it when `Held` is 0 and a trainee does not complete. (i) `LegalLevelSet` and `RightSuspensionSet` get no instrument: they are one per changed key of a consumer's call between steps, so a counter would only repeat what the consumer did; they stay in `ignoredEvents`.
 
 ### N-424 The default strategy never asks a closed endowment
 
@@ -2714,6 +2711,24 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-org PR C review.
 - **Note:** The root calls `clearing.AdmitClamp`; `Admit` is a wrapper kept by `spec-clearing.md` 3.2.1.1 so that a caller that reads no range is unchanged, and only tests call it. Drop it, or keep it with a test that pins it to `AdmitClamp`, when the next change touches `internal/clearing/admit.go`.
 
+### N-463 ORG, SPN: a body shared by several roles of a region is bounded per role in one entry step
+
+- **Areas:** ORG, SPN
+- **Raised:** 2026-11-19, plan 3-org PR D, `spec-institutions.md` 3.4.2.
+- **Note:** The headroom of a body is the places less the households of all the body's roles in the region. The spawner holds its room per role (`RoleView.Headroom`, `s.room[r]`, `spec-spawner.md` 6.3.1: "a body's places add a second source to the same count and no field"), so two entrants into two roles of one body each see the whole headroom in one entry step and can together exceed the places. `spec-institutions.md` 3.4.2 already says the limit is not enforced on what is there and nothing is removed (SET R3), and the next step's view counts the households, so the overshoot lasts one step. A body over a single role (every example of the spec) is exact. Decision of plan 3-org PR D: documented, not fixed. The spawner owner either shares the room of the roles of a body (a group field on `RoleView` and in `occupation.Limits`, which 6.3.1 says the view does not have) or keeps the overshoot and says so in 3.4.2.
+
+### N-464 ORG, SKL: the expected wait counts the body's trainee limit only where a train right is in force
+
+- **Areas:** ORG, SKL
+- **Raised:** 2026-11-19, plan 3-org PR D, `spec-institutions.md` 5.7.2 and 5.7.3.
+- **Note:** `n_max = Trainers * MaxTrainees` of the spawner's view takes one `MaxTrainees` for a role. With a `train` right in force every trainer is a member, so `RoleView.MaxTrainees` is the least of the role's and the body's, which is exact. Without the right, a member holds the least and a non-member the role's, and one number cannot say both: the view keeps the role's. The snapshot's `Places` is exact for each trainer. A role of a body with a `MaxTrainees` and no train right overstates the places in the applicant's expected wait by the difference.
+
+### N-465 ORG, OBS: `Held` and `Train` count each tick, and `Held` only where a body's own places are short
+
+- **Areas:** ORG, OBS
+- **Raised:** 2026-11-19, plan 3-org PR D.
+- **Note:** `MembershipChanged.Held` counts a held trainee in every tick it stays held (the event says "held at P7.1(a) this tick"), and only when the body's headroom is below the trainee's weight: a completion held by the class limit alone is not a body's. `RightRefused.Train` is `min(f, a)` per (region, right) per tick, so a queue that waits for a closed craft is counted again every tick, as `Produce` counts requests (N-455). Both are pressure, not distinct households, and both exist only under an observer (N-456). The adapter that records them says so in its description.
+
 ### N-480 D17 is keyed once per due actor (`sitePolicy`)
 
 - **Areas:** WLD, PLC, CHK
@@ -2822,6 +2837,60 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-emp PR 4.
 - **Note:** Step 2c (`dropHires`) runs before `dropClaims`, and `TestInterrupt_EmployerRemoved_*` proves the refund reached the employer's own account before the estate took it (`AgentBankrupted.Money` holds it). No test runs a removal with a claim against the employer, so that the waterfall of `spec-credit.md` 9.1 pays a creditor from the refunded escrow. The first change that has a credit pack with a hire world (the proof PR of EMP, or CRD's) adds it.
 
+### N-458 S128 is empty on every merchants pack, so the merchant reading of `LossBP` is unmeasured
+
+- **Areas:** RSK, STY
+- **Raised:** 2026-11-19, plan 3-rsk PR D (S128), `spec-risk.md` RSK-A1, A4, A5.
+- **Note:** The warm and cold merchants packs dispatch no shipment in 400 ticks, so the arm that reads `LossBP` and the arm that does not (`blindMerchant`) both report 0 shipments and 8 brokers removed. The books and the composition are exact; the comparison is empty. RSK-A1, A4 and A5 stay unmeasured until a pack lives. Left open for STY.
+
+### N-459 The shipper of the transport goldens sends once
+
+- **Areas:** RSK, TRN
+- **Raised:** 2026-11-19, plan 3-rsk PR D (S130), `spec-risk.md` 6.2.
+- **Note:** `shipperPackOn` sends one volley of 24 shipments at tick 1, and the pack then collapses (N-352), so a series of route scales over time has no dispatch to act on in the middle of a run. S130 is scripted around the volley. A test of scales over time on routes needs a pack that lives or a shipper with its own supply.
+
+### N-460 `overlay/risk.toml` carries no store row, and the reference-chain spec says it does
+
+- **Areas:** RSK, REF
+- **Raised:** 2026-11-19, plan 3-rsk PR D, `spec-reference-chain.md` 4.5.
+- **Note:** The spec says `risk.toml` holds route rows and one store row. A store row needs the storage module, which pack two with transport does not load, so the store row is in `overlay/risk-store.toml` (pack one). Settle it: change 4.5 to follow the two overlays, or add a three-module overlay that carries both.
+
+### N-461 A common and a unit row of one store class cannot share a file
+
+- **Areas:** RSK, CFG
+- **Raised:** 2026-11-19, plan 3-rsk PR D (S129), `spec-risk.md` 6.3.
+- **Note:** A (region, class) key has one row, so the common variant of the barn of pack one cannot sit beside its unit row in one overlay. S129 builds the common variant in Go. Nothing is owed unless a golden needs both.
+
+### N-520 `FacilityLimited.Cut` and `Refused` are counted once per request, where it fails
+
+- **Areas:** CAP, OBS
+- **Raised:** 2026-11-19, plan 3-cap PR 4 (Phases 8 and 9).
+- **Note:** `spec-infrastructure.md` 14.1 says `Cut` and `Refused` are counted at P2.5 and again at P2.7 for a start the second evaluation lowers. The code counts each request once: a refusal at the point it is refused (P2.5 or P2.7, by `refuse`) and the executions the capacity took off at the start that began (`started`). The totals per tick are the ones the spec intends and no request is counted twice, but the position differs from the wording. `Cut` is the executions the needed classes took off, read before storage's room cut, and only `no_facility` adds to it for a refusal. A reader who needs the P2.5 count apart from the P2.7 one has to add a field; the spec sentence should say "once, at the decision" when it is next edited.
+
+### N-521 The Work view of the tick a job completes is not built
+
+- **Areas:** CAP, AGT, EMP
+- **Raised:** 2026-11-19, plan 3-cap PR 4 (Phases 8 and 9).
+- **Note:** `spec-infrastructure.md` 9.1 says a facility completed at P2.1 is in the same tick's `Work` view. `Work` is called only for an agent that has no job and did not complete one this tick, so the agent that completed a build does not see it until the next tick; the sentence holds for another agent of the same principal (a hire, EMP) and for the query `Facilities`. `TestView_Facilities` reads the view of the next tick. EMP's hire form decides whether the employer's agents get the view of its facilities (the principal's, not the executor's: `fillView` reads the executor's own).
+
+### N-522 `facility_missing` is raised at construction, not by `Validate`
+
+- **Areas:** CAP, CFG, VIA
+- **Raised:** 2026-11-19, plan 3-cap PR 4 (Phases 8 and 9).
+- **Note:** A warm-start job of a recipe that `Needs` a site class the group has no initial row of is a `*ViabilityError` (rule `facility_missing`, `Value` the recipe, `Bound` the class) returned by `NewWorld` at the warm start, since the facilities are made after it and the check reads the rows. `spec-config.md` 7.6 and FR-CFG-041 list five viability rules that `Validate` returns; this one is not among them and `Validate` accepts the configuration. When the capacity row of the programme is built (N-383) the rule moves into the viability check and the list gains a sixth name.
+
+### N-523 `FacilityDecay` is a list of class IDs in `Report`
+
+- **Areas:** CAP, VIA
+- **Raised:** 2026-11-19, plan 3-cap PR 4 (Phases 8 and 9).
+- **Note:** `Report.FacilityDecay` holds, ascending, the IDs of the classes whose `Decay` or `WearPerUse` is above 0 (`spec-infrastructure.md` 13.4, informational). It has no programme row and no figure: the programme holds neither decay nor repair, as the spec says. N-383 still owes the capacity row and the runnability of a `Needs` recipe in `internal/steady`.
+
+### N-524 The room of a store build is conservative
+
+- **Areas:** CAP, STO
+- **Raised:** 2026-11-19, plan 3-cap PR 4 (Phases 8 and 9).
+- **Note:** Limit 3 of `spec-infrastructure.md` 4.2.2 for a store class is `MaxStoresPerAgent` less the stores the agent owns, less its pending store facilities, less the facilities its builds ordered this tick (any class: the principal runs one job, so a hire is the only way it orders two kinds in a tick). A build of `k` stores is cut to what fits, and a store facility still pending counts against the room before it is installed. The pending count is read by a pass over the owner's facilities, at most `MaxFacilitiesPerAgent`.
+
 ### N-510 The LabourRound row of spec-observability 4.1 now names the refusal fields of spec-employment 15.1
 
 - **Areas:** EMP, OBS
@@ -2862,4 +2931,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 70f4981e0ee9845b341b4692
+NOTES-TAG: ff43d40b3f5b1de1af64dd6e
