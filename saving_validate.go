@@ -294,7 +294,10 @@ func valueSavingProject(c *Config, lk lookup, m *Saving, ro *Role, region string
 		benefit = saving.SiteBenefit(gain, saving.ServiceTime(cl.Durability, rate, b.PaybackTicks), MaxMoney)
 	}
 	cost := saving.Cost(inputs, saving.Opportunity(saving.JobValue(pvB, pvA, 1, 0), rc.Duration), MaxMoney)
-	upkeep, _ := savingUpkeep(c, lk, region, ro)
+	upkeep, uok := savingUpkeep(c, lk, region, ro)
+	if !uok {
+		return savingProject{}, false
+	}
 	return savingProject{benefit: benefit, cost: cost, outlay: saving.Outlay(inputs, tools, upkeep, rc.Duration, m.SafetyTicks)}, true
 }
 
@@ -387,7 +390,8 @@ func savingNet(lk lookup, region string, rc *Recipe) (int64, bool) {
 		return 0, false
 	}
 	value, vok := net.Value()
-	return value - inputs, vok
+	out, sok := checked.Sub(value, inputs)
+	return out, vok && sok
 }
 
 // savingUpkeep is the cost of one tick of upkeep of a household of the role in a region
