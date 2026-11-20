@@ -84,6 +84,8 @@ type tradeCtx struct {
 	jobs int64
 	// pk is the saving pick of the call, set only for a view with a Saving group.
 	pk savingPick
+	// projectPlanned says the saving project is the planned recipe of this plan.
+	projectPlanned bool
 	// hire is the plan of an employer's hires for the next tick (spec-employment.md
 	// 9.2.1): n is 0 for every other agent.
 	hire plannedHire

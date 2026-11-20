@@ -202,8 +202,14 @@ func TestExports_MatchDefault(t *testing.T) {
 		reserve, _ := household.ReserveMoney(cost, v.Tunables.ReserveTicks)
 		tc := &tradeCtx{v: v, par: householdParams(&v.Tunables), rstar: -1}
 		tc.planProject(reserve, cost)
+		// The default nets the plan's tier 2 only when the project is the planned recipe; the
+		// caller of SavingTarget states the same by the figure it passes.
 		for _, tier2 := range []int64{0, 360} {
-			if got, want := tc.savingTarget(tier2), SavingTarget(v, tier2).Target; got != want {
+			want := SavingTarget(v, tier2).Target
+			if !tc.projectPlanned {
+				want = SavingTarget(v, 0).Target
+			}
+			if got := tc.savingTarget(tier2); got != want {
 				t.Errorf("money %d, tier2 %d: the default's target = %d, SavingTarget = %d, want equal", money, tier2, got, want)
 			}
 		}

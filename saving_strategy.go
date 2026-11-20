@@ -449,10 +449,17 @@ func heldOf(fs []FacilityView, class FacilityClassID) classHeld {
 	return h
 }
 
-// savingTargetOf is the savings target the default's spend cap reads instead of the flat
-// reserve (spec 3.2.2): the floor plus the goal of the plan's project net of its tier 2
-// spend. The pick was made once for the view, by planProject.
-func (t *tradeCtx) savingTarget(tier2 int64) int64 { return t.pk.target(tier2).Target }
+// savingTarget is the savings target the default's spend cap reads instead of the flat
+// reserve (spec 3.2.2): the floor plus the goal of the chosen project, net of the tier 2 spend
+// of the plan when the project is the planned recipe (5.6.3). In any other plan the tier 2 is
+// the inputs of another recipe, none of them the project's, and is not netted from the goal.
+// The pick was made once for the view, by planProject.
+func (t *tradeCtx) savingTarget(tier2 int64) int64 {
+	if !t.projectPlanned {
+		tier2 = 0
+	}
+	return t.pk.target(tier2).Target
+}
 
 // planProject picks the project of the agent once for the Trade call and, when the
 // household is funded and the plan has no trip, makes the project's recipe the planned
@@ -464,7 +471,7 @@ func (t *tradeCtx) planProject(reserve, upkeep int64) {
 	}
 	for i := range t.v.Recipes {
 		if t.v.Recipes[i].Recipe == t.pk.choice.Recipe {
-			t.rstar, t.jobs = i, t.pk.choice.Executions
+			t.rstar, t.jobs, t.projectPlanned = i, t.pk.choice.Executions, true
 			return
 		}
 	}
