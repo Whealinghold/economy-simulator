@@ -292,14 +292,18 @@ func (w *World) regionStateOf(g RegionID, sh *regionShared) (RegionState, error)
 	}
 	out.Endowments = w.regionEndowments(g)
 	out.Shipments = keepRows(sh.ships, func(r ShipmentRow) bool { return r.Region == g || r.To == g })
+	for i := range out.Shipments { // Lines is a slice: each state owns its own copy, as a fresh snapshot gave it
+		out.Shipments[i].Lines = slices.Clone(out.Shipments[i].Lines)
+	}
 	out.Journeys = keepRows(sh.s.Journeys, func(r JourneyRow) bool { return r.From == g || r.To == g })
 	return out, nil
 }
 
-// keepRows returns a new slice of the rows for which keep is true, nil when none is, so a
-// state built from shared rows owns its rows.
+// keepRows returns a new slice of the rows for which keep is true, so a state built from shared
+// rows owns its rows. It is nil when rows is nil and empty otherwise, as slices.DeleteFunc left
+// the result of Region.
 func keepRows[T any](rows []T, keep func(T) bool) []T {
-	var out []T
+	out := rows[:0:0]
 	for _, r := range rows {
 		if keep(r) {
 			out = append(out, r)
