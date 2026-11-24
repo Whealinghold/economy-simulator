@@ -819,7 +819,7 @@ reaction in ascending lever order, with `m` the reading, `T` = `Target`, `D` =
    `d = raw` when `Raise` is true, `-raw` when it is false;
 4. the entry is `(Lever, v + d)` with the lever's `Closed` as the view has it (the rule neither
    closes nor opens an edge; a `Closed` true that the key already has is no closing, so the
-   rule moves the factor of an edge a consumer closed and leaves it closed, 6.2.1 check 3). The lever's `Closed` of a group is its first key's (3.4.4), so a group whose keys disagree (a consumer closed some) gets that flag on every key at the next move: reopened when the first key is open, and the whole entry refused as `no_close` when the first is closed and the lever has no `MayClose` while a key is open, N-530). A sum outside `int64` is cut to the bound of `int64` in its
+   rule moves the factor of an edge a consumer closed and leaves it closed, 6.2.1 check 3). The lever's `Closed` of a group is its first key's (3.4.4), so a group whose keys disagree (a consumer closed some) gets that flag on every key at the next move: reopened when the first key is open, and the whole entry refused as `no_close` when the first is closed, a key is open and the lever has no `MayClose` (N-530). A sum outside `int64` is cut to the bound of `int64` in its
    sign, which the checks of 6.2 then cut to `[Min, Max]`, so no wrap occurs.
 
 The checks of 6.2 then apply as to any policy: the bounds, then `MaxStep`.
