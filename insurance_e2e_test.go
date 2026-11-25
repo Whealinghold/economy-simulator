@@ -83,6 +83,11 @@ func coverPack(t testing.TB, k coverKnobs) (economysim.Config, []economysim.Opti
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate(cover pack) error = %v, want nil", err)
 	}
+	// shipperFor builds a probe world with no "ship" strategy registered, so the roles
+	// carry the built-in one until it puts "ship" on them.
+	for i := range cfg.Roles {
+		cfg.Roles[i].Strategy = "default"
+	}
 	cfg, sh := shipperFor(t, cfg)
 	cs := coverScript{shipper: sh, k: k, backer: economysim.RoleID(backer), insured: economysim.RoleID(carrier)}
 	return cfg, []economysim.Option{economysim.WithStrategy("ship", cs)}
