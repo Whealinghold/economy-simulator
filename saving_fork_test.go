@@ -58,6 +58,10 @@ func savingForkCells(t testing.TB) []savingCell {
 			t.Fatalf("the saving pack at seed 1 has no %q tick in %d ticks, want one for the fork matrix", k, goldenTicks)
 		}
 	}
+	if first["request"] >= first["built"] || last["request"] >= last["built"] {
+		t.Fatalf("first request %d, built %d; last request %d, built %d: want each request before its completion so the mid-build cells fall inside a build",
+			first["request"], first["built"], last["request"], last["built"])
+	}
 	mid := (first["request"] + first["built"]) / 2
 	return []savingCell{
 		{"before the first step", 0},
@@ -91,6 +95,11 @@ func TestFork_Saving(t *testing.T) {
 	}
 	cfg := loadValidPack(t, packOneSaving...)
 	cells := savingForkCells(t)
+	for _, cell := range cells {
+		if cell.n < 0 || int64(cell.n) >= goldenTicks {
+			t.Fatalf("cell %q at N %d, want 0 <= N < %d", cell.name, cell.n, goldenTicks)
+		}
+	}
 	for _, cell := range cells {
 		t.Run(fmt.Sprintf("%s (N %d)", cell.name, cell.n), func(t *testing.T) {
 			t.Parallel()

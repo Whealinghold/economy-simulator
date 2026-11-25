@@ -58,34 +58,53 @@ const savingSampleEvery = 20
 
 // savingRun runs cfg for seed and ticks with the audit on and returns the stats. It samples the
 // snapshot every savingSampleEvery ticks and adds the unfed households and the idle money of the
-// rows to the stats.
+// rows to the stats. It fails the test when the run could not show anything: a seed of 0, too few
+// ticks to sample, no role rows, or no household that planned or saved.
 func savingRun(t testing.TB, cfg economysim.Config, seed uint64, ticks int64) *savingStats {
 	t.Helper()
+	if seed == 0 || ticks < savingSampleEvery {
+		t.Fatalf("savingRun(seed %d, ticks %d): want a seed above 0 and at least %d ticks, or no sample is taken", seed, ticks, savingSampleEvery)
+	}
 	st := &savingStats{}
 	w, err := economysim.NewWorld(cfg, economysim.WithSeed(seed), economysim.WithAudit(), economysim.WithObserver(st))
 	if err != nil {
 		t.Fatalf("seed %d: NewWorld() error = %v, want nil", seed, err)
 	}
+	samples := 0
 	for w.Tick() < ticks {
 		if err := w.Step(); err != nil {
 			t.Fatalf("seed %d: Step() at tick %d error = %v, want nil", seed, w.Tick(), err)
 		}
-		if w.Tick()%savingSampleEvery != 0 {
-			continue
-		}
-		snap, err := w.Snapshot()
-		if err != nil {
-			t.Fatalf("seed %d: Snapshot() at tick %d error = %v, want nil", seed, w.Tick(), err)
-		}
-		for _, r := range snap.Roles {
-			st.UnfedSamples += r.Unfed
-			st.IdleSamples += int64(r.IdleMoney)
-			if r.IdleMoney < 0 {
-				st.IdleNegative++
-			}
+		if w.Tick()%savingSampleEvery == 0 {
+			st.sample(t, w, seed)
+			samples++
 		}
 	}
+	// A run that no household planned in, or none saved in, passed every check below it for nothing.
+	if samples == 0 || st.Planned == 0 || st.Saving == 0 {
+		t.Fatalf("seed %d: %d samples, %d SavingPlanned events, %d saving household-ticks, want each above 0 (the pack collapsed or the module planned nothing)",
+			seed, samples, st.Planned, st.Saving)
+	}
 	return st
+}
+
+// sample adds the unfed households and the idle money of the snapshot rows to the stats.
+func (s *savingStats) sample(t testing.TB, w *economysim.World, seed uint64) {
+	t.Helper()
+	snap, err := w.Snapshot()
+	if err != nil {
+		t.Fatalf("seed %d: Snapshot() at tick %d error = %v, want nil", seed, w.Tick(), err)
+	}
+	if len(snap.Roles) == 0 {
+		t.Fatalf("seed %d: snapshot at tick %d has no role rows, want a populated world", seed, w.Tick())
+	}
+	for _, r := range snap.Roles {
+		s.UnfedSamples += r.Unfed
+		s.IdleSamples += int64(r.IdleMoney)
+		if r.IdleMoney < 0 {
+			s.IdleNegative++
+		}
+	}
 }
 
 // savingPack loads the pack of the golden and applies edit to it, for a scenario that varies a

@@ -43,6 +43,17 @@ func TestScenarioS144_AMillIsBuiltAndMended(t *testing.T) {
 			rep.num(seed, name+": repaired", st.Repaired)
 			rep.num(seed, name+": no return household-ticks", st.NoReturn)
 			rep.num(seed, name+": unreachable household-ticks", st.Unreachable)
+			// Not in the report: a leg in which no project started, or in which the gate-5000 control
+			// never repaired, would pass the checks below with nothing to check.
+			if st.Builds == 0 || st.Built == 0 {
+				t.Fatalf("seed %d, %s: %d build requests and %d built, want both above 0", seed, name, st.Builds, st.Built)
+			}
+			if v.repair > 0 && (st.Repairs == 0 || st.Repaired == 0) {
+				t.Fatalf("seed %d, %s: %d repair requests and %d repaired with the gate open, want both above 0 so the gate-0 leg has a control", seed, name, st.Repairs, st.Repaired)
+			}
+			if st.Repaired > st.Repairs {
+				t.Errorf("seed %d, %s: %d repaired against %d requested, want no repair without a request", seed, name, st.Repaired, st.Repairs)
+			}
 			checkExact(t, rep, "S144", "one", seed, name+": no facility is built without a build request",
 				st.Built <= st.Builds, "%d built against %d requested", st.Built, st.Builds)
 			if v.repair == 0 {
