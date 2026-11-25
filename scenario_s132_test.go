@@ -2,6 +2,7 @@ package economysim_test
 
 import (
 	"reflect"
+	"slices"
 	"strconv"
 	"testing"
 
@@ -79,52 +80,90 @@ func TestScenarioS132_OffAndZeroScaleNeutral(t *testing.T) {
 	for _, seed := range seedList(scenarioSeedCount()) {
 		t.Run("seed "+strconv.FormatUint(seed, 10), func(t *testing.T) {
 			t.Parallel()
-			ron, roff := &recorder{}, &recorder{}
-			won := mustWorld(t, on, economysim.WithSeed(seed), economysim.WithAudit(), economysim.WithObserver(ron))
-			woff := mustWorld(t, off, economysim.WithSeed(seed), economysim.WithAudit(), economysim.WithObserver(roff))
-			pauseAll(t, won, ids)
-			if got := len(ron.events); got < len(ids) {
-				t.Fatalf("seed %d: %d events after the call, want at least the %d MoneyFlowScaled", seed, got, len(ids))
+			compareFiscalNeutral(t, on, off, ids, seed)
+		})
+	}
+}
+
+// compareFiscalNeutral runs on (the module on, the flows named by ids paused at scale 0) against off (the
+// module removed) for 200 ticks under the audit, and fails at the first event or the final snapshot that
+// differs beyond what fiscalNeutralEvent and fiscalNeutralSnapshot allow.
+func compareFiscalNeutral(t *testing.T, on, off economysim.Config, ids []string, seed uint64) {
+	t.Helper()
+	ron, roff := &recorder{}, &recorder{}
+	won := mustWorld(t, on, economysim.WithSeed(seed), economysim.WithAudit(), economysim.WithObserver(ron))
+	woff := mustWorld(t, off, economysim.WithSeed(seed), economysim.WithAudit(), economysim.WithObserver(roff))
+	if len(ids) > 0 {
+		pauseAll(t, won, ids)
+	}
+	if got := len(ron.events); got < len(ids) {
+		t.Fatalf("seed %d: %d events after the call, want at least the %d MoneyFlowScaled", seed, got, len(ids))
+	}
+	// The two worlds are compared tick by tick, so the events of 200 ticks are never all in memory.
+	compared := 0
+	for tick := 0; tick < 200; tick++ {
+		fiscalStepTo(t, won, int64(tick+1))
+		fiscalStepTo(t, woff, int64(tick+1))
+		a, b := roff.events, withoutScaleEvents(ron.events)
+		if tick == 0 && len(ron.events)-len(b) != len(ids) {
+			t.Errorf("seed %d: %d MoneyFlowScaled events from the call, want %d (one per flow)", seed, len(ron.events)-len(b), len(ids))
+		}
+		if len(a) != len(b) {
+			t.Fatalf("seed %d, tick %d: %d events with the module and %d without, want equal", seed, tick, len(b), len(a))
+		}
+		for i := range a {
+			switch b[i].(type) {
+			case economysim.FiscalFlowApplied, economysim.TreasuryOrdered:
+				t.Fatalf("seed %d, tick %d: event %d is %T at scale 0, want none (FR-FIS-001)", seed, tick, i, b[i])
 			}
-			// The two worlds are compared tick by tick, so the events of 200 ticks are never all in memory.
-			compared := 0
-			for tick := 0; tick < 200; tick++ {
-				fiscalStepTo(t, won, int64(tick+1))
-				fiscalStepTo(t, woff, int64(tick+1))
-				a, b := roff.events, withoutScaleEvents(ron.events)
-				if tick == 0 && len(ron.events)-len(b) != len(ids) {
-					t.Errorf("seed %d: %d MoneyFlowScaled events from the call, want %d (one per flow)", seed, len(ron.events)-len(b), len(ids))
-				}
-				if len(a) != len(b) {
-					t.Fatalf("seed %d, tick %d: %d events with the module and %d without, want equal", seed, tick, len(b), len(a))
-				}
-				for i := range a {
-					switch b[i].(type) {
-					case economysim.FiscalFlowApplied, economysim.TreasuryOrdered:
-						t.Fatalf("seed %d, tick %d: event %d is %T at scale 0, want none (FR-FIS-001)", seed, tick, i, b[i])
-					}
-					if x, y := fiscalNeutralEvent(a[i]), fiscalNeutralEvent(b[i]); !reflect.DeepEqual(x, y) {
-						t.Fatalf("seed %d, tick %d: event %d differs: %#v with the module, %#v without", seed, tick, i, y, x)
-					}
-				}
-				compared += len(a)
-				ron.forget()
-				roff.forget()
+			if x, y := fiscalNeutralEvent(a[i]), fiscalNeutralEvent(b[i]); !reflect.DeepEqual(x, y) {
+				t.Fatalf("seed %d, tick %d: event %d differs: %#v with the module, %#v without", seed, tick, i, y, x)
 			}
-			if compared == 0 {
-				t.Fatalf("seed %d: no event compared in 200 ticks, want a world that emits events (an empty world proves nothing)", seed)
-			}
-			son, err := won.Snapshot()
-			if err != nil {
-				t.Fatalf("seed %d: Snapshot() error = %v, want nil", seed, err)
-			}
-			soff, err := woff.Snapshot()
-			if err != nil {
-				t.Fatalf("seed %d: Snapshot() error = %v, want nil", seed, err)
-			}
-			if !reflect.DeepEqual(fiscalNeutralSnapshot(son), fiscalNeutralSnapshot(soff)) {
-				t.Errorf("seed %d: the final snapshots differ beyond the hash and the module list", seed)
-			}
+		}
+		compared += len(a)
+		ron.forget()
+		roff.forget()
+	}
+	if compared == 0 {
+		t.Fatalf("seed %d: no event compared in 200 ticks, want a world that emits events (an empty world proves nothing)", seed)
+	}
+	son, err := won.Snapshot()
+	if err != nil {
+		t.Fatalf("seed %d: Snapshot() error = %v, want nil", seed, err)
+	}
+	soff, err := woff.Snapshot()
+	if err != nil {
+		t.Fatalf("seed %d: Snapshot() error = %v, want nil", seed, err)
+	}
+	if !reflect.DeepEqual(fiscalNeutralSnapshot(son), fiscalNeutralSnapshot(soff)) {
+		t.Errorf("seed %d: the final snapshots differ beyond the hash and the module list", seed)
+	}
+}
+
+// TestScenarioS132_EmptyModuleNeutral verifies FIS-S1 of spec-fiscal.md 19 as written: the pack `five`
+// with overlay/polity-governed.toml and overlay/fiscal.toml (the module on with no flow; the module needs
+// a governed jurisdiction, so overlay/polity.toml cannot carry it, FR-FIS-007) against the same without the module, seeds 1 to 10, 200 ticks, audit on. Every event is identical except the
+// configuration hash of the world-created event, and the final snapshot except the hash and module list.
+//
+// Requirement: FR-FIS-001
+//
+// Guard: the present module with no flow must leave no trace; the stronger proof with flows paused is
+// TestScenarioS132_OffAndZeroScaleNeutral.
+func TestScenarioS132_EmptyModuleNeutral(t *testing.T) {
+	t.Parallel()
+	if testing.Short() {
+		t.Skip("end-to-end scenario, skipped with -short")
+	}
+	on := loadValidPack(t, append(slices.Clone(fivePolityGoverned), "overlay/fiscal.toml")...)
+	if on.Modules.Fiscal == nil {
+		t.Fatalf("fiscal.toml left Modules.Fiscal nil, want the module on")
+	}
+	off := on
+	off.Modules.Fiscal = nil
+	for _, seed := range seedList(scenarioSeedCount()) {
+		t.Run("seed "+strconv.FormatUint(seed, 10), func(t *testing.T) {
+			t.Parallel()
+			compareFiscalNeutral(t, on, off, nil, seed)
 		})
 	}
 }
