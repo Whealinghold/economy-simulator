@@ -508,3 +508,5 @@ Golden rule held: `git diff --name-status origin/phase-3...HEAD -- testdata` sho
 Tests: S132 (`TestScenarioS132_OffAndZeroScaleNeutral`, `_FullScaleMovesMoney`), S133 to S136, the five golden tests, `TestStep_AllocationsStayAtTheBaseline` rows.
 
 Left open: the REF 4.5 and FIS 19 spec text (above); a spoilage event for the treasury's goods; gomu on `internal/fiscal` (PR 1's owed run); the otelobserver instruments (Q3).
+
+Test-pyramid review of PR 7 (stage 6): the plan's Phase 10 list and the requirement rows that name S132 to S136, `TestFork_Fiscal` and `TestDeterminism_Fiscal` are all present, and each scenario fails if the module did nothing (S132's second test, `collects` and `the store acted` checks in S133 to S135, `shipments were dispatched` in S136). One item was missing: the plan's invariants row (Phase 10, "Invariants and determinism"). `TestInvariants_Packs` gains the row `five+fiscal` (gate F only, like `five+policy`), and its checker now counts a treasury as a live party of a trade and `HeldByTreasury` in the goods balance. The four checker unit tests moved by pure move to `invariants_checker_test.go`.
