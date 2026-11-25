@@ -1,0 +1,81 @@
+# The fiscal module on the warm five with the governed polity (spec-fiscal.md 18 and 19, spec-reference-chain.md 4.5,
+# plan 3-fis Phase 10). Layer it after the pack and overlay/polity-governed.toml: base.toml, lines.toml, five.toml,
+# warm-five.toml, overlay/polity-governed.toml, this file. It governs the two groups beside the root (a seat and a
+# start_money on each, layered over the tables of polity-governed.toml), so that three treasuries exist and a
+# remittance runs up the chain, and it adds one flow of every kind that needs no other module: a head tax, a rate
+# tax, two remittances, a sales duty, two payouts (one the treasury cannot meet, so the pro rata cut runs), a standing
+# purchase and a standing release of one good. A test double, not a design: every number is a labelled placeholder
+# (N-018, N-027). There is no toll here: a toll needs the transport module and its own jurisdictions, and scenario
+# S136 builds them (it layers overlay/trade-three.toml and overlay/transport-three.toml on `three`).
+
+# Placeholder governance: the treasuries of the two groups sit in a region of their own members.
+[modules.polity.jurisdiction.group_a]
+seat = "north"
+start_money = 5000
+
+[modules.polity.jurisdiction.group_b]
+seat = "east"
+start_money = 2000
+
+# Placeholder head tax of the north's cooks, paid to group_a's treasury: one minor unit a tick.
+[modules.fiscal.tax.poll]
+authority = "group_a"
+target = { kind = "households", region = "north", role = "cook" }
+amount = 1
+
+# Placeholder rate tax of the east's cooks, paid to group_b's treasury: 0.5% a tick of the money above 100.
+[modules.fiscal.tax.tithe]
+authority = "group_b"
+target = { kind = "households", region = "east", role = "cook" }
+rate_bp = 50
+exempt = 100
+
+# Placeholder remittances: the root takes a quarter of each group's treasury above 1 000.
+[modules.fiscal.tax.remit_a]
+authority = "root"
+target = { kind = "treasury", jurisdiction = "group_a" }
+rate_bp = 2500
+exempt = 1000
+
+[modules.fiscal.tax.remit_b]
+authority = "root"
+target = { kind = "treasury", jurisdiction = "group_b" }
+rate_bp = 2500
+exempt = 1000
+
+# Placeholder sales duty of the root: 1% of the value of every trade of good_a in the centre, paid by the seller.
+# A trade whose seller is the root's own treasury (the release below) is exempt: a pseudo-agent never pays.
+[modules.fiscal.duty.sales]
+authority = "root"
+region = "centre"
+commodity = "good_a"
+payer = "seller"
+rate_bp = 100
+
+# Placeholder payout of the root: one unit a tick to each cook of the centre.
+[modules.fiscal.payout.stipend]
+authority = "root"
+target = { kind = "households", region = "centre", role = "cook" }
+amount = 1
+
+# Placeholder payout of group_b that its treasury cannot meet (200 cooks at 20 a tick against 2 000 and the tithe),
+# so the cut falls and is counted.
+[modules.fiscal.payout.alms]
+authority = "group_b"
+target = { kind = "households", region = "east", role = "cook" }
+amount = 20
+
+# Placeholder standing orders of the root's treasury in its seat region: it bids at 80% of the reference price of
+# good_a up to a hold of 50 units, and asks at 120% of it. The limits differ, so the pair is admitted (FR-FIS-053).
+[modules.fiscal.purchase.buy]
+authority = "root"
+commodity = "good_a"
+quantity = 2
+limit_bp = 8000
+hold = 50
+
+[modules.fiscal.release.sell]
+authority = "root"
+commodity = "good_a"
+quantity = 2
+limit_bp = 12000
