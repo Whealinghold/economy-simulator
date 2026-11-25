@@ -199,7 +199,7 @@ func (w *World) positionsProduce() error {
 }
 
 // positionsPlan is the start of the trade phase of the straight line, from P3.1 to
-// the contract round (P3.3), split from positionsProduce to stay within the Lizard
+// the contract round and the merchants' plan (P3.3, P3.3a), split from positionsProduce to stay within the Lizard
 // complexity limit before the risk module's P3.1a joins it (N-243). The position
 // test reads it as part of the straight line, between positionsProduce and
 // positionsTrade.
@@ -216,6 +216,9 @@ func (w *World) positionsPlan() error {
 	if w.mer != nil && w.mer.on {
 		w.p33Round()
 	}
+	if w.mer != nil && w.mer.roles > 0 {
+		w.p33aPlanned()
+	}
 	return w.positionsTrade()
 }
 
@@ -224,9 +227,6 @@ func (w *World) positionsPlan() error {
 // limit (N-243). The position test reads it as part of the straight line, between
 // positionsPlan and positionsTail.
 func (w *World) positionsTrade() error {
-	if w.mer != nil && w.mer.roles > 0 {
-		w.p33aPlanned()
-	}
 	if w.credit != nil {
 		w.p33bRound()
 	}
