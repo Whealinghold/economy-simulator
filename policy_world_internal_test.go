@@ -184,7 +184,10 @@ func TestPolicy_NeutralHoldAndIdle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Snapshot() error = %v, want nil", err)
 	}
-	sa.Modules, sb.Modules, sa.ConfigHash, sb.ConfigHash = nil, nil, [32]byte{}, [32]byte{}
+	if len(sb.Actors) != 0 || len(sa.Actors) != 2 {
+		t.Errorf("Actors = %d rows with hold actors, %d with the module off, want 2 and 0", len(sa.Actors), len(sb.Actors))
+	}
+	sa.Modules, sb.Modules, sa.ConfigHash, sb.ConfigHash, sa.Actors = nil, nil, [32]byte{}, [32]byte{}, nil
 	if !reflect.DeepEqual(sa, sb) {
 		t.Errorf("snapshots differ between a world with only hold actors and one with the module off")
 	}
@@ -257,7 +260,7 @@ func reachedTypes(typ reflect.Type, seen map[reflect.Type]bool) []string {
 // Requirement: FR-PLC-091, FR-PLC-035
 func TestPolicy_NoIndicatorImport(t *testing.T) {
 	t.Parallel()
-	files := []string{"policy.go", "policy_validate.go", "policy_reach.go", "policy_warn.go", "policy_view.go", "policy_apply.go", "policy_builtin.go"}
+	files := []string{"policy.go", "policy_validate.go", "policy_reach.go", "policy_warn.go", "policy_view.go", "policy_apply.go", "policy_builtin.go", "policy_state.go"}
 	fset := token.NewFileSet()
 	for _, name := range files {
 		f, err := parser.ParseFile(fset, name, nil, parser.ImportsOnly)

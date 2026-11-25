@@ -137,12 +137,12 @@ func writeSparseRows(cw *codec.Writer, vals []int64, writeKey func(i int)) {
 	}
 }
 
-// The kinds of an extension entry, the enumeration of spec-checkpoint.md 4.2.4. A
-// policy is 3 and has no registry yet, so it has no entry (plan 2-2 D255).
+// The kinds of an extension entry, the enumeration of spec-checkpoint.md 4.2.4.
 const (
 	extStrategy uint64 = iota
 	extSpawner
 	extClearing
+	extPolicy
 )
 
 // extEntry is one entry of tag 34: a registered extension that implements
@@ -172,6 +172,11 @@ func (w *World) statefulEntries() []extEntry {
 	for i, c := range w.reg.clearings.vals {
 		if st, ok := c.(Stateful); ok {
 			out = append(out, extEntry{extClearing, w.reg.clearings.names[i], st})
+		}
+	}
+	for i, p := range w.reg.policies.vals {
+		if st, ok := p.(Stateful); ok {
+			out = append(out, extEntry{extPolicy, w.reg.policies.names[i], st})
 		}
 	}
 	slices.SortFunc(out, func(a, b extEntry) int {

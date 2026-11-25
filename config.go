@@ -198,6 +198,69 @@ type Modules struct {
 	// route cover needs Modules.Transport and store cover Modules.Storage. Its hash id
 	// is 18, whatever its place in this struct.
 	Insurance *Insurance
+	// Saving is the saving module: a savings target above the reserve, a precaution
+	// buffer taken from the household's own cash cycle and a project test for a build
+	// or a repair, for the roles that carry a Saver block (spec-saving-and-investment.md).
+	// Nil is off; non-nil is on, even when no role has a block (an inert module). It
+	// needs no other module itself; a Saver block needs it, and a Worth row needs
+	// Modules.Infrastructure. Its hash id is 23, whatever its place in this struct.
+	Saving *Saving
+}
+
+// Saving is the configuration of the saving module (spec-saving-and-investment.md 3.2.1,
+// 10.2). Its presence switches the module on. Start from DefaultSaving. Every field is a
+// placeholder (N-015, N-027): its bound is in bounds.go (MaxSafetyTicks,
+// MaxHurdleSpreadBP, MaxCommitBandBP).
+type Saving struct {
+	// SafetyTicks is the ticks of upkeep cost added to the outlay of a project beyond
+	// its duration, 0 to MaxSafetyTicks. Its hash id is 1, written only when non-zero.
+	SafetyTicks int64
+	// HurdleSpreadBP is the half-open spread of the hurdle by agent, in the units of
+	// the hurdle, 0 to MaxHurdleSpreadBP. Its hash id is 2, written only when non-zero.
+	HurdleSpreadBP int64
+	// CommitBandBP is the fall of the hurdle for a household that already holds the
+	// inputs, 0 to MaxCommitBandBP. Its hash id is 3, written only when non-zero.
+	CommitBandBP int64
+}
+
+// Saver is the saving block of a role, a pointer of Role: nil means the role has the
+// reserve of spec-agents.md 7.4 and no project (spec-saving-and-investment.md 3.2.1,
+// 10.2). It needs Modules.Saving and is hashed when non-nil, even when every field is
+// zero (the hash does not judge the bounds: Validate needs HurdleBP and PaybackTicks
+// above 0). Start from DefaultSaver.
+type Saver struct {
+	// PrecautionShareBP is the share of the drawdown held as a buffer, 0 to
+	// MaxPrecautionShareBP; 0 is none. Its hash id is 1.
+	PrecautionShareBP int64
+	// PrecautionCapTicks is the most ticks of upkeep cost the buffer holds, 0 to
+	// MaxPrecautionCapTicks. Its hash id is 2.
+	PrecautionCapTicks int64
+	// HurdleBP is the return per unit of its cost a project must give, 10 000 (break
+	// even) to MaxHurdleBP. Its hash id is 3.
+	HurdleBP int64
+	// PaybackTicks is the horizon over which a facility's service is counted, 1 to
+	// MaxPaybackTicks. Its hash id is 4.
+	PaybackTicks int64
+	// RepairBelowBP is the share of durability at or below which a facility is
+	// considered for repair, 0 to 10 000; 0 never repairs. Its hash id is 5.
+	RepairBelowBP int64
+	// Worth is the worth per tick of a whole facility of a class the rule cannot value,
+	// at most MaxWorthRows rows, each class once; canonical order is by class. It
+	// needs Modules.Infrastructure. Its hash id is 6.
+	Worth []ProjectWorth
+}
+
+// ProjectWorth states what a whole facility of a class is worth to a role per tick, in
+// minor units: a pack's assertion (spec-saving-and-investment.md 5.3.2). Its hash ids
+// are Class 1, PerTick 2 and Count 3.
+type ProjectWorth struct {
+	// Class is a facility class of Modules.Infrastructure.
+	Class string
+	// PerTick is the worth of one facility per tick, 1 to MaxWorthPerTick.
+	PerTick int64
+	// Count is the facilities of the class that one household holds, up to which the
+	// row counts, 1 to MaxWorthCount.
+	Count int64
 }
 
 // Credit is the configuration of the credit module (spec-credit.md 4.1, 14). Its
@@ -536,6 +599,15 @@ func (m *Insurance) canonical() *Insurance {
 	return &out
 }
 
+// canonical returns a copy of the module, nil for nil. It has no list to sort.
+func (m *Saving) canonical() *Saving {
+	if m == nil {
+		return nil
+	}
+	out := *m
+	return &out
+}
+
 // canonical returns a copy of the block with a copy of each sub-block, nil for nil,
 // so a change of the consumer's Config after construction moves no role block.
 func (c *CoverTerms) canonical() *CoverTerms {
@@ -551,6 +623,18 @@ func (c *CoverTerms) canonical() *CoverTerms {
 		s := *c.Insure
 		out.Insure = &s
 	}
+	return &out
+}
+
+// canonical returns a copy of the block with the Worth rows in class-ID order
+// (spec-config.md 3.4, FR-CFG-096), nil for nil. The rows are copied, so the copy owns
+// them.
+func (b *Saver) canonical() *Saver {
+	if b == nil {
+		return nil
+	}
+	out := *b
+	out.Worth = sortedBy(b.Worth, func(x, y ProjectWorth) int { return cmp.Compare(x.Class, y.Class) })
 	return &out
 }
 
@@ -1931,6 +2015,11 @@ type Role struct {
 	// insured (spec-insurance.md 4.2), exactly one of Underwrite and Insure. It needs
 	// Modules.Insurance and is hashed when non-nil, even when empty. Its hash id is 28.
 	Cover *CoverTerms
+	// Saver is the saving block: non-nil makes the role a saver, with a precaution
+	// buffer and a project test (spec-saving-and-investment.md 3.2.1). It needs
+	// Modules.Saving and is hashed when non-nil, even when every field is zero. Its hash
+	// id is 29; 28 is reserved for the insurance block (N-496).
+	Saver *Saver
 	// Label is a display name. It is presentation only: it changes no result
 	// and is not hashed.
 	Label string
@@ -2112,6 +2201,7 @@ func (c Config) canonical() Config {
 		r.Employer = r.Employer.canonical()
 		r.Credit = r.Credit.canonical()
 		r.Cover = r.Cover.canonical()
+		r.Saver = r.Saver.canonical()
 	}
 	out.Regions = sortedBy(c.Regions, func(a, b Region) int { return cmp.Compare(a.ID, b.ID) })
 	for i := range out.Regions {
@@ -2163,6 +2253,7 @@ func (c Config) canonical() Config {
 	out.Modules.Fiscal = c.Modules.Fiscal.canonical(c.Calendar.Seasons)
 	out.Modules.Policy = c.Modules.Policy.canonical()
 	out.Modules.Employment = c.Modules.Employment.canonical()
+	out.Modules.Saving = c.Modules.Saving.canonical()
 	return out
 }
 

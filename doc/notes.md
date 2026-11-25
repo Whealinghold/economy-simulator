@@ -48,8 +48,8 @@ PR description.
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351, N-353 |
 | AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424, N-474, N-490, N-512, N-521 |
 | BEL | N-042, N-043, N-230, N-245 |
-| CAL | N-030 |
-| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-388, N-438, N-475, N-492, N-520, N-521, N-522, N-523, N-524 |
+| CAL | N-030, N-527 |
+| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-388, N-438, N-475, N-492, N-520, N-521, N-522, N-523, N-524, N-525, N-526, N-527 |
 | CFG | N-476, N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-494, N-496, N-483, N-461, N-522 |
 | CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444, N-471, N-480, N-500, N-502 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
@@ -57,16 +57,16 @@ PR description.
 | CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457, N-491, N-493, N-494, N-438, N-481, N-502 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398, N-472, N-484, N-503 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-445, N-500, N-501, N-502, N-503, N-510, N-511, N-512, N-513, N-514, N-521 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-445, N-500, N-501, N-502, N-503, N-510, N-511, N-512, N-513, N-514, N-515, N-516, N-517, N-518, N-521 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361, N-485 |
 | EXT | N-108, N-112, N-113, N-214 |
 | FIS | N-505, N-506, N-504, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-475, N-483 |
 | GDS | N-039 |
-| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473 |
+| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473, N-515 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
-| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476 |
+| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476, N-494, N-496 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436, N-471 |
 | LND | N-504, N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475, N-484, N-513 |
@@ -76,23 +76,23 @@ PR description.
 | OBS | N-543, N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482, N-510, N-520 |
 | ORG | N-541, N-542, N-543, N-544, N-540, N-400, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-463, N-464, N-465, N-492, N-483, N-484 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485 |
-| POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348 |
+| POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348, N-527 |
 | PRO | N-542, N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454, N-501 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-540 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-525, N-540, N-516, N-517 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470, N-458, N-459, N-460, N-461 |
-| SAV | N-145, N-156, N-195, N-362, N-382, N-475, N-490, N-491, N-492, N-493, N-495, N-496 |
+| SAV | N-145, N-156, N-195, N-362, N-382, N-475, N-490, N-491, N-492, N-493, N-495, N-496, N-497 |
 | SCL | N-030, N-198, N-222, N-300, N-493 |
 | SET | N-404, N-140, N-192, N-268, N-348, N-365 |
 | SKL | N-542, N-540, N-464, N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
 | SPN | N-463, N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
-| STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375, N-388, N-513, N-524 |
-| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485, N-458 |
+| STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375, N-388, N-513, N-524, N-526 |
+| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485, N-458, N-517, N-518 |
 | SUB | N-121, N-228, N-268, N-244, N-426 |
 | TEC | N-358, N-359, N-360, N-361, N-384 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434, N-459, N-505 |
-| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383, N-522, N-523, N-505 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383, N-522, N-523, N-516, N-505 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346, N-472, N-491, N-514 |
 | WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438, N-475, N-480 |
 
@@ -2795,11 +2795,11 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-saving-and-investment.md` 4.1.4 and open question 3.
 - **Note:** The drawdown is `O(window)` per agent with a block and per view, so twice a tick, with no cache. `BenchmarkDrawdown` (PR 1) measured 17.6 microseconds and no allocation at `MaxWelfareWindow` 3 650, which is a cost of 35 microseconds a tick for an agent at the longest window and 1 microsecond at the default of 30. A per-tick cache or a running form needs state and is built only if a scenario at scale shows a cost. Left open for SCL.
 
-### N-494 Two config tests use `modules.saving` as an unbuilt module
+### N-494 Two config tests use a made-up module name as an unbuilt module
 
-- **Areas:** CFG, CODE
-- **Raised:** 2026-11-19, plan 3-sav PR 1, `config/config_test.go` and `config/demand_test.go`.
-- **Note:** Both tests use `[modules.saving]` as "a module that is not built". When PR 2 of plan 3-sav builds the module they need another unbuilt module, or the test of an unknown key. Left open for PR 2.
+- **Areas:** CFG, INS, CODE
+- **Raised:** 2026-11-19, plan 3-sav PR 1, `config/config_test.go` and `config/demand_test.go`; updated 2026-11-20, plan 3-sav PR 2 (after merging plan 3-ins).
+- **Note:** Both tests used `[modules.<name>]` as "a module that is not built". Saving and insurance are now both built, so no module is left unbuilt: the two cases use `[modules.nosuch]` and test an unknown key of a made-up module name. Left open until a spec adds a module that is not built, when the cases may use it again.
 
 ### N-495 The `economysim.limit` sentence of `spec-saving-and-investment.md` 12.3 was false
 
@@ -2811,7 +2811,13 @@ PR description.
 
 - **Areas:** CFG, SAV
 - **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-config.md` 8.2.2.
-- **Note:** The hash ids of the `Role` fields are 28 for `Cover` (insurance) and 29 for `Saver`, reserved in one edit so that the order in which the two modules are built cannot make them collide. INS took 28 when it was built (plan 3-ins PR B: `pairsRole` writes `Cover` at id 28). Left open for SAV, which takes 29.
+- **Note:** The hash ids of the `Role` fields are 28 for `Cover` (insurance) and 29 for `Saver`, reserved in one edit so that the order in which the two modules are built cannot make them collide. INS took 28 when it was built (plan 3-ins PR B: `pairsRole` writes `Cover` at id 28) and SAV took 29 (plan 3-sav PR 2). Both are written in id order. Left open until PR 3 uses them.
+
+### N-497 The warnings of the saving module that read prices judge a weight of 1 that holds nothing
+
+- **Areas:** SAV, CODE
+- **Raised:** 2026-11-20, plan 3-sav PR 2, `saving_validate.go`, `spec-saving-and-investment.md` 11.2.
+- **Note:** `project_below_hurdle`, `spread_below_margin` and `saving_target_exceeds_money` are pure functions of the configuration, so they value the best build project of a role at the reference prices of the regions it has a group in, for a household of weight 1 that holds no facility, with the yield of a recipe as written (no yield profile, season, technology, draw rent or belief) and the precaution at 0 (the drawdown is state). The last sums, over the groups, the households times the reserve plus the outlay of the role's best build project, against the households times `StartMoney` of every group. A repair is not valued (it needs a facility held). The spec words are loose on both points; settle them in 11.2 when STY runs the first pack. Left open.
 
 ### N-504 An in-kind payout to a store-limited household stops at its free store room
 
@@ -2909,6 +2915,24 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-cap PR 4 (Phases 8 and 9).
 - **Note:** Limit 3 of `spec-infrastructure.md` 4.2.2 for a store class is `MaxStoresPerAgent` less the stores the agent owns, less its pending store facilities, less the facilities its builds ordered this tick (any class: the principal runs one job, so a hire is the only way it orders two kinds in a tick). A build of `k` stores is cut to what fits, and a store facility still pending counts against the room before it is installed. The pending count is read by a pass over the owner's facilities, at most `MaxFacilitiesPerAgent`.
 
+### N-525 `overlay/infrastructure.toml` carries the site only
+
+- **Areas:** CAP, REF
+- **Raised:** 2026-11-20, plan 3-cap PR 5 (Phase 10).
+- **Note:** The row of `spec-reference-config.md` 4.5 for `overlay/infrastructure.toml` says the file also carries a route class and a ground class "where a scenario uses them". The file has the site class and the initial rows only. S121 and S123 add the route and the ground class as an extra TOML layer over the layers they need (`loadPackBytes`). The row should say "the site; the route and ground classes are layered by the scenario" when REF is next edited, or the file should gain them if a second scenario needs them.
+
+### N-526 No store facility pending at the pack level
+
+- **Areas:** CAP, STO
+- **Raised:** 2026-11-20, plan 3-cap PR 5 (Phase 10).
+- **Note:** Storage gives the room at once and no public call produces an owner that cannot take the store, so no pack-level scenario reaches a store facility still pending. That leg is proved only by `TestFork_Infrastructure_Build` and `TestStoreFacility_Pending`. If STO later lets an owner lack room at completion, add a pack-level scenario.
+
+### N-527 The drain of S123 does not bind the draw
+
+- **Areas:** CAP, CAL, POP
+- **Raised:** 2026-11-20, plan 3-cap PR 5 (Phase 10).
+- **Note:** On pack one the capacity a drain adds to the arable endowment never binds the draw, so the households with and without the drain are equal in every run and S123 reports them without comparing them. A ground class whose drain binds needs the calibration platform to choose its numbers; until then nothing proves that the drained capacity reaches the population draw.
+
 ### N-510 The LabourRound row of spec-observability 4.1 now names the refusal fields of spec-employment 15.1
 
 - **Areas:** EMP, OBS
@@ -2938,6 +2962,30 @@ PR description.
 - **Areas:** EMP, WEL
 - **Raised:** 2026-11-19, plan 3-emp PR 5.
 - **Note:** `spec-employment.md` 8.2.4 makes a tick in which the agent is the principal of a hired job in progress a working tick for the floor. The code marks it when a wage of the hire is released (P2.7 and P2.1), so the tick in which the last wage is paid counts and a tick between the formation at P2.5a and the start at P2.7 of a hire that starts nothing does not. The working household-ticks of the agent are its own executions only, as 8.2.4 says, so its observed wage is unchanged by hiring.
+
+### N-515 `Employment` has no role split in its window form
+
+- **Areas:** EMP, IND
+- **Raised:** 2026-11-20, plan 3-emp PR 6.
+- **Note:** `spec-indicators.md` 9.1 row 24 asks for the paid household-ticks over the running households "by region and role". `LabourRound.HouseholdTicks` is a figure of the region (the rows by worker role carry `Offered`, `Hired` and `NoVacancy` only), so the preset gives the window rate by region, over the running households of the hireable roles of the region, and the boundary rate by (region, role) from `RoleRow.Employed`. A role split of the window needs `HouseholdTicks` in `LabourRow`, an appended count (architecture.md 2.10.5); no consumer asks for it yet. The row of the spec was edited to say so.
+
+### N-516 A world with the hire form on and nothing offered is not the world with it off
+
+- **Areas:** EMP, REF, VIA
+- **Raised:** 2026-11-20, plan 3-emp PR 6.
+- **Note:** EMP-S5 and FR-EMP-061 say the stream of a module on equals the module off. It holds for the draws, not for the state: on one-demand with every role silent, `CostAnchor` of the first market at tick 1 is 1 068 with the form on and 1 382 off, because an employer role with a hire list and a Hireable role change the cost anchor (`spec-viability.md` 4.7). `TestScenarioS101_ModuleTakesNoWordWithOrWithoutOffers` therefore reads the PCG after P2.5a and P2.8b, with and without offers, and no test compares the two worlds whole. A reader who wants "the module on is inert with no offers" must say which of the two he means.
+
+### N-517 One-demand with the hire form forms hires until about tick 250, and the closures by reason are all 0
+
+- **Areas:** EMP, REF, STY
+- **Raised:** 2026-11-20, plan 3-emp PR 6.
+- **Note:** S97 to S100 on one-demand (seeds 1 to 10): the last hire forms between ticks 225 and 293 and then the pack collapses (N-352), so the figures are read over the first 250 ticks and no band is asserted; the closed form of 11.2 is for a one-good circuit, which the pack is not (FR-EMP-062 is proved by `internal/employment` `TestCircuit_ClosedForm_*`). The positions closed for `employer_funds` and `no_input` are 0 in every run, because the default posts only what the employer's cash, stock and tools cover (FR-EMP-015), so `Unemployment.ByReason` is empty on the pack and its order and sums are tested on hand-built windows only. A pack where the default closes positions would need employers with less cash than the bill.
+
+### N-518 The arc elasticity of S98 is a ramp-up, not a supply elasticity
+
+- **Areas:** EMP, STY
+- **Raised:** 2026-11-20, plan 3-emp PR 6.
+- **Note:** S98 records the arc elasticity of the hired households to the wage between ticks 10 to 60 and 60 to 110 (EMP-A1). On one-demand both rise together in the ramp of the warm start (the wage from about 1 340 to 1 750, the hired households from about 22 to 52 a tick), so the value is large and positive (about 27 600 basis points), and it is the same with the work floor at 4 000 and at 0. It says nothing of the backward bend of the supply of the target-income rule (L14, EMP-A1). Measuring it needs a wage moved by a call (a grant or a shock) with the households' reservation held, which no scenario of this PR does; the item stays open for STY.
 
 ### N-540 ORG, SKL, REF: a `train` right is not neutral at places 0, so the inert overlay carries none
 
@@ -2979,4 +3027,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 6624d65917237c1618fe5e90
+NOTES-TAG: 1206a22e44aabc314706f608

@@ -107,6 +107,8 @@ func (t *Tally) foldLimits(e economysim.Event) {
 		t.moneyFlowLimited(e)
 	case economysim.ReliefPaid:
 		t.reliefPaid(e)
+	case economysim.LabourRound:
+		t.labourRound(e)
 	}
 }
 

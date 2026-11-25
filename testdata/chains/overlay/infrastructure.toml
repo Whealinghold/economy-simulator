@@ -1,0 +1,45 @@
+# The infrastructure module alone on pack one (plan 3-cap D11, spec-infrastructure.md 12.1, spec-reference-chain.md
+# 4.5): one site class, a mill that the cooks' `prepare` recipe needs, held by 60 of the cooks of the north from the
+# start, with a build recipe and a repair recipe on the cook role. Every figure is a labelled placeholder (N-018,
+# N-027): the class lasts 1 000 units, loses 2 a tick to age and 6 an execution to use, and serves 3 executions a tick
+# at full condition, so the mills of the cooks that work most are worn out by use before tick 400 and the others are not.
+#
+# The default strategy builds and repairs nothing (spec-infrastructure.md 4.5.1: a build recipe has no non-discard
+# output, so its net value is never positive), so a run of the pack alone shows the initial facilities decaying, being
+# worn and ruined, and the limit the site puts on `prepare`; a build or a repair needs a consumer's strategy or a
+# directive (the scenarios S120 to S122 add them). The route and ground classes need the trade and resources overlays
+# of the pack they run on, so the scenarios that use them add the class to the configuration they load (plan 3-cap
+# Phase 10); this file loads, validates and solves on `one` by itself.
+# Layer it after the pack: base.toml, one.toml, warm-one.toml, this file.
+
+[modules.infrastructure.class.mill]
+kind = "site"
+durability = 1000
+decay = 2
+wear_per_use = 6
+capacity = 3
+label = "a mill"
+
+[[modules.infrastructure.initial]]
+region = "north"
+class = "mill"
+role = "cook"
+count = 60
+
+[recipe.prepare]
+needs = [ "mill" ]
+
+[recipe.build_mill]
+duration = 3
+inputs = [ { commodity = "staple", quantity = 2 } ]
+[recipe.build_mill.builds]
+class = "mill"
+
+[recipe.repair_mill]
+inputs = [ { commodity = "staple", quantity = 1 } ]
+[recipe.repair_mill.repairs]
+class = "mill"
+units = 500
+
+[role.cook]
+recipes = [ "prepare", "prepare_basic", "build_mill", "repair_mill" ]
