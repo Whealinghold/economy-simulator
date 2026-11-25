@@ -43,6 +43,14 @@ func (w *World) runTax(s *fiscalState, i int) {
 	clear(s.agg[i*s.regions : (i+1)*s.regions])
 	s.gather(w, f)
 	w.dueTax(s, f)
+	w.collect(s, i, f)
+}
+
+// collect moves the collections of the flow at position i to its treasury, in
+// ascending account ID, after cutting them to the treasury's headroom if together
+// they would pass it (spec-fiscal.md 5.3.2), nets each from the household's income
+// (X_t) and counts them. The dues and the collections are in s.dues and s.take.
+func (w *World) collect(s *fiscalState, i int, f *fiscalFlowState) {
 	to := s.pol.tr[f.treasury].account
 	v, err := w.ledger.Account(to)
 	if err != nil {
@@ -52,7 +60,7 @@ func (w *World) runTax(s *fiscalState, i int) {
 	for k, p := range s.payers {
 		if a := s.applied[k]; a > 0 {
 			if err := w.ledger.Transfer(p.account, to, a, f.reason); err != nil {
-				invariant("the ledger refused a tax's transfer: " + err.Error())
+				invariant("the ledger refused a collection's transfer: " + err.Error())
 			}
 			w.netCharge(f, p, a)
 		}

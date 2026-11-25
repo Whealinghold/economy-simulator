@@ -64,7 +64,9 @@ var positionList = [...]position{
 	{"P3.5", "EXT", line},
 	{"P3.6", "INF", line},
 	{"P3.6a", "STO", line},
+	{"P3.6c", "FIS", line},
 	{"P4.1", "CLR", line},
+	{"P4.1a", "FIS", line},
 	{"P4.1b", "EMP", line},
 	{"P4.2", "EXT", line},
 	{"P5.1", "CLR", line},
@@ -97,8 +99,7 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P1.3a",
-	"P3.4a", "P3.6b", "P3.6c",
-	"P4.1a",
+	"P3.4a", "P3.6b",
 	"P8.1b",
 }
 
@@ -244,6 +245,9 @@ func (w *World) positionsTrade() error {
 	if w.sto != nil {
 		w.p36aRoomLimited()
 	}
+	if w.fiscal != nil {
+		w.p36cTolls()
+	}
 	if err := w.p41Clear(); err != nil {
 		return err
 	}
@@ -255,6 +259,9 @@ func (w *World) positionsTrade() error {
 // complexity limit (N-243). The position test reads it as part of the straight
 // line, between positionsTrade and positionsTail.
 func (w *World) positionsSettle() error {
+	if w.fiscal != nil {
+		w.p41aDuties()
+	}
 	if w.employment != nil {
 		if err := w.p41bPayroll(); err != nil {
 			return err

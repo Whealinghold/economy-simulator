@@ -1,0 +1,76 @@
+# Presets 22 to 24 of spec-indicators.md 9.1 for the second window of 100 ticks of the pack
+# one-demand with the employment module in its hire form, warm (seed 1, 200 ticks). Integers
+# only; a field that is 0, false or empty is not written. It records no world state, so
+# testdata/golden/off/ does not move (plan 3-emp Phase 8). The pack collapses after about tick 250
+# (N-352), so the window is read before it.
+## Unemployment
+Unemployment.From = 100
+Unemployment.To = 200
+Unemployment.Rows[0].Role = 2
+Unemployment.Rows[0].Offered = 6251
+Unemployment.Rows[0].Hired = 3058
+Unemployment.Rows[0].NoVacancy = 3193
+Unemployment.Rows[0].Rate.Value = 5108
+Unemployment.Rows[0].Rate.OK = true
+Unemployment.Rows[1].Role = 3
+Unemployment.Rows[1].Offered = 10705
+Unemployment.Rows[1].Hired = 4536
+Unemployment.Rows[1].NoVacancy = 6169
+Unemployment.Rows[1].Rate.Value = 5763
+Unemployment.Rows[1].Rate.OK = true
+Unemployment.Regions[0].Role = -1
+Unemployment.Regions[0].Offered = 16956
+Unemployment.Regions[0].Hired = 7594
+Unemployment.Regions[0].NoVacancy = 9362
+Unemployment.Regions[0].Rate.Value = 5521
+Unemployment.Regions[0].Rate.OK = true
+Unemployment.Total.Region = -1
+Unemployment.Total.Role = -1
+Unemployment.Total.Offered = 16956
+Unemployment.Total.Hired = 7594
+Unemployment.Total.NoVacancy = 9362
+Unemployment.Total.Rate.Value = 5521
+Unemployment.Total.Rate.OK = true
+Unemployment.Warnings[0] = 8
+## WageBill
+WageBill.From = 100
+WageBill.To = 200
+WageBill.Regions[0].Paid = 8454372
+WageBill.Regions[0].ValueAdded = 61847415
+WageBill.Regions[0].Cash = 71764800
+WageBill.Regions[0].Share.Value = 1367
+WageBill.Regions[0].Share.OK = true
+WageBill.Regions[0].ShareCash.Value = 1178
+WageBill.Regions[0].ShareCash.OK = true
+WageBill.Realm.Region = -1
+WageBill.Realm.Paid = 8454372
+WageBill.Realm.ValueAdded = 61847415
+WageBill.Realm.Cash = 71764800
+WageBill.Realm.Share.Value = 1367
+WageBill.Realm.Share.OK = true
+WageBill.Realm.ShareCash.Value = 1178
+WageBill.Realm.ShareCash.OK = true
+WageBill.Warnings[0] = 8
+## Employment
+Employment.From = 100
+Employment.To = 200
+Employment.Rows[0].Role = 1
+Employment.Rows[0].Households = 90
+Employment.Rows[1].Role = 2
+Employment.Rows[1].Hireable = true
+Employment.Rows[1].Households = 105
+Employment.Rows[1].CloseRate.OK = true
+Employment.Rows[2].Role = 3
+Employment.Rows[2].Hireable = true
+Employment.Rows[2].Households = 158
+Employment.Rows[2].CloseRate.OK = true
+Employment.Regions[0].HouseholdTicks = 7594
+Employment.Regions[0].Running = 20564
+Employment.Regions[0].Rate.Value = 3693
+Employment.Regions[0].Rate.OK = true
+Employment.Total.Region = -1
+Employment.Total.HouseholdTicks = 7594
+Employment.Total.Running = 20564
+Employment.Total.Rate.Value = 3693
+Employment.Total.Rate.OK = true
+Employment.Warnings[0] = 8

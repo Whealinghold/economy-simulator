@@ -370,7 +370,17 @@ var stepSites = []site{
 		}
 		return nil
 	}},
+	{"P3.6c", noError(func(w *World) {
+		if w.fiscal != nil {
+			w.p36cTolls()
+		}
+	})},
 	{"P4.1", (*World).p41Clear},
+	{"P4.1a", noError(func(w *World) {
+		if w.fiscal != nil {
+			w.p41aDuties()
+		}
+	})},
 	{"P4.1b", func(w *World) error {
 		if w.employment != nil {
 			return w.p41bPayroll()

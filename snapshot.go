@@ -121,6 +121,9 @@ type Snapshot struct {
 	// (spec-institutions.md 11.5.2). Both are empty with the module off or with nothing set.
 	LegalLevels []LegalRow
 	Suspended   []RightID
+	// Actors has one row per policy actor, by ActorID (spec-policy.md 12.3.1). Empty
+	// with the policy module off.
+	Actors []ActorRow
 }
 
 // BodyRow is the households of one body in one region of its scope (spec-institutions.md
@@ -478,6 +481,7 @@ func (w *World) Snapshot() (Snapshot, error) {
 	w.dropOutsideRows(&s)
 	w.snapshotSkills(&s)
 	w.snapshotBodies(&s)
+	w.snapshotActors(&s)
 	return s, nil
 }
 

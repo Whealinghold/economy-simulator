@@ -112,6 +112,12 @@ var skipFields = []string{
 	// was loaded from a checkpoint, which is not state: a restored world and one that
 	// ran on hold the same ticks (information.go).
 	"information.buf", "information.tally", "Record.restored",
+	// infrastructure.limits are the per-tick counts of FacilityLimited, kept only when an
+	// observer is attached and cleared at P8.6; infrastructure.world is the back pointer to
+	// the world (which reaches the observer), and productionScratch.free and facCut are the
+	// scratch of the Cut count, filled only under an observer: an observed world holds what a
+	// bare one does not, and none is state or saved (spec-infrastructure.md 14.1, 14.6).
+	"infrastructure.limits", "infrastructure.world", "productionScratch.free", "productionScratch.facCut",
 	// The merchants module's tables are derived from the configuration (rows), or
 	// scratch cleared by the position that fills it (tally, goods, lots, and the
 	// round's submitted, admitted and sorted entities and its counts): none is
@@ -560,7 +566,9 @@ var replayRows = []replayRow{
 	{id: "P3.5", run: (*World).p35Orders, on: externalOn},
 	{id: "P3.6", run: noErr((*World).p36Aggregates), on: wantsOrInformationOn},
 	{id: "P3.6a", run: noErr((*World).p36aRoomLimited), on: storageOn},
+	{id: "P3.6c", run: noErr((*World).p36cTolls), on: fiscalOn},
 	{id: "P4.1", run: (*World).p41Clear},
+	{id: "P4.1a", run: noErr((*World).p41aDuties), on: fiscalOn},
 	{id: "P4.1b", run: (*World).p41bPayroll, on: employmentOn},
 	{id: "P4.2", run: (*World).p42Sweep, on: externalOn},
 	{id: "P5.1", run: noErr((*World).p51Window)},

@@ -630,6 +630,10 @@ type RouteRow struct {
 	// the risk module expects a strike to take, from the rows and the scales in force
 	// (spec-risk.md 8.1); 0 with the module off or for a route with no risk.
 	LossBP int64
+	// Toll is the money one carrying unit pays in tolls on the shortest path, at the
+	// scales and in the windows of the tick (the fiscal module, spec-fiscal.md 7.5);
+	// 0 with the module off or for a route no toll acts on.
+	Toll int64
 }
 
 // EndowmentView is one endowment of the agent's region as the agent sees it

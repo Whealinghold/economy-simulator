@@ -35,6 +35,7 @@ SITES = {
     "siteOutcome": 0xD9CC0A517EB0D9F5,       # D8
     "siteSpawner": 0xBE0B1D169200E9FF,       # D9
     "siteCreation": 0x9B8FFA303CB545DC,      # D10
+    "sitePolicy": 0x2E0AE131A3008963,        # D17
 }
 
 

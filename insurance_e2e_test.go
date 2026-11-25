@@ -83,7 +83,8 @@ func coverPack(t testing.TB, k coverKnobs) (economysim.Config, []economysim.Opti
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate(cover pack) error = %v, want nil", err)
 	}
-	cs := coverScript{shipper: shipperOf(t, cfg), k: k, backer: economysim.RoleID(backer), insured: economysim.RoleID(carrier)}
+	cfg, sh := shipperFor(t, cfg)
+	cs := coverScript{shipper: sh, k: k, backer: economysim.RoleID(backer), insured: economysim.RoleID(carrier)}
 	return cfg, []economysim.Option{economysim.WithStrategy("ship", cs)}
 }
 

@@ -95,21 +95,22 @@ func shipperPack(t testing.TB) (economysim.Config, []economysim.Option) {
 // overlay of pack two (the storage pack of S94 adds its overlay after it).
 func shipperPackOn(t testing.TB, layers []string) (economysim.Config, []economysim.Option) {
 	t.Helper()
-	cfg := loadValidPack(t, layers...)
-	s := shipperOf(t, cfg)
-	cfg.Modules.Transport.Modes[modeFootID].Speed = 50
-	for i := range cfg.Roles {
-		cfg.Roles[i].Strategy = "ship"
-	}
+	return shipperOnConfig(t, loadValidPack(t, layers...))
+}
+
+// shipperOnConfig puts the scripted shipper on a configuration that has the transport
+// overlay of pack two (a pack with a layer of its own after it, such as the fiscal tolls).
+func shipperOnConfig(t testing.TB, cfg economysim.Config) (economysim.Config, []economysim.Option) {
+	t.Helper()
+	cfg, s := shipperFor(t, cfg)
 	return cfg, []economysim.Option{economysim.WithStrategy("ship", s)}
 }
 
-// shipperOf returns the scripted shipper of a pack with the transport overlay of pack two:
-// the carriers ship, to the first household of the other region that is not a carrier.
-func shipperOf(t testing.TB, cfg economysim.Config) shipper {
+// shipperFor is shipperOnConfig that returns the shipper itself, for a test that wraps it.
+func shipperFor(t testing.TB, cfg economysim.Config) (economysim.Config, shipper) {
 	t.Helper()
 	rec := &recorder{}
-	if _, err := economysim.NewWorld(cfg, economysim.WithObserver(rec), economysim.WithStrategy("ship", shipper{})); err != nil {
+	if _, err := economysim.NewWorld(cfg, economysim.WithObserver(rec)); err != nil {
 		t.Fatalf("NewWorld() error = %v, want nil", err)
 	}
 	carrier := slices.IndexFunc(cfg.Roles, func(r economysim.Role) bool { return r.ID == "carrier" })
@@ -127,7 +128,11 @@ func shipperOf(t testing.TB, cfg economysim.Config) shipper {
 			seen[a.Region], first[a.Region] = true, a.Agent
 		}
 	}
-	return shipper{first: first, shipEvery: 7, role: economysim.RoleID(carrier), staple: economysim.CommodityID(staple)}
+	cfg.Modules.Transport.Modes[modeFootID].Speed = 50
+	for i := range cfg.Roles {
+		cfg.Roles[i].Strategy = "ship"
+	}
+	return cfg, shipper{first: first, shipEvery: 7, role: economysim.RoleID(carrier), staple: economysim.CommodityID(staple)}
 }
 
 // TestDeterminism_Transport verifies, for the module-alone pack with and without the
