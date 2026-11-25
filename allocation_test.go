@@ -72,6 +72,17 @@ const (
 	riskStoreStepAllocBaseline = storageStepAllocBaseline
 )
 
+// fiveGovernedStepAllocBaseline and fiscalStepAllocBaseline are the same measure for the governed warm
+// five without and with the fiscal module (overlay/polity-governed.toml, then the two fiscal overlays):
+// taxes, remittances, a duty, two payouts and a standing bid and ask on every tick. NFR-FIS-001 asks no
+// more than the module off: the counters and the scratch of the module are preallocated and no event is
+// built without an observer, so the second row has the first's limit (932 and 922 measured). Measured under -race at 50
+// ticks, seed 1. The row is a reviewed addition (rule 8.2); raising either is a reviewed change.
+const (
+	fiveGovernedStepAllocBaseline = 932
+	fiscalStepAllocBaseline       = fiveGovernedStepAllocBaseline
+)
+
 // TestStep_AllocationsStayAtTheBaseline checks that a full Step of pack one
 // allocates no more than the baseline. Not parallel: testing.AllocsPerRun
 // panics in a parallel test. Allocation counts differ under -race, so the test
@@ -102,6 +113,8 @@ func TestStep_AllocationsStayAtTheBaseline(t *testing.T) {
 		{"two+transport", packTwoTransport, twoTransportStepAllocBase, false},
 		{"two+transport+risk", packTwoRisk, riskStepAllocBaseline, false},               // NFR-RSK-001: P3.1a and the dispatch work in scratch
 		{"one+storage+risk-store", packOneRiskStore, riskStoreStepAllocBaseline, false}, // NFR-RSK-001: P8.1a works in scratch
+		{"five+polity-governed", fivePolityGoverned, fiveGovernedStepAllocBaseline, false},
+		{"five+polity-governed+fiscal", fiveFiscal, fiscalStepAllocBaseline, false}, // NFR-FIS-001: no more than the module off
 		{"one+external", packExternal(), stepAllocBaseline, false},                      // NFR-EXT-001: no more than the off world (36 measured)
 	} {
 		cfg := loadValidPack(t, row.layers...)
