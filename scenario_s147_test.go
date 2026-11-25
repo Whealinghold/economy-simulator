@@ -38,6 +38,9 @@ func savingQueries(t testing.TB, w *economysim.World) (rows []string, building i
 			building++
 		}
 	}
+	if _, err := w.Saving(savingAgentBound); !errors.Is(err, economysim.ErrUnknownAgent) {
+		t.Errorf("Saving(%d) error = %v, want ErrUnknownAgent: savingAgentBound is not above every agent", savingAgentBound, err)
+	}
 	return rows, building
 }
 

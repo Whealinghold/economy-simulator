@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -157,6 +158,23 @@ func TestGolden_SavingOffLeavesNoTrace(t *testing.T) {
 	}
 	if want := []string{"events-one.txt", "one.positions.txt", "one.txt"}; !slices.Equal(names, want) {
 		t.Errorf("files of golden/saving = %v, want %v", names, want)
+	}
+	for _, dir := range []string{moduleGoldenPath("all", "."), filepath.Join("testdata", "checkpoints")} {
+		checkNoSavingFile(t, dir)
+	}
+}
+
+// checkNoSavingFile fails for every file of dir whose name mentions the saving module.
+func checkNoSavingFile(t testing.TB, dir string) {
+	t.Helper()
+	es, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range es {
+		if strings.Contains(e.Name(), "saving") {
+			t.Errorf("%s holds %s: the module joins golden/all and the checkpoint fixtures at Stage 3 close, not here", dir, e.Name())
+		}
 	}
 }
 

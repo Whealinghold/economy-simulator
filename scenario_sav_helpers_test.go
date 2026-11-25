@@ -18,12 +18,12 @@ import (
 // over the run (household-ticks, as the event counts households), the facilities the world built
 // and repaired, and the sampled sums of unfed households and of idle money of the roles with a block.
 type savingStats struct {
-	Planned                                          int64
-	Saving, Buffered, Passed, Building               int64
-	NoReturn, Standing, Unreachable, Survival        int64
-	Builds, Repairs, Built, Repaired                 int64
-	Goal, Buffer                                     economysim.Money
-	UnfedSamples, IdleSamples, SavingHouseholdsFinal int64
+	Planned                                   int64
+	Saving, Buffered, Passed, Building        int64
+	NoReturn, Standing, Unreachable, Survival int64
+	Builds, Repairs, Built, Repaired          int64
+	Goal, Buffer                              economysim.Money
+	UnfedSamples, IdleSamples, IdleNegative   int64
 }
 
 // Observe adds one event to the stats.
@@ -80,7 +80,9 @@ func savingRun(t testing.TB, cfg economysim.Config, seed uint64, ticks int64) *s
 		for _, r := range snap.Roles {
 			st.UnfedSamples += r.Unfed
 			st.IdleSamples += int64(r.IdleMoney)
-			st.SavingHouseholdsFinal = int64(r.SavingHouseholds)
+			if r.IdleMoney < 0 {
+				st.IdleNegative++
+			}
 		}
 	}
 	return st
