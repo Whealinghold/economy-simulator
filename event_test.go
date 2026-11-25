@@ -113,6 +113,8 @@ var declaredEvents = []economysim.Event{
 	economysim.PolicyDecided{},
 	economysim.CoverFormed{},
 	economysim.CoverRound{},
+	economysim.CoverEnded{},
+	economysim.CoverSettled{},
 }
 
 // moduleGates are the gates of 4.1 (besides core and the two prefixes) whose events are
@@ -129,7 +131,6 @@ var moduleGates = []string{
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
 	"TreasuryOrdered", "SavingPlanned",
-	"CoverEnded", "CoverSettled",
 }
 
 // deferredCore names every event whose row of 4.1 has the gate core but that
@@ -409,7 +410,7 @@ func TestEvents_Shape(t *testing.T) {
 		"RoleChanged.From": role, "RoleChanged.To": role,
 		"WeightChanged.From": reflect.TypeFor[int64](), "WeightChanged.To": reflect.TypeFor[int64](),
 		"EndowmentAdjusted.Kind": reflect.TypeFor[economysim.AdjustKind](), "FacilityChanged.Kind": reflect.TypeFor[economysim.FacilityKind](),
-		"CoverFormed.Kind": reflect.TypeFor[economysim.CoverKind](),
+		"CoverFormed.Kind": reflect.TypeFor[economysim.CoverKind](), "CoverEnded.Kind": reflect.TypeFor[economysim.CoverKind](), "CoverEnded.Cause": reflect.TypeFor[economysim.CoverCause](),
 	}
 	for _, e := range declaredEvents {
 		typ := reflect.TypeOf(e)
