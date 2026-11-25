@@ -1,0 +1,30 @@
+# The saving module alone on pack one (plan 3-sav Phase 7, spec-saving-and-investment.md 10, spec-reference-chain.md
+# 4.5): a `Saver` block on the grower (the producer with the long job, 60 ticks) and on the cook (the role with a site
+# recipe, a build recipe and a repair recipe). Layer it after overlay/infrastructure.toml, which holds the mill class, the
+# 60 mills of the cooks that have one and the recipes `build_mill` and `repair_mill`: base.toml, one.toml, warm-one.toml,
+# overlay/infrastructure.toml, this file. The build and repair legs need that overlay; the buffer of the grower does not.
+#
+# A test double, not a design: every number is a labelled placeholder (N-015, N-027), none is set from a source. The
+# hurdle spread is near the 40 000 of the model (spec 14.1 SAV-D2) and not the weak default of 20 000, so the hurdles
+# of the 76 cooks that hold no mill are spread over 15 000 to 55 000 and some build before tick 400 and some do not. The
+# commit band is the default.
+#
+# grower: a buffer of the whole drawdown, at most 30 ticks of upkeep, so a household with a 60-tick job holds money
+#   against the hole between sales. The role has no project recipe, so it has the buffer only (warning saver_no_project,
+#   which a pack one run shows once and that is not an error).
+# cook: no buffer; the project is the mill (`prepare` needs it, `build_mill` makes one, `repair_mill` mends one). The
+#   repair gate is the default, 5 000 of 10 000 of the durability.
+
+[modules.saving]
+safety_ticks = 2
+hurdle_spread_bp = 40000
+commit_band_bp = 2000
+
+[role.grower.saver]
+precaution_share_bp = 10000
+precaution_cap_ticks = 30
+
+[role.cook.saver]
+hurdle_bp = 15000
+payback_ticks = 180
+repair_below_bp = 5000
