@@ -256,16 +256,18 @@ func TestValidateInsurance_DependenciesAreOfTheRequestOnly(t *testing.T) {
 // TestInsurance_OnWorldBuildsAndRunsLikeOff verifies, over three seeds, that a world
 // built in Go with the insurance module on, an insured role and an underwriter role, is
 // accepted by NewWorld, hashes differently from the same configuration with the module
-// and the blocks removed, and then emits the same events and ends in the same snapshot
-// but for the name of the module in the list of modules, if it is listed, because this change gives the
-// module no position: it is data that is checked and hashed and that nothing reads.
+// and the blocks removed, and then emits the same events but for the two of the cover round
+// (CoverRound, CoverFormed) and ends in the same snapshot but for the name of the module in
+// the list of modules. The module has its round at P3.3c since plan 3-ins PR C, but this pack
+// has no shipment and no store, so the round forms no policy and moves no money: only its
+// own events differ.
 //
 // Requirement: FR-INS-001, FR-INS-005
 //
 // Guard: a module that is on changes a run only where it acts. If a later change let the
-// blocks or the reasons of the module reach a draw, an event or a boundary row before the
-// module's positions exist, this comparison would differ. The run must have events, or
-// the comparison would pass for nothing.
+// blocks or the reasons of the module reach a draw, an event or a boundary row outside its
+// own positions, this comparison would differ. The run must have events, or the comparison
+// would pass for nothing.
 func TestInsurance_OnWorldBuildsAndRunsLikeOff(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -286,6 +288,13 @@ func TestInsurance_OnWorldBuildsAndRunsLikeOff(t *testing.T) {
 		if len(onEvents) == 0 {
 			t.Fatalf("seed %d: no event after WorldCreated in 25 ticks, the comparison would pass for nothing", seed)
 		}
+		onEvents = slices.DeleteFunc(onEvents, func(e economysim.Event) bool {
+			switch e.(type) {
+			case economysim.CoverRound, economysim.CoverFormed:
+				return true
+			}
+			return false
+		})
 		if !reflect.DeepEqual(onEvents, offEvents) {
 			t.Errorf("seed %d: %d events with the module on, %d with it off, want the same events", seed, len(onEvents), len(offEvents))
 		}

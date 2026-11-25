@@ -508,6 +508,9 @@ func skillsOn(w *World) bool { return w.skills != nil }
 // world records no line for them.
 func creditOn(w *World) bool { return w.credit != nil }
 
+// insuranceOn is the gate of the insurance module's positions.
+func insuranceOn(w *World) bool { return w.insurance != nil }
+
 // fiscalOn is the guard of the rows of the fiscal module (P1.7b, plan 3-fis): an off
 // world records no line for them.
 func fiscalOn(w *World) bool { return w.fiscal != nil }
@@ -558,6 +561,7 @@ var replayRows = []replayRow{
 	{id: "P3.3", run: noErr((*World).p33Round), on: contractsOn},
 	{id: "P3.3a", run: noErr((*World).p33aPlanned), on: merchantRolesOn},
 	{id: "P3.3b", run: noErr((*World).p33bRound), on: creditOn},
+	{id: "P3.3c", run: noErr((*World).p33cCoverRound), on: insuranceOn},
 	{id: "P3.4", run: (*World).p34Estates},
 	{id: "P3.5", run: (*World).p35Orders, on: externalOn},
 	{id: "P3.6", run: noErr((*World).p36Aggregates), on: wantsOrInformationOn},

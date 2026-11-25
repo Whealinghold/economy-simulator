@@ -46,10 +46,9 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351, N-353 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424, N-474, N-490, N-512, N-521 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424, N-474, N-490, N-512, N-521, N-478 |
 | BEL | N-042, N-043, N-230, N-245 |
-| CAL | N-030, N-527 |
-| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-388, N-438, N-475, N-492, N-520, N-521, N-522, N-523, N-524, N-525, N-526, N-527 |
+| CAL | N-030, N-479, N-527 |
 | CFG | N-476, N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-494, N-496, N-483, N-461, N-522 |
 | CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444, N-471, N-480, N-500, N-502 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
@@ -66,11 +65,11 @@ PR description.
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473, N-515 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
-| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476, N-494, N-496 |
+| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476, N-494, N-496, N-477, N-478, N-479 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436, N-471 |
 | LND | N-504, N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475, N-484, N-513 |
-| MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
+| MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370, N-478 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
 | OBS | N-543, N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482, N-510, N-520 |
@@ -94,7 +93,7 @@ PR description.
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434, N-459, N-505 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383, N-522, N-523, N-516, N-505 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346, N-472, N-491, N-514 |
-| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438, N-475, N-480 |
+| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438, N-475, N-480, N-477 |
 
 ## Open notes
 
@@ -3017,6 +3016,24 @@ PR description.
 - **Raised:** 2026-11-20, plan 3-org PR C result (Phases 6 and 7), written in PR E.
 - **Note:** `AdmitClamp` returns `(code, price, changed)`: the side of the order says whether the change is a lowering or a raising. `spec-institutions.md` 5.2 and `spec-clearing.md` 3.2.1 may say it returns one flag. Check both and align them to the code.
 
+### N-477 INS, WLD: the store policies of a tick end at the next round's entry until PR D
+
+- **Areas:** INS, WLD
+- **Raised:** 2026-11-20, plan 3-ins PR C (Phases 4 and 5).
+- **Note:** the round of P3.3c forms store policies, and P8.1b (PR D) is what ends them in their tick. Until PR D, `insurance_round.go` drops the store policies of the previous tick at the entry of the next round, so none leaks. PR D deletes that reset in the change that adds P8.1b. A route policy stays open until PR D settles it at P1.3a.
+
+### N-478 INS, AGT, MER: `DefaultCover` is called after `TradeWith`, not inside it
+
+- **Areas:** INS, AGT, MER
+- **Raised:** 2026-11-20, plan 3-ins PR C (Phases 4 and 5).
+- **Note:** `DefaultStrategy.Trade` calls `DefaultCover` after `TradeWith`, and `Merchant.Trade` calls it after `send` on the trip path. A call inside `TradeWith` would see no shipment, because a trip's lanes are appended after it, and would double the requests when the merchant calls it again. `spec-insurance.md` 10.4 and `spec-merchants.md` 9.7 must say that a strategy that wraps `TradeWith` calls `DefaultCover` itself.
+
+### N-479 INS, CAL: a small sum at a small cover share never fills
+
+- **Areas:** INS, CAL
+- **Raised:** 2026-11-20, plan 3-ins PR C (Phases 4 and 5).
+- **Note:** a pair whose maximum payout `halfEven(CoverBP * S / 10 000)` is 0 is skipped (`spec-insurance.md` 7.3.2 step 1), so a sweep that lowers `CoverBP` or `MinSum` far enough sees requests that no offer can fill, counted as `no_offer`. A calibration of the insurance knobs must keep `MinSum` above `5 000 / CoverBP` (half to even rounds exactly one half down to 0).
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -3027,4 +3044,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 1206a22e44aabc314706f608
+NOTES-TAG: cf894e9c1ddece74a5337318

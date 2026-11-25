@@ -574,6 +574,7 @@ offers of the matching order:
 1. an offer is skipped if it is the insured's own, if its `CoverBP` is below the
    request's `MinCoverBP`, or if its remaining `MaxLiability` is below the
    **pair's** maximum payout, which is `halfEven(CoverBP * S / 10 000)` of the offer's `CoverBP` and the candidate's sum `S` (6.4.1), not of any other offer's;
+   a pair whose maximum payout is 0 is skipped too: a zero maximum payout means no payout, so no fill and no policy of it;
 2. an offer whose loading (rate) exceeds the request's limit ends the scan for this
    candidate (**no underwriter at the price**: the offers are in ascending order
    of the price a lane request compares);
@@ -866,9 +867,9 @@ These hold after every position of the module and are checked by the audit
 
 ## 10. What a strategy sees, and the default rules
 
-### 10.1 The `Cover` group of the view
+### 10.1 The `Insurance` group of the view
 
-`AgentView` (`spec-agents.md` 6.4.1) gains one group, present **only in the view of
+`AgentView` (`spec-agents.md` 6.4.1) gains one group, `AgentView.Insurance` of type `CoverView` (not `Cover`: that name is the subsistence module's ticks of upkeep held in stock, `spec-subsistence.md` 5.2), present **only in the view of
 an agent whose role has a cover block** (as the merchant and credit groups are).
 Plain values, valid for the call only:
 
@@ -1096,7 +1097,7 @@ Counts, not timings (N-015):
 | P3.3c | `O(R + O)` per lane for the sorts, `O(candidates * scanned offers)` for the matching | agents with a block, shipments of the tick |
 | P8.1b | `O(store owners struck + underwriters paid)` | strikes, not owners |
 | removal 2f | `O(policies of the removed agent)`, from the by-agent index | policies of one agent |
-| `Cover` group of the view | `O(1)` for an insured, `O(policies of the agent)` for an underwriter, once per `Trade` | one agent |
+| `Insurance` group of the view | `O(1)` for an insured, `O(policies of the agent)` for an underwriter, once per `Trade` | one agent |
 
 A world with the module off has none of it. A step of the reference chain with the
 module on and no role with a block allocates nothing beyond the default (NFR-INS-001).
@@ -1701,7 +1702,7 @@ No open note is tagged `INS`. The notes tagged `ALL` and the others read are:
 | Spec | Section | Edit |
 |------|---------|------|
 | `spec-world.md` | 6.3, 6.5, 6.8, 6.10, 6.11 | rows P1.3a (after P1.3, before P1.4), P3.3c (after P3.3b, before P3.4) and P8.1b (after P8.1a, before P8.2); the event order of 12.1.1; 7.5 lists "the cover round's order and the settlement's remainders" among what does not draw; 11.1 the cost rows; **6.8, row P6.3**: "a flow of the insurance result that moves after P6.3 (P7.1, P8.1b) is added to the record of its tick by amending it" |
-| `spec-agents.md` | 3.6, 6.3, 6.4.1, 13, 14 | removal step **2f** (after CRD's 2d and 2e); the plan fields `Cover`, `Store`, `Offer`; the view group `Cover`; the errors and the `Debug` refusals; the welfare record's `N_t` is WEL's |
+| `spec-agents.md` | 3.6, 6.3, 6.4.1, 13, 14 | removal step **2f** (after CRD's 2d and 2e); the plan fields `Cover`, `Store`, `Offer`; the view group `Insurance`; the errors and the `Debug` refusals; the welfare record's `N_t` is WEL's |
 | `spec-risk.md` | 5, 10.2, 10.3 | P1.3 keeps, for **each** arrived shipment of the tick, the lost units by commodity (lines and account) in a per-tick list **whether or not an observer was supplied** (applied in plan 3-ins Phase 1: `spec-risk.md` 10.2.1), and P8.1a the lost units of each struck agent; the row INS of 10.3 says "used"; 10.2.1's list of reads is the one this spec uses |
 | `spec-transport.md` | 5.7, 9.2 | the arrival's scratch above; nothing else: no step of dispatch is added (5.1.2 here) |
 | `spec-credit.md` | 3.1, 3.2, 3.3.2, 3.6, 6.4 step 1, 11.1, 13.2, 16.1.3, 16.3, 16.3.1, 16.4, 17 | the operation `Obligate` and the field `Origin` (3.1, 3.2); the total `Awarded` and the identity of 3.6 item 1 (3.3.2, 3.6); `MaxClaims` counts payout claims (6.4 step 1); the principal paid on a payout claim is income and cost (11.1); `ForgiveClaims` ends loans only (13.2); **16.1.3**: a payout claim is added to an observer's open claims by `CoverEnded.Short` with its `Claim`, and it ends in a `LoanEnded` of origin `payout`; its payments are INS's `CoverSettled` of stage `claim`; **16.3**: the credit instruments count origin `loan` only (`CreditSettled` counts loans only), and the claims outstanding are INS's `economysim.insurance.claims`; **16.4**: the `Credit` row gains `Awarded` and the `Claims` row `Origin`; `LoanEnded` carries `Origin`; the ledger section saves both (17). The pass of P1.7a and the waterfall of 8 and 9 need no edit: they pay a claim of either origin (8.4.1) |
