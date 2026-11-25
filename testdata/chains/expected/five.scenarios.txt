@@ -1,0 +1,52 @@
+# Recorded outcomes of the Stage 1 scenarios (plan 1-12 D181), written with -update.
+# Read by the reviewer of STY 8.4; no test compares it.
+
+## S155 five+policy schedule, 260 ticks seeds 1-10
+measure events of the module: 1=68 2=69 3=69 4=68 5=69 6=68 7=69 8=68 9=69 10=69 | median=69 n=10
+check council_a is called at every multiple of 10 up to 250: 10/10 pass
+check every slot event of council_a has the cause policy: 10/10 pass
+check the border is open at 20 000, then closed, then open: 10/10 pass
+check the border moves in three batches of eight keys: 10/10 pass
+check the road moves at 50 and 250: 10/10 pass
+check the stipend moves at 100 and 200: 10/10 pass
+
+## S156 five+policy rule against hold after a yield shock, 240 ticks seeds 1-10
+measure last unfed share on hold bp: 1=10000 2=9990 3=10000 4=9979 5=10000 6=9989 7=9988 8=10000 9=10000 10=9952 | median=9995 n=10
+measure last unfed share with the rule bp: 1=10000 2=9979 3=9990 4=9972 5=9982 6=10000 7=9989 8=9968 9=10000 10=9989 | median=9989 n=10
+measure moves of the lane with the rule: 1=5 2=5 3=5 4=5 5=5 6=5 7=5 8=5 9=5 10=5 | median=5 n=10
+measure peak unfed share on hold bp: 1=10000 2=9990 3=10000 4=9992 5=10000 6=10000 7=9993 8=10000 9=10000 10=9973 | median=10000 n=10
+measure peak unfed share with the rule bp: 1=10000 2=9981 3=9991 4=9992 5=9982 6=10000 7=9993 8=9990 9=10000 10=9992 | median=9992 n=10
+check a world on hold writes no slot: 10/10 pass
+check the actors write slots: 10/10 pass
+check the lane stays within its bounds: 10/10 pass
+
+## S157 five+policy two rules face to face, 240 ticks seeds 1-10
+measure lane highest factor bp: 1=20000 2=20000 3=20000 4=20000 5=20000 6=20000 7=20000 8=20000 9=20000 10=20000 | median=20000 n=10
+measure lane last factor bp: 1=20000 2=20000 3=20000 4=20000 5=20000 6=20000 7=20000 8=20000 9=20000 10=20000 | median=20000 n=10
+measure lane lowest factor bp: 1=10000 2=10000 3=10000 4=10000 5=10000 6=10000 7=10000 8=10000 9=10000 10=10000 | median=10000 n=10
+measure lane moves: 1=5 2=6 3=6 4=5 5=6 6=5 7=6 8=5 9=6 10=6 | median=6 n=10
+measure road highest factor bp: 1=10000 2=10000 3=10000 4=10000 5=10000 6=10000 7=10000 8=10000 9=10000 10=10000 | median=10000 n=10
+measure road last factor bp: 1=5000 2=5000 3=5000 4=5000 5=5000 6=5000 7=5000 8=5000 9=5000 10=5000 | median=5000 n=10
+measure road lowest factor bp: 1=5000 2=5000 3=5000 4=5000 5=5000 6=5000 7=5000 8=5000 9=5000 10=5000 | median=5000 n=10
+measure road moves: 1=5 2=6 3=5 4=6 5=6 6=6 7=6 8=6 9=6 10=6 | median=6 n=10
+check lane moves by at most its step: 10/10 pass
+check lane stays within [5 000, 20 000]: 10/10 pass
+check road moves by at most its step: 10/10 pass
+check road stays within [5 000, 20 000]: 10/10 pass
+
+## S158 five+policy directive at 95, checkpoint at 97, applied at 100 seeds 1-3
+check nothing was written before the due tick: 3/3 pass
+check the checkpoints at 101 are equal: 3/3 pass
+check the mailbox is empty after the decision: 3/3 pass
+check the original applies it at tick 100: 3/3 pass
+check the restored world applies the same: 3/3 pass
+check the restored world has the settings pending: 3/3 pass
+check the three settings are pending after the call: 3/3 pass
+
+## S159 five+policy neutrality of hold and of a rule at rest, 200 ticks seeds 1-4
+check a hold actor emits no decision: 4/4 pass
+check a rule that never leaves its band: the other events equal in number: 4/4 pass
+check a rule that never leaves its band: the snapshots equal the world without the module: 4/4 pass
+check every actor on hold: the other events equal in number: 4/4 pass
+check every actor on hold: the snapshots equal the world without the module: 4/4 pass
+check the rule holds every decision: 4/4 pass

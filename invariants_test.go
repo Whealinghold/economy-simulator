@@ -313,6 +313,9 @@ var invariantTable = []invariantCase{
 	{"two+merchants", packMerchants("two"), 4, 0, "", nil},
 	// Plan 3-tec Phase 8: pack three with the four-mechanism technology overlay.
 	{"three+technology", technologyThree, 2, 0, "", nil},
+	// Plan 3-plc Phase 8: the five of the module-alone golden, where the actors move a flow, an edge
+	// group and a transit factor, so the audit runs across every application of a policy.
+	{"five+policy", fivePolicy, 2, 0, "", nil},
 }
 
 // runInvariants runs one (pack, seed) case and fails with the seed, tick and
@@ -406,7 +409,7 @@ func TestInvariants_Packs(t *testing.T) {
 	}
 	t.Parallel()
 	for _, tc := range invariantTable {
-		if raceEnabled && (tc.name == "five" || tc.name == "all") {
+		if raceEnabled && (tc.name == "five" || tc.name == "all" || tc.name == "five+policy") {
 			continue // 5 000 households: gate F runs these rows, never -race (plan 2-24 Phase 2)
 		}
 		cfg := loadValidPack(t, tc.layers...)

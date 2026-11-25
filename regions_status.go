@@ -225,15 +225,57 @@ func (w *World) Region(g RegionID) (RegionState, error) {
 	if _, err := w.prepareAnchors(); err != nil {
 		return RegionState{}, fmt.Errorf("Region: %w", err)
 	}
-	return w.regionStateOf(g)
+	sh, err := w.newRegionShared()
+	if err != nil {
+		return RegionState{}, fmt.Errorf("Region: region %d: %w", g, err)
+	}
+	return w.regionStateOf(g, sh)
+}
+
+// regionShared is the part of a region's state that reads the whole world, not the region:
+// the journeys, the money in contracts and hires, the treasuries and the shipments. It is
+// built once and shared by the states of the regions of one pass (spec-policy.md 5.4, NFR-PLC-002)
+// instead of once per region. Its Snapshot holds only the additions the three snapshot parts
+// make to the rows of the regions and roles; it changes no saved state.
+type regionShared struct {
+	s     Snapshot
+	ships []ShipmentRow
+}
+
+// newRegionShared builds the whole-world parts of the state of the regions at the boundary.
+func (w *World) newRegionShared() (*regionShared, error) {
+	nr, n := len(w.cfg.Roles), len(w.cfg.Regions)
+	sh := &regionShared{s: Snapshot{Regions: make([]RegionRow, n), Roles: make([]RoleRow, n*nr)}}
+	w.snapshotMigration(&sh.s)
+	w.snapshotContracts(&sh.s)
+	if err := w.snapshotTreasuries(&sh.s); err != nil {
+		return nil, err
+	}
+	sh.ships = w.snapshotShipments()
+	return sh, nil
+}
+
+// addTo adds the whole-world parts to the row of region g and to its role rows of s, as the
+// snapshot's own passes add them after the region is read.
+func (sh *regionShared) addTo(s *Snapshot, g RegionID, nr int) {
+	row, add := &s.Regions[g], sh.s.Regions[g]
+	row.OnJourneyFrom += add.OnJourneyFrom
+	row.OnJourneyTo += add.OnJourneyTo
+	row.MoneyContract = satMoney(row.MoneyContract, add.MoneyContract, 0)
+	row.MoneyTreasury = satMoney(row.MoneyTreasury, add.MoneyTreasury, 0)
+	for r := range nr {
+		at := int(g)*nr + r
+		s.Roles[at].Employed += sh.s.Roles[at].Employed
+		s.Roles[at].Employing += sh.s.Roles[at].Employing
+	}
 }
 
 // regionStateOf is the body of Region after its guard, its region check and the
-// preparation of the cost anchors: the state of the known region g at the boundary.
-// The policy actors' view calls it inside a step (P0.3a), where Region would return
-// ErrInStep, after one prepareAnchors for the pass (spec-policy.md 5.4, plan 3-plc D6).
-// It draws no random number and changes no saved state.
-func (w *World) regionStateOf(g RegionID) (RegionState, error) {
+// preparation of the cost anchors: the state of the known region g at the boundary, with the
+// whole-world parts sh. The policy actors' view calls it inside a step (P0.3a), where Region
+// would return ErrInStep, after one prepareAnchors and one newRegionShared for the pass
+// (spec-policy.md 5.4, plan 3-plc D6). It draws no random number and changes no saved state.
+func (w *World) regionStateOf(g RegionID, sh *regionShared) (RegionState, error) {
 	nr, nc, n := len(w.cfg.Roles), len(w.cfg.Commodities), len(w.cfg.Regions)
 	s := Snapshot{Regions: make([]RegionRow, n), Roles: make([]RoleRow, n*nr), Markets: make([]MarketRow, n*nc)}
 	acc := newSnapAcc(nc, len(w.cfg.Recipes))
@@ -242,20 +284,32 @@ func (w *World) regionStateOf(g RegionID) (RegionState, error) {
 	if err := w.snapRegion(&s, g, &acc, w.makesTable()); err != nil {
 		return RegionState{}, fmt.Errorf("Region: region %d: %w", g, err)
 	}
-	w.snapshotMigration(&s)
-	w.snapshotContracts(&s)
-	if err := w.snapshotTreasuries(&s); err != nil {
-		return RegionState{}, fmt.Errorf("Region: region %d: %w", g, err)
-	}
+	sh.addTo(&s, g, nr)
 	out := RegionState{Region: s.Regions[g], Jobs: s.Jobs}
 	if !w.isOutsideNode(g) {
 		out.Roles = slices.Clone(s.Roles[int(g)*nr : (int(g)+1)*nr])
 		out.Markets = slices.Clone(s.Markets[int(g)*nc : (int(g)+1)*nc])
 	}
 	out.Endowments = w.regionEndowments(g)
-	out.Shipments = slices.DeleteFunc(w.snapshotShipments(), func(r ShipmentRow) bool { return r.Region != g && r.To != g })
-	out.Journeys = slices.DeleteFunc(s.Journeys, func(r JourneyRow) bool { return r.From != g && r.To != g })
+	out.Shipments = keepRows(sh.ships, func(r ShipmentRow) bool { return r.Region == g || r.To == g })
+	for i := range out.Shipments { // Lines is a slice: each state owns its own copy, as a fresh snapshot gave it
+		out.Shipments[i].Lines = slices.Clone(out.Shipments[i].Lines)
+	}
+	out.Journeys = keepRows(sh.s.Journeys, func(r JourneyRow) bool { return r.From == g || r.To == g })
 	return out, nil
+}
+
+// keepRows returns a new slice of the rows for which keep is true, so a state built from shared
+// rows owns its rows. It is nil when rows is nil and empty otherwise, as slices.DeleteFunc left
+// the result of Region.
+func keepRows[T any](rows []T, keep func(T) bool) []T {
+	out := rows[:0:0]
+	for _, r := range rows {
+		if keep(r) {
+			out = append(out, r)
+		}
+	}
+	return out
 }
 
 // regionEndowments returns the endowment rows of region g, by resource; nil with
