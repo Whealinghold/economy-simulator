@@ -234,6 +234,92 @@ measure households at end scale 10: 1=160 | median=160 n=1
 measure households at end scale 4: 1=413 | median=413 n=1
 measure largest absolute gap bp: 1=15955 | median=15955 n=1
 
+## S142 one+saving without a block equals off, 100 ticks seeds 1-3
+measure events: 1=319235 2=322207 3=329435 | median=322207 n=3
+check no SavingPlanned with no block: 3/3 pass
+check the events are equal: 3/3 pass
+check the snapshots are equal: 3/3 pass
+
+## S143 one+saving the grower's buffer by share, 200 ticks seeds 1-10
+measure share 0: buffer, summed over the events: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure share 0: unfed household samples: 1=1330 2=1496 3=1432 4=1571 5=944 6=1257 7=1275 8=1369 9=1265 10=1370 | median=1350 n=10
+measure share 10000: buffer, summed over the events: 1=920447752 2=927314889 3=904441727 4=915101936 5=896127422 6=909565706 7=946720089 8=942922668 9=946038878 10=935761112 | median=923881320 n=10
+measure share 10000: unfed household samples: 1=1345 2=1324 3=1186 4=1514 5=1002 6=1325 7=1288 8=1574 9=1293 10=1356 | median=1324 n=10
+measure share 20000: buffer, summed over the events: 1=1016090607 2=1014240712 3=985337856 4=992050009 5=999974808 6=997309564 7=1029868321 8=1000722154 9=1021152365 10=957683511 | median=1000348481 n=10
+measure share 20000: unfed household samples: 1=1358 2=1183 3=1353 4=1515 5=1031 6=891 7=1387 8=1514 9=1261 10=1327 | median=1340 n=10
+check share 0: the buffer exists exactly when the share is above 0: 10/10 pass
+check share 10000: the buffer exists exactly when the share is above 0: 10/10 pass
+check share 20000: the buffer exists exactly when the share is above 0: 10/10 pass
+
+## S144 one+saving build and repair by spread, band and gate, 200 ticks seeds 1-10
+measure spread 0 band 0 gate 5000: built: 1=161 2=161 3=171 4=157 5=151 6=158 7=159 8=166 9=155 10=160 | median=160 n=10
+measure spread 0 band 0 gate 5000: no return household-ticks: 1=28063 2=28948 3=29560 4=27174 5=28322 6=28009 7=28930 8=29357 9=27907 10=27025 | median=28192 n=10
+measure spread 0 band 0 gate 5000: repaired: 1=53 2=55 3=49 4=51 5=67 6=51 7=52 8=50 9=53 10=47 | median=52 n=10
+measure spread 0 band 0 gate 5000: unreachable household-ticks: 1=72 2=106 3=104 4=4 5=15 6=35 7=0 8=156 9=106 10=0 | median=54 n=10
+measure spread 0 band 2000 gate 5000: built: 1=153 2=162 3=166 4=158 5=151 6=158 7=166 8=166 9=156 10=160 | median=159 n=10
+measure spread 0 band 2000 gate 5000: no return household-ticks: 1=27074 2=29270 3=29191 4=27406 5=28530 6=28569 7=29134 8=29357 9=27772 10=27025 | median=28550 n=10
+measure spread 0 band 2000 gate 5000: repaired: 1=53 2=55 3=50 4=51 5=66 6=51 7=52 8=50 9=52 10=47 | median=52 n=10
+measure spread 0 band 2000 gate 5000: unreachable household-ticks: 1=49 2=106 3=120 4=7 5=10 6=34 7=0 8=156 9=134 10=0 | median=42 n=10
+measure spread 40000 band 0 gate 5000: built: 1=161 2=161 3=172 4=160 5=151 6=158 7=161 8=162 9=160 10=167 | median=161 n=10
+measure spread 40000 band 0 gate 5000: no return household-ticks: 1=27572 2=29170 3=29225 4=27425 5=28568 6=28991 7=28135 8=28582 9=28156 10=28277 | median=28422 n=10
+measure spread 40000 band 0 gate 5000: repaired: 1=55 2=55 3=49 4=50 5=68 6=51 7=52 8=49 9=54 10=51 | median=52 n=10
+measure spread 40000 band 0 gate 5000: unreachable household-ticks: 1=64 2=100 3=81 4=7 5=28 6=53 7=0 8=81 9=134 10=4 | median=58 n=10
+measure spread 40000 band 2000 gate 0: built: 1=162 2=161 3=171 4=159 5=157 6=158 7=168 8=167 9=155 10=159 | median=160 n=10
+measure spread 40000 band 2000 gate 0: no return household-ticks: 1=27860 2=29561 3=29254 4=26496 5=28491 6=28562 7=29308 8=28898 9=28109 10=28135 | median=28526 n=10
+measure spread 40000 band 2000 gate 0: repaired: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure spread 40000 band 2000 gate 0: unreachable household-ticks: 1=7 2=115 3=71 4=4 5=52 6=73 7=0 8=36 9=64 10=4 | median=44 n=10
+measure spread 40000 band 2000 gate 5000: built: 1=161 2=161 3=167 4=158 5=165 6=159 7=163 8=159 9=158 10=160 | median=160 n=10
+measure spread 40000 band 2000 gate 5000: no return household-ticks: 1=27937 2=29475 3=29285 4=27369 5=28333 6=28047 7=29317 8=28679 9=27621 10=28031 | median=28190 n=10
+measure spread 40000 band 2000 gate 5000: repaired: 1=55 2=55 3=48 4=49 5=64 6=50 7=53 8=49 9=52 10=52 | median=52 n=10
+measure spread 40000 band 2000 gate 5000: unreachable household-ticks: 1=64 2=104 3=84 4=0 5=44 6=62 7=0 8=0 9=135 10=4 | median=53 n=10
+measure spread 5000 band 2000 gate 5000: built: 1=158 2=161 3=171 4=157 5=151 6=158 7=160 8=166 9=155 10=160 | median=159 n=10
+measure spread 5000 band 2000 gate 5000: no return household-ticks: 1=27816 2=28948 3=29560 4=27174 5=28530 6=28009 7=29220 8=29357 9=27907 10=27025 | median=28270 n=10
+measure spread 5000 band 2000 gate 5000: repaired: 1=54 2=55 3=49 4=51 5=66 6=51 7=52 8=50 9=53 10=47 | median=52 n=10
+measure spread 5000 band 2000 gate 5000: unreachable household-ticks: 1=72 2=106 3=104 4=4 5=10 6=35 7=0 8=156 9=106 10=0 | median=54 n=10
+check spread 0 band 0 gate 5000: no facility is built without a build request: 10/10 pass
+check spread 0 band 2000 gate 5000: no facility is built without a build request: 10/10 pass
+check spread 40000 band 0 gate 5000: no facility is built without a build request: 10/10 pass
+check spread 40000 band 2000 gate 0: a gate of 0 never repairs: 10/10 pass
+check spread 40000 band 2000 gate 0: no facility is built without a build request: 10/10 pass
+check spread 40000 band 2000 gate 5000: no facility is built without a build request: 10/10 pass
+check spread 5000 band 2000 gate 5000: no facility is built without a build request: 10/10 pass
+
+## S145 one+saving the outlay of a build, 200 ticks seeds 1-10
+measure inputs 20000: built: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure inputs 20000: no return household-ticks: 1=28176 2=29042 3=29491 4=29261 5=27309 6=28716 7=29480 8=29583 9=30231 10=29407 | median=29334 n=10
+measure inputs 20000: saving household-ticks: 1=29 2=38 3=37 4=33 5=37 6=22 7=38 8=45 9=37 10=17 | median=37 n=10
+measure inputs 20000: unreachable household-ticks: 1=0 2=17 3=0 4=0 5=1 6=9 7=18 8=0 9=0 10=1 | median=0 n=10
+measure inputs 2: built: 1=161 2=161 3=167 4=158 5=165 6=159 7=163 8=159 9=158 10=160 | median=160 n=10
+measure inputs 2: no return household-ticks: 1=27937 2=29475 3=29285 4=27369 5=28333 6=28047 7=29317 8=28679 9=27621 10=28031 | median=28190 n=10
+measure inputs 2: saving household-ticks: 1=436 2=399 3=422 4=395 5=426 6=390 7=420 8=395 9=407 10=403 | median=405 n=10
+measure inputs 2: unreachable household-ticks: 1=64 2=104 3=84 4=0 5=44 6=62 7=0 8=0 9=135 10=4 | median=53 n=10
+measure inputs 400: built: 1=158 2=146 3=150 4=152 5=138 6=151 7=153 8=144 9=145 10=152 | median=150 n=10
+measure inputs 400: no return household-ticks: 1=25193 2=24422 3=25547 4=25902 5=24808 6=26087 7=24106 8=25903 9=24942 10=24682 | median=25068 n=10
+measure inputs 400: saving household-ticks: 1=647 2=566 3=599 4=627 5=603 6=585 7=616 8=571 9=578 10=579 | median=592 n=10
+measure inputs 400: unreachable household-ticks: 1=1248 2=1056 3=1313 4=1442 5=1126 6=1163 7=1207 8=1100 9=1282 10=940 | median=1185 n=10
+check inputs 20000: no facility is built without a build request: 10/10 pass
+check inputs 2: no facility is built without a build request: 10/10 pass
+check inputs 400: no facility is built without a build request: 10/10 pass
+
+## S146 one+saving a surplus with no outlet, a project and a charge, 200 ticks seeds 1-5
+measure a holding charge: built: 1=158 2=155 3=154 4=154 5=150 | median=154 n=5
+measure a holding charge: idle money, sampled: 1=177375418 2=175567540 3=177882063 4=174237862 5=172226449 | median=175567540 n=5
+measure a project: built: 1=372 2=377 3=381 4=376 5=380 | median=377 n=5
+measure a project: idle money, sampled: 1=187072026 2=186969334 3=187219438 4=183608010 5=186945483 | median=186969334 n=5
+measure no outlet: built: 1=161 2=169 3=168 4=163 5=153 | median=163 n=5
+measure no outlet: idle money, sampled: 1=185315444 2=183958960 3=186737924 4=183496611 5=178739354 | median=183958960 n=5
+check a holding charge: the idle money is not negative: 5/5 pass
+check a project: the idle money is not negative: 5/5 pass
+check no outlet: the idle money is not negative: 5/5 pass
+
+## S147 one+saving checkpoint mid-build, 30 ticks after seeds 1-3
+measure boundary tick: 1=161 2=172 3=168 | median=168 n=3
+measure households building at the boundary: 1=4 2=1 3=2 | median=2 n=3
+check a job is in progress at the boundary: 3/3 pass
+check the restored queries equal the original's: 3/3 pass
+check the run makes a build request: 3/3 pass
+check the snapshots and queries agree for 30 ticks: 3/3 pass
+
 ## S149 one+population+resources+technology learning, 365 ticks seeds 1-10
 measure TechnologyAdvanced events: 1=26 2=27 3=24 4=28 5=26 6=21 7=26 8=30 9=25 10=23 | median=26 n=10
 measure experience of the first cell at end: 1=126 2=123 3=129 4=135 5=120 6=107 7=120 8=117 9=132 10=116 | median=122 n=10
