@@ -138,6 +138,9 @@ func treasurySum(t testing.TB, w *economysim.World) economysim.Money {
 // title in the file of pack.
 func fiscalScenario(t *testing.T, pack, title string, seeds int, fn func(t *testing.T, rep *scenReport, seed uint64)) {
 	t.Helper()
+	if seeds < 1 {
+		t.Fatalf("%s: %d seeds, want at least 1 (a scenario with no seed asserts nothing)", title, seeds)
+	}
 	rep := newPackScenReport(pack, fmt.Sprintf("%s seeds 1-%d", title, seeds))
 	t.Run("seeds", func(t *testing.T) {
 		for _, seed := range seedList(seeds) {
@@ -173,9 +176,34 @@ func treasuryMoneyRows(t testing.TB, w *economysim.World) []economysim.Money {
 	if err != nil {
 		t.Fatalf("Snapshot() error = %v, want nil", err)
 	}
+	if len(s.Jurisdictions) == 0 {
+		t.Fatalf("Snapshot().Jurisdictions is empty, want the governed treasuries of the pack (the polity module is off?)")
+	}
 	out := make([]economysim.Money, len(s.Jurisdictions))
 	for i, j := range s.Jurisdictions {
 		out[i] = j.Money
+	}
+	return out
+}
+
+// treasuryByName is the money of each treasury of w by the string ID of its jurisdiction. It fails the
+// test when a name in want is absent, so an index of a row is never assumed.
+func treasuryByName(t testing.TB, w *economysim.World, want ...string) map[string]economysim.Money {
+	t.Helper()
+	s, err := w.Snapshot()
+	if err != nil {
+		t.Fatalf("Snapshot() error = %v, want nil", err)
+	}
+	out := map[string]economysim.Money{}
+	for _, j := range s.Jurisdictions {
+		if int(j.Jurisdiction) < len(s.Names.Jurisdictions) {
+			out[s.Names.Jurisdictions[j.Jurisdiction]] = j.Money
+		}
+	}
+	for _, name := range want {
+		if _, ok := out[name]; !ok {
+			t.Fatalf("no treasury of jurisdiction %q in the snapshot, have %v", name, out)
+		}
 	}
 	return out
 }

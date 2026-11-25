@@ -97,6 +97,9 @@ func runS134(t testing.TB, seed uint64, payback, ticks int64) s134Out {
 	if err != nil {
 		t.Fatalf("Snapshot() error = %v, want nil", err)
 	}
+	if len(s0.Jurisdictions) == 0 {
+		t.Fatalf("seed %d: no governed jurisdiction, want the root's treasury", seed)
+	}
 	for _, j := range s0.Jurisdictions {
 		watch.firstHousehold = max(watch.firstHousehold, j.Agent+1)
 	}
@@ -145,6 +148,7 @@ func TestScenarioS134_DutyCash(t *testing.T) {
 			c.check(tag+": treasury = start + duty - payout", o.end == o.start+o.applied-o.paid,
 				"end %d, want %d + %d - %d", o.end, o.start, o.applied, o.paid)
 			c.check(tag+": the duty collects", o.applied > 0, "collected %d", o.applied)
+			c.check(tag+": the payout pays iff it is configured", (o.paid > 0) == (p > 0), "paid %d with a payback of %d", o.paid, p)
 			rep.num(seed, tag+" revenue per tick", int64(o.applied)/ticks)
 			rep.num(seed, tag+" money per household", int64(o.householdMoney)/max(o.households, 1))
 			rep.num(seed, tag+" treasury end", int64(o.end))

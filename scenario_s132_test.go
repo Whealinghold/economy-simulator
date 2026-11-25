@@ -87,6 +87,7 @@ func TestScenarioS132_OffAndZeroScaleNeutral(t *testing.T) {
 				t.Fatalf("seed %d: %d events after the call, want at least the %d MoneyFlowScaled", seed, got, len(ids))
 			}
 			// The two worlds are compared tick by tick, so the events of 200 ticks are never all in memory.
+			compared := 0
 			for tick := 0; tick < 200; tick++ {
 				fiscalStepTo(t, won, int64(tick+1))
 				fiscalStepTo(t, woff, int64(tick+1))
@@ -106,8 +107,12 @@ func TestScenarioS132_OffAndZeroScaleNeutral(t *testing.T) {
 						t.Fatalf("seed %d, tick %d: event %d differs: %#v with the module, %#v without", seed, tick, i, y, x)
 					}
 				}
+				compared += len(a)
 				ron.forget()
 				roff.forget()
+			}
+			if compared == 0 {
+				t.Fatalf("seed %d: no event compared in 200 ticks, want a world that emits events (an empty world proves nothing)", seed)
 			}
 			son, err := won.Snapshot()
 			if err != nil {

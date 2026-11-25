@@ -77,6 +77,9 @@ func (b *bufferWatch) sample(t testing.TB, w *economysim.World, staple economysi
 	if err != nil {
 		t.Fatalf("Snapshot() error = %v, want nil", err)
 	}
+	if len(s.Jurisdictions) == 0 || int(staple) < 0 || int(staple) >= len(s.Markets) {
+		t.Fatalf("snapshot has %d treasuries and %d market rows, want the crown's treasury and a row of the staple (%d)", len(s.Jurisdictions), len(s.Markets), staple)
+	}
 	m := int64(s.Jurisdictions[0].Money)
 	b.lastMoney = m
 	if !b.minMoneySet || m < b.minMoney {
@@ -98,9 +101,12 @@ func s135Run(t testing.TB, seed uint64) (*bufferWatch, economysim.Money) {
 	if err != nil {
 		t.Fatalf("Snapshot() error = %v, want nil", err)
 	}
+	si, gi := slices.Index(s0.Names.Commodities, "staple"), slices.Index(s0.Names.Recipes, "grow_staple")
+	if len(s0.Jurisdictions) == 0 || si < 0 || gi < 0 {
+		t.Fatalf("seed %d: %d treasuries, staple at %d, grow_staple at %d, want the crown, the staple and its recipe", seed, len(s0.Jurisdictions), si, gi)
+	}
 	b.agent = s0.Jurisdictions[0].Agent
-	staple := economysim.CommodityID(slices.Index(s0.Names.Commodities, "staple"))
-	grow := economysim.RecipeID(slices.Index(s0.Names.Recipes, "grow_staple"))
+	staple, grow := economysim.CommodityID(si), economysim.RecipeID(gi)
 	start := s0.Jurisdictions[0].Money
 	for w.Tick() < 200 {
 		switch w.Tick() {
@@ -151,6 +157,7 @@ func TestScenarioS135_Band(t *testing.T) {
 		c.check("stock + spoiled = bought - sold - paid in kind, spoiled >= 0", spoiled >= 0,
 			"stock %d, bought %d, sold %d, paid %d: %d units created", b.heldStaple, b.boughtQ, b.soldQ, inKind, -spoiled)
 		c.check("money = start - bought + sold", b.lastMoney == want, "money %d, want %d - %d + %d", b.lastMoney, int64(start), b.boughtV, b.soldV)
+		c.check("the store acted: it bought and paid in kind", b.boughtQ > 0 && inKind > 0, "bought %d units, paid %d in kind", b.boughtQ, inKind)
 		c.check("never traded with itself", b.tradesSelf == 0, "%d self trades", b.tradesSelf)
 		rep.num(seed, "units bought", b.boughtQ)
 		rep.num(seed, "units sold", b.soldQ)

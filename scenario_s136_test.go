@@ -115,7 +115,7 @@ func (s threeShipper) Trade(v *economysim.AgentView, rng *rand.Rand, p *economys
 type s136Out struct {
 	dispatched, wrong, leaving int
 	tolls                      economysim.Money
-	start, end                 []economysim.Money
+	start, end                 map[string]economysim.Money
 	k                          *fiscalKept
 }
 
@@ -155,7 +155,7 @@ func s136World(t testing.TB, seed uint64) (*economysim.World, economysim.Config,
 	}
 	j := &tollJudge{fiscalKept: out.k, names: s.Names.Regions, out: out}
 	w := mustWorld(t, cfg, append(slices.Clone(opts), economysim.WithSeed(seed), economysim.WithAudit(), economysim.WithObserver(j))...)
-	out.start = treasuryMoneyRows(t, w)
+	out.start = treasuryByName(t, w, "coast", "crown", "inland")
 	return w, cfg, opts, out
 }
 
@@ -187,14 +187,14 @@ func TestScenarioS136_TollsAndRemittance(t *testing.T) {
 			t.Fatalf("seed %d: Checkpoint() error = %v, want nil", seed, err)
 		}
 		fiscalStepTo(t, w, 150)
-		o.end = treasuryMoneyRows(t, w)
+		o.end = treasuryByName(t, w, "coast", "crown", "inland")
 		k := o.k
 		tolls := k.applied["gate"] + k.applied["ferry"]
 		c.check("shipments were dispatched", o.dispatched > 0 && o.tolls > 0, "%d dispatches, tolls %d", o.dispatched, o.tolls)
 		c.check("every dispatch pays the toll of FIS 7.2", o.wrong == 0, "%d of %d dispatches paid another toll", o.wrong, o.dispatched)
 		c.check("toll events add up to the dispatches' tolls", tolls == o.tolls, "events %d, dispatches %d", tolls, o.tolls)
-		// Jurisdiction rows are in ascending ID: the coast (0), the crown (1) and the inland (2).
-		coast, crown, inland := 0, 1, 2
+		// The rows are read by name: no order of the snapshot is assumed.
+		coast, crown, inland := "coast", "crown", "inland"
 		c.check("coast = start + gate + tax - remittance",
 			o.end[coast] == o.start[coast]+k.applied["gate"]+k.applied["poll"]-k.applied["remit"], "end %d, start %d, gate %d, tax %d, remittance %d",
 			o.end[coast], o.start[coast], k.applied["gate"], k.applied["poll"], k.applied["remit"])
@@ -202,6 +202,7 @@ func TestScenarioS136_TollsAndRemittance(t *testing.T) {
 			"end %d, start %d, ferry %d", o.end[inland], o.start[inland], k.applied["ferry"])
 		c.check("crown = start + remittance", o.end[crown] == o.start[crown]+k.applied["remit"],
 			"end %d, start %d, remittance %d", o.end[crown], o.start[crown], k.applied["remit"])
+		c.check("the remittance and the head tax ran", k.applied["remit"] > 0 && k.applied["poll"] > 0, "remitted %d, head tax %d", k.applied["remit"], k.applied["poll"])
 		s136Restore(c, cfg, opts, cp, w)
 		c.check("a dispatch leaves the inland", o.leaving > 0, "%d of %d dispatches leave the inland", o.leaving, o.dispatched)
 		rep.num(seed, "dispatches", int64(o.dispatched))
