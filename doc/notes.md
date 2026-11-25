@@ -2500,7 +2500,7 @@ PR description.
 - **Areas:** INS, RSK
 - **Raised:** 2026-11-19, plan 3-ins D6, H-11, `spec-risk.md` 10.2.1.
 - **Note:** `risk_loss.go` overwrote the lost units of the last arrival; P1.3a runs after all of P1.3 and needs the figures of each arrived shipment that has a policy. INS adds a per-tick list `risk.arrived` (shipment, lines lost, account lost), cleared at the entry of P1.3, kept whether or not an observer was supplied and only while insurance is on. A shipment whose arrival is held (RSK's order guard) has no row and its policy stays open. A `Guard:` test (`TestRisk_ArrivedListKeptWithoutObserver`) pins the observer-free case.
-- **Update (2026-11-25, plan 3-ins PR D):** built as one nil-safe call at the end of `arrivalLoss` into `insurance.noteArrival`; the list (`insurance.arrived`, with the lost units of the lines then of the account in `insurance.amounts` and the origin region of the shipment, which the unit values need) lives in the insurance state, not in `risk`, so a world with insurance off holds nothing more. A row is kept only for a shipment that has a route policy and is emptied at the end of P1.3a. The guard tests are `TestNoteArrival_KeepsOnlyInsuredShipments` and `TestRoute_ArrivalListKeptWithoutObserver`. Left open: `TestRoute_HeldArrivalSettlesLater` (a held arrival settles at the arrival that completes) is not built; the guard that holds an arrival is hard to set up in the harness of the insurance tests.
+- **Update (2026-11-25, plan 3-ins PR D):** built as one nil-safe call at the end of `arrivalLoss` into `insurance.noteArrival`; the list (`insurance.arrived`, with the lost units of the lines then of the account in `insurance.amounts` and the origin region of the shipment, which the unit values need) lives in the insurance state, not in `risk`, so a world with insurance off holds nothing more. A row is kept only for a shipment that has a route policy and is emptied at the end of P1.3a. The guard tests are `TestNoteArrival_KeepsOnlyInsuredShipments` and `TestRoute_ArrivalListKeptWithoutObserver`. `TestRoute_HeldArrivalSettlesLater` (a held arrival settles at the arrival that completes) covers the held case, and `TestInsurance_WorkIsCounted` covers the settlement work counter.
 
 ### N-471 `premium` and `payout` are pinned rows 30 and 31, and a built-in reason takes a code below 42
 
@@ -3059,4 +3059,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 44f0971103bd59ab14ce9c7a
+NOTES-TAG: 56cf098be58f3a24317dc6b5
