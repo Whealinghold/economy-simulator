@@ -186,6 +186,17 @@ func treasuryMoneyRows(t testing.TB, w *economysim.World) []economysim.Money {
 	return out
 }
 
+// soleTreasury is the money of the one treasury of w. A pack that governs more than one jurisdiction
+// fails the test instead of reading an assumed first row.
+func soleTreasury(t testing.TB, w *economysim.World) economysim.Money {
+	t.Helper()
+	rows := treasuryMoneyRows(t, w)
+	if len(rows) != 1 {
+		t.Fatalf("pack has %d treasuries, want exactly one (read it by name with treasuryByName otherwise)", len(rows))
+	}
+	return rows[0]
+}
+
 // treasuryByName is the money of each treasury of w by the string ID of its jurisdiction. It fails the
 // test when a name in want is absent, so an index of a row is never assumed.
 func treasuryByName(t testing.TB, w *economysim.World, want ...string) map[string]economysim.Money {

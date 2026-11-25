@@ -103,7 +103,7 @@ func runS134(t testing.TB, seed uint64, payback, ticks int64) s134Out {
 	for _, j := range s0.Jurisdictions {
 		watch.firstHousehold = max(watch.firstHousehold, j.Agent+1)
 	}
-	start := treasuryMoneyRows(t, w)[0]
+	start := soleTreasury(t, w)
 	fiscalStepTo(t, w, ticks)
 	s, err := w.Snapshot()
 	if err != nil {
@@ -115,7 +115,7 @@ func runS134(t testing.TB, seed uint64, payback, ticks int64) s134Out {
 	}
 	return s134Out{
 		due: watch.due["sales"], applied: watch.applied["sales"], paid: watch.applied["back"],
-		start: start, end: s.Jurisdictions[0].Money, householdMoney: hh, households: s.Households,
+		start: start, end: soleTreasury(t, w), householdMoney: hh, households: s.Households,
 		exact: int64(watch.due["sales"]) == watch.expectedDue(),
 	}
 }

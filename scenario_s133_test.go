@@ -39,12 +39,12 @@ func runS133(t testing.TB, seed uint64, exempt, ticks int64) s133Out {
 	t.Helper()
 	cfg := loadPackBytes(t, s133Doc(exempt), fivePolityGoverned...)
 	w, k := fiscalWorld(t, cfg, seed)
-	start := treasuryMoneyRows(t, w)[0]
+	start := soleTreasury(t, w)
 	fiscalStepTo(t, w, ticks)
 	return s133Out{
 		taxed: k.applied["poll"], paid: k.applied["alms"],
 		short: economysim.Money(k.short["poll"]), cut: economysim.Money(k.cut["alms"]),
-		unfed: unfedShare(t, w, regionRank(cfg, "centre")), start: start, end: treasuryMoneyRows(t, w)[0],
+		unfed: unfedShare(t, w, regionRank(cfg, "centre")), start: start, end: soleTreasury(t, w),
 	}
 }
 

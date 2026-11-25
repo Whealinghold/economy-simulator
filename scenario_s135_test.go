@@ -77,8 +77,8 @@ func (b *bufferWatch) sample(t testing.TB, w *economysim.World, staple economysi
 	if err != nil {
 		t.Fatalf("Snapshot() error = %v, want nil", err)
 	}
-	if len(s.Jurisdictions) == 0 || int(staple) < 0 || int(staple) >= len(s.Markets) {
-		t.Fatalf("snapshot has %d treasuries and %d market rows, want the crown's treasury and a row of the staple (%d)", len(s.Jurisdictions), len(s.Markets), staple)
+	if len(s.Jurisdictions) != 1 || int(staple) < 0 || int(staple) >= len(s.Markets) {
+		t.Fatalf("snapshot has %d treasuries and %d market rows, want exactly the crown's treasury and a row of the staple (%d)", len(s.Jurisdictions), len(s.Markets), staple)
 	}
 	m := int64(s.Jurisdictions[0].Money)
 	b.lastMoney = m
@@ -102,8 +102,8 @@ func s135Run(t testing.TB, seed uint64) (*bufferWatch, economysim.Money) {
 		t.Fatalf("Snapshot() error = %v, want nil", err)
 	}
 	si, gi := slices.Index(s0.Names.Commodities, "staple"), slices.Index(s0.Names.Recipes, "grow_staple")
-	if len(s0.Jurisdictions) == 0 || si < 0 || gi < 0 {
-		t.Fatalf("seed %d: %d treasuries, staple at %d, grow_staple at %d, want the crown, the staple and its recipe", seed, len(s0.Jurisdictions), si, gi)
+	if len(s0.Jurisdictions) != 1 || si < 0 || gi < 0 {
+		t.Fatalf("seed %d: %d treasuries, staple at %d, grow_staple at %d, want exactly the crown, the staple and its recipe", seed, len(s0.Jurisdictions), si, gi)
 	}
 	b.agent = s0.Jurisdictions[0].Agent
 	staple, grow := economysim.CommodityID(si), economysim.RecipeID(gi)
