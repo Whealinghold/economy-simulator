@@ -115,7 +115,7 @@ func TestStep_AllocationsStayAtTheBaseline(t *testing.T) {
 		{"one+storage+risk-store", packOneRiskStore, riskStoreStepAllocBaseline, false}, // NFR-RSK-001: P8.1a works in scratch
 		{"five+polity-governed", fivePolityGoverned, fiveGovernedStepAllocBaseline, false},
 		{"five+polity-governed+fiscal", fiveFiscal, fiscalStepAllocBaseline, false}, // NFR-FIS-001: no more than the module off
-		{"one+external", packExternal(), stepAllocBaseline, false},                      // NFR-EXT-001: no more than the off world (36 measured)
+		{"one+external", packExternal(), stepAllocBaseline, false},                  // NFR-EXT-001: no more than the off world (36 measured)
 	} {
 		cfg := loadValidPack(t, row.layers...)
 		w, err := economysim.NewWorld(cfg, economysim.WithSeed(1))
