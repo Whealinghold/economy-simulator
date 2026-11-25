@@ -46,21 +46,21 @@ func TestSettle_StorePolicyPaidAtP81b(t *testing.T) {
 	w.p81bSettleStores()
 	want := CoverEnded{Tick: 0, Policy: 0, Kind: CoverStore, Insured: insHome, Underwriter: insBacker, Region: regHome, UnderwriterRegion: regHome,
 		Cause: CoverClaimed, LossValue: 5_000, Due: 4_000, Paid: 4_000, Claim: -1}
-	if got := coverEndedAt(rec, 0); len(got) != 1 || got[0] != want {
-		t.Errorf("CoverEnded = %+v, want one %+v", got, want)
+	if got := only(t, "CoverEnded", coverEndedAt(rec, 0)); got != want {
+		t.Errorf("CoverEnded = %+v, want %+v", got, want)
 	}
-	if got := coverSettledAt(rec, 0); len(got) != 1 || got[0].Stage != CoverStageStore || got[0].Ended != 1 || got[0].Paid != 4_000 {
-		t.Errorf("CoverSettled = %+v, want one of the stage store, one ended, 4000 paid", got)
+	s := only(t, "CoverSettled", coverSettledAt(rec, 0))
+	if got := [2]int64{s.Ended, int64(s.Paid)}; s.Stage != CoverStageStore || got != [2]int64{1, 4_000} {
+		t.Errorf("CoverSettled = %+v, want one of the stage store, one ended, 4000 paid", s)
 	}
 	if home := heldMoney(t, w, insHome); home != 10_000-150+4_000 {
 		t.Errorf("insured's money = %d, want 13850 (premium 150, payout 4000)", home)
 	}
-	in := w.insurance
-	if len(in.stores) != 0 || in.liabilityOf(insBacker) != 0 {
-		t.Errorf("after P8.1b: store policies %d, liability %d, want none", len(in.stores), in.liabilityOf(insBacker))
+	if got := shape(w, insBacker, insHome); got != [4]int64{} {
+		t.Errorf("after P8.1b: open, store policies, liability, policies = %v, want none", got)
 	}
-	if a, b, c := indexOfEvent[StoreLoss](rec), indexOfEvent[CoverEnded](rec), indexOfEvent[CoverSettled](rec); !(a < b && b < c) {
-		t.Errorf("event positions StoreLoss %d, CoverEnded %d, CoverSettled %d, want that order", a, b, c)
+	if !inOrder[StoreLoss, CoverEnded, CoverSettled](rec) {
+		t.Errorf("events are not in the order StoreLoss, CoverEnded, CoverSettled")
 	}
 	auditNow(t, w)
 }

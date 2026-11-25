@@ -1,6 +1,7 @@
 package economysim
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/Whealinghold/economy-sim/internal/ledger"
@@ -29,31 +30,31 @@ func TestSettle_RoutePaidInFull(t *testing.T) {
 
 	wantEnded := CoverEnded{Tick: 2, Policy: 0, Kind: CoverRoute, Insured: insHome, Underwriter: insBacker, Region: regHome, UnderwriterRegion: regHome,
 		Cause: CoverClaimed, LossValue: 2_000, Due: 1_600, Paid: 1_600, Claim: -1}
-	if got := coverEndedAt(rec, 2); len(got) != 1 || got[0] != wantEnded {
-		t.Errorf("CoverEnded at tick 2 = %+v, want one %+v", got, wantEnded)
+	if got := only(t, "CoverEnded at tick 2", coverEndedAt(rec, 2)); got != wantEnded {
+		t.Errorf("CoverEnded = %+v, want %+v", got, wantEnded)
 	}
 	wantSettled := CoverSettled{Tick: 2, Region: regHome, Stage: CoverStageArrival, Ended: 1, Claimed: 1, LossValue: 2_000, Due: 1_600, Paid: 1_600}
-	if got := coverSettledAt(rec, 2); len(got) != 1 || got[0] != wantSettled {
-		t.Errorf("CoverSettled at tick 2 = %+v, want one %+v", got, wantSettled)
+	if got := only(t, "CoverSettled at tick 2", coverSettledAt(rec, 2)); got != wantSettled {
+		t.Errorf("CoverSettled = %+v, want %+v", got, wantSettled)
 	}
-	if home, under := heldMoney(t, w, insHome), heldMoney(t, w, insBacker); home != 10_000 || under != 10_000 {
-		t.Errorf("money after the payout: insured %d underwriter %d, want 10000 each (premium 1600 paid, payout 1600 received)", home, under)
+	if !inOrder[ShipmentArrived, CoverEnded, CoverSettled](rec) {
+		t.Errorf("events are not in the order ShipmentArrived, CoverEnded, CoverSettled (spec-insurance.md 12.1.1)")
+	}
+	if got := moneyOfAgents(t, w, insHome, insBacker); !slices.Equal(got, []int64{10_000, 10_000}) {
+		t.Errorf("money of the insured and the underwriter = %v, want 10000 each (premium 1600 paid, payout 1600 received)", got)
 	}
 	in := w.insurance
-	if len(in.open) != 0 || in.covered(0) || in.liabilityOf(insBacker) != 0 || in.policiesOf(insHome) != 0 {
-		t.Errorf("after the end: open %d, covered %v, liability %d, policies %d, want all empty", len(in.open), in.covered(0), in.liabilityOf(insBacker), in.policiesOf(insHome))
+	if got := shape(w, insBacker, insHome); got != [4]int64{} || in.covered(0) {
+		t.Errorf("after the end: lists %v, covered %v, want all empty", got, in.covered(0))
 	}
 	if want := (coverTotals{formed: 1, premiums: 1_600, due: 1_600, paid: 1_600}); in.tot != want {
 		t.Errorf("totals = %+v, want %+v", in.tot, want)
 	}
 	// N_t: the premium of tick 0 is a cost of the insured and an income of the underwriter, the payout of tick 2 the reverse.
-	for _, c := range []struct {
-		id   AgentID
-		want [3]int64
-	}{{insHome, [3]int64{-1_600, 0, 1_600}}, {insBacker, [3]int64{1_600, 0, -1_600}}} {
-		recs := welfareRecords(w, c.id)
-		if got := [3]int64{recs[0].Unearned, recs[1].Unearned, recs[2].Unearned}; got != c.want || recs[0].Income != c.want[0] || recs[2].Income != c.want[2] {
-			t.Errorf("agent %d: unearned of ticks 0 to 2 = %v (income %d, %d), want %v and the same income", c.id, got, recs[0].Income, recs[2].Income, c.want)
+	for id, want := range map[AgentID][5]int64{insHome: {-1_600, 0, 1_600, -1_600, 1_600}, insBacker: {1_600, 0, -1_600, 1_600, -1_600}} {
+		r := welfareRecords(w, id)
+		if got := [5]int64{r[0].Unearned, r[1].Unearned, r[2].Unearned, r[0].Income, r[2].Income}; got != want {
+			t.Errorf("agent %d: unearned of ticks 0 to 2 and income of ticks 0 and 2 = %v, want %v", id, got, want)
 		}
 	}
 	auditNow(t, w)
@@ -63,7 +64,7 @@ func TestSettle_RoutePaidInFull(t *testing.T) {
 // 1 500 has a pot of 1 500 - 1 000 = 500, pays that, and the 1 100 left is a claim of origin
 // payout of the insured on it, due one tick on. The identity of the due holds, the shield
 // the position kept is told, and the claim is the ledger's, so the next pass of the credit
-// module pays it and both parties' record has the principal.
+// module pays it.
 //
 // Requirement: FR-INS-043, FR-INS-044, FR-INS-045, FR-INS-006, FR-INS-064
 func TestSettle_ShortfallFormsAPayoutClaim(t *testing.T) {
@@ -73,19 +74,23 @@ func TestSettle_ShortfallFormsAPayoutClaim(t *testing.T) {
 	moneyOf(t, w, insBacker, 1_500)
 	step(t, w, 1)
 
-	ended := coverEndedAt(rec, 2)
-	if len(ended) != 1 {
-		t.Fatalf("CoverEnded at tick 2 = %+v, want one", ended)
+	e := only(t, "CoverEnded at tick 2", coverEndedAt(rec, 2))
+	if got, want := figures(e), [5]Money{1_600, 500, 1_100, 0, 0}; got != want || e.Claim != 0 || e.Cause != CoverClaimed {
+		t.Errorf("CoverEnded = %+v, want due 1600 = paid 500 + short 1100, claim 0 (figures %v)", e, want)
 	}
-	if e := ended[0]; e.Due != 1_600 || e.Paid != 500 || e.Short != 1_100 || e.Claim != 0 || e.Dropped != 0 || e.Cut != 0 || e.Cause != CoverClaimed {
-		t.Errorf("CoverEnded = %+v, want due 1600 = paid 500 + short 1100, claim 0", e)
-	}
-	if got := coverSettledAt(rec, 2); len(got) != 1 || got[0].Short != 1_100 || got[0].Shielded != 1_000 || got[0].Paid != 500 {
-		t.Errorf("CoverSettled = %+v, want short 1100, shielded min(1500, 1600) - 500 = 1000, paid 500", got)
+	s := only(t, "CoverSettled at tick 2", coverSettledAt(rec, 2))
+	if got, want := [3]Money{s.Short, s.Shielded, s.Paid}, [3]Money{1_100, 1_000, 500}; got != want {
+		t.Errorf("CoverSettled short, shielded, paid = %v, want %v (shielded is min(1500, 1600) - 500)", got, want)
 	}
 	c := openClaim(t, w, 0)
-	if c.Origin != ledger.OriginPayout || c.Creditor != w.agents[insHome].account || c.Debtor != w.agents[insBacker].account || c.PrincipalOwed != 1_100 || c.Due != 3 || c.Overdue != -1 {
-		t.Errorf("claim = %+v, want a payout claim of home on backer, 1100 owed, due at tick 3", c)
+	got := [5]int64{int64(c.Origin), int64(c.Creditor), int64(c.Debtor), c.PrincipalOwed, c.Due}
+	if want := [5]int64{ledger.OriginPayout, int64(w.agents[insHome].account), int64(w.agents[insBacker].account), 1_100, 3}; got != want || c.Overdue != -1 {
+		t.Errorf("claim = %v, want a payout claim of home on backer, 1100 owed, due at tick 3", got)
+	}
+	// N_t is in G_t, so it is out of the observed wage: the numerator is 0 whatever the income of the window.
+	h := w.agents[insHome].history
+	if num, _ := h.WageParts(); num != 0 || welfareRecords(w, insHome)[2].Income != 500 {
+		t.Errorf("wage numerator = %d, last income %d, want 0 and 500: the premium and the payout are unearned", num, welfareRecords(w, insHome)[2].Income)
 	}
 	auditNow(t, w)
 }
@@ -106,22 +111,23 @@ func TestClaim_SettledByCreditUnchanged(t *testing.T) {
 	moneyOf(t, w, insBacker, 5_000) // pot 5 000 - 1 000 shield = 4 000, above the 1 100 owed
 	step(t, w, 1)
 
-	ends := of[LoanEnded](rec)
-	if len(ends) != 1 || ends[0].Origin != OriginPayout || ends[0].Cause != CauseRepaid || ends[0].Principal != 1_100 || ends[0].Creditor != insHome || ends[0].Debtor != insBacker {
-		t.Errorf("LoanEnded = %+v, want one repaid claim of origin payout, principal 1100, home creditor", ends)
+	end := only(t, "LoanEnded", of[LoanEnded](rec))
+	wantEnd := LoanEnded{Tick: 3, Claim: 0, Origin: OriginPayout, Creditor: insHome, Debtor: insBacker, Region: regHome, CreditorRegion: regHome, Principal: 1_100, Cause: CauseRepaid}
+	if end != wantEnd {
+		t.Errorf("LoanEnded = %+v, want %+v", end, wantEnd)
 	}
-	claim := coverSettledAt(rec, 3)
 	want := CoverSettled{Tick: 3, Region: regHome, Stage: CoverStageClaim, ClaimEnded: 1, ClaimPaid: 1_100, ClaimReceived: 1_100}
-	if len(claim) != 1 || claim[0] != want {
-		t.Errorf("CoverSettled at tick 3 = %+v, want one %+v", claim, want)
+	if got := only(t, "CoverSettled at tick 3", coverSettledAt(rec, 3)); got != want {
+		t.Errorf("CoverSettled at tick 3 = %+v, want %+v", got, want)
 	}
 	if _, open := w.ledger.Claim(0); open {
 		t.Errorf("the claim is still open after it was paid")
 	}
-	if home, under := welfareRecords(w, insHome)[3].Unearned, welfareRecords(w, insBacker)[3].Unearned; home != 1_100 || under != -1_100 {
-		t.Errorf("unearned of tick 3: creditor %d, debtor %d, want +1100 and -1100 (the principal of a payout claim is N_t)", home, under)
+	got := [2]int64{welfareRecords(w, insHome)[3].Unearned, welfareRecords(w, insBacker)[3].Unearned}
+	if got != [2]int64{1_100, -1_100} {
+		t.Errorf("unearned of tick 3: creditor and debtor %v, want +1100 and -1100 (the principal of a payout claim is N_t)", got)
 	}
-	if order := indexOfEvent[LoanEnded](rec) - indexOfEvent[CoverSettled](rec); order >= 0 {
+	if !inOrder[CoverEnded, LoanEnded, CoverSettled](rec) {
 		t.Errorf("CoverSettled of the claim stage is not after LoanEnded in the event order")
 	}
 	auditNow(t, w)
@@ -159,12 +165,15 @@ func TestSettle_ProRataWithTheLargestRemainder(t *testing.T) {
 	for _, e := range coverEndedAt(rec, 2) {
 		byInsured[e.Insured] = e
 	}
-	home, home2 := byInsured[insHome], byInsured[insHome2]
-	if home.Due != 1_600 || home.Paid != 400 || home.Short != 1_200 || home2.Due != 2_400 || home2.Paid != 601 || home2.Short != 1_799 {
-		t.Errorf("home %+v, home2 %+v, want dues 1600 and 2400 paid 400 and 601, short 1200 and 1799", home, home2)
+	if got, want := figures(byInsured[insHome]), [5]Money{1_600, 400, 1_200, 0, 0}; got != want {
+		t.Errorf("home due, paid, short, dropped, cut = %v, want %v", got, want)
 	}
-	if got := coverSettledAt(rec, 2); len(got) != 1 || got[0].Ended != 2 || got[0].Short != 2_999 || got[0].Paid != 1_001 {
-		t.Errorf("CoverSettled = %+v, want two ended, paid 1001 (the pot), short 2999", got)
+	if got, want := figures(byInsured[insHome2]), [5]Money{2_400, 601, 1_799, 0, 0}; got != want {
+		t.Errorf("home2 due, paid, short, dropped, cut = %v, want %v", got, want)
+	}
+	s := only(t, "CoverSettled at tick 2", coverSettledAt(rec, 2))
+	if got, want := [3]int64{s.Ended, int64(s.Short), int64(s.Paid)}, [3]int64{2, 2_999, 1_001}; got != want {
+		t.Errorf("CoverSettled ended, short, paid = %v, want %v (the pot is paid, 1001)", got, want)
 	}
 	auditNow(t, w)
 }

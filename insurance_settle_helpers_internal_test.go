@@ -73,3 +73,38 @@ func coverEndedAt(rec *evLog, tick int64) []CoverEnded {
 func coverSettledAt(rec *evLog, tick int64) []CoverSettled {
 	return slices.DeleteFunc(of[CoverSettled](rec), func(e CoverSettled) bool { return e.Tick != tick })
 }
+
+// only returns the one element of a list, failing the test when there is not exactly one.
+func only[T any](t *testing.T, name string, got []T) T {
+	t.Helper()
+	if len(got) != 1 {
+		t.Fatalf("%s = %+v, want exactly one", name, got)
+	}
+	return got[0]
+}
+
+// figures are the money figures of a CoverEnded: due, paid, short, dropped and cut.
+func figures(e CoverEnded) [5]Money { return [5]Money{e.Due, e.Paid, e.Short, e.Dropped, e.Cut} }
+
+// inOrder reports whether the last events of the three types are in that order in the log.
+func inOrder[A, B, C Event](rec *evLog) bool {
+	a, b, c := indexOfEvent[A](rec), indexOfEvent[B](rec), indexOfEvent[C](rec)
+	return a < b && b < c
+}
+
+// moneyOfAgents reads the money of the agents, in the order given.
+func moneyOfAgents(t *testing.T, w *World, ids ...AgentID) []int64 {
+	t.Helper()
+	out := make([]int64, len(ids))
+	for i, id := range ids {
+		out[i] = heldMoney(t, w, id)
+	}
+	return out
+}
+
+// shape is the state of the module's lists for an underwriter and an insured: open route
+// policies, store policies, the underwriter's liability and the insured's policies.
+func shape(w *World, under, insured AgentID) [4]int64 {
+	in := w.insurance
+	return [4]int64{int64(len(in.open)), int64(len(in.stores)), in.liabilityOf(under), in.policiesOf(insured)}
+}

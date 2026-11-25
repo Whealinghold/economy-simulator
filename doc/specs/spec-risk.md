@@ -770,7 +770,7 @@ bridge washed away) would be a status set inside a step, at a position that the 
 | Read | Source | When | Use |
 |------|--------|------|-----|
 | the expected loss of a route | `RouteLoss`, 8.2 | any time at a boundary, or at a position of INS | a premium |
-| the loss of a shipment | `ShipmentArrived`: `Lost` of each line and `AccountLost`; for every shipment that arrived in the tick, a row (shipment, lines lost, account lost) of a per-tick list kept by `risk_loss.go` whether or not an observer was supplied and only while INS is on, cleared at the entry of P1.3 and read at P1.3a (plan 3-ins D6, H-11; a held arrival has no row) | P1.3, at the arrival; P1.3a, for every arrival of the tick | a loss report; a payout is INS's |
+| the loss of a shipment | `ShipmentArrived`: `Lost` of each line and `AccountLost`; for every shipment with a route policy that arrived in the tick, a row (shipment, origin region, lost units of the lines and of the account) that `risk_loss.go`'s arrival step passes to the list of the insurance module, whether or not an observer was supplied and only while INS is on, read at P1.3a and emptied at its end (plan 3-ins D6, H-11; a held arrival has no row) | P1.3, at the arrival; P1.3a, for every arrival of the tick | a loss report; a payout is INS's |
 | the loss of a store | `StoreLoss` | P8.1a | a loss report |
 | the rows | `Config().Modules.Risk` | construction | the correlation: a `Common` row is a risk that strikes every insured at once |
 

@@ -23,14 +23,14 @@ func TestSettle_HeadroomCutIsDroppedNotClaimed(t *testing.T) {
 	step(t, w, 2)
 	moneyOf(t, w, insHome, MaxMoney-100)
 	step(t, w, 1)
-	ended := coverEndedAt(rec, 2)
-	if len(ended) != 1 || ended[0].Due != 1_600 || ended[0].Paid != 100 || ended[0].Cut != 1_500 || ended[0].Short != 0 || ended[0].Claim != -1 {
-		t.Errorf("CoverEnded = %+v, want due 1600 = paid 100 + cut 1500, no claim", ended)
+	e := only(t, "CoverEnded at tick 2", coverEndedAt(rec, 2))
+	if got, want := figures(e), [5]Money{1_600, 100, 0, 0, 1_500}; got != want || e.Claim != -1 {
+		t.Errorf("CoverEnded figures = %v, claim %d, want due 1600 = paid 100 + cut 1500, no claim", got, e.Claim)
 	}
 	if _, open := w.ledger.Claim(0); open {
 		t.Errorf("a claim was formed for a cut payment")
 	}
-	if tot := w.insurance.tot; tot.due != 1_600 || tot.paid != 100 || tot.cut != 1_500 || tot.dropped != 0 {
+	if tot := w.insurance.tot; tot != (coverTotals{formed: 1, premiums: 1_600, due: 1_600, paid: 100, cut: 1_500}) {
 		t.Errorf("totals = %+v, want due 1600, paid 100, cut 1500", tot)
 	}
 	auditNow(t, w)
@@ -50,9 +50,9 @@ func TestClaim_ListFullDropped(t *testing.T) {
 	step(t, w, 2)
 	moneyOf(t, w, insBacker, 1_500)
 	step(t, w, 1)
-	ended := coverEndedAt(rec, 2)
-	if len(ended) != 1 || ended[0].Paid != 500 || ended[0].Short != 0 || ended[0].Dropped != 1_100 || ended[0].Claim != -1 {
-		t.Errorf("CoverEnded = %+v, want paid 500, dropped 1100, no claim", ended)
+	e := only(t, "CoverEnded at tick 2", coverEndedAt(rec, 2))
+	if got, want := figures(e), [5]Money{1_600, 500, 0, 1_100, 0}; got != want || e.Claim != -1 {
+		t.Errorf("CoverEnded figures = %v, claim %d, want paid 500, dropped 1100, no claim", got, e.Claim)
 	}
 	if tot := w.insurance.tot; tot.dropped != 1_100 || tot.due != tot.paid+tot.dropped+tot.cut {
 		t.Errorf("totals = %+v, want dropped 1100 and due = paid + dropped + cut", tot)
@@ -71,16 +71,15 @@ func TestSettle_NoLossEndsTheRoutePolicy(t *testing.T) {
 	c.Modules.Risk.Routes[0].SeverityBP = 100
 	w, rec := settleWorld(t, c, 8)
 	step(t, w, 3)
-	ended := coverEndedAt(rec, 2)
-	if len(ended) != 1 || ended[0].Cause != CoverNoLoss || ended[0].Due != 0 || ended[0].Paid != 0 || ended[0].LossValue != 0 {
-		t.Errorf("CoverEnded = %+v, want one no_loss with nothing due", ended)
+	e := only(t, "CoverEnded at tick 2", coverEndedAt(rec, 2))
+	if got := [3]Money{e.Due, e.Paid, e.LossValue}; got != [3]Money{} || e.Cause != CoverNoLoss {
+		t.Errorf("CoverEnded = %+v, want one no_loss with nothing due", e)
 	}
-	got := coverSettledAt(rec, 2)
-	if len(got) != 1 || got[0].Ended != 1 || got[0].Claimed != 0 {
-		t.Errorf("CoverSettled = %+v, want one ended and none claimed", got)
+	if s := only(t, "CoverSettled at tick 2", coverSettledAt(rec, 2)); [2]int64{s.Ended, s.Claimed} != [2]int64{1, 0} {
+		t.Errorf("CoverSettled = %+v, want one ended and none claimed", s)
 	}
-	if len(w.insurance.open) != 0 || heldMoney(t, w, insBacker) <= 10_000 {
-		t.Errorf("open %d, underwriter's money %d, want no open policy and the premium kept", len(w.insurance.open), heldMoney(t, w, insBacker))
+	if got := moneyOfAgents(t, w, insBacker); len(w.insurance.open) != 0 || got[0] != 10_064 {
+		t.Errorf("open %d, underwriter's money %v, want no open policy and the premium of 64 kept (halfEven(8000 * 100 * 8000 * 10000 / 10^12))", len(w.insurance.open), got)
 	}
 	auditNow(t, w)
 }
