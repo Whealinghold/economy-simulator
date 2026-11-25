@@ -14,7 +14,7 @@ func snapOf() economysim.Snapshot {
 		Names: miniNames(),
 		Markets: []economysim.MarketRow{{
 			State:        economysim.MarketState{Region: 1, Commodity: 2},
-			HeldByAgents: 7, HeldByEstate: 3, Lots: 5, Pending: 11, EstateAtFloor: 2,
+			HeldByAgents: 7, HeldByEstate: 3, HeldByTreasury: 4, Lots: 5, Pending: 11, EstateAtFloor: 2,
 		}},
 		Jobs:    []economysim.JobRow{{Region: 2, Recipe: 0, Executions: 4}},
 		Regions: []economysim.RegionRow{{Region: 0, MoneyHouseholds: 100, MoneyPool: 30, MoneyContract: 9}},
@@ -41,6 +41,7 @@ func TestSnapshot_RowsToInstruments(t *testing.T) {
 	check(t, got, "ledger.lots", 5, cc...)
 	check(t, got, "market.stock", 7, append(cc, "holder", "agents")...)
 	check(t, got, "market.stock", 3, append(cc, "holder", "estate")...)
+	check(t, got, "market.stock", 4, append(cc, "holder", "treasury")...)
 	check(t, got, "recipe.in_progress", 4, "recipe", "p0", "region", "r2")
 	check(t, got, "money.supply", 100, "region", "r0", "sector", "households")
 	check(t, got, "money.supply", 30, "region", "r0", "sector", "pool")
@@ -183,7 +184,7 @@ func TestSnapshot_RealWorld(t *testing.T) {
 // snapSums adds up the held units, the lots and the money of a snapshot.
 func snapSums(s economysim.Snapshot) (held, lots, money, pool int64) {
 	for _, m := range s.Markets {
-		held += int64(m.HeldByAgents + m.HeldByEstate)
+		held += int64(m.HeldByAgents + m.HeldByEstate + m.HeldByTreasury)
 		lots += m.Lots
 	}
 	for _, r := range s.Regions {

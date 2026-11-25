@@ -271,3 +271,32 @@ func BenchmarkDrawdown(b *testing.B) {
 		}
 	}
 }
+
+// TestCumulative_Sums checks C_n of spec 5.6.5: the sum of Income - Cost over
+// the records, the one cycle of 16.3 earning 2 200 - 2 000 = 200 (inputs of 300
+// are netted from the first income, sales of 2 500 land in the last tick), 0
+// for no records and the nearest extreme beyond int64.
+//
+// Requirement: FR-SAV-045
+func TestCumulative_Sums(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		recs []welfare.Record
+		want int64
+	}{
+		{"no records", nil, 0},
+		{"one cycle of 16.3", cycle(), 200},
+		{"a deficit is negative", []welfare.Record{{Income: 10, Cost: 30}}, -20},
+		{"saturates up", []welfare.Record{{Income: math.MaxInt64}, {Income: math.MaxInt64}}, math.MaxInt64},
+		{"saturates down", []welfare.Record{{Cost: math.MaxInt64}, {Cost: math.MaxInt64}}, math.MinInt64},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := welfare.Cumulative(tt.recs); got != tt.want {
+				t.Errorf("Cumulative(%d records) = %d, want %d", len(tt.recs), got, tt.want)
+			}
+		})
+	}
+}

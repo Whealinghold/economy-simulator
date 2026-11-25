@@ -1642,6 +1642,9 @@
 //     with the counts of the rules that stay silent (Short, Cut, Headroom, Exempt); its
 //     kind is a Kind (KindTax, KindDuty, KindToll, KindPayout) and its class a
 //     FiscalClass (FiscalHouseholds, FiscalPool, FiscalTreasury).
+//   - TreasuryOrdered: the aggregate event of the standing orders (purchases and releases)
+//     of one authority at P3.4a, with the units wanted and placed on each side and the
+//     units cut for cash, for the hold and for stock.
 //   - Hire: the one-job contract of the hire form of the employment module
 //     (spec-employment.md 3.4): a worker household runs one recipe of an employer's
 //     hire list for the employer's account, for a wage fixed at formation and paid a
@@ -1876,8 +1879,9 @@
 //     role whose households save for a purpose and invest, and the row that states what a whole
 //     facility of a class is worth to the role per tick (spec-saving-and-investment.md 3.2).
 //     The word investment means a build or a repair only. SavingView is the group of the view
-//     that carries the block, the drawdown, the facilities and the classes; SavingState is the
-//     result of the query Saving; SavingTargetResult and ProjectChoice are the results of the
+//     that carries the block, the drawdown, the facilities and the classes, each class a
+//     SavingClass; BuildView and RepairView are the clauses of a recipe in its view;
+//     SavingState is the result of the query Saving; SavingTargetResult and ProjectChoice are the results of the
 //     two pure rules SavingTarget and ChooseProject; SavingBar names the four bars (no return,
 //     standing, unreachable, survival); SavingPlanned is the event of the counts.
 //   - Savings target, floor of the target, goal: S* is the floor plus the goal and replaces

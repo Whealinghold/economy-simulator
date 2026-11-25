@@ -378,3 +378,35 @@ func TestValueAdded_ConfigOfAnotherWorldIsRejected(t *testing.T) {
 		t.Errorf("ValueAdded(config of another world) error = %v, want ErrConfigMismatch", err)
 	}
 }
+
+// TestSectors_TreasuryGoodsAreTheTreasurys verifies that units of a market held by a
+// treasury move out of the households' net worth into the treasury's, and that the
+// realm's total does not change.
+//
+// Guard: Held counts the treasuries' units (spec-indicators.md 7.1.2) but only
+// HeldByAgents is the households' (7.5). Without the split, a purchase by a treasury
+// would raise the households' net worth and leave the treasury's untouched.
+func TestSectors_TreasuryGoodsAreTheTreasurys(t *testing.T) {
+	w, open, closing := workedWindow(t)
+	p := valleyTable(t, w, alphaP, betaP)
+	base, err := indicator.Sectors(w, open, closing, p)
+	if err != nil {
+		t.Fatalf("Sectors(base) error = %v, want nil", err)
+	}
+	// Ten of the closing grain units of alpha pass from the agents to a treasury, so
+	// Held is unchanged and 10 * the price of grain in alpha changes hands.
+	moved := append([]economysim.MarketRow(nil), closing.Markets...)
+	m := &moved[int(alpha)*4+int(grain)]
+	m.HeldByAgents -= 10
+	m.HeldByTreasury += 10
+	closing.Markets = moved
+	got, err := indicator.Sectors(w, open, closing, p)
+	if err != nil {
+		t.Fatalf("Sectors(moved) error = %v, want nil", err)
+	}
+	r, b := got.Regions[alpha].NW, base.Regions[alpha].NW
+	d := 10 * int64(alphaP[grain])
+	if r.Households != b.Households-d || r.Treasury != b.Treasury+d || r.Pool != b.Pool || r.Contract != b.Contract {
+		t.Errorf("Sectors(alpha).NW = %+v, want households %d, treasury %d, others as %+v", r, b.Households-d, b.Treasury+d, b)
+	}
+}

@@ -20,7 +20,8 @@ func TestViews_CarryNoClass(t *testing.T) {
 	t.Parallel()
 	forbidden := []string{"Class", "Flag", "Limit", "Needs", "Ceiling"}
 	// NoLimit is the ceiling's headroom flag; OutcomeView.Limit is a trade's limit price, unrelated.
-	allowed := map[string]bool{"RoleView.NoLimit": true, "OutcomeView.Limit": true}
+	// RecipeView.Needs is the facility classes a recipe needs (spec-saving-and-investment.md 5.2.2), not a settlement class.
+	allowed := map[string]bool{"RoleView.NoLimit": true, "OutcomeView.Limit": true, "RecipeView.Needs": true}
 	views := []reflect.Type{
 		reflect.TypeOf(economysim.RegionView{}), reflect.TypeOf(economysim.RoleView{}), reflect.TypeOf(economysim.RegionAgent{}),
 		reflect.TypeOf(economysim.AgentView{}), reflect.TypeOf(economysim.CommodityView{}), reflect.TypeOf(economysim.OutcomeView{}),

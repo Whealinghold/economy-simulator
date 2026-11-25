@@ -87,7 +87,7 @@ func TestFanIns_AreCompositionsOfTheExpectedCalls(t *testing.T) {
 	}{
 		{"fillAgentView", []string{"fillCore", "fillEarlyGroups", "fillView", "fillLateGroups"}},
 		{"fillEarlyGroups", []string{"fillWants", "fillEndowments", "fillTransport", "fillTradeOnly"}},
-		{"fillLateGroups", []string{"fillBoard", "fillRoomView", "fillTenure", "isHire", "fillEmployment", "fillView"}}, // the last is the infrastructure module's (spec-infrastructure.md 9.1)
+		{"fillLateGroups", []string{"fillBoard", "fillRoomView", "fillTenure", "isHire", "fillEmployment", "fillView", "fillView"}}, // the last two are the infrastructure module's (spec-infrastructure.md 9.1) and the saving module's (spec-saving-and-investment.md 5.2)
 		{"checkTradePlan", []string{"normalisePlan", "checkDiscards", "checkWants", "checkMerchantPlan", "checkRoomPlan", "checkCreditPlan", "checkCoverPlan"}},
 		{"removeAgent", []string{"Tick", "regionOf", "dropAgent", "hasJob", "abandonJob", "dropTraveller", "dropJourney", "dropContracts", "Errorf", "dropAgent", "dropHires", "dropClaims", "dropPolicies", "dropFacilities", "receive", "Errorf", "mustClose", "Close", "deliver", "deliver", "pool", "dropModules", "logRemoval", "forget"}},
 		{"dropModules", []string{"dropAgent", "dropAgent", "drop", "dropExternal", "dropStorage"}},

@@ -253,6 +253,11 @@ func skippedOverPackOne(f string) bool {
 	if strings.HasPrefix(f, "overlay/institutions") {
 		return true
 	}
+	// The policy overlays need the polity module (a jurisdiction to govern), which pack one
+	// lacks; the policy goldens and scenarios S155 to S159 load and run them over their layers.
+	if strings.HasPrefix(f, "overlay/policy") {
+		return true
+	}
 	// The tenure overlay titles the endowments of the resources overlay, which pack
 	// one alone lacks; TestPacks_TenureOverlayLoadsAndSolves validates it over the
 	// layers it needs.

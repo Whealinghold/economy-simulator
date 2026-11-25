@@ -2960,6 +2960,50 @@ type PolicyDecided struct {
 
 func (PolicyDecided) isEvent() {}
 
+// TreasuryOrdered is emitted at P3.4a once per authority in ascending JurisdictionID, after
+// its OrderPlaced and OrderRejected events, when a standing order of the authority was in
+// its window with a wish of at least 1; never otherwise and never with the fiscal module
+// off (spec-fiscal.md 16.1.2, FR-FIS-045). It is the counter of the standing orders'
+// clamps: the wish against what the book admitted, and the three caps of 9.3.2 each counted.
+// Every field is a count of orders or of units.
+type TreasuryOrdered struct {
+	Tick int64
+	// Authority is the jurisdiction whose treasury ordered and Region its seat, the one
+	// market its orders go to.
+	Authority JurisdictionID
+	Region    RegionID
+	// Bids and Asks are the orders of the authority the books admitted this tick.
+	Bids, Asks int64
+	// WantedBuy and WantedSell are the units the wishes of its purchases and releases came
+	// to, and PlacedBuy and PlacedSell the units of the orders the books admitted.
+	WantedBuy, PlacedBuy, WantedSell, PlacedSell int64
+	// CutCash, CutHold and CutStock are the units cut from a wish by the cash, the hold
+	// and the stock less the reserve (spec-fiscal.md 9.3.2).
+	CutCash, CutHold, CutStock int64
+}
+
+func (TreasuryOrdered) isEvent() {}
+
+// SavingBar is the reason a household has no project chosen (spec-saving-and-investment.md
+// 5.5, 12.3): a constant of a closed set, the value of reason in the Debug line "project
+// declined" and of the metric attribute economysim.bar. A household with a project chosen,
+// with a job of a project in progress or with no project recipe has none, "".
+type SavingBar string
+
+// The four bars. They are not values of economysim.reason or of economysim.limit.
+const (
+	// BarNoReturn is a household that weighed a project and none passed or had a value.
+	BarNoReturn SavingBar = "no_return"
+	// BarStanding is a household none of whose projects was weighed because the world would
+	// refuse the start for a reason buying inputs does not cure (spec 5.5.1).
+	BarStanding SavingBar = "standing"
+	// BarUnreachable is a household with a project that passed and was not reachable (5.6.5).
+	BarUnreachable SavingBar = "unreachable"
+	// BarSurvival is a household barred by hunger, money below the reserve or the own-use
+	// mode (5.5.5).
+	BarSurvival SavingBar = "survival"
+)
+
 // The reasons of the insurance module (spec-insurance.md 5.2): the first failing check of
 // a request or an offer at the admission of the cover round, in the order of the table.
 // ReasonTooManyRequests, ReasonDuplicate, ReasonInArrears and ReasonExposure are the
