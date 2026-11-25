@@ -87,14 +87,16 @@ type GDPResult struct {
 }
 
 // stockTable is the stocks of a snapshot at region * commodities + commodity.
-type stockTable struct{ held, pend, estate, transit []int64 }
+// held counts the agents, the estate and the treasuries (spec-indicators.md 7.1.2);
+// estate and treasury are its parts that are not the households'.
+type stockTable struct{ held, pend, estate, transit, treasury []int64 }
 
 // stocksOf reads the units a snapshot holds. The units in transit are the lines
 // of the shipments in flight, attributed to the origin region (spec-indicators.md
 // 7.1.2).
 func stocksOf(preset string, s economysim.Snapshot, regions, commodities int) (stockTable, error) {
 	n := regions * commodities
-	st := stockTable{make([]int64, n), make([]int64, n), make([]int64, n), make([]int64, n)}
+	st := stockTable{make([]int64, n), make([]int64, n), make([]int64, n), make([]int64, n), make([]int64, n)}
 	for _, m := range s.Markets {
 		r, c := m.State.Region, m.State.Commodity
 		if r < 0 || int(r) >= regions || c < 0 || int(c) >= commodities {
@@ -102,10 +104,10 @@ func stocksOf(preset string, s economysim.Snapshot, regions, commodities int) (s
 		}
 		i := int(r)*commodities + int(c)
 		var err error
-		if st.held[i], err = net(preset, "held", []int64{int64(m.HeldByAgents), int64(m.HeldByEstate)}); err != nil {
+		if st.held[i], err = net(preset, "held", []int64{int64(m.HeldByAgents), int64(m.HeldByEstate), int64(m.HeldByTreasury)}); err != nil {
 			return stockTable{}, err
 		}
-		st.estate[i], st.pend[i] = int64(m.HeldByEstate), int64(m.Pending)
+		st.estate[i], st.pend[i], st.treasury[i] = int64(m.HeldByEstate), int64(m.Pending), int64(m.HeldByTreasury)
 	}
 	if err := st.addTransit(preset, s.Shipments, regions, commodities); err != nil {
 		return stockTable{}, err

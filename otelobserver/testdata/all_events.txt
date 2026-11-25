@@ -78,6 +78,7 @@ TraineeshipCompleted
 TraineeshipEnded
 TraineeshipStarted
 TransitFactorChanged
+TreasuryOrdered
 UpkeepShortfall
 WantShortfall
 WearApplied

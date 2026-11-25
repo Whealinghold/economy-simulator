@@ -88,6 +88,7 @@ var allEvents = []economysim.Event{
 	economysim.LabourRound{},
 	economysim.RouteRiskScaled{},
 	economysim.FiscalFlowApplied{},
+	economysim.TreasuryOrdered{},
 	economysim.StoreLoss{},
 	economysim.StoreRiskScaled{},
 	economysim.MembershipChanged{},

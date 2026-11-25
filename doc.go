@@ -1642,6 +1642,9 @@
 //     with the counts of the rules that stay silent (Short, Cut, Headroom, Exempt); its
 //     kind is a Kind (KindTax, KindDuty, KindToll, KindPayout) and its class a
 //     FiscalClass (FiscalHouseholds, FiscalPool, FiscalTreasury).
+//   - TreasuryOrdered: the aggregate event of the standing orders (purchases and releases)
+//     of one authority at P3.4a, with the units wanted and placed on each side and the
+//     units cut for cash, for the hold and for stock.
 //   - Hire: the one-job contract of the hire form of the employment module
 //     (spec-employment.md 3.4): a worker household runs one recipe of an employer's
 //     hire list for the employer's account, for a wage fixed at formation and paid a

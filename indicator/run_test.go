@@ -184,7 +184,7 @@ func TestRun_UnitsConserved(t *testing.T) {
 			held := func(s economysim.Snapshot) []int64 {
 				out := make([]int64, len(net))
 				for _, m := range s.Markets {
-					out[m.State.Commodity] += int64(m.HeldByAgents) + int64(m.HeldByEstate)
+					out[m.State.Commodity] += int64(m.HeldByAgents) + int64(m.HeldByEstate) + int64(m.HeldByTreasury)
 				}
 				return out
 			}
