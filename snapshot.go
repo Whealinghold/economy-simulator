@@ -643,9 +643,6 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 			acc.atFloor[l.Commodity] = satAdd(acc.atFloor[l.Commodity], l.Quantity)
 		}
 	}
-	if w.fiscal != nil {
-		w.fiscal.snapHeld(w, g, acc)
-	}
 	if w.pop != nil {
 		w.popSnapshotRegion(s, g, v)
 	}
@@ -740,6 +737,9 @@ func (b *beliefAcc) add(centre int64, bd beliefs.Bounds) {
 // marketRows fills the market rows of region g from its markets and acc.
 func (w *World) marketRows(s *Snapshot, g RegionID, acc *snapAcc) {
 	nc := len(w.cfg.Commodities)
+	if w.fiscal != nil {
+		w.fiscal.snapHeld(w, g, acc) // the goods of the treasuries seated in g, beside the estate's
+	}
 	for c := range nc {
 		i := w.markets.index(g, CommodityID(c))
 		row, b := &s.Markets[i], &acc.bel[c]
