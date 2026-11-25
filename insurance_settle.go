@@ -139,6 +139,8 @@ func (w *World) p13aSettleRoutes() {
 	}
 	in.arrived, in.amounts = in.arrived[:0], in.amounts[:0]
 	slices.SortFunc(st.items, func(a, b coverItem) int { return cmp.Compare(a.p.id, b.p.id) })
+	// a shipment noted twice must not settle its policy twice
+	st.items = slices.CompactFunc(st.items, func(a, b coverItem) bool { return a.p.id == b.p.id })
 	w.settleCoverItems(CoverStageArrival, false)
 }
 
@@ -186,7 +188,10 @@ func (w *World) coverItemOf(p *coverPolicy, g RegionID, lost []Amount) coverItem
 		w.coverValuesOf(g)
 		clear(st.qty)
 		for _, a := range lost {
-			st.qty[a.Commodity] += int64(a.Quantity)
+			if int(a.Commodity) < 0 || int(a.Commodity) >= len(st.qty) || a.Quantity <= 0 {
+				continue // a hostile or stale entry is no loss; the settlement never indexes outside the commodities
+			}
+			st.qty[a.Commodity] = addSat(st.qty[a.Commodity], int64(a.Quantity))
 			if st.capped[a.Commodity] {
 				it.valueCapped = addSat(it.valueCapped, int64(a.Quantity))
 			}
@@ -299,7 +304,7 @@ func (w *World) payCoverGroup(g *coverGroup, late bool) {
 func (w *World) payCoverItem(it *coverItem, share int64, late bool) {
 	in := w.insurance
 	insured, under := &w.agents[it.p.insured], &w.agents[it.p.underwriter]
-	it.paid = min(share, MaxMoney-w.accountView(insured.account).Balance)
+	it.paid = min(share, max(0, MaxMoney-w.accountView(insured.account).Balance)) // a balance past MaxMoney leaves no headroom, never a negative one
 	it.cut = share - it.paid
 	if it.paid > 0 {
 		mustClaim(w.ledger.Transfer(under.account, insured.account, it.paid, ledger.Payout), "a payout")
