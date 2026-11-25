@@ -614,21 +614,8 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 	if w.skills != nil {
 		w.skillsRoleRows(s.Roles[int(g)*nr:int(g+1)*nr], g)
 	}
-	for i := range v.Agents {
-		ra := &v.Agents[i]
-		rr.Households = satAdd(rr.Households, ra.Weight)
-		rr.MoneyHouseholds = Money(satAdd(int64(rr.MoneyHouseholds), int64(ra.Money)))
-		addRoleAgent(&s.Roles[int(g)*nr+int(ra.Role)], ra)
-		if w.sto != nil {
-			w.addRoomRow(&s.Roles[int(g)*nr+int(ra.Role)], &w.agents[ra.Agent])
-		}
-		// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
-		// refusal of the world's own accounts, which a valid configuration cannot cause
-		// and no test can inject from the root (D190); the branch only wraps and returns
-		// it.
-		if err := w.snapAgent(g, &w.agents[ra.Agent], acc, makes); err != nil {
-			return err
-		}
+	if err := w.snapAgents(s, g, v, acc, makes); err != nil {
+		return err
 	}
 	floor, _ := resolutionFloor(w.cfg.World)
 	for _, l := range w.estates.heldLots(w.ledger, g) {
@@ -645,6 +632,31 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 	w.fillRegionClass(rr, g)
 	w.marketRows(s, g, acc)
 	s.Jobs = appendJobs(s.Jobs, g, acc)
+	return nil
+}
+
+// snapAgents adds every agent of the view of region g to the region row, to the row of
+// its role and to the market accumulators (a pure move out of snapRegion, which was at the
+// Lizard complexity limit).
+func (w *World) snapAgents(s *Snapshot, g RegionID, v *RegionView, acc *snapAcc, makes [][]bool) error {
+	nr := len(w.cfg.Roles)
+	rr := &s.Regions[g]
+	for i := range v.Agents {
+		ra := &v.Agents[i]
+		rr.Households = satAdd(rr.Households, ra.Weight)
+		rr.MoneyHouseholds = Money(satAdd(int64(rr.MoneyHouseholds), int64(ra.Money)))
+		addRoleAgent(&s.Roles[int(g)*nr+int(ra.Role)], ra)
+		if w.sto != nil {
+			w.addRoomRow(&s.Roles[int(g)*nr+int(ra.Role)], &w.agents[ra.Agent])
+		}
+		// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
+		// refusal of the world's own accounts, which a valid configuration cannot cause
+		// and no test can inject from the root (D190); the branch only wraps and returns
+		// it.
+		if err := w.snapAgent(g, &w.agents[ra.Agent], acc, makes); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
