@@ -66,6 +66,7 @@ var positionList = [...]position{
 	{"P3.5", "EXT", line},
 	{"P3.6", "INF", line},
 	{"P3.6a", "STO", line},
+	{"P3.6b", "SAV", line},
 	{"P3.6c", "FIS", line},
 	{"P4.1", "CLR", line},
 	{"P4.1a", "FIS", line},
@@ -100,9 +101,7 @@ var positionList = [...]position{
 // yet, in the order of the table. The position test fails on a listed position
 // that has a call and on a position of the table that is neither here nor in
 // positionList.
-var notBuiltPositions = [...]string{
-	"P3.6b",
-}
+var notBuiltPositions = [...]string{}
 
 // positions is the straight line of a step: one call for each position of
 // positionList whose where is line, in the order of the table of spec-world.md
@@ -261,6 +260,9 @@ func (w *World) positionsClear() error {
 	w.p36Aggregates()
 	if w.sto != nil {
 		w.p36aRoomLimited()
+	}
+	if w.saving != nil {
+		w.p36bSaving()
 	}
 	if w.fiscal != nil {
 		w.p36cTolls()

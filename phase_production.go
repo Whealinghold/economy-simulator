@@ -242,6 +242,7 @@ func (w *World) workAgent(a *agent, region RegionID) error {
 	}
 	req := s.Work(v, w.rnd.rnd)
 	w.noteLabour(a, region, &req)
+	w.saving.noteRequest(a, region, &req)
 	if !req.NoJob {
 		w.admitJob(a, region, req)
 	}

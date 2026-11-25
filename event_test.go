@@ -116,6 +116,7 @@ var declaredEvents = []economysim.Event{
 	economysim.CoverRound{},
 	economysim.CoverEnded{},
 	economysim.CoverSettled{},
+	economysim.SavingPlanned{},
 }
 
 // moduleGates are the gates of 4.1 (besides core and the two prefixes) whose events are
@@ -124,15 +125,14 @@ var moduleGates = []string{
 	"demand", "resources", "subsistence", "population", "transport", "information", "migration",
 	"merchant block", "merchants", "external", "employment", "storage", "credit", "technology",
 	"settlements", "tenure", "infrastructure", "risk", "fiscal", "institutions", "policy", "insurance",
+	"saving",
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
 // that event.go does not declare yet: the events of the modules, of the
 // regions, checkpoint and skill stages. The change that
 // declares one deletes its entry; the catalogue test fails on a stale entry.
-var notBuiltEvents = []string{
-	"SavingPlanned",
-}
+var notBuiltEvents = []string{}
 
 // deferredCore names every event whose row of 4.1 has the gate core but that
 // event.go does not declare, with the stage and file that builds it. A core

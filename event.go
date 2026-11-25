@@ -3004,6 +3004,42 @@ const (
 	BarSurvival SavingBar = "survival"
 )
 
+// SavingPlanned is emitted once per region and role at P3.6b, in ascending RegionID then
+// role order, after RoomLimited, when the saving module is on and one of the triggering
+// counts is above 0; never otherwise (spec-saving-and-investment.md 12.1). It is an
+// aggregate bounded by regions times roles. The counts are households (the sum of weights)
+// of the agents of a role with a Saver block that were given a Trade view, computed by the
+// world from the pure rules whatever strategy runs, with tier 2 read as 0; a household is in
+// at most one of Survival, Building, Passed, Unreachable, NoReturn and Standing. Builds and
+// Repairs are the requests Work returned, one for each agent, not the starts.
+type SavingPlanned struct {
+	Tick   int64
+	Region RegionID
+	Role   RoleID
+	// Households, Goal, Buffer, Funded and Committed ride along and never trigger the
+	// event: the households given a Trade view, the sum of Goal and of the excess of the
+	// buffer over the reserve, and the households of Passed that are funded and committed.
+	Households int64
+	Goal       Money
+	Buffer     Money
+	Funded     int64
+	Committed  int64
+	// Saving is the households with a goal above 0 (the keep of a job in progress
+	// included) and Buffered those whose buffer is above the reserve.
+	Saving, Buffered int64
+	// Passed is the households with a project chosen and Building those with a project job
+	// in progress.
+	Passed, Building int64
+	// NoReturn, Standing, Unreachable and Survival are the households barred, by the bar
+	// of the same name (spec 5.5, 12.3).
+	NoReturn, Standing, Unreachable, Survival int64
+	// Builds and Repairs are the requests of a build recipe and of a repair recipe that
+	// Work returned at P2.5.
+	Builds, Repairs int64
+}
+
+func (SavingPlanned) isEvent() {}
+
 // The reasons of the insurance module (spec-insurance.md 5.2): the first failing check of
 // a request or an offer at the admission of the cover round, in the order of the table.
 // ReasonTooManyRequests, ReasonDuplicate, ReasonInArrears and ReasonExposure are the
