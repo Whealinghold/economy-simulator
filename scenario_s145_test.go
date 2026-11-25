@@ -35,7 +35,7 @@ func TestScenarioS145_AnOutlayAboveTheSurplus(t *testing.T) {
 	}
 	savingScenario(t, "S145 one+saving the outlay of a build, 200 ticks", scenarioSeedCount(), func(t *testing.T, rep *scenReport, seed uint64) {
 		for _, q := range savingS145Inputs {
-			cfg := savingPack(t, func(c *economysim.Config) { setRecipeInput(c, "build_mill", q) })
+			cfg := savingPack(t, func(c *economysim.Config) { setRecipeInput(t, c, "build_mill", q) })
 			st := savingRun(t, cfg, seed, 200)
 			name := fmt.Sprintf("inputs %d", q)
 			rep.num(seed, name+": built", st.Built)
@@ -47,11 +47,15 @@ func TestScenarioS145_AnOutlayAboveTheSurplus(t *testing.T) {
 	})
 }
 
-// setRecipeInput sets the quantity of the first input of the recipe id.
-func setRecipeInput(c *economysim.Config, id string, quantity int64) {
+// setRecipeInput sets the quantity of the first input of the recipe id and fails the test when the
+// recipe or its input is missing, so a leg never runs on the unchanged pack.
+func setRecipeInput(t testing.TB, c *economysim.Config, id string, quantity int64) {
+	t.Helper()
 	for i := range c.Recipes {
-		if c.Recipes[i].ID == id {
+		if c.Recipes[i].ID == id && len(c.Recipes[i].Inputs) > 0 {
 			c.Recipes[i].Inputs[0].Quantity = economysim.Quantity(quantity)
+			return
 		}
 	}
+	t.Fatalf("recipe %q with an input is not in the configuration", id)
 }

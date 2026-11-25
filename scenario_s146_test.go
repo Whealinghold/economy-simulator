@@ -54,7 +54,7 @@ func TestScenarioS146_SurplusWithNoOutlet(t *testing.T) {
 			name := leg.name
 			rep.num(seed, name+": idle money, sampled", st.IdleSamples)
 			rep.num(seed, name+": built", st.Built)
-			checkExact(t, rep, "S146", "one", seed, name+": the idle money is not negative", st.IdleSamples >= 0, "idle money %d", st.IdleSamples)
+			checkExact(t, rep, "S146", "one", seed, name+": the idle money is not negative", st.IdleNegative == 0, "%d rows with negative idle money", st.IdleNegative)
 		}
 	})
 }
