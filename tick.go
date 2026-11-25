@@ -218,10 +218,10 @@ func (w *World) positionsPlan() error {
 	return w.positionsTrade()
 }
 
-// positionsTrade is the trade phase of the straight line, from P3.1 to the
-// clearing, split from positionsProduce to stay within the Lizard complexity
-// limit (N-243). The position test reads it as part of the straight line, between
-// positionsPlan and positionsTail.
+// positionsTrade is the trade phase of the straight line from the merchants' plans
+// (P3.3a) to the orders of the treasuries (P3.4a), split from positionsPlan to stay within
+// the Lizard complexity limit (N-243). The position test reads it as part of the
+// straight line, between positionsPlan and positionsClear.
 func (w *World) positionsTrade() error {
 	if w.mer != nil && w.mer.roles > 0 {
 		w.p33aPlanned()
@@ -232,6 +232,16 @@ func (w *World) positionsTrade() error {
 	if err := w.p34Estates(); err != nil {
 		return err
 	}
+	return w.positionsClear()
+}
+
+// positionsClear is the part of the straight line from the counterparties' orders
+// (P3.5) to the clearing (P4.1), split from positionsTrade by a pure move of its
+// lines so that the standing orders of P3.4a keep both within the Lizard complexity
+// limit (N-243, N-390, plan 3-fis D15). The position test reads it as part of the
+// straight line, between positionsTrade and positionsSettle. A later module that adds
+// a call between P3.5 and P4.1b appends here.
+func (w *World) positionsClear() error {
 	if w.external != nil {
 		if err := w.p35Orders(); err != nil {
 			return err
@@ -251,9 +261,9 @@ func (w *World) positionsTrade() error {
 }
 
 // positionsSettle is the part of the straight line after the clearing, from P4.1b
-// to the outside sweep, split from positionsTrade to stay within the Lizard
+// to the outside sweep, split from positionsClear to stay within the Lizard
 // complexity limit (N-243). The position test reads it as part of the straight
-// line, between positionsTrade and positionsTail.
+// line, between positionsClear and positionsTail.
 func (w *World) positionsSettle() error {
 	if w.fiscal != nil {
 		w.p41aDuties()
