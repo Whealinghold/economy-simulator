@@ -24,6 +24,7 @@ func TestScenarioS158_ADirectiveIsAppliedAtTheCadence(t *testing.T) {
 		t.Skip("end-to-end scenario, skipped with -short")
 	}
 	cfg := loadValidPack(t, fivePolicyDirected...)
+	centre, east := regionRank(cfg, "centre"), regionRank(cfg, "east")
 	policyScenario(t, "S158 five+policy directive at 95, checkpoint at 97, applied at 100", min(scenarioSeedCount(), 3), func(t *testing.T, rep *scenReport, seed uint64) {
 		w, k := policyWorld(t, cfg, seed)
 		policyStepTo(t, w, 95, nil)
@@ -38,7 +39,12 @@ func TestScenarioS158_ADirectiveIsAppliedAtTheCadence(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Checkpoint() error = %v, want nil", err)
 		}
-		before := len(k.edges) + len(k.flows) // council_b's rule moves a transit lane of its own
+		before := len(k.edges) + len(k.flows) // council_b's rule moves a transit lane of its own: only the road is council_a's
+		for _, f := range k.transit {
+			if f.From == centre && f.To == east {
+				before++
+			}
+		}
 		r, rk := restoreKept(t, cfg, ck)
 		rs, err := r.Snapshot()
 		if err != nil {
@@ -47,7 +53,7 @@ func TestScenarioS158_ADirectiveIsAppliedAtTheCadence(t *testing.T) {
 		checkExact(t, rep, "S158", "five", seed, "the restored world has the settings pending", len(rs.Actors) > 0 && rs.Actors[0].Pending == 3, "Actors = %+v", rs.Actors)
 		policyStepTo(t, w, 101, nil)
 		policyStepTo(t, r, 101, nil)
-		checkExact(t, rep, "S158", "five", seed, "nothing was written before the due tick", before == 0, "%d edge or flow events before tick 97", before)
+		checkExact(t, rep, "S158", "five", seed, "nothing was written before the due tick", before == 0, "%d edge, flow or road events before tick 97", before)
 		got, want := appliedAt(k, 100), appliedAt(rk, 100)
 		checkExact(t, rep, "S158", "five", seed, "the original applies it at tick 100", got == [3]int{8, 1, 1}, "edge, flow and transit events at 100: %v, want [8 1 1]", got)
 		checkExact(t, rep, "S158", "five", seed, "the restored world applies the same", got == want, "restored %v, original %v", want, got)
