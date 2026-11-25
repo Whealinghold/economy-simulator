@@ -48,7 +48,7 @@ type bufferWatch struct {
 	boughtQ, soldQ         int64
 	boughtV, soldV         int64
 	minMoney, maxHeld      int64
-	minMoneySet, negative  bool
+	minMoneySet            bool
 	heldStaple, tradesSelf int64
 	lastMoney              int64
 }

@@ -80,11 +80,11 @@ func (d *dutyWatch) expectedDue() int64 {
 
 // s134Out is what one run of S134 keeps.
 type s134Out struct {
-	due, applied, paid, tradeValue economysim.Money
-	start, end                     economysim.Money
-	householdMoney                 economysim.Money
-	households                     int64
-	exact                          bool
+	due, applied, paid economysim.Money
+	start, end         economysim.Money
+	householdMoney     economysim.Money
+	households         int64
+	exact              bool
 }
 
 // runS134 runs the duty with the payback for ticks under the audit.

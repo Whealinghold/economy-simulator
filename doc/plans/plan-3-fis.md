@@ -484,3 +484,27 @@ Golden rule held: `git diff --name-status origin/phase-3...HEAD -- testdata` is 
 Tests: `fiscal_orders_internal_test.go` (the limit, the caps and their counts, the wish carry, the pair, a band that never matches itself over 30 audited ticks, the input order with an estate's ask), `fiscal_orders_events_internal_test.go` (when `TreasuryOrdered` is and is not emitted, a refused ask, the seat-only rule, spoilage of a treasury's lot, zero allocations of the position with no observer), `fiscal_observer_internal_test.go` (`HeldByTreasury` and the restored snapshot, the Debug line and the construction line, the rebuild of the treasury sector and goods from the events alone, the regional identity with a remittance up and a payout down), `fiscal_fork_test.go` (`TestFork_Fiscal` at N in 0, 7 and 7 after a scale call, with a check that orders and taxes occurred after the boundary).
 
 Left open: the cut-tick fork case (above); gomu on `internal/fiscal` (PR 1's owed run); the otelobserver instruments (Q3); the module-alone golden and S132 to S136 (PR 7); N-507 and N-508.
+
+## PR 7 result (Phase 10, recorded when PR 7 was built)
+
+Rule tags read: architecture=87c4da88312e78e6540e5913, observability=f33dfae634ae3b8a056802f8, testing=66af7645b01fef4e2796c367 (the tags are those at the tail of each file; `testing.md` was read to section 5 and the sections for goldens, scenarios and allocations on demand, the other two by section). No spec or note was edited, so the notes file was not read; the numbers N-389 to N-396 and N-504 to N-509 left to this row stay unused by this PR.
+
+The probe (a throwaway test, not committed): the pack `five` with `polity-governed.toml` and the new `fiscal-governed.toml`, seeds 1 to 4, 400 ticks, audit on. Every seed records 1 200 to 1 253 tax events, 24 to 95 payout events with a cut, and 38 to 50 duty events with an exempt trade; no toll, as no transport layer is on `five`. `five` is the first pack of the order, so it is the golden's; `payroll` and `one` were not probed. The toll is proved by S136.
+
+Built: `overlay/fiscal.toml` (the present, empty module) and `overlay/fiscal-governed.toml` (a seat and start money for the two groups, so three treasuries and a remittance chain, and one flow of each kind that needs no other module); the golden `testdata/golden/fiscal/` (`five.txt`, `events-five.txt` of about 17 MB, `five.positions.txt` at 26 lines a tick: the 22 of the off set and the module's four), recorded once; `TestGolden_Fiscal`, `TestGolden_FiscalEvents`, `TestPositionHash_FiscalGolden`, `TestGolden_FiscalOffUnmoved`, `TestDeterminism_Fiscal`; S132 to S136; the allocation rows `five+polity-governed` (932) and `five+polity-governed+fiscal` (932; 922 measured under -race); the `scenario_owner_test.go` row; the recorded blocks of S133 and S134 in `expected/five.scenarios.txt`, S135 in `one.scenarios.txt` and S136 in `three.scenarios.txt`.
+
+Deviations and choices the plan left open:
+
+- The overlay split (REF 4.5 says `fiscal.toml` holds the flows and sits after `polity.toml`): a flow needs a governed authority (FR-FIS-007), so `fiscal.toml` is the empty module, valid after the ungoverned polity, and `fiscal-governed.toml` holds the governance and the flows. `spec-reference-chain.md` 4.5 and `spec-fiscal.md` 19 still describe the other split; the edit is left open (it needs the notes rule).
+- S136 runs on `three` with its trade and transport overlays, and its own polity tables in a document (a `three` toll needs its own jurisdictions). The shipper of the transport tests knows two regions and the carriers of `three` live in one, so S136 has a three-region scripted shipper; the merchants "with and without the toll in the margin" are covered by PR 5's strategy tests, not here.
+- S132 compares the module on with every flow (the standing orders too) at scale 0 against the module removed, tick by tick, so the events of 200 ticks are never all in memory (the first version kept them and held 7 million events a world). The seats of the two groups are in both worlds.
+- S135: no event reports a spoiled unit, and the warm start's old lots spoil early, so the stock identity is `stock + spoiled = bought - sold - paid in kind` with `spoiled` the residual, asserted at least 0 and reported.
+- S133 and S134 use placeholders (an amount of 8, a 3% duty); the unfed share on `five` is above 99% at tick 200 because the pack collapses (N-352), which the report shows and no check reads.
+- `scenReport` rewrites `one.scenarios.txt` without some blank lines; the file was restored and the S135 block inserted by hand so the diff is additions only.
+- The allocation rows are on the governed five, not on `one` (the overlay is for `five`); the module adds nothing over its own off pack.
+
+Golden rule held: `git diff --name-status origin/phase-3...HEAD -- testdata` shows A for the two overlays and the three golden files, and M for three expected files with additions only (`--numstat`: 39, 13 and 15 added, none deleted). `golden/off/`, `polity/`, `all/`, the pinned hash and `testdata/checkpoints` are not in the diff.
+
+Tests: S132 (`TestScenarioS132_OffAndZeroScaleNeutral`, `_FullScaleMovesMoney`), S133 to S136, the five golden tests, `TestStep_AllocationsStayAtTheBaseline` rows.
+
+Left open: the REF 4.5 and FIS 19 spec text (above); a spoilage event for the treasury's goods; gomu on `internal/fiscal` (PR 1's owed run); the otelobserver instruments (Q3).
