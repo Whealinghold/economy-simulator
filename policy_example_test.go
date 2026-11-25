@@ -25,7 +25,11 @@ func ExampleWorld_DirectPolicy() {
 		return
 	}
 	pending := func() int64 {
-		s, _ := w.Snapshot()
+		s, err := w.Snapshot()
+		if err != nil || len(s.Actors) == 0 {
+			fmt.Println("Snapshot:", err)
+			return -1
+		}
 		return s.Actors[0].Pending
 	}
 	fmt.Println("pending after the call:", pending())
