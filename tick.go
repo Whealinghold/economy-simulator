@@ -64,6 +64,7 @@ var positionList = [...]position{
 	{"P3.5", "EXT", line},
 	{"P3.6", "INF", line},
 	{"P3.6a", "STO", line},
+	{"P3.6b", "SAV", line},
 	{"P3.6c", "FIS", line},
 	{"P4.1", "CLR", line},
 	{"P4.1a", "FIS", line},
@@ -99,7 +100,7 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P1.3a",
-	"P3.4a", "P3.6b",
+	"P3.4a",
 	"P8.1b",
 }
 
@@ -244,6 +245,9 @@ func (w *World) positionsTrade() error {
 	w.p36Aggregates()
 	if w.sto != nil {
 		w.p36aRoomLimited()
+	}
+	if w.saving != nil {
+		w.p36bSaving()
 	}
 	if w.fiscal != nil {
 		w.p36cTolls()

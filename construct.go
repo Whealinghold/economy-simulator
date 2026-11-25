@@ -175,7 +175,8 @@ func (w *World) allocate() {
 		}
 		w.infra.wire(w)
 	}
-	w.saving = newSaving(&w.cfg, &w.roles, w.infra, w.log)
+	w.saving = newSaving(&w.cfg, &w.roles, w.infra, w.log, w.obs.supplied)
+	w.saving.attach(w)
 	w.registerBounds()
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)

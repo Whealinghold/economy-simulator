@@ -25,6 +25,11 @@ type saving struct {
 	// world's logger, which the Debug lines of the Trade view go to.
 	module *Saving
 	log    *slog.Logger
+	// world is the world the snapshot rows and the query build their views in; counts are
+	// the counts of SavingPlanned per (region, role) cell, cleared at P8.6, and nil unless
+	// an observer was supplied (observability-and-logging.md 4.5).
+	world  *World
+	counts []savingCount
 	// infra is the infrastructure module the clauses and the classes are read from; nil
 	// when it is off, in which case a role has no project and the buffer only.
 	infra *infrastructure
@@ -42,6 +47,14 @@ type saving struct {
 	recs    []welfare.Record
 }
 
+// attach gives the module its world, after the world is built; it is nil-safe so the call
+// adds no branch to the constructor.
+func (s *saving) attach(w *World) {
+	if s != nil {
+		s.world = w
+	}
+}
+
 // savingRole is what the module resolves of one role at construction: its block and the
 // rows of the classes that a Builds or Repairs clause of its recipes names.
 type savingRole struct {
@@ -53,11 +66,14 @@ type savingRole struct {
 
 // newSaving resolves the tables of a canonical configuration that passed Validate, or
 // returns nil when the module is off. It reads no agent and takes no draw.
-func newSaving(c *Config, rt *roleTable, infra *infrastructure, log *slog.Logger) *saving {
+func newSaving(c *Config, rt *roleTable, infra *infrastructure, log *slog.Logger, supplied bool) *saving {
 	if c.Modules.Saving == nil {
 		return nil
 	}
 	s := &saving{module: c.Modules.Saving, log: log, infra: infra, roles: make([]savingRole, len(c.Roles))}
+	if supplied {
+		s.counts = make([]savingCount, len(c.Regions)*len(c.Roles))
+	}
 	if m := c.Modules.Infrastructure; m != nil {
 		for i := range m.Classes {
 			s.names = append(s.names, m.Classes[i].ID)

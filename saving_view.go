@@ -31,7 +31,7 @@ func (s *saving) fillView(v *AgentView, a *agent, kind viewKind) {
 	s.fillClauses(v, a)
 	v.Saving = sv
 	if kind == viewTrade {
-		s.logProject(v)
+		s.noteTrade(v)
 	}
 }
 

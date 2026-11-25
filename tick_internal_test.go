@@ -273,6 +273,9 @@ func TestPositions_TheCheckCanFail(t *testing.T) {
 		t.Fatalf("read tick.go: %v", err)
 	}
 	calls, _ := straightLineCalls(t, string(src))
+	// first is a position still listed not built: the test removes it from both lists, so it
+	// keeps working as each module builds its own (it named P3.6b until the saving module).
+	first := notBuiltPositions[0]
 	tests := []struct {
 		name   string
 		edit   func(built []position, notBuilt, calls []string) ([]position, []string, []string)
@@ -280,8 +283,8 @@ func TestPositions_TheCheckCanFail(t *testing.T) {
 	}{
 		{"unedited data", func(b []position, n, c []string) ([]position, []string, []string) { return b, n, c }, ""},
 		{"a real position removed from both lists", func(b []position, n, c []string) ([]position, []string, []string) {
-			return b, slices.DeleteFunc(n, func(id string) bool { return id == "P3.6b" }), c
-		}, "P3.6b: a position of the spec that is neither built nor listed"},
+			return b, slices.DeleteFunc(n, func(id string) bool { return id == first }), c
+		}, first + ": a position of the spec that is neither built nor listed"},
 		{"a built position also listed not built", func(b []position, n, c []string) ([]position, []string, []string) {
 			return b, append(n, "P0.2"), c
 		}, "P0.2: built and listed not built"},
