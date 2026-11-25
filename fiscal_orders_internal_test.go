@@ -13,17 +13,24 @@ import (
 // at a reference price of 1 000), call the position and read the book, the ledger and
 // the events: the arithmetic of a limit, a wish and a cap is tested in internal/fiscal.
 
-// orderMill builds the fiscal mill with the module m, letting mutate change the
-// configuration first, and forgets the events of construction. The crown and the
-// shire hold crownCash each.
+// orderMill builds the fiscal mill with the module m; the crown and the shire hold
+// crownCash each. The events of construction are forgotten.
 func orderMill(t *testing.T, m *Fiscal, crownCash Money) (*World, *evLog) {
 	t.Helper()
+	return orderMillWith(t, m, func(c *Config) {
+		for i := range c.Modules.Polity.Jurisdictions {
+			c.Modules.Polity.Jurisdictions[i].StartMoney = crownCash
+		}
+	})
+}
+
+// orderMillWith is orderMill with mutate applied to the configuration first.
+func orderMillWith(t *testing.T, m *Fiscal, mutate func(*Config), opts ...Option) (*World, *evLog) {
+	t.Helper()
 	cfg := fiscalMillConfig(m)
-	for i := range cfg.Modules.Polity.Jurisdictions {
-		cfg.Modules.Polity.Jurisdictions[i].StartMoney = crownCash
-	}
+	mutate(&cfg)
 	rec := &evLog{}
-	w := newMill(t, cfg, WithSeed(exitSeed), WithAudit(), WithObserver(rec))
+	w := newMill(t, cfg, append([]Option{WithSeed(exitSeed), WithAudit(), WithObserver(rec)}, opts...)...)
 	rec.events = nil
 	return w, rec
 }
