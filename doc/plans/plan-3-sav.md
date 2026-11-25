@@ -396,3 +396,21 @@ Differences from the plan, each decided in the plan's direction:
 - `TestPositions_TheCheckCanFail` named P3.6b as its example of a real position; it now takes the first position still listed not built, so it keeps working as the modules are built.
 
 Not done, with the reason: the five `otelobserver` instruments (Q8: the event joins the three lists only); `TestSaving_MetricsDerivable` (the five instruments have no adapter yet; the event fields and the rows are what feeds them and are asserted directly); a note or a spec edit (spec-observability.md, spec-checkpoint.md and the rule files already hold the SAV rows from PR 1, so PR 4 changes no spec and adds no note).
+
+## PR 5 result (Phase 7, branch `s3-sav-5`)
+
+Built: `testdata/chains/overlay/saving.toml` (a buffer for the grower, the mill project for the cook, a hurdle spread of 40 000), the new module-alone golden `testdata/golden/saving/` (`one.txt`, `events-one.txt` of 1.3 MB, `one.positions.txt` of 24 positions a tick), recorded once after the diff against `golden/infrastructure` was read (the hash, the two warnings `saver_no_project` and `spread_below_margin`, the markets and a rise in the unfed households of the cooks and growers, which is the module's effect), `testdata/chains/second/saving.toml` with `TestConfigOnly_SavingBuildsItsOwnCapital`, `TestDeterminism_Saving`, `TestFork_Saving` (eleven cells through `forkAtN`), the invariants row `one+infrastructure+saving`, the scenarios S142 to S147 with their owner row and blocks in `expected/one.scenarios.txt` (additions only), and the edits to `spec-reference-chain.md` 4.5 and 7.12, `spec-stability.md` (the runs of three cases) and `doc/notes.md` (N-498, N-499 added; N-196, N-382, N-490, N-491, N-495 and N-496 removed as built; updates to N-145, N-199, N-492, N-493 and N-497).
+
+**The probe.** Pack `one` gives all the plan asks for, so the probe did not move to `five`: over seeds 1 to 4 each run records `SavingPlanned` with `Saving` above 0 (98 to 106 events), 158 to 167 build requests, 70 to 79 repair requests and as many facilities built and repaired by tick 400. `TestGolden_SavingProbeExercisesAProject` fails a run that lacks any of the five counts.
+
+Differences from the plan, each decided in the plan's direction:
+
+- `Modules.Saving` was already in `allPackNotYetOn` (PR 2); nothing to add. `spec-calibration.md` 6 and `spec-stylised-facts.md` 5.11 already hold the SAV rows and the harness list of FR-STY-098 names S142 and S147, so they are not edited.
+- The second setting is a layer of `second/saving.toml` carrying its own infrastructure tables, not a new pack directory.
+- `TestDeterminism_Saving` found that the state hash differed with an observer or a logger: `saving.counts` (allocated only under an observer, cleared at P8.6) and `saving.log` were walked. Both are in `skipFields` of `poshash_internal_test.go`, as the institutions module's counts are.
+- The overlay has no employer block (an employer needs the payroll pack); S146 gives the growers a `Worth` row as the outlet and runs the faucet and the holding charge.
+- S143 does not run the cut of the partners' income and S144 does not run the standing-refusal variant: the pack has no second consumer of the grower's money and its one class never reaches the bound of facilities. Both are reported as not run in `spec-reference-chain.md` 7.12.
+- S145 found that the `Unreachable` count does not rise with the outlay, because the margin test fails first (N-498); the scenario asserts the audit and that no facility is built without a request, and reports the rest.
+- The recorder of `expected/*.scenarios.txt` collapses blank lines, which deleted 19 lines of the file; the new blocks were inserted by hand so the diff is additions only (N-499).
+
+Not done, with the reason: the gates (`check.sh`, `full.sh`, gate R and F, `gomu`) and the arm64 run, which are later stages; the `otelobserver` instruments (Q8).

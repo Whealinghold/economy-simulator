@@ -46,14 +46,14 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351, N-353 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424, N-474, N-490, N-512, N-521, N-478 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-424, N-474, N-512, N-521, N-478 |
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030, N-479, N-527 |
-| CFG | N-476, N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-494, N-496, N-483, N-461, N-522 |
+| CFG | N-476, N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-494, N-483, N-461, N-522 |
 | CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444, N-471, N-480, N-500, N-502 |
-| CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
+| CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364, N-498 |
 | CLR | N-541, N-544, N-113, N-137, N-241, N-457 |
-| CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457, N-491, N-493, N-494, N-438, N-481, N-502 |
+| CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457, N-493, N-494, N-438, N-481, N-502, N-499 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398, N-472, N-484, N-503 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-445, N-500, N-501, N-502, N-503, N-510, N-511, N-512, N-513, N-514, N-515, N-516, N-517, N-518, N-521 |
@@ -65,34 +65,34 @@ PR description.
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473, N-515 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
-| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476, N-494, N-496, N-477, N-478, N-479 |
+| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476, N-494, N-477, N-478, N-479 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484, N-530 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436, N-471 |
 | LND | N-504, N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475, N-484, N-513 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370, N-478 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-543, N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482, N-510, N-520 |
+| OBS | N-543, N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-482, N-510, N-520 |
 | ORG | N-541, N-542, N-543, N-544, N-540, N-400, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-463, N-464, N-465, N-492, N-483, N-484 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485, N-530 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348, N-527 |
 | PRO | N-542, N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454, N-501 |
-| REF | N-508, N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-525, N-540, N-516, N-517 |
+| REF | N-508, N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-525, N-540, N-516, N-517, N-499 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470, N-458, N-459, N-460, N-461 |
-| SAV | N-145, N-156, N-195, N-362, N-382, N-475, N-490, N-491, N-492, N-493, N-495, N-496, N-497 |
+| SAV | N-145, N-156, N-195, N-362, N-475, N-492, N-493, N-497, N-498 |
 | SCL | N-030, N-198, N-222, N-300, N-493 |
 | SET | N-404, N-140, N-192, N-268, N-348, N-365 |
 | SKL | N-542, N-540, N-464, N-039, N-071, N-090, N-110, N-138, N-149, N-193, N-268, N-244, N-365 |
 | SPN | N-463, N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375, N-388, N-513, N-524, N-526 |
-| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485, N-458, N-517, N-518 |
+| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485, N-458, N-517, N-518, N-498 |
 | SUB | N-121, N-228, N-268, N-244, N-426 |
 | TEC | N-358, N-359, N-360, N-361, N-384 |
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434, N-459, N-505 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383, N-522, N-523, N-516, N-505 |
-| WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346, N-472, N-491, N-514 |
+| WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346, N-472, N-514 |
 | WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438, N-475, N-480, N-477 |
 
 ## Open notes
@@ -1049,6 +1049,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-employment.md` 11.2 and `models/emp/circuit.py`.
 - **Note:** With midpoint wages and employers who spend only their upkeep, hired households settle at `E u_e / ((1 - phi) a)`. REF's overlay with an employer role needs wants on the employer side; STY may state a report fact; SAV is the investment outlet and its default builds nothing for a role with no block.
 - **Update (2026-11-19, plan 3-sav PR 1):** read: the outlet exists once the saving module is built (a `Saver` block on the employer role and a `Worth` row for its workshop class, `spec-employment.md` 11.3); the REF overlay with an employer's wants is STY's. Left open.
+- **Update (2026-11-25, plan 3-sav PR 5):** read: `overlay/saving.toml` has no employer block (an employer needs the payroll pack `one-demand`); S146 gives the growers a `Worth` row as the outlet and found the sampled idle money no lower with it (184.0 against 187.0 million minor units, seeds 1 to 5). The employer's wants and its outlet stay STY's. Left open.
 
 ### N-146 A steady state with employers is not a zero-profit state
 
@@ -1389,15 +1390,6 @@ PR description.
 - **Note:** A bullet loan that falls due at the end of a build is the debt squeeze of CRD-A1; the default asks for no loan for a project; a claim with a schedule is the safe form.
 - **Update (2026-11-19, plan 3-sav PR 1):** read: the saving module builds no loan for a project (a funded household finds no gap, `spec-credit.md` 10.2.5); a consumer's strategy may append its own `CreditRequest`. Left open for CRD.
 
-### N-196 A `Facilities` group in the `Trade` view
-
-- **Areas:** AGT, CAP
-- **Raised:** 2026-10-13, `spec-saving-and-investment.md` (the plan and the view) and `spec-infrastructure.md` 9.1.
-- **Note:** CAP 9.1 leaves the `Trade` view without facilities; SAV's goal and planned recipe are decided in `Trade`, and the clauses go in the per-recipe group.
-- **Update (2026-10-17, plan 1-7 Phase 1):** read: no `Facilities` group in the slice view. Left open for CAP and SAV.
-- **Update (2026-11-18, plan 3-cap Phase 1):** the `Work` view carries `Facilities` (CAP builds it in PR 4); the `Trade`-view group of a `Saver` role is SAV's (N-382). Left open for SAV.
-- **Update (2026-11-19, plan 3-sav PR 1):** read: `spec-infrastructure.md` 9.1 already says the `Facilities` field is also in the `Trade` view of an agent whose role has a `Saver` block; the field is built in PR 3 of plan 3-sav with N-382 (D6). Left open until PR 3.
-
 ### N-198 The drawdown is `O(T)` per agent and tick
 
 - **Areas:** SCL, CODE
@@ -1411,6 +1403,7 @@ PR description.
 - **Areas:** CLB, STY
 - **Raised:** 2026-10-13, `spec-saving-and-investment.md` (the default of `HurdleSpreadBP`) and `models/sav/invest.py`.
 - **Note:** A spread of 5 000 does nothing and 40 000 staggers entry in the model; a calibration should find the real range.
+- **Update (2026-11-25, plan 3-sav PR 5):** S144 on pack one (seeds 1 to 10, 200 ticks) built a median of 159 to 161 facilities at spreads of 0, 5 000 and 40 000, so the spread does not change the count on this pack; the timing is not measured. The overlay uses 40 000 (the model's figure) and `spread_below_margin` fires on it for the cook. Left open for CLB and STY.
 
 ### N-200 A gain is not a recipe
 
@@ -2316,13 +2309,6 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-cap Phase 1, `spec-infrastructure.md` 5.1.2 and `spec-employment.md` 5.5 (edit 27 of CAP 19.2).
 - **Note:** the formation checks of a hire of a recipe that `Needs` a site (the bound `committed_c + m` on the employer's capacity, and the reason `no_facility`) have no caller until EMP builds the hire form; the payroll form hires nothing. CAP builds the per-principal counter and one method, `facilityRoom(principal, class)`, with a unit test; EMP wires it into its formation and adds the spec rows of its edit 27.
 
-### N-382 `Standing` and the `Facilities` group of the `Trade` view belong to SAV
-
-- **Areas:** AGT, SAV, CAP
-- **Raised:** 2026-11-18, plan 3-cap Phase 1, `spec-infrastructure.md` 4.2.2 and 9.1.
-- **Note:** the per-recipe field `Standing` and the `Trade`-view `Facilities` group of a `Saver` role are read only by SAV's project rule. CAP builds the `Work`-view `Facilities` and the helper `standingReason`, and no `Trade` field; SAV adds the group, the field and its owed rows.
-- **Update (2026-11-19, plan 3-sav PR 1):** read: the specs already carry the rows (`spec-agents.md` 6.4.1, `spec-infrastructure.md` 4.2.2 and 9.1); the group, the field and the clauses are built in PR 3 of plan 3-sav (D5, D6). Left open until PR 3.
-
 ### N-383 The capacity row of the viability programme for a `Needs` recipe
 
 - **Areas:** VIA, CAP
@@ -2536,6 +2522,18 @@ PR description.
 - **Areas:** INS, CFG
 - **Raised:** 2026-11-19, plan 3-ins PR B, `spec-insurance.md` 14.2.
 - **Note:** `cover_no_insured` is raised from the roles alone: a consumer's strategy that could request cover is not known to `Config`, so the warning says only that no role has an `Insure` block (informational, as CRD's `credit_no_borrower`). `cover_below_minimum` has no shipment in the configuration to size, so it reads the households' `StartMoney` as the bound of a first cargo: it is raised when `MinSum` is above the `StartMoney` of every insured role. Both are placeholders (N-015). The paths of the field errors are `roles.<id>.cover.<block>.<key>`, as `roles.<id>.credit` is, not the `role.<id>` of the spec's example. Left open for a reader of a later run (the sum of a real planned shipment) and for the spec to say so.
+
+### N-498 Three facts the saving scenarios found on pack one
+
+- **Areas:** STY, SAV, CLB
+- **Raised:** 2026-11-25, plan 3-sav PR 5, S144, S145 and S146.
+- **Note:** (1) The bars of `spec-saving-and-investment.md` 5.5 are in a precedence, so a build whose cost is so large that the margin test fails is counted `NoReturn`, not `Unreachable`: at 20 000 units of input the `Unreachable` count falls to 0 to 17 household-ticks against 0 to 135 at 2, while `NoReturn` stays near 28 000; a reader of the event must not take `Unreachable` as a measure of how far out of reach a project is. (2) The facilities built do not depend on the hurdle spread on this pack (N-199). (3) An outlet for the growers did not lower the sampled idle money (S146). None is a defect; each is for the first calibration (STY, CLB) to read. Left open.
+
+### N-499 The scenario recorder rewrites the blank lines of `expected/*.scenarios.txt`
+
+- **Areas:** CODE, REF
+- **Raised:** 2026-11-25, plan 3-sav PR 5.
+- **Note:** `writeScenarioBlock` (`scenario_helpers_test.go`) rewrites the whole file and collapses a run of blank lines between blocks to one, so `-update` on a new block deletes 19 blank lines of `one.scenarios.txt` and a "no deleted line" check fails. PR 5 inserted its blocks by hand after the recorder had written them. A later change should make the writer keep the file as it is except for its own block. Left open.
 
 ## Read receipt
 
@@ -2772,29 +2770,19 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-plc Phase 1.
 - **Note:** The library guarantees conservation and determinism of every setting a rule makes, not the stability of the loop (PLC-A1). S156 and S157 report the lever paths and assert nothing about the loop. Band values and the defaults of any lever stay with STY and CLB (N-027).
 
-### N-490 `SavingTarget` takes the plan's tier 2
-
-- **Areas:** SAV, AGT
-- **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-saving-and-investment.md` 5.6.3 and FR-SAV-042.
-- **Note:** The goal is net of `Tier2_p`, the money the plan of this tick has committed to the project's inputs, and the view carries no plan, so the exported rule is `SavingTarget(v, tier2)` as `DefaultCredit` takes the figures the view does not hold. A read of saved state (the counts of `SavingPlanned`, the snapshot rows, the query) passes `tier2` 0; the two differ only in the tick in which a funded household buys its inputs, and a test pins it (R1, R9 of the plan). Applied to the spec in PR 1; remove when PR 3 has built the rule.
-
-### N-491 The drawdown saturates
-
-- **Areas:** SAV, WEL, CODE
-- **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-saving-and-investment.md` 4.1 and 11.3.
-- **Note:** The ring clamps each record field to plus or minus `MaxInt64 / MaxWelfareWindow`, so the net of a window can still reach twice `MaxInt64`. `welfare.Drawdown` saturates at each step and returns no error: the buffer is capped by `PrecautionCapTicks * UpkeepCost` and a failure has no caller. Applied to the spec and built in PR 1 (`internal/welfare/drawdown.go`, `FuzzDrawdown`); remove at the close of the row.
-
 ### N-492 A right refused to a non-member is a standing refusal
 
 - **Areas:** SAV, ORG, CAP
 - **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-saving-and-investment.md` 5.5.1.
 - **Note:** ORG's `not_permitted` (`spec-institutions.md` 4) is not cured by buying inputs, so it belongs in the per-recipe `Standing` of a `Builds` or `Repairs` recipe, or the household would save for a start it is refused every tick. Listed in 5.5.1 in PR 1; CAP's `standingReason` must put it in its order (after `not_on_role`) and `TestStanding_NotPermitted` pins it once ORG's PR B has merged. Left open until then.
+- **Update (2026-11-25, plan 3-sav PR 5):** `ReasonNotPermitted` is in the standing set of the rule and its unit test lists it (`saving_strategy_internal_test.go`); the end-to-end test waits for ORG's `not_permitted` in `limitList`, which is not in the tree. Left open.
 
 ### N-493 The drawdown is computed in both views
 
 - **Areas:** SAV, SCL, CODE
 - **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-saving-and-investment.md` 4.1.4 and open question 3.
 - **Note:** The drawdown is `O(window)` per agent with a block and per view, so twice a tick, with no cache. `BenchmarkDrawdown` (PR 1) measured 17.6 microseconds and no allocation at `MaxWelfareWindow` 3 650, which is a cost of 35 microseconds a tick for an agent at the longest window and 1 microsecond at the default of 30. A per-tick cache or a running form needs state and is built only if a scenario at scale shows a cost. Left open for SCL.
+- **Update (2026-11-25, plan 3-sav PR 5):** the module-alone golden and the scenarios run 200 to 400 ticks of about 700 households with a block at the default window of 30 in 1 to 3 seconds a run with the audit on; no cost showed. Left open for a run at scale.
 
 ### N-494 Two config tests use a made-up module name as an unbuilt module
 
@@ -2802,23 +2790,12 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-sav PR 1, `config/config_test.go` and `config/demand_test.go`; updated 2026-11-20, plan 3-sav PR 2 (after merging plan 3-ins).
 - **Note:** Both tests used `[modules.<name>]` as "a module that is not built". Saving and insurance are now both built, so no module is left unbuilt: the two cases use `[modules.nosuch]` and test an unknown key of a made-up module name. Left open until a spec adds a module that is not built, when the cases may use it again.
 
-### N-495 The `economysim.limit` sentence of `spec-saving-and-investment.md` 12.3 was false
-
-- **Areas:** SAV, OBS
-- **Raised:** 2026-11-19, plan 3-sav PR 1.
-- **Note:** The spec said `no_return` is a constant of `economysim.limit` already; the rule file lists only `economysim.bar` (`no_return`, `standing`, `unreachable`, `survival`). Corrected in 12.3 in PR 1; the four constants are the bars. Remove when PR 4 has built them.
-
-### N-496 `Role.Cover` 28 and `Role.Saver` 29 are reserved
-
-- **Areas:** CFG, SAV
-- **Raised:** 2026-11-19, plan 3-sav PR 1, `spec-config.md` 8.2.2.
-- **Note:** The hash ids of the `Role` fields are 28 for `Cover` (insurance) and 29 for `Saver`, reserved in one edit so that the order in which the two modules are built cannot make them collide. INS took 28 when it was built (plan 3-ins PR B: `pairsRole` writes `Cover` at id 28) and SAV took 29 (plan 3-sav PR 2). Both are written in id order. Left open until PR 3 uses them.
-
 ### N-497 The warnings of the saving module that read prices judge a weight of 1 that holds nothing
 
 - **Areas:** SAV, CODE
 - **Raised:** 2026-11-20, plan 3-sav PR 2, `saving_validate.go`, `spec-saving-and-investment.md` 11.2.
 - **Note:** `project_below_hurdle`, `spread_below_margin` and `saving_target_exceeds_money` are pure functions of the configuration, so they value the best build project of a role at the reference prices of the regions it has a group in, for a household of weight 1 that holds no facility, with the yield of a recipe as written (no yield profile, season, technology, draw rent or belief) and the precaution at 0 (the drawdown is state). The last sums, over the groups, the households times the reserve plus the outlay of the role's best build project, against the households times `StartMoney` of every group. A repair is not valued (it needs a facility held). The spec words are loose on both points; settle them in 11.2 when STY runs the first pack. Left open.
+- **Update (2026-11-25, plan 3-sav PR 5):** the golden pack shows two of the warnings at once: `saver_no_project` for the grower (a buffer and no project recipe, as designed) and `spread_below_margin` for the cook at a spread of 40 000, whose margin to hurdle on pack one is above that range. Left open.
 
 ### N-504 An in-kind payout to a store-limited household stops at its free store room
 
@@ -3064,4 +3041,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: aec876e314f8d7294a48b75e
+NOTES-TAG: ae74d3a7f38a6226ce10ac76
