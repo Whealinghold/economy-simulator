@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
@@ -81,7 +82,7 @@ func (k fiscalKind) event() Kind {
 // region's snapshot: the units by commodity and the lots, beside the estate's
 // (spec-fiscal.md 16.3, MarketRow.HeldByTreasury). It is a function of the saved
 // ledger: no state of the module is read, the lot scratch of the snapshot is reused.
-func (s *fiscalState) snapHeld(w *World, g RegionID, acc *snapAcc) {
+func (s *fiscalState) snapHeld(w *World, g RegionID, acc *snapAcc) error {
 	for i := range s.pol.tr {
 		tr := &s.pol.tr[i]
 		if tr.seat != g {
@@ -89,12 +90,16 @@ func (s *fiscalState) snapHeld(w *World, g RegionID, acc *snapAcc) {
 		}
 		lots, err := w.ledger.AppendLots(w.lotBuf[:0], tr.account)
 		w.lotBuf = lots
+		// Excluded from coverage (testing.md 9.5): a ledger refusal of the world's own
+		// treasury account, which a valid configuration cannot cause; the branch only wraps
+		// and returns it, as snapAgent does.
 		if err != nil {
-			invariant("the account of a treasury is unreadable: " + err.Error())
+			return fmt.Errorf("lots of the treasury of authority %d: %w", tr.j, err)
 		}
 		for _, l := range lots {
 			acc.treasury[l.Commodity] = satAdd(acc.treasury[l.Commodity], l.Quantity)
 			acc.lots[l.Commodity]++
 		}
 	}
+	return nil
 }

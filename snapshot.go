@@ -649,9 +649,8 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 	}
 	s.Stores = w.storeRows(s.Stores, g, v)
 	w.fillRegionClass(rr, g)
-	w.marketRows(s, g, acc)
 	s.Jobs = appendJobs(s.Jobs, g, acc)
-	return nil
+	return w.marketRows(s, g, acc)
 }
 
 // roleRow sets the signals of role r of the view of region g: the welfare
@@ -736,10 +735,12 @@ func (b *beliefAcc) add(centre int64, bd beliefs.Bounds) {
 }
 
 // marketRows fills the market rows of region g from its markets and acc.
-func (w *World) marketRows(s *Snapshot, g RegionID, acc *snapAcc) {
+func (w *World) marketRows(s *Snapshot, g RegionID, acc *snapAcc) error {
 	nc := len(w.cfg.Commodities)
 	if w.fiscal != nil {
-		w.fiscal.snapHeld(w, g, acc) // the goods of the treasuries seated in g, beside the estate's
+		if err := w.fiscal.snapHeld(w, g, acc); err != nil { // the goods of the treasuries seated in g, beside the estate's
+			return err
+		}
 	}
 	for c := range nc {
 		i := w.markets.index(g, CommodityID(c))
@@ -754,6 +755,7 @@ func (w *World) marketRows(s *Snapshot, g RegionID, acc *snapAcc) {
 		mean, _ := b.sum.DivHalfEven(b.n)
 		row.MeanCentre = Price(mean)
 	}
+	return nil
 }
 
 // marketState is the state of market i: its report and its window.
