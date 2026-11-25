@@ -60,6 +60,7 @@ RouteRiskScaled
 RumoursServed
 RunEnded
 RunStarted
+SavingPlanned
 SettlementClassChanged
 SettlementHeld
 ShipmentArrived

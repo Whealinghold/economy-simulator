@@ -30,8 +30,11 @@ type ProjectChoice struct {
 	Benefit, Cost, Outlay int64
 	// Held is the value at the beliefs of the inputs and tools of the project the household
 	// already holds (5.5.3), and Funded says it holds enough money for the outlay (5.6.2).
-	Held   int64
-	Funded bool
+	// Committed says the household already holds enough of the project's inputs for the
+	// lowered hurdle of the commit band (5.5.2).
+	Held      int64
+	Funded    bool
+	Committed bool
 }
 
 // SavingTargetResult is the savings target of an agent (spec 3.2.2).
@@ -339,8 +342,8 @@ func (e *projectEval) price(r *RecipeView, cl *SavingClass, hd classHeld, pv pro
 	pvs := e.jobPVs(cl.Class)
 	opp := sav.Opportunity(sav.JobValue(pvs.b, pvs.a, e.v.Weight, hd.capacity), r.Duration)
 	cost := sav.Cost(ln.inputs, opp, MaxMoney)
-	hurdle := e.hurdle
-	if sav.Committed(ln.held, ln.inputs) {
+	hurdle, committed := e.hurdle, sav.Committed(ln.held, ln.inputs)
+	if committed {
 		hurdle = sav.Lowered(hurdle, e.sv.CommitBandBP)
 	}
 	if !sav.Passes(pv.benefit, cost, hurdle, MaxMoney) {
@@ -353,7 +356,7 @@ func (e *projectEval) price(r *RecipeView, cl *SavingClass, hd classHeld, pv pro
 	}
 	return ProjectChoice{
 		Recipe: r.Recipe, Class: cl.Class, Repair: r.Repairs.On, Executions: pv.m,
-		Benefit: pv.benefit, Cost: cost, Outlay: outlay, Held: ln.held,
+		Benefit: pv.benefit, Cost: cost, Outlay: outlay, Held: ln.held, Committed: committed,
 		Funded: sav.Funded(e.v.Money, ln.held, outlay, e.floor),
 	}, projectPassed
 }

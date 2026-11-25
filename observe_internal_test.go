@@ -375,6 +375,11 @@ var stepSites = []site{
 		}
 		return nil
 	}},
+	{"P3.6b", noError(func(w *World) {
+		if w.saving != nil {
+			w.p36bSaving()
+		}
+	})},
 	{"P3.6c", noError(func(w *World) {
 		if w.fiscal != nil {
 			w.p36cTolls()
