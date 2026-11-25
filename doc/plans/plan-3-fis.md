@@ -505,7 +505,7 @@ Deviations and choices the plan left open:
 
 Golden rule held: `git diff --name-status origin/phase-3...HEAD -- testdata` shows A for the two overlays and the three golden files, and M for three expected files with additions only (`--numstat`: 39, 13 and 15 added, none deleted). `golden/off/`, `polity/`, `all/`, the pinned hash and `testdata/checkpoints` are not in the diff.
 
-Tests: S132 (`TestScenarioS132_OffAndZeroScaleNeutral`, `_FullScaleMovesMoney`), S133 to S136, the five golden tests, `TestStep_AllocationsStayAtTheBaseline` rows.
+Tests: S132 (`TestScenarioS132_OffAndZeroScaleNeutral`, `_EmptyModuleNeutral`, `_FullScaleMovesMoney`), S133 to S136, the five golden tests, `TestStep_AllocationsStayAtTheBaseline` rows.
 
 Left open: a spoilage event for the treasury's goods; gomu on `internal/fiscal` (PR 1's owed run); the otelobserver instruments (Q3).
 

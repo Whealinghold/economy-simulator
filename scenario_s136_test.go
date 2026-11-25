@@ -148,12 +148,11 @@ func s136World(t testing.TB, seed uint64) (*economysim.World, economysim.Config,
 	cfg, base := shipperFor(t, loadPackBytes(t, []byte(s136Doc), packThreeTransport...))
 	opts := []economysim.Option{economysim.WithStrategy("ship", threeShipper{base})}
 	out := &s136Out{k: newFiscalKept()}
-	probe := mustWorld(t, cfg, opts...)
-	s, err := probe.Snapshot()
-	if err != nil {
-		t.Fatalf("Snapshot() error = %v, want nil", err)
+	names := make([]string, len(cfg.Regions))
+	for i, r := range cfg.Regions {
+		names[i] = r.ID
 	}
-	j := &tollJudge{fiscalKept: out.k, names: s.Names.Regions, out: out}
+	j := &tollJudge{fiscalKept: out.k, names: names, out: out}
 	w := mustWorld(t, cfg, append(slices.Clone(opts), economysim.WithSeed(seed), economysim.WithAudit(), economysim.WithObserver(j))...)
 	out.start = treasuryByName(t, w, "coast", "crown", "inland")
 	return w, cfg, opts, out
