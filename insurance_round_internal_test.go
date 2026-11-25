@@ -93,7 +93,7 @@ func TestCoverRound_FormsARoutePolicy(t *testing.T) {
 }
 
 // TestCoverRound_FormsAStorePolicy verifies a store policy: a share of the held value, priced at
-// the store rate, for the one tick, and ended at the next round.
+// the store rate, for the one tick, and ended at P8.1b of the tick.
 //
 // Worked: the household holds 10 grain at a unit value of 1 000, so the held value is
 // 10 000 and a share of 5 000 bp is a sum of 5 000. At a store rate of 100 bp the premium
@@ -118,9 +118,9 @@ func TestCoverRound_FormsAStorePolicy(t *testing.T) {
 	if in := w.insurance; len(in.stores) != 1 || len(in.open) != 0 || in.liabilityOf(insBacker) != 4_000 {
 		t.Errorf("store policies %d, route policies %d, liability %d, want 1, 0, 4000", len(in.stores), len(in.open), in.liabilityOf(insBacker))
 	}
-	w.p33cCoverRound() // the next round: the store policy of the last tick ends
+	w.p81bSettleStores() // P8.1b of the same tick: the store policy ends with no strike
 	if in := w.insurance; len(in.stores) != 0 || in.liabilityOf(insBacker) != 0 {
-		t.Errorf("after the next round: store policies %d, liability %d, want 0 and 0", len(in.stores), in.liabilityOf(insBacker))
+		t.Errorf("after P8.1b: store policies %d, liability %d, want 0 and 0", len(in.stores), in.liabilityOf(insBacker))
 	}
 	auditNow(t, w)
 }

@@ -25,9 +25,16 @@ import (
 func (w *World) arrivalLoss(s *shipment) {
 	r := w.risk
 	r.lost, r.accountLost = r.lost[:0], r.accountLost[:0]
-	if s.loss == 0 {
-		return
+	if s.loss != 0 {
+		w.strikeArrival(s)
 	}
+	w.insurance.noteArrival(s, r.lost, r.accountLost) // nil-safe: the units lost of an insured shipment, kept for P1.3a
+}
+
+// strikeArrival applies the loss of an arrival with a loss share above 0 to the Transit
+// account and to the traveller's, recording the units lost.
+func (w *World) strikeArrival(s *shipment) {
+	r := w.risk
 	for _, ln := range s.lines {
 		held, _, err := w.ledger.Holding(s.account, int(ln.Commodity))
 		if err != nil {

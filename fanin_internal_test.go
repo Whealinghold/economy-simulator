@@ -89,7 +89,7 @@ func TestFanIns_AreCompositionsOfTheExpectedCalls(t *testing.T) {
 		{"fillEarlyGroups", []string{"fillWants", "fillEndowments", "fillTransport", "fillTradeOnly"}},
 		{"fillLateGroups", []string{"fillBoard", "fillRoomView", "fillTenure", "isHire", "fillEmployment", "fillView"}}, // the last is the infrastructure module's (spec-infrastructure.md 9.1)
 		{"checkTradePlan", []string{"normalisePlan", "checkDiscards", "checkWants", "checkMerchantPlan", "checkRoomPlan", "checkCreditPlan", "checkCoverPlan"}},
-		{"removeAgent", []string{"Tick", "regionOf", "dropAgent", "hasJob", "abandonJob", "dropTraveller", "dropJourney", "dropContracts", "Errorf", "dropAgent", "dropHires", "dropClaims", "dropFacilities", "receive", "Errorf", "mustClose", "Close", "deliver", "deliver", "pool", "dropModules", "logRemoval", "forget"}},
+		{"removeAgent", []string{"Tick", "regionOf", "dropAgent", "hasJob", "abandonJob", "dropTraveller", "dropJourney", "dropContracts", "Errorf", "dropAgent", "dropHires", "dropClaims", "dropPolicies", "dropFacilities", "receive", "Errorf", "mustClose", "Close", "deliver", "deliver", "pool", "dropModules", "logRemoval", "forget"}},
 		{"dropModules", []string{"dropAgent", "dropAgent", "drop", "dropExternal", "dropStorage"}},
 		{"relocationRefusal", []string{"refusal"}},
 		{"tradableItems", []string{"demandItems", "subsistenceItems"}},
