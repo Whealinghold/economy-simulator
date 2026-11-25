@@ -537,13 +537,18 @@ func TestCardinality_StorageAttributesTakeConfiguredValues(t *testing.T) {
 }
 
 // checkFiscal applies the closed-set checks to FiscalFlowApplied: its region, its
-// authority (a jurisdiction of the configuration), its kind and its class.
+// authority (a jurisdiction of the configuration), its kind and its class; and to
+// TreasuryOrdered: its seat region and its authority.
 func (c *cardChecker) checkFiscal(e economysim.Event) {
 	if e, ok := e.(economysim.FiscalFlowApplied); ok {
 		c.region("FiscalFlowApplied", e.Tick, e.Region)
 		c.id("FiscalFlowApplied", e.Tick, "Jurisdiction", int(e.Authority), len(c.names.Jurisdictions))
 		c.member("FiscalFlowApplied", e.Tick, "Kind", string(e.Kind))
 		c.member("FiscalFlowApplied", e.Tick, "FiscalClass", string(e.Class))
+	}
+	if e, ok := e.(economysim.TreasuryOrdered); ok {
+		c.region("TreasuryOrdered", e.Tick, e.Region)
+		c.id("TreasuryOrdered", e.Tick, "Jurisdiction", int(e.Authority), len(c.names.Jurisdictions))
 	}
 }
 

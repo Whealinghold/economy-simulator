@@ -308,8 +308,7 @@ func (w *World) feedWelfare(mi int, trades []Trade) {
 			w.welfare.addReceipt(int(t.Seller), pay)
 			w.welfare.markTraded(int(t.Seller))
 		}
-		// Excluded from coverage (testing.md 9.5): only an estate is a pseudo-agent and
-		// an estate never bids, so a buyer is never below pseudo.
+		// A pseudo-agent that bids is a treasury (fiscal module, P3.4a): it has no welfare slot.
 		if t.Buyer < pseudo {
 			continue
 		}

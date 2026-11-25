@@ -2959,3 +2959,27 @@ type PolicyDecided struct {
 }
 
 func (PolicyDecided) isEvent() {}
+
+// TreasuryOrdered is emitted at P3.4a once per authority in ascending JurisdictionID, after
+// its OrderPlaced and OrderRejected events, when a standing order of the authority was in
+// its window with a wish of at least 1; never otherwise and never with the fiscal module
+// off (spec-fiscal.md 16.1.2, FR-FIS-045). It is the counter of the standing orders'
+// clamps: the wish against what the book admitted, and the three caps of 9.3.2 each counted.
+// Every field is a count of orders or of units.
+type TreasuryOrdered struct {
+	Tick int64
+	// Authority is the jurisdiction whose treasury ordered and Region its seat, the one
+	// market its orders go to.
+	Authority JurisdictionID
+	Region    RegionID
+	// Bids and Asks are the orders of the authority the books admitted this tick.
+	Bids, Asks int64
+	// WantedBuy and WantedSell are the units the wishes of its purchases and releases came
+	// to, and PlacedBuy and PlacedSell the units of the orders the books admitted.
+	WantedBuy, PlacedBuy, WantedSell, PlacedSell int64
+	// CutCash, CutHold and CutStock are the units cut from a wish by the cash, the hold
+	// and the stock less the reserve (spec-fiscal.md 9.3.2).
+	CutCash, CutHold, CutStock int64
+}
+
+func (TreasuryOrdered) isEvent() {}

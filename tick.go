@@ -60,6 +60,7 @@ var positionList = [...]position{
 	{"P3.3a", "MER", line},
 	{"P3.3b", "CRD", line},
 	{"P3.4", "EST", line},
+	{"P3.4a", "FIS", line},
 	{"P3.5", "EXT", line},
 	{"P3.6", "INF", line},
 	{"P3.6a", "STO", line},
@@ -98,7 +99,7 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P1.3a",
-	"P3.3c", "P3.4a", "P3.6b",
+	"P3.3c", "P3.6b",
 	"P8.1b",
 }
 
@@ -231,6 +232,9 @@ func (w *World) positionsTrade() error {
 	}
 	if err := w.p34Estates(); err != nil {
 		return err
+	}
+	if w.fiscal != nil {
+		w.p34aOrders()
 	}
 	return w.positionsClear()
 }

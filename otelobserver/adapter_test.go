@@ -278,7 +278,7 @@ var (
 		"PopulationScaled", "TransitFactorChanged", "OutsideEnded", "OutsideShocked", "YieldShocked",
 		"TraineeshipStarted", "TraineeshipCompleted", "TraineeshipEnded", "StoreChanged", "RoomLimited", "TechnologyAdvanced", "TechnologyAdjusted", "LoanEnded", "LoanPassed", "CreditSettled", "LoanFormed", "CreditRound", "CreditRateScaled",
 		"SettlementClassChanged", "SettlementHeld", "TitleTransferred", "RentScaled", "RentPaid", "FacilityChanged", "FacilityLimited", "HireFormed", "HireEnded", "LabourRound", "RouteRiskScaled", "MembershipChanged", "RightRefused", "PriceControlled",
-		"LegalLevelSet", "RightSuspensionSet", "StoreLoss", "StoreRiskScaled", "FiscalFlowApplied", "PolicyDecided"}
+		"LegalLevelSet", "RightSuspensionSet", "StoreLoss", "StoreRiskScaled", "FiscalFlowApplied", "TreasuryOrdered", "PolicyDecided"}
 )
 
 // TestAdapter_ExhaustiveOverEvents verifies that every event type is on the
