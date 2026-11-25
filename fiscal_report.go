@@ -80,15 +80,15 @@ func (k fiscalKind) event() Kind {
 // snapHeld adds the goods of the treasuries seated in region g to the accumulator of the
 // region's snapshot: the units by commodity and the lots, beside the estate's
 // (spec-fiscal.md 16.3, MarketRow.HeldByTreasury). It is a function of the saved
-// ledger: no state of the module is read, only its scratch slice of lots is reused.
+// ledger: no state of the module is read, the lot scratch of the snapshot is reused.
 func (s *fiscalState) snapHeld(w *World, g RegionID, acc *snapAcc) {
 	for i := range s.pol.tr {
 		tr := &s.pol.tr[i]
 		if tr.seat != g {
 			continue
 		}
-		lots, err := w.ledger.AppendLots(s.lots[:0], tr.account)
-		s.lots = lots
+		lots, err := w.ledger.AppendLots(w.lotBuf[:0], tr.account)
+		w.lotBuf = lots
 		if err != nil {
 			invariant("the account of a treasury is unreadable: " + err.Error())
 		}
