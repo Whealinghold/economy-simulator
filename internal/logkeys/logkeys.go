@@ -113,6 +113,9 @@ const (
 	// less than the share left them because the recipient had no room.
 	Cut      = "cut"
 	Headroom = "headroom"
+	// Exempt is a count of trades of a duty that are in no base, because the payer side
+	// is a pseudo-agent.
+	Exempt = "exempt"
 	// Births and Deaths are counts of households born and of households that died.
 	Births = "births"
 	Deaths = "deaths"

@@ -103,6 +103,10 @@ type fiscalFlowState struct {
 	// carry of a purchase or a release.
 	carry  []carryPair
 	single int64
+	// duty is a duty's payer, scope, commodity, rate and the trades of the tick; toll
+	// a toll's side, mode and amount.
+	duty fiscalDuty
+	toll fiscalToll
 }
 
 // fiscalAgg is the aggregate of one flow in one region in the tick: the counters of
@@ -110,6 +114,7 @@ type fiscalFlowState struct {
 type fiscalAgg struct {
 	due, applied                int64
 	parties, short, cut, headrm int64
+	exempt                      int64
 }
 
 // fiscalPayer is one account a flow acts on in the tick: the account, its weight
@@ -127,6 +132,7 @@ type fiscalPayer struct {
 type fiscalState struct {
 	pol     *polity
 	flows   []fiscalFlowState // canonical position order
+	tolls   [2]int            // the positions of the tolls: from, to
 	regions int
 	agg     []fiscalAgg // flow position * regions + region
 	ran     []int       // the positions that ran at P1.7b, in event order
@@ -134,7 +140,10 @@ type fiscalState struct {
 	// valued and added to the welfare scratch at P6.3 (spec-fiscal.md 12.3); scratch.
 	receipts []fiscalReceipt
 	// scratch
+	paid    []tollCharge // the tolls of the shipment being checked or dispatched
+	view    []tollCharge // the tolls of a route row
 	payers  []fiscalPayer
+	bases   []fiscal.Base // a duty's base of each payer
 	dues    []int64
 	take    []int64
 	applied []int64
@@ -165,12 +174,23 @@ func newFiscal(c *Config, p *polity) *fiscalState {
 		}
 		f.target = s.resolve(c, f.authority, t.Target)
 	}
-	for i, d := range m.Duties {
-		s.add(c, fkDuty, i, d.ID, d.Authority, d.Window)
+	for i := range m.Duties {
+		d := &m.Duties[i]
+		f := s.add(c, fkDuty, i, d.ID, d.Authority, d.Window)
+		f.duty = newDuty(c, d)
+		// a duty is paid by households, in the regions of the trades it takes.
+		f.target = fiscalTarget{kind: TargetHouseholds, role: -1, in: s.regionsOf(c, f.authority, d.Region)}
 	}
-	for i, t := range m.Tolls {
-		s.add(c, fkToll, i, t.ID, t.Authority, t.Window)
+	s.tolls[0] = len(s.flows)
+	for i := range m.Tolls {
+		t := &m.Tolls[i]
+		f := s.add(c, fkToll, i, t.ID, t.Authority, t.Window)
+		f.toll = newToll(c, t)
+		// a toll is paid by the shipper, a household; the regions its authority covers
+		// are where a crossing is told.
+		f.target = fiscalTarget{kind: TargetHouseholds, role: -1, in: s.regionsOf(c, f.authority, "")}
 	}
+	s.tolls[1] = len(s.flows)
 	for i, o := range m.Payouts {
 		f := s.add(c, fkPayout, i, o.ID, o.Authority, o.Window)
 		f.period = flowPeriod(c, o.Per)

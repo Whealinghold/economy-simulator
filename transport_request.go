@@ -34,15 +34,16 @@ type shipCtx struct {
 	k, n, units int64
 	// haul is the haul units redeemed, n * s.
 	haul int64
+	// toll is the total toll of the path, left by the check of row 22a (fiscal module).
+	toll int64
 	// lines is the request's lines in commodity order; the quantity of each is
 	// also in t.qty by commodity until the request ends.
 	lines []Line
 }
 
 // shipChecks are the checks of spec-transport.md 5.4 in the order of its table.
-// Row 22a (toll_unaffordable) is the marked seam of its module: an empty
-// position here, filled when its module is built, and its reason is not declared
-// yet (D446). Rows 3a (has_store) and 11a (consignee_full) are the storage
+// Row 22a (toll_unaffordable) is the fiscal module's: ckToll, empty while it is off
+// (spec-fiscal.md 7.4). Rows 3a (has_store) and 11a (consignee_full) are the storage
 // module's and do nothing while it is off. The table is never written.
 var shipChecks = [...]func(c *shipCtx) Reason{
 	ckCount,         // 1
@@ -66,7 +67,7 @@ var shipChecks = [...]func(c *shipCtx) Reason{
 	ckHaul,          // 20
 	ckFeed,          // 21
 	ckProvisioned,   // 22
-	nil,             // 22a toll_unaffordable: FIS
+	ckToll,          // 22a toll_unaffordable: FIS
 }
 
 // ckCount is row 1: the request number MaxDispatchPerTick + 1 or later.
@@ -387,7 +388,7 @@ func (w *World) dispatch(a *agent, idx int, r *ShipmentRequest, region RegionID)
 	}
 	s := w.send(c)
 	if w.obs.supplied {
-		w.deliverDispatched(&s)
+		w.deliverDispatched(&s, c.toll)
 	}
 	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
 		w.log.LogAttrs(ctx, slog.LevelDebug, "shipment dispatched",
@@ -406,8 +407,8 @@ func (w *World) shipmentRefused(a *agent, r *ShipmentRequest, reason Reason) {
 }
 
 // send applies a request that passed the checks: the steps 1 to 5 of
-// spec-transport.md 5.5.1. The seams of the toll (3a) and the risk (4a) are empty
-// positions here, each filled by its module. A refusal of the ledger below is a
+// spec-transport.md 5.5.1. The steps of the toll (3a) and the risk (4a) belong to
+// their modules and are guarded calls. A refusal of the ledger below is a
 // violated invariant: every move was checked.
 func (w *World) send(c *shipCtx) shipment {
 	t, a := c.t, c.a
@@ -434,7 +435,9 @@ func (w *World) send(c *shipCtx) shipment {
 	} else {
 		w.spendTrip(a, c)
 	}
-	// 3a: the toll (FIS).
+	if w.fiscal != nil {
+		w.chargeToll(c) // 3a: the toll
+	}
 	if w.risk != nil {
 		s.loss = w.riskStrike(&s) // 4a: the risk
 	}
@@ -505,7 +508,7 @@ func (w *World) spendTrip(a *agent, c *shipCtx) {
 }
 
 // deliverDispatched builds and delivers ShipmentDispatched; the lines are a copy.
-func (w *World) deliverDispatched(s *shipment) {
+func (w *World) deliverDispatched(s *shipment, toll int64) {
 	lines := make([]Amount, len(s.lines))
 	for i, ln := range s.lines {
 		lines[i] = Amount(ln)
@@ -513,6 +516,6 @@ func (w *World) deliverDispatched(s *shipment) {
 	w.obs.deliver(ShipmentDispatched{
 		Tick: s.dispatched, Shipment: s.id, Mode: s.mode, Region: s.from, To: s.to,
 		Shipper: s.shipper, Traveller: s.traveller, Consignee: s.consignee, Hired: s.hired,
-		Arrives: s.arrives, Units: s.units, HaulUnits: s.haulUnits, Lines: lines, LossBP: s.loss,
+		Arrives: s.arrives, Units: s.units, HaulUnits: s.haulUnits, Lines: lines, LossBP: s.loss, Toll: Money(toll),
 	})
 }

@@ -17,7 +17,7 @@ func (s *state) carriage(t *trip, q int64) (c merchant.Carriage, n int64, ok boo
 	if !ok {
 		return c, 0, false
 	}
-	c = merchant.Carriage{N: n, K: t.k, Hired: md.Hired, S: t.s}
+	c = merchant.Carriage{N: n, K: t.k, Hired: md.Hired, S: t.s, Toll: t.toll}
 	if md.Hired {
 		hi := s.at(md.Haul)
 		if hi < 0 {
@@ -205,7 +205,11 @@ func (s *state) otherCost(t *trip, q, n int64) (int64, bool) {
 	if !ok {
 		return 0, false
 	}
-	var total int64
+	// The toll of the trip is paid in cash at dispatch (spec-merchants.md 6.2.1 item 2).
+	total, ok := checked.Mul(n, t.toll)
+	if !ok {
+		return 0, false
+	}
 	for _, l := range ls[1:] {
 		i := s.at(l.c)
 		if i < 0 {

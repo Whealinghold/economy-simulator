@@ -140,9 +140,7 @@ var deferredCore = map[string]string{}
 // notBuiltFields names the Event.Field entries of a row of 4.1 whose module
 // has not appended the field to its declared event yet (D3 of the plan of
 // Stage 0). The change that appends one deletes its entry.
-var notBuiltFields = []string{
-	"ShipmentDispatched.Toll", // fiscal module, FIS 16.1
-}
+var notBuiltFields = []string{}
 
 // eventRow is one row of the tables of spec-observability.md 4.1.
 type eventRow struct {
