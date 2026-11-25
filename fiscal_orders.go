@@ -48,7 +48,7 @@ type orderTally struct {
 	wished                                       bool
 }
 
-// p34aOrders is P3.4a: for each authority in ascending JurisdictionID, its purchases
+// p34aOrders is P3.4a: for each authority in ascending authority ID, its purchases
 // in ascending flow ID and then its releases in ascending flow ID, each flow in its
 // window and above scale 0 giving one order or none; then TreasuryOrdered. The flows
 // are in the canonical order of the lists, so the bid of an authority comes before its

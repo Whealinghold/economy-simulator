@@ -375,6 +375,10 @@ type MarketRow struct {
 	// resolution floor, where a markdown cannot lower them (spec-estates.md
 	// 2.7.3); at most HeldByEstate. Derived from the saved listings; appended last.
 	EstateAtFloor Quantity
+	// HeldByTreasury is the units of the commodity held by the treasuries seated in the
+	// region, beside HeldByAgents and HeldByEstate; their lots are in Lots. It is 0
+	// with the fiscal module off (spec-fiscal.md 16.3).
+	HeldByTreasury Quantity
 	// Beliefs is the beliefs of the region's agents for the commodity; the
 	// centres are the mean (half to even), lowest and highest; AtFloor and
 	// AtCeiling count the beliefs at the bounds of their range.
@@ -400,14 +404,14 @@ type beliefAcc struct {
 
 // snapAcc is what one region's agents add up, by commodity and by recipe.
 type snapAcc struct {
-	held, estate, atFloor, lots, pending []int64
-	jobs, execs, hh                      []int64
-	bel                                  []beliefAcc
+	held, estate, treasury, atFloor, lots, pending []int64
+	jobs, execs, hh                                []int64
+	bel                                            []beliefAcc
 }
 
 func newSnapAcc(commodities, recipes int) snapAcc {
 	return snapAcc{
-		held: make([]int64, commodities), estate: make([]int64, commodities), atFloor: make([]int64, commodities),
+		held: make([]int64, commodities), estate: make([]int64, commodities), treasury: make([]int64, commodities), atFloor: make([]int64, commodities),
 		lots: make([]int64, commodities), pending: make([]int64, commodities),
 		jobs: make([]int64, recipes), execs: make([]int64, recipes), hh: make([]int64, recipes),
 		bel: make([]beliefAcc, commodities),
@@ -417,6 +421,7 @@ func newSnapAcc(commodities, recipes int) snapAcc {
 func (a *snapAcc) reset() {
 	clear(a.held)
 	clear(a.estate)
+	clear(a.treasury)
 	clear(a.atFloor)
 	clear(a.lots)
 	clear(a.pending)
@@ -638,6 +643,9 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 			acc.atFloor[l.Commodity] = satAdd(acc.atFloor[l.Commodity], l.Quantity)
 		}
 	}
+	if w.fiscal != nil {
+		w.fiscal.snapHeld(w, g, acc)
+	}
 	if w.pop != nil {
 		w.popSnapshotRegion(s, g, v)
 	}
@@ -739,6 +747,7 @@ func (w *World) marketRows(s *Snapshot, g RegionID, acc *snapAcc) {
 		row.HeldByAgents, row.HeldByEstate = Quantity(acc.held[c]), Quantity(acc.estate[c])
 		row.Lots, row.Pending = acc.lots[c], Quantity(acc.pending[c])
 		row.EstateAtFloor = Quantity(acc.atFloor[c])
+		row.HeldByTreasury = Quantity(acc.treasury[c])
 		row.Beliefs, row.LowCentre, row.HighCentre = b.n, Price(b.low), Price(b.high)
 		row.AtFloor, row.AtCeiling = b.atFloor, b.atCeiling
 		mean, _ := b.sum.DivHalfEven(b.n)

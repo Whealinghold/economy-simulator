@@ -419,6 +419,7 @@ func renderSample(t int64, s economysim.Snapshot, anchors map[goldenMarketKey]in
 		}
 		addKV(&r, "held_agents", int64(m.HeldByAgents))
 		addKV(&r, "held_estate", int64(m.HeldByEstate))
+		addKV(&r, "held_treasury", int64(m.HeldByTreasury))
 		addKV(&r, "pending", int64(m.Pending))
 		addKV(&r, "cost_anchor", anchors[goldenMarketKey{int(st.Region), int(st.Commodity)}])
 		if r.Len() > 0 {
@@ -562,7 +563,7 @@ func writeFinal(b *strings.Builder, s economysim.Snapshot) {
 	}
 	goods := map[string]int64{}
 	for _, m := range s.Markets {
-		if u := int64(m.HeldByAgents) + int64(m.HeldByEstate); u != 0 {
+		if u := int64(m.HeldByAgents) + int64(m.HeldByEstate) + int64(m.HeldByTreasury); u != 0 {
 			goods[tableName(s.Names.Commodities, int(m.State.Commodity))] += u
 		}
 	}

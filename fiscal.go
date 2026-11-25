@@ -155,6 +155,7 @@ type fiscalState struct {
 	order   []int      // the active payouts, grouped by authority and resource
 	ent     []payEntry // the recipients of one group of payouts
 	cut     fiscal.Scratch
+	lots    []ledger.Lot // the lots of a treasury read for the snapshot
 }
 
 // newFiscal builds the state of a canonical configuration the validator accepted,
