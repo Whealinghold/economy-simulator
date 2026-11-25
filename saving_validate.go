@@ -7,13 +7,12 @@ import (
 	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/household"
 	"github.com/Whealinghold/economy-sim/internal/production"
-	"github.com/Whealinghold/economy-sim/internal/saving"
+	sav "github.com/Whealinghold/economy-sim/internal/saving"
 )
 
 // This file is the validation of the saving module (spec-saving-and-investment.md 11;
 // the continuation file of saving.go, architecture.md 2.6): the rules of 11.1 that
-// Validate checks and the eight warnings of 11.2. The module adds no behaviour yet: a
-// configuration with the module on builds a world that ignores it.
+// Validate checks and the eight warnings of 11.2.
 
 // savingModulePath is the path of the module in a configuration.
 var savingModulePath = []string{"modules", "saving"}
@@ -224,7 +223,7 @@ func savingProjectWarnings(c *Config, lk lookup, m *Saving, ro *Role, p []string
 		return nil
 	}
 	b := ro.Saver
-	if !saving.Passes(best.benefit, best.cost, b.HurdleBP, MaxMoney) {
+	if !sav.Passes(best.benefit, best.cost, b.HurdleBP, MaxMoney) {
 		return []Warning{{Path: p, Rule: "project_below_hurdle"}}
 	}
 	ratio, ok := checked.MulDiv(best.benefit, wholeBP, max(best.cost, 1))
@@ -245,7 +244,7 @@ func bestSavingProject(c *Config, lk lookup, m *Saving, ro *Role) (savingProject
 	var best savingProject
 	found := false
 	for _, region := range savingRegions(c, ro) {
-		if pr, ok := bestSavingProjectIn(c, lk, m, ro, region); ok && (!found || saving.Better(savingCandidate(pr, 0), savingCandidate(best, 0))) {
+		if pr, ok := bestSavingProjectIn(c, lk, m, ro, region); ok && (!found || sav.Better(savingCandidate(pr, 0), savingCandidate(best, 0))) {
 			best, found = pr, true
 		}
 	}
@@ -253,8 +252,8 @@ func bestSavingProject(c *Config, lk lookup, m *Saving, ro *Role) (savingProject
 }
 
 // savingCandidate is the project as the pure rule compares it: by benefit over cost.
-func savingCandidate(p savingProject, id int64) saving.Candidate {
-	return saving.Candidate{Benefit: p.benefit, Cost: p.cost, ID: id}
+func savingCandidate(p savingProject, id int64) sav.Candidate {
+	return sav.Candidate{Benefit: p.benefit, Cost: p.cost, ID: id}
 }
 
 // savingRegions are the distinct regions in which the role has a group, in the order of
@@ -285,19 +284,19 @@ func valueSavingProject(c *Config, lk lookup, m *Saving, ro *Role, region string
 	b := ro.Saver
 	var benefit int64
 	if row, has := savingWorthRow(b, cl.ID); has {
-		rate := saving.WorthRate(cl.Decay, cl.WearPerUse, 1, cl.Capacity)
-		benefit = saving.WorthBenefit(row.PerTick, saving.ServiceTime(cl.Durability, rate, b.PaybackTicks), 0, row.Count, MaxMoney)
+		rate := sav.WorthRate(cl.Decay, cl.WearPerUse, 1, cl.Capacity)
+		benefit = sav.WorthBenefit(row.PerTick, sav.ServiceTime(cl.Durability, rate, b.PaybackTicks), 0, row.Count, MaxMoney)
 	} else if cl.Kind == kindSite {
-		gain := saving.BuildGain(saving.JobValue(pvB, pvA, 1, 0), saving.JobValue(pvB, pvA, 1, cl.Capacity))
-		rate := saving.Rate(cl.Decay, cl.WearPerUse, min(1, cl.Capacity), max(rc.Duration, 1))
-		benefit = saving.SiteBenefit(gain, saving.ServiceTime(cl.Durability, rate, b.PaybackTicks), MaxMoney)
+		gain := sav.BuildGain(sav.JobValue(pvB, pvA, 1, 0), sav.JobValue(pvB, pvA, 1, cl.Capacity))
+		rate := sav.Rate(cl.Decay, cl.WearPerUse, min(1, cl.Capacity), max(rc.Duration, 1))
+		benefit = sav.SiteBenefit(gain, sav.ServiceTime(cl.Durability, rate, b.PaybackTicks), MaxMoney)
 	}
-	cost := saving.Cost(inputs, saving.Opportunity(saving.JobValue(pvB, pvA, 1, 0), rc.Duration), MaxMoney)
+	cost := sav.Cost(inputs, sav.Opportunity(sav.JobValue(pvB, pvA, 1, 0), rc.Duration), MaxMoney)
 	upkeep, uok := savingUpkeep(c, lk, region, ro)
 	if !uok {
 		return savingProject{}, false
 	}
-	return savingProject{benefit: benefit, cost: cost, outlay: saving.Outlay(inputs, tools, upkeep, rc.Duration, m.SafetyTicks)}, true
+	return savingProject{benefit: benefit, cost: cost, outlay: sav.Outlay(inputs, tools, upkeep, rc.Duration, m.SafetyTicks)}, true
 }
 
 // savingClass is the facility class with the ID.
@@ -370,7 +369,7 @@ func savingJobValues(lk lookup, region string, ro *Role, class string) (pvB, pvA
 		if !ok || net <= 0 {
 			continue
 		}
-		pv := saving.PerTick(net, rc.Duration)
+		pv := sav.PerTick(net, rc.Duration)
 		switch {
 		case slices.Contains(rc.Needs, class):
 			pvB = max(pvB, pv)
@@ -436,7 +435,7 @@ func savingTargetExceedsMoney(c *Config, lk lookup, m *Saving) bool {
 		if !rok {
 			return true
 		}
-		floor := saving.Floor(reserve, 0)
+		floor := sav.Floor(reserve, 0)
 		if pr, found := bestSavingProjectIn(c, lk, m, ro, g.Region); found {
 			floor = satAdd64(floor, pr.outlay)
 		}
@@ -457,7 +456,7 @@ func bestSavingProjectIn(c *Config, lk lookup, m *Saving, ro *Role, region strin
 	for n, id := range ro.Recipes {
 		if rc := lk.recipe[id]; rc != nil && rc.Builds != nil {
 			pr, ok := valueSavingProject(c, lk, m, ro, region, rc)
-			if ok && (!found || saving.Better(savingCandidate(pr, int64(n)), savingCandidate(best, bestAt))) {
+			if ok && (!found || sav.Better(savingCandidate(pr, int64(n)), savingCandidate(best, bestAt))) {
 				best, bestAt, found = pr, int64(n), true
 			}
 		}

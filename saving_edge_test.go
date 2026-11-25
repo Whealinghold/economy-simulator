@@ -125,16 +125,18 @@ func TestSavingWarnings_ReferencePriceRulesNeedAWorld(t *testing.T) {
 	}
 }
 
-// TestSaving_OnEqualsOffOverSeeds verifies that a world built with the saving module on
-// and a Saver block on a role is the world with the module off, bit for bit, over a few
-// seeds: the snapshot after every tick (but its ConfigHash) and the events of the run
-// are equal. This change gives the module no position, so nothing may read it.
+// TestSaving_OnEqualsOffOverSeeds verifies that a world built with the saving module on and
+// no Saver block on any role is the world with the module off, bit for bit, over a few seeds:
+// the snapshot after every tick (but its ConfigHash and its list of modules) and the events of the run are equal.
+// A module on with no block is inert (spec-saving-and-investment.md 3.2.2: no block, S* is the
+// reserve and nothing changes); a role with a block is the module's, which acts since the
+// views and the rules of the default exist (TestSaving_BuildsItsOwnMill).
 //
 // Requirement: FR-SAV-001
 //
-// Guard: a read of the module's data before its positions exist (a default that moves a
-// spend bound, a draw from the stream) would move every golden of a consumer that
-// switches the module on early.
+// Guard: a read of the module's data for a role with no block (a default that moves a spend
+// bound, a draw from the stream) would move every golden of a consumer that switches the
+// module on for another role.
 func TestSaving_OnEqualsOffOverSeeds(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -146,7 +148,7 @@ func TestSaving_OnEqualsOffOverSeeds(t *testing.T) {
 			t.Parallel()
 			on, off := savingConfig(), savingConfig()
 			off.Modules.Saving = nil
-			roleOf(&off, "grower").Saver = nil
+			roleOf(&on, "grower").Saver, roleOf(&off, "grower").Saver = nil, nil
 			recOn, recOff := &recorder{}, &recorder{}
 			a, errA := economysim.NewWorld(on, economysim.WithSeed(seed), economysim.WithObserver(recOn))
 			b, errB := economysim.NewWorld(off, economysim.WithSeed(seed), economysim.WithObserver(recOff))
@@ -168,6 +170,7 @@ func TestSaving_OnEqualsOffOverSeeds(t *testing.T) {
 					t.Fatalf("seed %d tick %d: Snapshot = %v, %v", seed, tick, errA, errB)
 				}
 				sa.ConfigHash, sb.ConfigHash = [32]byte{}, [32]byte{}
+				sa.Modules, sb.Modules = nil, nil // the names of the modules on differ by design: saving is listed
 				if !reflect.DeepEqual(sa, sb) {
 					t.Fatalf("seed %d tick %d: the module on changed the snapshot, want it ignored", seed, tick)
 				}

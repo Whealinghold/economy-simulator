@@ -331,15 +331,15 @@ func TestHash_SavingOnOff(t *testing.T) {
 }
 
 // TestSaving_ModuleOnBuildsAWorldThatIgnoresIt verifies that a configuration with the
-// module on and a block on a role builds a world and runs a tick: this change adds no
-// behaviour (FR-SAV-001), the module's data is accepted and nothing reads it yet.
+// module on and no block on any role builds a world and runs five ticks as the world with
+// the module off does (FR-SAV-001): the module acts for a role with a block only.
 //
 // Requirement: FR-SAV-001
 func TestSaving_ModuleOnBuildsAWorldThatIgnoresIt(t *testing.T) {
 	t.Parallel()
 	on, off := savingConfig(), savingConfig()
 	off.Modules.Saving = nil
-	roleOf(&off, "grower").Saver = nil
+	roleOf(&on, "grower").Saver, roleOf(&off, "grower").Saver = nil, nil // a role with a block is the module's: it acts
 	a, err := economysim.NewWorld(on, economysim.WithSeed(7))
 	if err != nil {
 		t.Fatalf("NewWorld(saving on) = %v", err)
@@ -361,9 +361,10 @@ func TestSaving_ModuleOnBuildsAWorldThatIgnoresIt(t *testing.T) {
 	if errA != nil || errB != nil {
 		t.Fatalf("Snapshot = %v, %v", errA, errB)
 	}
-	sa.ConfigHash, sb.ConfigHash = [32]byte{}, [32]byte{} // the hash is the one thing the configuration changes
+	sa.ConfigHash, sb.ConfigHash = [32]byte{}, [32]byte{} // the hash and the list of modules are what the configuration changes
+	sa.Modules, sb.Modules = nil, nil
 	if !reflect.DeepEqual(sa, sb) {
-		t.Error("the module on changed the snapshot, want it to be ignored")
+		t.Error("the module on with no block changed the snapshot, want it to be ignored")
 	}
 }
 
