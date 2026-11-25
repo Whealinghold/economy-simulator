@@ -367,7 +367,8 @@ type MarketRow struct {
 	// HeldByAgents and HeldByEstate are the stock in the households' and the
 	// estate's accounts.
 	HeldByAgents, HeldByEstate Quantity
-	// Lots is the lots of the commodity those accounts hold.
+	// Lots is the lots of the commodity the accounts of HeldByAgents, HeldByEstate and
+	// HeldByTreasury hold.
 	Lots int64
 	// Pending is the pending output of the jobs in progress in the region.
 	Pending Quantity
