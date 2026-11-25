@@ -69,9 +69,12 @@ func TestScenarioS133_UpkeepTax(t *testing.T) {
 	fiscalScenario(t, "five", "S133 five+fiscal poll tax with and without an exemption, 200 ticks", scenarioSeedCount(), func(t *testing.T, rep *scenReport, seed uint64) {
 		c := fiscalChecker{t, rep, "S133", "five", seed}
 		plain, safe := runS133(t, seed, 0, ticks), runS133(t, seed, huge, ticks)
-		for name, o := range map[string]s133Out{"plain": plain, "exempt": safe} {
-			c.check(name+": treasury = start + taxed - paid", o.end == o.start+o.taxed-o.paid,
-				"end %d, want %d + %d - %d", o.end, o.start, o.taxed, o.paid)
+		for _, row := range []struct {
+			name string
+			o    s133Out
+		}{{"plain", plain}, {"exempt", safe}} {
+			c.check(row.name+": treasury = start + taxed - paid", row.o.end == row.o.start+row.o.taxed-row.o.paid,
+				"end %d, want %d + %d - %d", row.o.end, row.o.start, row.o.taxed, row.o.paid)
 		}
 		c.check("exemption above every balance collects nothing", safe.taxed == 0, "collected %d", safe.taxed)
 		c.check("the plain tax collects", plain.taxed > 0, "collected %d", plain.taxed)
