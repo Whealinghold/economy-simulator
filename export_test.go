@@ -449,3 +449,46 @@ func LaneWantsTerm(c *Config, regions []RegionID) ([]steady.Ratio, error) {
 
 // TransportLanesLimit is TransportLanes with the bound MaxLanes lowered to limit.
 func TransportLanesLimit(cfg Config, limit int) ([]Lane, error) { return cfg.transportLanes(limit) }
+
+// PolicyViews builds, as P0.3a would for the actors in ascending ActorID, the view of every actor
+// that reads regions (or of every actor when all is set) for the tick boundary, and returns the
+// number of region states built. With shared the whole-world parts of a region's state are built
+// once for the pass, as the actors do; without it once per region, as the module did before the
+// PR B review item (NFR-PLC-002). It exists for BenchmarkPolicyView.
+func PolicyViews(w *World, all, shared bool) int {
+	var pass policyPass
+	n := 0
+	for i := range w.policy.actors {
+		a := &w.policy.actors[i]
+		switch {
+		case !all && !a.reads:
+		case !shared:
+			n += perRegionStates(w, a, &pass)
+		default:
+			v, ok := w.policyView(ActorID(i), a, &pass)
+			if !ok {
+				panic("policy view not built")
+			}
+			n += len(v.Regions)
+		}
+	}
+	return n
+}
+
+// perRegionStates builds the states of the regions actor a covers, each with its own whole-world
+// parts, and returns their number: the cost of the module before the PR B review item.
+func perRegionStates(w *World, a *policyActor, pass *policyPass) int {
+	if !a.reads || !w.policyAnchors(pass) {
+		return 0
+	}
+	for _, g := range a.covered {
+		sh, err := w.newRegionShared()
+		if err == nil {
+			_, err = w.regionStateOf(g, sh)
+		}
+		if err != nil {
+			panic(err)
+		}
+	}
+	return len(a.covered)
+}

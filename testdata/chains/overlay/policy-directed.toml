@@ -1,0 +1,57 @@
+# The policy module on the variant five with a player's actor (spec-policy.md 9, 14.4, spec-reference-chain.md 4.5, plan 3-plc
+# Phase 8): the same layers as overlay/policy.toml, with this file in its place. A test double, not a design: every number is a
+# placeholder (N-015, N-027).
+#
+# council_a is `directed`: it holds the same three levers as in overlay/policy.toml and no schedule, and it decides every 10 ticks on
+# its rotation (tick 0, 10, ... for a first actor), applying what DirectPolicy left in its mailbox since its last decision. The
+# embargo `gate` may close. council_b is the same rule as in overlay/policy.toml.
+
+[modules.policy.actor.council_a]
+jurisdiction = "group_a"
+policy       = "directed"
+every        = 10
+
+[modules.policy.actor.council_a.lever.grant]
+kind     = "flow"
+flow     = "stipend"
+min      = 0
+max      = 20000
+max_step = 5000
+
+[modules.policy.actor.council_a.lever.road]
+kind = "transit"
+from = "centre"
+to   = "east"
+mode = "foot"
+min  = 5000
+max  = 20000
+
+[modules.policy.actor.council_a.lever.gate]
+kind      = "edge"
+against   = "group_b"
+min       = 10000
+max       = 30000
+may_close = true
+
+[modules.policy.actor.council_b]
+jurisdiction  = "group_b"
+policy        = "rule"
+every         = 30
+reads_regions = true
+
+[modules.policy.actor.council_b.lever.lane]
+kind     = "transit"
+from     = "east"
+to       = "centre"
+mode     = "foot"
+min      = 5000
+max      = 20000
+max_step = 2000
+
+[modules.policy.actor.council_b.rule.lane]
+gauge    = "unfed_share"
+target   = 50
+deadband = 50
+span     = 500
+move     = 2000
+raise    = true

@@ -66,7 +66,7 @@ PR description.
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473, N-515 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
 | INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476, N-494, N-496, N-477, N-478, N-479 |
-| INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484 |
+| INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484, N-530 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436, N-471 |
 | LND | N-504, N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475, N-484, N-513 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370, N-478 |
@@ -74,7 +74,7 @@ PR description.
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
 | OBS | N-543, N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482, N-510, N-520 |
 | ORG | N-541, N-542, N-543, N-544, N-540, N-400, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-463, N-464, N-465, N-492, N-483, N-484 |
-| PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485 |
+| PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485, N-530 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348, N-527 |
 | PRO | N-542, N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454, N-501 |
 | REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-525, N-540, N-516, N-517 |
@@ -2751,6 +2751,7 @@ PR description.
 - **Areas:** PLC, OBS
 - **Raised:** 2026-11-19, plan 3-plc Phase 1.
 - **Note:** The view's `Regions` need the body of `World.Region` without `guard()` (a call from inside a step is `ErrInStep`), so PR B splits it into the guard and `regionState`. `prepareAnchors` reads every agent (the cost note of `Region`), so a `ReadsRegions` actor costs one scan per decision; anchors are prepared once per P0.3a pass and the cost is measured, not optimised, in PR B (NFR-PLC-002).
+- **Update (2026-11-20, plan 3-plc PR D):** the whole-world parts of a region's state (journeys, money in contracts and hires, treasuries, shipments) are now built once per pass, not once per covered region. `BenchmarkPolicyView` on the warm five (5 000 households, the two actors of `overlay/policy.toml` reading five regions, GOMAXPROCS 3, seed 1, 3 steps in): 3.31 ms and 463 kB for the views with the shared parts, 3.32 ms and 601 kB with a copy per region, and 1 us with no actor reading regions. The time is the scan of the agents of each region (`snapRegion`), so the sharing saves allocations only on a pack where migration, merchants, hires and transport are off; O(region) anchors and region scans stay the open work.
 
 ### N-483 `soundPolity` is the shared step of N-433
 
@@ -2932,6 +2933,12 @@ PR description.
 - **Raised:** 2026-11-20, plan 3-cap PR 5 (Phase 10).
 - **Note:** On pack one the capacity a drain adds to the arable endowment never binds the draw, so the households with and without the drain are equal in every run and S123 reports them without comparing them. A ground class whose drain binds needs the calibration platform to choose its numbers; until then nothing proves that the drained capacity reaches the population draw.
 
+### N-530 A rule cannot keep the Closed flag of each key of an edge group
+
+- **Areas:** PLC, INT
+- **Raised:** 2026-11-20, plan 3-plc PR D (the open item of the PR B review).
+- **Note:** `rule` sends the `Closed` of the lever as the view has it, which for a group is the first key's (`spec-policy.md` 3.4.4, 8.3.1), and one application writes it to every key. A consumer that closed only some keys of an `Against` group therefore has its flags made equal by the next move of a rule: reopened when the first key is open, or the whole entry refused as `NoClose` (nothing written) when the first is closed and the lever may not close. `TestRule_MixedClosedGroupReadsTheFirstKey` pins both. Keeping each key's own flag needs an entry that says "number only", a field on `LeverSetting` and a change to 6.2, which no consumer has asked for. Leave open until one does.
+
 ### N-510 The LabourRound row of spec-observability 4.1 now names the refusal fields of spec-employment 15.1
 
 - **Areas:** EMP, OBS
@@ -3044,4 +3051,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: d70a3214489e2e5296344109
+NOTES-TAG: a2fe360fa3722c0015a0269d
