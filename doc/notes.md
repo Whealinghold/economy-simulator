@@ -62,7 +62,7 @@ PR description.
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361, N-485 |
 | EXT | N-108, N-112, N-113, N-214 |
-| FIS | N-505, N-506, N-504, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-475, N-483 |
+| FIS | N-507, N-508, N-505, N-506, N-504, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-475, N-483 |
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473, N-515 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
@@ -78,7 +78,7 @@ PR description.
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348, N-527 |
 | PRO | N-542, N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454, N-501 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-525, N-540, N-516, N-517 |
+| REF | N-508, N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-525, N-540, N-516, N-517 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470, N-458, N-459, N-460, N-461 |
 | SAV | N-145, N-156, N-195, N-362, N-382, N-475, N-490, N-491, N-492, N-493, N-495, N-496, N-497 |
@@ -2376,6 +2376,7 @@ PR description.
 - **Areas:** WLD, CODE
 - **Raised:** 2026-11-18, plan 3-fis D15.
 - **Note:** The three calls FIS adds (P3.4a, P3.6c, P4.1a) would take `positionsTrade` past Lizard CCN 10, so plan 3-fis PR 6 splits it the way plan 2-14 O7 did: `positionsTrade` ends at P3.4a and a new `positionsClear` holds P3.5 onwards in source order. A later module that adds a call between P3.5 and P4.1b appends to `positionsClear`; the comments and the two lists of `tick_internal_test.go` name both functions.
+- **Update (2026-11-25, plan 3-fis PR 6):** built. `positionsTrade` now runs P3.3a to P3.4a (with the fiscal P3.4a) and hands over to `positionsClear`, which holds P3.5, P3.6, P3.6a, P3.6c and P4.1 and hands over to `positionsSettle`. `positionsTrade` is at CCN 5 and `positionsClear` at CCN 7. Left open as the pointer for later modules.
 
 ### N-391 The fiscal reasons are an Internal per-flow row family
 
@@ -2837,6 +2838,18 @@ PR description.
 - **Raised:** 2026-11-20, plan 3-fis PR 5, `fiscal_toll.go`.
 - **Note:** `spec-fiscal.md` 16.1 defines `Parties` as the payers with a due, as the sum of weights. A toll has no per-tick payer list, only the shipments of P3.2(c) and P3.3, so `chargeToll` adds the shipper's weight once for each flow for each shipment: a household that sends two shipments across one border in a tick is counted twice in `Parties` of that toll. The count of distinct shippers would need a per-tick set. Left open for FIS: say so in 16.1 or count distinct shippers, whichever the first consumer of `Parties` needs.
 
+### N-507 TreasuryOrdered counts the orders the books admitted
+
+- **Areas:** FIS, OBS
+- **Raised:** 2026-11-25, plan 3-fis PR 6, `fiscal_orders.go`.
+- **Note:** `spec-fiscal.md` 16.1 says `Bids` and `Asks` are "orders placed" and `PlacedBuy` and `PlacedSell` units, and does not say what a book's refusal does to them. The code counts an order only when the book admitted it (`OrderPlaced`): a refused order is an `OrderRejected` with its reason and adds to none of the four, while the wish is still in `WantedBuy` or `WantedSell`. So `WantedBuy - PlacedBuy - CutCash - CutHold` is the units of refused orders. The one refusal a treasury can meet is `receipt_limit` of an ask (a balance within the worst-case receipt of `MaxMoney`). Left open for OBS: say so in 16.1.2 when `spec-observability.md` 4.1 is next edited.
+
+### N-508 A goods total that sums `HeldByAgents` and `HeldByEstate` leaves out a treasury's stock
+
+- **Areas:** FIS, REF
+- **Raised:** 2026-11-25, plan 3-fis PR 6, `snapshot.go`.
+- **Note:** `MarketRow.HeldByTreasury` is new (FR-FIS-048). The goods totals of older scenario tests (`scenario_s19_test.go`, `scenario_s24_test.go`, `scenario_stable_test.go`) add `HeldByAgents` and `HeldByEstate` only; they run with no treasury, so they stay right, but a test of a pack with a purchase or an in-kind payout (S135, plan 3-fis PR 7) must add `HeldByTreasury` to its total, as `render_test.go` does for the golden renderer (`held_treasury` and the goods line). `Lots` counts the treasuries' lots too.
+
 ### N-500 The checkpoint section of tag 24 saves the wages paid
 
 - **Areas:** EMP, CHK
@@ -3027,4 +3040,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 1206a22e44aabc314706f608
+NOTES-TAG: 37d11abbea0ac492fb36badf
