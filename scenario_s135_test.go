@@ -85,7 +85,6 @@ func (b *bufferWatch) sample(t testing.TB, w *economysim.World, staple economysi
 	// One region, so the row of the staple is at its commodity's rank (Markets is by region, then commodity).
 	b.heldStaple = int64(s.Markets[staple].HeldByTreasury)
 	b.maxHeld = max(b.maxHeld, b.heldStaple)
-
 }
 
 // s135Run runs pack one with the buffer store and the shock of S79 on grow_staple (3 000 of 10 000 for the

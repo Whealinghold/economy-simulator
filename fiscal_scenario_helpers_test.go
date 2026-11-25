@@ -127,13 +127,9 @@ func fiscalStepTo(t testing.TB, w *economysim.World, n int64) {
 // treasurySum is the money of the treasuries of w.
 func treasurySum(t testing.TB, w *economysim.World) economysim.Money {
 	t.Helper()
-	s, err := w.Snapshot()
-	if err != nil {
-		t.Fatalf("Snapshot() error = %v, want nil", err)
-	}
 	var sum economysim.Money
-	for _, j := range s.Jurisdictions {
-		sum += j.Money
+	for _, m := range treasuryMoneyRows(t, w) {
+		sum += m
 	}
 	return sum
 }
