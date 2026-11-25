@@ -351,6 +351,11 @@ var stepSites = []site{
 			w.p33bRound()
 		}
 	})},
+	{"P3.3c", noError(func(w *World) {
+		if w.insurance != nil {
+			w.p33cCoverRound()
+		}
+	})},
 	{"P3.4", (*World).p34Estates},
 	{"P3.4a", noError(func(w *World) {
 		if w.fiscal != nil {

@@ -1,0 +1,89 @@
+# The policy module on the variant five (spec-policy.md 14, spec-reference-chain.md 4.5, plan 3-plc Phase 8): two actors, one for
+# each child jurisdiction of overlay/polity-governed.toml. Layer it last: base.toml, lines.toml, five.toml, warm-five.toml,
+# overlay/trade-five.toml, overlay/transport-five.toml, overlay/polity-governed.toml, overlay/faucet.toml, this file (it needs the
+# edges, the foot mode, the two child jurisdictions and the faucet's `stipend` flow). A test double, not a design: every number is
+# a placeholder (N-015, N-027); the actors have no stability claim (N-485).
+#
+# council_a (group_a: centre, north, west) decides every 10 ticks on a schedule and holds three levers, one of each kind:
+#   grant: the faucet's `stipend` (it pays the growers of the north, a region of group_a): 10 000 at tick 0 (its default, so nothing is
+#     written), 15 000 from tick 100 (the first due tick at or after it), 10 000 from 200 and 5 000 from 300; each step is at most the
+#     lever's max_step of 5 000.
+#   road: the foot factor from the centre to the east (a key of group_a's regions): 15 000 from tick 50 and 10 000 (the default, so
+#     the key is cleared) from 250.
+#   gate: the two directions of every edge between group_a and group_b (the centre and the north to the east: `Against`), the factor
+#     20 000 from tick 150 and, from 200 to 249, closed (an embargo), reopened from 250 at the same factor.
+# council_b (group_b: east, south) decides every 30 ticks by a rule and reads its regions:
+#   lane: the foot factor from the east to the centre, raised by 2 000 of 10 000 for each 500 basis points the unfed share of its
+#     regions is above 50, resting inside 0 to 100 (target 50, deadband 50), at most 2 000 a decision, from 5 000 to 20 000.
+
+[modules.policy.actor.council_a]
+jurisdiction = "group_a"
+policy       = "schedule"
+every        = 10
+
+[modules.policy.actor.council_a.lever.grant]
+kind     = "flow"
+flow     = "stipend"
+min      = 0
+max      = 20000
+max_step = 5000
+
+[modules.policy.actor.council_a.lever.road]
+kind = "transit"
+from = "centre"
+to   = "east"
+mode = "foot"
+min  = 5000
+max  = 20000
+
+[modules.policy.actor.council_a.lever.gate]
+kind      = "edge"
+against   = "group_b"
+min       = 10000
+max       = 30000
+may_close = true
+
+[modules.policy.actor.council_a.schedule.grant.0]
+bp = 10000
+[modules.policy.actor.council_a.schedule.grant.100]
+bp = 15000
+[modules.policy.actor.council_a.schedule.grant.200]
+bp = 10000
+[modules.policy.actor.council_a.schedule.grant.300]
+bp = 5000
+
+[modules.policy.actor.council_a.schedule.road.50]
+bp = 15000
+[modules.policy.actor.council_a.schedule.road.250]
+bp = 10000
+
+[modules.policy.actor.council_a.schedule.gate.150]
+bp = 20000
+[modules.policy.actor.council_a.schedule.gate.200]
+bp = 20000
+closed = true
+[modules.policy.actor.council_a.schedule.gate.250]
+bp = 20000
+
+[modules.policy.actor.council_b]
+jurisdiction  = "group_b"
+policy        = "rule"
+every         = 30
+reads_regions = true
+
+[modules.policy.actor.council_b.lever.lane]
+kind     = "transit"
+from     = "east"
+to       = "centre"
+mode     = "foot"
+min      = 5000
+max      = 20000
+max_step = 2000
+
+[modules.policy.actor.council_b.rule.lane]
+gauge    = "unfed_share"
+target   = 50
+deadband = 50
+span     = 500
+move     = 2000
+raise    = true

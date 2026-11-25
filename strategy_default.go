@@ -78,6 +78,14 @@ type tradeCtx struct {
 	bp    beliefs.Params
 	rows  []tradeRow
 	rstar int
+	// jobs is the executions the inputs of the planned recipe are bought for when a saving
+	// project is the planned recipe; 0 for every other plan, which buys InputJobs of each
+	// household of the weight (spec-saving-and-investment.md 5.6.4).
+	jobs int64
+	// pk is the saving pick of the call, set only for a view with a Saving group.
+	pk savingPick
+	// projectPlanned says the saving project is the planned recipe of this plan.
+	projectPlanned bool
 	// hire is the plan of an employer's hires for the next tick (spec-employment.md
 	// 9.2.1): n is 0 for every other agent.
 	hire plannedHire
@@ -120,6 +128,11 @@ func beliefParamsOf(t *BeliefTunables) beliefs.Params {
 // random word.
 func (DefaultStrategy) Work(v *AgentView, _ *rand.Rand) JobRequest {
 	buf := workReportBuf{noList: true}
+	if v.Saving != nil {
+		if req, ok := savingRequest(v); ok {
+			return req // the request of a chosen project, whatever the work share (H-7)
+		}
+	}
 	workReport(v, &buf)
 	req := JobRequest{NoJob: true}
 	if buf.chosen >= 0 {
@@ -157,6 +170,9 @@ func (DefaultStrategy) Revise(o *OutcomeView, _ *rand.Rand) Belief {
 // overflows) and never a panic (D96).
 func (d DefaultStrategy) Trade(v *AgentView, rng *rand.Rand, p *TradePlan) {
 	d.TradeWith(v, rng, p, nil)
+	if v.Insurance != nil {
+		DefaultCover(v, p) // after the orders: the offer is sized from the bids the plan holds
+	}
 }
 
 // TradeWith is Trade with a planned trip in place of the planned recipe, the seam
@@ -188,12 +204,18 @@ func (DefaultStrategy) TradeWith(v *AgentView, rng *rand.Rand, p *TradePlan, tri
 		t.rstar = t.plannedRecipe()
 		t.hire = v.plannedHire(cost)
 	}
+	if v.Saving != nil {
+		t.planProject(savings, cost) // a funded project is the planned recipe (H-6)
+	}
 	t.scaleToRoom(&sc.trade.room)
 	for i := range v.Commodities {
 		t.consider(i, rng)
 	}
 	t.discardForRoom(&sc.trade.room)
 	tier2 := t.tier2Cost() // before allocate lowers a limit to the money
+	if v.Saving != nil {
+		savings = t.savingTarget(tier2) // S* replaces the reserve in the spend cap and nowhere else (H-5)
+	}
 	t.allocate(cost, savings)
 	t.emit(p)
 	if v.Credit != nil {
@@ -268,11 +290,20 @@ func (t *tradeCtx) ownInputs(j *sum, c CommodityID) {
 	}
 	for _, in := range t.v.Recipes[t.rstar].Inputs {
 		if in.Commodity == c {
-			jobs, ok1 := checked.Mul(t.par.InputJobs, t.v.Weight)
+			jobs, ok1 := t.inputJobs()
 			n, ok2 := checked.Mul(jobs, in.Quantity)
 			j.add(n, ok1 && ok2)
 		}
 	}
+}
+
+// inputJobs is the executions of the planned recipe the inputs are bought for: the project's
+// m when a saving project is planned, InputJobs of each household of the weight otherwise.
+func (t *tradeCtx) inputJobs() (int64, bool) {
+	if t.jobs > 0 {
+		return t.jobs, true
+	}
+	return checked.Mul(t.par.InputJobs, t.v.Weight)
 }
 
 // ownTools adds to j the items of c the planned recipe needs as tools, one for each

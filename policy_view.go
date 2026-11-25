@@ -80,14 +80,16 @@ func (w *World) policyTreasury(j JurisdictionID) (Money, bool) {
 }
 
 // policyPass is what the actors of one P0.3a share (plan 3-plc D6): the moment of the
-// tick, found once, and whether the cost anchors were prepared. The anchors read the
-// prices, wages, yield shocks and tools, none of which an actor's write changes (a flow
-// scale, an edge status or a transit factor), so the first actor that reads regions
-// prepares them for the others.
+// tick, found once, whether the cost anchors were prepared, and the whole-world parts of a
+// region's state. The anchors read the prices, wages, yield shocks and tools, and the shared
+// parts the journeys, the money held in contracts and hires, the treasuries and the shipments,
+// none of which an actor's write changes (a flow scale, an edge status or a transit factor), so
+// the first actor that reads regions prepares them for the others.
 type policyPass struct {
 	moment   Moment
 	haveMoms bool
 	anchored bool
+	shared   *regionShared
 }
 
 // policyMoment returns the moment of the tick, false when the calendar cannot place it
@@ -151,15 +153,23 @@ func (w *World) policyView(id ActorID, a *policyActor, pass *policyPass) (Policy
 
 // policyRegions fills v.Regions with the state of each covered region that is not an
 // outside node, in ascending RegionID: the rows of a snapshot filtered by region
-// (FR-OBS-044). The cost is one snapshot's scan per region (NFR-PLC-002).
+// (FR-OBS-044). The cost is the scan of the agents of each covered region, plus one pass over the
+// whole world for every actor of the tick that reads regions (NFR-PLC-002).
 func (w *World) policyRegions(v *PolicyView, a *policyActor, pass *policyPass) bool {
 	if !w.policyAnchors(pass) {
 		return false
 	}
 	v.Moment = pass.moment
+	if pass.shared == nil {
+		sh, err := w.newRegionShared()
+		if err != nil {
+			invariant("the shared part of the region states of a policy pass cannot be read: " + err.Error())
+		}
+		pass.shared = sh
+	}
 	v.Regions = make([]RegionState, 0, len(a.covered))
 	for _, g := range a.covered {
-		rs, err := w.regionStateOf(g)
+		rs, err := w.regionStateOf(g, pass.shared)
 		if err != nil {
 			invariant("the state of a region a policy actor covers cannot be read: " + err.Error())
 		}

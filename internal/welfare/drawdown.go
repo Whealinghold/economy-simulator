@@ -35,3 +35,14 @@ func DrawdownRing(r *Ring, scratch []Record) (int64, []Record) {
 	scratch = r.AppendRecords(scratch[:0])
 	return Drawdown(scratch), scratch
 }
+
+// Cumulative returns C_n of spec-saving-and-investment.md 4.1.1 and 5.6.5: the sum
+// of Income - Cost over recs, saturating at the nearest extreme, 0 for no records.
+// The reach test of a project reads it with len(recs) as the mean surplus a tick.
+func Cumulative(recs []Record) int64 {
+	var cum int64
+	for i := range recs {
+		cum = satAdd(cum, satSub(recs[i].Income, recs[i].Cost))
+	}
+	return cum
+}

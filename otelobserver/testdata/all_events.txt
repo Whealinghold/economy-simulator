@@ -6,6 +6,8 @@ BoundaryFlow
 ContractFormed
 ContractRound
 ContractSettled
+CoverFormed
+CoverRound
 CreditRateScaled
 CreditRound
 CreditSettled

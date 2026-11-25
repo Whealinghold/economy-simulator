@@ -161,6 +161,7 @@ func (w *World) allocate() {
 		w.sto.world = w
 	}
 	w.credit = newCredit(&w.cfg)
+	w.insurance = newInsurance(&w.cfg)
 	w.set = newSettlements(&w.cfg)
 	w.tenure = newTenure(&w.cfg)
 	if w.tenure != nil {
@@ -174,6 +175,7 @@ func (w *World) allocate() {
 		}
 		w.infra.wire(w)
 	}
+	w.saving = newSaving(&w.cfg, &w.roles, w.infra, w.log)
 	w.registerBounds()
 	if w.cfg.Modules.Estates != nil {
 		w.relief = newReliefPass(regions)
@@ -406,6 +408,8 @@ func modulesOn(c *Config) []string {
 		{"fiscal", m.Fiscal != nil},
 		{"institutions", m.Institutions != nil},
 		{"policy", m.Policy != nil},
+		{"saving", m.Saving != nil},
+		{"insurance", m.Insurance != nil},
 	}
 	on := []string{}
 	for _, t := range table {
@@ -527,5 +531,5 @@ func (w *World) summaryLater(attrs []slog.Attr) []slog.Attr {
 	if w.infra != nil {
 		attrs = append(attrs, slog.Int(logkeys.FacilityClasses, len(w.infra.cls)), slog.Int(logkeys.Facilities, len(w.infra.fac)))
 	}
-	return w.policySummary(w.orgSummary(attrs))
+	return w.insuranceSummary(w.policySummary(w.orgSummary(attrs)))
 }

@@ -45,6 +45,8 @@ var stageTwoScenarios = []struct {
 	{97, 101, "plan 3-emp (EMP-S1 to EMP-S5)"},
 	// S119 to S125 (CAP-S1 to CAP-S7) in the fifth pull request of plan 3-cap.
 	{119, 125, "plan 3-cap (CAP-S1 to CAP-S7)"},
+	// S155 to S159 (PLC-S1 to PLC-S5) in the fourth pull request of plan 3-plc.
+	{155, 159, "plan 3-plc (PLC-S1 to PLC-S5)"},
 }
 
 // scenariosNotBuilt are the numbers of stageTwoScenarios that have no test yet, the staged

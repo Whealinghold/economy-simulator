@@ -112,6 +112,8 @@ var declaredEvents = []economysim.Event{
 	economysim.LegalLevelSet{},
 	economysim.RightSuspensionSet{},
 	economysim.PolicyDecided{},
+	economysim.CoverFormed{},
+	economysim.CoverRound{},
 }
 
 // moduleGates are the gates of 4.1 (besides core and the two prefixes) whose events are
@@ -119,7 +121,7 @@ var declaredEvents = []economysim.Event{
 var moduleGates = []string{
 	"demand", "resources", "subsistence", "population", "transport", "information", "migration",
 	"merchant block", "merchants", "external", "employment", "storage", "credit", "technology",
-	"settlements", "tenure", "infrastructure", "risk", "fiscal", "institutions", "policy",
+	"settlements", "tenure", "infrastructure", "risk", "fiscal", "institutions", "policy", "insurance",
 }
 
 // notBuiltEvents names every row of the tables of spec-observability.md 4.1
@@ -128,7 +130,7 @@ var moduleGates = []string{
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
 	"SavingPlanned",
-	"CoverFormed", "CoverEnded", "CoverRound", "CoverSettled",
+	"CoverEnded", "CoverSettled",
 }
 
 // deferredCore names every event whose row of 4.1 has the gate core but that
@@ -408,6 +410,7 @@ func TestEvents_Shape(t *testing.T) {
 		"RoleChanged.From": role, "RoleChanged.To": role,
 		"WeightChanged.From": reflect.TypeFor[int64](), "WeightChanged.To": reflect.TypeFor[int64](),
 		"EndowmentAdjusted.Kind": reflect.TypeFor[economysim.AdjustKind](), "FacilityChanged.Kind": reflect.TypeFor[economysim.FacilityKind](),
+		"CoverFormed.Kind": reflect.TypeFor[economysim.CoverKind](),
 	}
 	for _, e := range declaredEvents {
 		typ := reflect.TypeOf(e)
