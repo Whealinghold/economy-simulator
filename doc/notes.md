@@ -2376,7 +2376,7 @@ PR description.
 - **Areas:** WLD, CODE
 - **Raised:** 2026-11-18, plan 3-fis D15.
 - **Note:** The three calls FIS adds (P3.4a, P3.6c, P4.1a) would take `positionsTrade` past Lizard CCN 10, so plan 3-fis PR 6 splits it the way plan 2-14 O7 did: `positionsTrade` ends at P3.4a and a new `positionsClear` holds P3.5 onwards in source order. A later module that adds a call between P3.5 and P4.1b appends to `positionsClear`; the comments and the two lists of `tick_internal_test.go` name both functions.
-- **Update (2026-11-25, plan 3-fis PR 6):** built. `positionsTrade` now runs P3.3a to P3.4a (with the fiscal P3.4a) and hands over to `positionsClear`, which holds P3.5, P3.6, P3.6a, P3.6c and P4.1 and hands over to `positionsSettle`. `positionsTrade` is at CCN 5 and `positionsClear` at CCN 7. Left open as the pointer for later modules.
+- **Update (2026-11-25, plan 3-fis PR 6):** built. `positionsTrade` now runs P3.3a to P3.4a (with the fiscal P3.4a) and hands over to `positionsClear`, which holds P3.5, P3.6, P3.6a, P3.6c and P4.1 and hands over to `positionsSettle`. `positionsTrade` and `positionsClear` are each at CCN 6. Left open as the pointer for later modules.
 
 ### N-391 The fiscal reasons are an Internal per-flow row family
 
