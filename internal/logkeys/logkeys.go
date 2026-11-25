@@ -113,6 +113,9 @@ const (
 	// less than the share left them because the recipient had no room.
 	Cut      = "cut"
 	Headroom = "headroom"
+	// Exempt is a count of trades of a duty that are in no base, because the payer side
+	// is a pseudo-agent.
+	Exempt = "exempt"
 	// Births and Deaths are counts of households born and of households that died.
 	Births = "births"
 	Deaths = "deaths"
@@ -294,4 +297,24 @@ const (
 	Changed = "changed"
 	Actors  = "actors"
 	Levers  = "levers"
+)
+
+// The keys of the saving module (spec-saving-and-investment.md 12.2): the goal and the
+// buffer of a household, money in minor units (int64), in the two Debug lines
+// "project chosen" and "project declined".
+const (
+	Goal   = "goal"
+	Buffer = "buffer"
+)
+
+// The keys of the insurance module (spec-insurance.md 15.2): a cover policy ID and its
+// sum, premium and payout in minor units, and the counts of underwriters and of insured
+// agents in the construction summary.
+const (
+	CoverPolicy  = "cover_policy"
+	Sum          = "sum"
+	Premium      = "premium"
+	Payout       = "payout"
+	Underwriters = "underwriters"
+	Insured      = "insured"
 )

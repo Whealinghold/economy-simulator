@@ -1860,17 +1860,22 @@
 //     policies (its lane is a region, not a transport lane); a request for one lane of a
 //     trip (LaneCover), beside a request for a store (StoreCover) and an offer to
 //     underwrite (CoverOffer).
-//   - CoverView, CoverPolicyRow, InsuranceTotals, Insurance: the view group of a strategy,
-//     the snapshot rows of the open policies and of the totals, and the module's
+//   - CoverView, CoverPolicyRow, InsuranceTotals, Insurance: the view group of a strategy
+//     (the field AgentView.Insurance, since AgentView.Cover is the subsistence ticks of
+//     upkeep), the snapshot rows of the open policies and of the totals, and the module's
 //     configuration.
+//   - CoverKind, DefaultCover, DefaultOffer: the closed set of the two kinds of policy (route
+//     and store), and the default rules of the insured and of the underwriter, exported for
+//     a wrapper strategy.
 //   - CoverFormed, CoverEnded, CoverRound, CoverSettled: the events of a policy formed, of a
 //     policy ended, of the cover round and of the settlement of a position.
 //   - Saving, Saver, ProjectWorth: the optional module of saving and investment, the block of a
 //     role whose households save for a purpose and invest, and the row that states what a whole
 //     facility of a class is worth to the role per tick (spec-saving-and-investment.md 3.2).
 //     The word investment means a build or a repair only. SavingView is the group of the view
-//     that carries the block, the drawdown, the facilities and the classes; SavingState is the
-//     result of the query Saving; SavingTargetResult and ProjectChoice are the results of the
+//     that carries the block, the drawdown, the facilities and the classes, each class a
+//     SavingClass; BuildView and RepairView are the clauses of a recipe in its view;
+//     SavingState is the result of the query Saving; SavingTargetResult and ProjectChoice are the results of the
 //     two pure rules SavingTarget and ChooseProject; SavingBar names the four bars (no return,
 //     standing, unreachable, survival); SavingPlanned is the event of the counts.
 //   - Savings target, floor of the target, goal: S* is the floor plus the goal and replaces

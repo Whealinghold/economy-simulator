@@ -120,8 +120,8 @@ const (
 // (spec-transport.md 5.4). ReasonUnknownRegion, ReasonSameRegion,
 // ReasonUnknownCommodity, ReasonInvalidQuantity, ReasonInsufficientStock and
 // ReasonOverflow, above, are the others of the table. The reasons of the modules
-// that are not built (has_store, outside_destination, consignee_full,
-// toll_unaffordable) join with their modules.
+// that are not built (has_store, outside_destination, consignee_full) join with
+// their modules.
 const (
 	// ReasonTooManyRequests is the request number MaxDispatchPerTick + 1 or later of
 	// a plan.
@@ -172,6 +172,9 @@ const (
 	// ReasonUnprovisioned is a self-carried request after which the traveller would
 	// be unfed on the way.
 	ReasonUnprovisioned Reason = "unprovisioned"
+	// ReasonTollUnaffordable is a shipment request whose total toll is above the
+	// shipper's available money, with the fiscal module on (spec-fiscal.md 7.4).
+	ReasonTollUnaffordable Reason = "toll_unaffordable"
 )
 
 // The reasons a job ends without output (spec-production.md 14.1).
@@ -1552,6 +1555,10 @@ type ShipmentDispatched struct {
 	Units, HaulUnits int64
 	// Lines is what is shipped, by commodity.
 	Lines []Amount
+	// Toll is the total toll the shipper paid at the dispatch, in minor units (the
+	// fiscal module, spec-fiscal.md 7.4): 0 for no toll or with the module off. It
+	// stands before LossBP as the row of spec-observability.md 4.1 lists it.
+	Toll Money
 	// LossBP is the share of every commodity of the cargo a strike takes at the
 	// arrival, fixed at the dispatch by the risk module (spec-risk.md 4.1, 14.1): 0
 	// for no strike or with the module off.
@@ -2952,3 +2959,121 @@ type PolicyDecided struct {
 }
 
 func (PolicyDecided) isEvent() {}
+
+// SavingBar is the reason a household has no project chosen (spec-saving-and-investment.md
+// 5.5, 12.3): a constant of a closed set, the value of reason in the Debug line "project
+// declined" and of the metric attribute economysim.bar. A household with a project chosen,
+// with a job of a project in progress or with no project recipe has none, "".
+type SavingBar string
+
+// The four bars. They are not values of economysim.reason or of economysim.limit.
+const (
+	// BarNoReturn is a household that weighed a project and none passed or had a value.
+	BarNoReturn SavingBar = "no_return"
+	// BarStanding is a household none of whose projects was weighed because the world would
+	// refuse the start for a reason buying inputs does not cure (spec 5.5.1).
+	BarStanding SavingBar = "standing"
+	// BarUnreachable is a household with a project that passed and was not reachable (5.6.5).
+	BarUnreachable SavingBar = "unreachable"
+	// BarSurvival is a household barred by hunger, money below the reserve or the own-use
+	// mode (5.5.5).
+	BarSurvival SavingBar = "survival"
+)
+
+// The reasons of the insurance module (spec-insurance.md 5.2): the first failing check of
+// a request or an offer at the admission of the cover round, in the order of the table.
+// ReasonTooManyRequests, ReasonDuplicate, ReasonInArrears and ReasonExposure are the
+// reasons above that the table shares. ReasonInsuranceOff is a Debug line only, never
+// counted.
+const (
+	// ReasonInsuranceOff is a cover request or offer submitted while Modules.Insurance
+	// is absent.
+	ReasonInsuranceOff Reason = "insurance_off"
+	// ReasonNotInsuredRole is a cover request of an agent whose role has no Insure block.
+	ReasonNotInsuredRole Reason = "not_insured_role"
+	// ReasonNotUnderwriter is a cover offer of an agent whose role has no Underwrite block.
+	ReasonNotUnderwriter Reason = "not_underwriter"
+	// ReasonInvalidCover is a request with a cover share, a limit or a share outside its
+	// bound.
+	ReasonInvalidCover Reason = "invalid_cover"
+	// ReasonInvalidOffer is an offer with a liability below MinSum, a cover share or a
+	// rate outside its bound.
+	ReasonInvalidOffer Reason = "invalid_offer"
+	// ReasonUnknownLane is a lane request whose mode is not configured or whose
+	// destination is not a region, is the agent's own region or is an outside node.
+	ReasonUnknownLane Reason = "unknown_lane"
+	// ReasonNoStore is a store request of an agent that owns no store, or with the storage
+	// module off.
+	ReasonNoStore Reason = "no_store"
+)
+
+// CoverKind is the kind of a cover policy, a closed set (spec-insurance.md 3.1).
+type CoverKind string
+
+const (
+	// CoverRoute is the policy of the goods of one shipment dispatched in the tick.
+	CoverRoute CoverKind = "route"
+	// CoverStore is the policy of the goods an agent holds in its region, for one tick.
+	CoverStore CoverKind = "store"
+)
+
+// NoShipment is the shipment of a store policy: it has none. NoMode is the mode of a
+// store policy. A store policy's destination is NoRegion.
+const (
+	NoShipment ShipmentID = -1
+	NoMode     ModeID     = -1
+)
+
+// CoverFormed is emitted once per cover formed at P3.3c, in formation order, after the
+// premium moved (spec-insurance.md 15.1). A store policy has NoShipment, NoMode and
+// NoRegion for its shipment, mode and destination. Policy is the policy's ID, issued in
+// order of formation.
+type CoverFormed struct {
+	Tick int64
+	// Policy is the cover policy's ID and Kind its kind.
+	Policy int64
+	Kind   CoverKind
+	// Insured and Underwriter are the two parties, Region the insured's region and
+	// UnderwriterRegion the underwriter's, which the lane of the round makes equal.
+	Insured, Underwriter AgentID
+	Region               RegionID
+	UnderwriterRegion    RegionID
+	// Shipment, Mode and To are the shipment a route policy covers, its mode and its
+	// destination.
+	Shipment ShipmentID
+	Mode     ModeID
+	To       RegionID
+	// Sum is the sum insured, MaxPayout the most the policy pays, Premium what the insured
+	// paid, RateBP the premium as basis points of the sum for the report, and CoverBP the
+	// share of a loss value the underwriter bears.
+	Sum, MaxPayout, Premium Money
+	RateBP, CoverBP         int64
+}
+
+func (CoverFormed) isEvent() {}
+
+// CoverRound is emitted once per region and tick at P3.3c, in ascending RegionID after the
+// last CoverFormed, in which a request or an offer was submitted for it; never when all its
+// counts are 0 (spec-insurance.md 15.1). It is an aggregate bounded by the regions.
+type CoverRound struct {
+	Tick   int64
+	Region RegionID
+	// Requests and Offers are the admitted ones, RequestsRefused and OffersRefused the
+	// refused ones with any reason but insurance_off. InArrears and Exposure are the parts of
+	// OffersRefused with those reasons.
+	Requests, Offers, RequestsRefused, OffersRefused int64
+	InArrears, Exposure                              int64
+	// Candidates are the policies asked for that were found, Formed those formed, Sum and
+	// Premium their sum insured and premium, and Unfilled the sum of the candidates not
+	// covered at the end.
+	Candidates, Formed int64
+	Sum, Premium       Money
+	Unfilled           Money
+	// NoShipment counts requests with no candidate, NoRisk candidates on a lane with no
+	// expected loss, NoOffer candidates no offer covered, BelowMinimum, Funds and Overflow
+	// the failures of a fill by reason, TooMany the lanes that reached MaxPolicies, and
+	// ValueCapped the units valued at the cap.
+	NoShipment, NoRisk, NoOffer, BelowMinimum, Funds, TooMany, Overflow, ValueCapped int64
+}
+
+func (CoverRound) isEvent() {}

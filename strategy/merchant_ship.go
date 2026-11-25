@@ -92,7 +92,7 @@ func (s *state) lower(p *economysim.TradePlan, n0 int) {
 	t := &s.best
 	ceiling := int64(-1)
 	if t.mode.Hired {
-		ceiling, _ = merchant.HaulCeiling(t.res.G, 0, t.n, t.s, s.phi)
+		ceiling, _ = merchant.HaulCeiling(t.res.G, t.toll, t.n, t.s, s.phi)
 	}
 	kept := p.Intents[:n0]
 	for _, in := range p.Intents[n0:] {

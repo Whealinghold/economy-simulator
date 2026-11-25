@@ -34,8 +34,10 @@ func (m Merchant) Revise(o *economysim.OutcomeView, rng *rand.Rand) economysim.B
 // buy its inputs, lowers the bids for the cargo and the haul units to the ceilings
 // the trip can bear, appends the shipment request or the delivery offer when the
 // trip is ready and the takes of a consignee. Without a merchant group in the
-// view it is the default's Trade. The plan notes count each decision once. It
-// takes the words the default takes for the same orders and no other.
+// view it is the default's Trade. With a cover group in the view it then appends the
+// cover requests for the lanes of its trip (spec-insurance.md 10.4). The plan notes count
+// each decision once. It takes the words the default takes for the same orders and no
+// other.
 func (m Merchant) Trade(v *economysim.AgentView, rng *rand.Rand, p *economysim.TradePlan) {
 	if !v.HasMerchant {
 		m.Default.Trade(v, rng, p)
@@ -53,4 +55,5 @@ func (m Merchant) Trade(v *economysim.AgentView, rng *rand.Rand, p *economysim.T
 	s.lower(p, n0)
 	s.send(p)
 	s.takes(p)
+	economysim.DefaultCover(v, p) // the lanes of the trip just appended, the store request and the offer; nothing without a cover group
 }

@@ -59,11 +59,14 @@ var positionList = [...]position{
 	{"P3.3", "MER", line},
 	{"P3.3a", "MER", line},
 	{"P3.3b", "CRD", line},
+	{"P3.3c", "INS", line},
 	{"P3.4", "EST", line},
 	{"P3.5", "EXT", line},
 	{"P3.6", "INF", line},
 	{"P3.6a", "STO", line},
+	{"P3.6c", "FIS", line},
 	{"P4.1", "CLR", line},
+	{"P4.1a", "FIS", line},
 	{"P4.1b", "EMP", line},
 	{"P4.2", "EXT", line},
 	{"P5.1", "CLR", line},
@@ -96,8 +99,7 @@ var positionList = [...]position{
 // positionList.
 var notBuiltPositions = [...]string{
 	"P1.3a",
-	"P3.3c", "P3.4a", "P3.6b", "P3.6c",
-	"P4.1a",
+	"P3.4a", "P3.6b",
 	"P8.1b",
 }
 
@@ -197,7 +199,7 @@ func (w *World) positionsProduce() error {
 }
 
 // positionsPlan is the start of the trade phase of the straight line, from P3.1 to
-// the contract round (P3.3), split from positionsProduce to stay within the Lizard
+// the contract round and the merchants' plan (P3.3, P3.3a), split from positionsProduce to stay within the Lizard
 // complexity limit before the risk module's P3.1a joins it (N-243). The position
 // test reads it as part of the straight line, between positionsProduce and
 // positionsTrade.
@@ -214,6 +216,9 @@ func (w *World) positionsPlan() error {
 	if w.mer != nil && w.mer.on {
 		w.p33Round()
 	}
+	if w.mer != nil && w.mer.roles > 0 {
+		w.p33aPlanned()
+	}
 	return w.positionsTrade()
 }
 
@@ -222,11 +227,11 @@ func (w *World) positionsPlan() error {
 // limit (N-243). The position test reads it as part of the straight line, between
 // positionsPlan and positionsTail.
 func (w *World) positionsTrade() error {
-	if w.mer != nil && w.mer.roles > 0 {
-		w.p33aPlanned()
-	}
 	if w.credit != nil {
 		w.p33bRound()
+	}
+	if w.insurance != nil {
+		w.p33cCoverRound()
 	}
 	if err := w.p34Estates(); err != nil {
 		return err
@@ -240,6 +245,9 @@ func (w *World) positionsTrade() error {
 	if w.sto != nil {
 		w.p36aRoomLimited()
 	}
+	if w.fiscal != nil {
+		w.p36cTolls()
+	}
 	if err := w.p41Clear(); err != nil {
 		return err
 	}
@@ -251,6 +259,9 @@ func (w *World) positionsTrade() error {
 // complexity limit (N-243). The position test reads it as part of the straight
 // line, between positionsTrade and positionsTail.
 func (w *World) positionsSettle() error {
+	if w.fiscal != nil {
+		w.p41aDuties()
+	}
 	if w.employment != nil {
 		if err := w.p41bPayroll(); err != nil {
 			return err

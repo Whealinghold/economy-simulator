@@ -176,8 +176,11 @@ func TestFiscal_RemovalLeavesNoCall(t *testing.T) {
 		if err != nil {
 			t.Fatalf("read %s: %v", name, err)
 		}
-		if strings.Contains(strings.ToLower(src), "fiscal") {
-			t.Errorf("%s mentions the fiscal module, want no call from a removal, a relocation or a strategy", name)
+		for _, ln := range strings.Split(strings.ToLower(src), "\n") {
+			// a comment may name the module (the doc of RouteRow.Toll does); code may not.
+			if strings.Contains(ln, "fiscal") && !strings.HasPrefix(strings.TrimSpace(ln), "//") {
+				t.Errorf("%s has the line %q, want no call to the fiscal module from a removal, a relocation or a strategy", name, ln)
+			}
 		}
 	}
 }

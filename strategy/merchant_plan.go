@@ -49,8 +49,9 @@ type trip struct {
 	// s the haul units a carrying unit costs on the route.
 	ci   int
 	k, s int64
-	// loss is the expected loss of the route in basis points (RouteRow.LossBP).
-	loss int64
+	// loss is the expected loss of the route in basis points (RouteRow.LossBP) and toll
+	// the money a carrying unit pays in tolls on it (RouteRow.Toll).
+	loss, toll int64
 	// rnet is the revenue per unit net of the cut and of the loss, and pacq the local
 	// price.
 	rnet, pacq int64
@@ -258,7 +259,7 @@ func (s *state) cargoLane(rows []economysim.RouteRow, c economysim.CommodityID, 
 		if !r.Has || md == nil || (s.stay && !md.Hired) {
 			continue
 		}
-		t := trip{dest: r.To, cargo: c, mode: md, ci: ci, k: r.Ticks, s: r.HaulPerUnit, loss: r.LossBP}
+		t := trip{dest: r.To, cargo: c, mode: md, ci: ci, k: r.Ticks, s: r.HaulPerUnit, loss: r.LossBP, toll: r.Toll}
 		if s.eval(&t) {
 			s.keepBest(&t)
 		}
