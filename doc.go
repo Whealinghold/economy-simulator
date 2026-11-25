@@ -1867,6 +1867,9 @@
 //   - CoverKind, DefaultCover, DefaultOffer: the closed set of the two kinds of policy (route
 //     and store), and the default rules of the insured and of the underwriter, exported for
 //     a wrapper strategy.
+//   - CoverCause, CoverStage: the closed set of the reasons a policy ends (no loss, claimed, the
+//     insured removed, the underwriter removed) and of the parts of the module a CoverSettled
+//     event counts (the arrival, the store and the claim).
 //   - CoverFormed, CoverEnded, CoverRound, CoverSettled: the events of a policy formed, of a
 //     policy ended, of the cover round and of the settlement of a position.
 //   - Saving, Saver, ProjectWorth: the optional module of saving and investment, the block of a
