@@ -45,7 +45,7 @@ func fiscalFlowIDs(cfg economysim.Config) []string {
 }
 
 // fiscalKept is what a scenario run keeps of the events: the sums of the module's flow events by kind and
-// flow, the module's other events by count, and the money of every flow for the rebuild of a treasury.
+// flow, TreasuryOrdered by count, and the money of every flow for the rebuild of a treasury.
 type fiscalKept struct {
 	applied map[string]economysim.Money // by flow ID: the sum of Applied
 	due     map[string]economysim.Money // by flow ID: the sum of Due
@@ -55,17 +55,14 @@ type fiscalKept struct {
 	events  map[string]int              // by flow ID: the number of FiscalFlowApplied
 	kinds   map[string]economysim.Kind  // by flow ID
 	ordered int                         // TreasuryOrdered
-	scaled  int                         // MoneyFlowScaled
 	toll    economysim.Money            // the sum of ShipmentDispatched.Toll
 	refused int                         // ShipmentRejected with the reason toll_unaffordable
-	others  map[string]int
 }
 
 func newFiscalKept() *fiscalKept {
 	return &fiscalKept{
 		applied: map[string]economysim.Money{}, due: map[string]economysim.Money{}, short: map[string]int64{},
 		cut: map[string]int64{}, exempt: map[string]int64{}, events: map[string]int{}, kinds: map[string]economysim.Kind{},
-		others: map[string]int{},
 	}
 }
 
@@ -82,16 +79,12 @@ func (k *fiscalKept) Observe(e economysim.Event) {
 		k.kinds[v.Flow] = v.Kind
 	case economysim.TreasuryOrdered:
 		k.ordered++
-	case economysim.MoneyFlowScaled:
-		k.scaled++
 	case economysim.ShipmentDispatched:
 		k.toll += v.Toll
 	case economysim.ShipmentRejected:
 		if v.Reason == economysim.ReasonTollUnaffordable {
 			k.refused++
 		}
-	default:
-		k.others[fmt.Sprintf("%T", e)]++
 	}
 }
 
