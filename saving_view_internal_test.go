@@ -150,6 +150,9 @@ func TestView_FacilitiesInTradeView(t *testing.T) {
 // Requirement: FR-SAV-001, FR-SAV-028
 // Guard: every new field is set only for a block; one set for all roles would show a clause to
 // strategies that never asked and would move no golden only by luck.
+//
+// Fix: the cases share one world, so its subtests must not run in parallel; they did, and the race
+// detector failed this test and any test running beside it, intermittently (plan 3-fis PR 7 stage 6).
 func TestView_NoBlockHasNoGroup(t *testing.T) {
 	t.Parallel()
 	on := savWorld(t, nil)
@@ -164,8 +167,9 @@ func TestView_NoBlockHasNoGroup(t *testing.T) {
 		{"role with no block, module off", off, facAgents(off, 0, "weaver")[0]},
 	}
 	for _, tt := range tests {
+		// Not parallel: two cases share the world off, and a view call rewrites the world's view context
+		// and scratch (refreshViewCtx, fillAgentView), so parallel subtests raced under -race.
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			for _, kind := range []viewKind{viewWork, viewTrade} {
 				v := savView(t, tt.w, tt.id, kind)
 				if v.Saving != nil {
