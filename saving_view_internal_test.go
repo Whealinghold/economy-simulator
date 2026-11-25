@@ -164,8 +164,8 @@ func TestView_NoBlockHasNoGroup(t *testing.T) {
 		{"role with no block, module off", off, facAgents(off, 0, "weaver")[0]},
 	}
 	for _, tt := range tests {
-		// Not parallel: two cases share the world "off", and savView rewrites its scratch.
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			for _, kind := range []viewKind{viewWork, viewTrade} {
 				v := savView(t, tt.w, tt.id, kind)
 				if v.Saving != nil {
