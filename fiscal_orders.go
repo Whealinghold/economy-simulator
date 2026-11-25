@@ -160,7 +160,7 @@ func (w *World) reportOrdered(tr *treasury, c *orderTally) {
 			CutCash: c.cutCash, CutHold: c.cutHold, CutStock: c.cutStock})
 	}
 	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
-		w.log.LogAttrs(ctx, slog.LevelDebug, "treasury ordered", slog.String(logkeys.Authority, w.fiscal.pol.v.Name(tr.j)),
+		w.log.LogAttrs(ctx, slog.LevelDebug, "treasury ordered", slog.Int64(logkeys.Tick, w.Tick()), slog.String(logkeys.Authority, w.fiscal.pol.v.Name(tr.j)),
 			slog.Int64(logkeys.Region, int64(tr.seat)))
 	}
 }
