@@ -19,20 +19,38 @@ const fiscalPackTag = 30
 // money before the first step.
 func fiscalEvents(t *testing.T, cfg economysim.Config, seed uint64, ticks int) (*economysim.World, []economysim.FiscalFlowApplied, economysim.Money) {
 	t.Helper()
+	w, evs, start, _ := fiscalEventsTraded(t, cfg, seed, ticks)
+	return w, evs, start
+}
+
+// fiscalEventsTraded is fiscalEvents with, in addition, the money the first treasury
+// took in by its trades less what it paid out by them over the run, which the standing
+// orders of the overlay move beside the flows (spec-fiscal.md 16.5, item 2).
+func fiscalEventsTraded(t *testing.T, cfg economysim.Config, seed uint64, ticks int) (w *economysim.World, evs []economysim.FiscalFlowApplied, start, traded economysim.Money) {
+	t.Helper()
 	rec := &recorder{}
-	w := mustWorld(t, cfg, economysim.WithSeed(seed), economysim.WithAudit(), economysim.WithObserver(rec))
+	w = mustWorld(t, cfg, economysim.WithSeed(seed), economysim.WithAudit(), economysim.WithObserver(rec))
 	s0, err := w.Snapshot()
 	if err != nil || len(s0.Jurisdictions) == 0 {
 		t.Fatalf("Snapshot() before the first step = %d treasuries, %v, want at least one", len(s0.Jurisdictions), err)
 	}
 	stepBoth(t, ticks, w)
-	var evs []economysim.FiscalFlowApplied
+	agent := s0.Jurisdictions[0].Agent
 	for _, e := range rec.events {
-		if f, ok := e.(economysim.FiscalFlowApplied); ok {
-			evs = append(evs, f)
+		switch e := e.(type) {
+		case economysim.FiscalFlowApplied:
+			evs = append(evs, e)
+		case economysim.TradeExecuted:
+			value := economysim.Money(int64(e.Price) * int64(e.Quantity))
+			if e.Seller == agent {
+				traded += value
+			}
+			if e.Buyer == agent {
+				traded -= value
+			}
 		}
 	}
-	return w, evs, s0.Jurisdictions[0].Money
+	return w, evs, s0.Jurisdictions[0].Money, traded
 }
 
 // taxEventFault returns what is wrong with e as the tax of the flow poll that follows
@@ -100,8 +118,9 @@ func flowFaults(evs, payouts []economysim.FiscalFlowApplied) []string {
 // root, in ascending tick order and at most once per tick, with Applied no more than
 // Due and Due less Applied no more than what the payers fell short; every payout event
 // is of the flow "alms" with Applied no more than Due; and the root's treasury ends at
-// exactly its start money plus the taxes and the duties applied less the payouts applied
-// (the standing orders of the overlay are not built, so nothing else moves it). The audit, on every
+// exactly its start money plus the taxes and the duties applied less the payouts applied,
+// plus the money of its own trades (the overlay's standing orders buy and sell; nothing
+// else moves it). The audit, on every
 // tick, is what proves money is conserved: a tax or a payout moves money between
 // sectors and mints none.
 //
@@ -119,7 +138,7 @@ func TestFiscal_PackTaxIsCollectedAndRemitted(t *testing.T) {
 		t.Skip("end-to-end test, skipped with -short")
 	}
 	const seed, ticks = 1, 30
-	w, evs, start := fiscalEvents(t, fiscalPackConfig(t, false), seed, ticks)
+	w, evs, start, traded := fiscalEventsTraded(t, fiscalPackConfig(t, false), seed, ticks)
 	taxed, paid, payouts := fiscalFlowSums(evs)
 	if taxed <= 0 || len(payouts) == 0 {
 		t.Fatalf("taxes applied = %d and payout events = %d over %d ticks (seed %d), want both positive", taxed, len(payouts), ticks, seed)
@@ -131,8 +150,8 @@ func TestFiscal_PackTaxIsCollectedAndRemitted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Snapshot() error = %v, want nil", err)
 	}
-	if got, want := snap.Jurisdictions[0].Money, start+taxed-paid; got != want {
-		t.Errorf("treasury after %d ticks (seed %d) = %d, want %d = start %d + taxed and dutied %d - paid %d", ticks, seed, got, want, start, taxed, paid)
+	if got, want := snap.Jurisdictions[0].Money, start+taxed-paid+traded; got != want {
+		t.Errorf("treasury after %d ticks (seed %d) = %d, want %d = start %d + taxed and dutied %d - paid %d + traded %d", ticks, seed, got, want, start, taxed, paid, traded)
 	}
 }
 

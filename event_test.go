@@ -103,6 +103,7 @@ var declaredEvents = []economysim.Event{
 	economysim.LabourRound{},
 	economysim.RouteRiskScaled{},
 	economysim.FiscalFlowApplied{},
+	economysim.TreasuryOrdered{},
 	economysim.StoreLoss{},
 	economysim.StoreRiskScaled{},
 	economysim.MembershipChanged{},
@@ -130,7 +131,6 @@ var moduleGates = []string{
 // regions, checkpoint and skill stages. The change that
 // declares one deletes its entry; the catalogue test fails on a stale entry.
 var notBuiltEvents = []string{
-	"TreasuryOrdered",
 	"CoverEnded", "CoverSettled",
 }
 

@@ -376,7 +376,8 @@ type MarketRow struct {
 	// HeldByAgents and HeldByEstate are the stock in the households' and the
 	// estate's accounts.
 	HeldByAgents, HeldByEstate Quantity
-	// Lots is the lots of the commodity those accounts hold.
+	// Lots is the lots of the commodity the accounts of HeldByAgents, HeldByEstate and
+	// HeldByTreasury hold.
 	Lots int64
 	// Pending is the pending output of the jobs in progress in the region.
 	Pending Quantity
@@ -384,6 +385,10 @@ type MarketRow struct {
 	// resolution floor, where a markdown cannot lower them (spec-estates.md
 	// 2.7.3); at most HeldByEstate. Derived from the saved listings; appended last.
 	EstateAtFloor Quantity
+	// HeldByTreasury is the units of the commodity held by the treasuries seated in the
+	// region, beside HeldByAgents and HeldByEstate; their lots are in Lots. It is 0
+	// with the fiscal module off (spec-fiscal.md 16.3).
+	HeldByTreasury Quantity
 	// Beliefs is the beliefs of the region's agents for the commodity; the
 	// centres are the mean (half to even), lowest and highest; AtFloor and
 	// AtCeiling count the beliefs at the bounds of their range.
@@ -409,14 +414,14 @@ type beliefAcc struct {
 
 // snapAcc is what one region's agents add up, by commodity and by recipe.
 type snapAcc struct {
-	held, estate, atFloor, lots, pending []int64
-	jobs, execs, hh                      []int64
-	bel                                  []beliefAcc
+	held, estate, treasury, atFloor, lots, pending []int64
+	jobs, execs, hh                                []int64
+	bel                                            []beliefAcc
 }
 
 func newSnapAcc(commodities, recipes int) snapAcc {
 	return snapAcc{
-		held: make([]int64, commodities), estate: make([]int64, commodities), atFloor: make([]int64, commodities),
+		held: make([]int64, commodities), estate: make([]int64, commodities), treasury: make([]int64, commodities), atFloor: make([]int64, commodities),
 		lots: make([]int64, commodities), pending: make([]int64, commodities),
 		jobs: make([]int64, recipes), execs: make([]int64, recipes), hh: make([]int64, recipes),
 		bel: make([]beliefAcc, commodities),
@@ -426,6 +431,7 @@ func newSnapAcc(commodities, recipes int) snapAcc {
 func (a *snapAcc) reset() {
 	clear(a.held)
 	clear(a.estate)
+	clear(a.treasury)
 	clear(a.atFloor)
 	clear(a.lots)
 	clear(a.pending)
@@ -642,9 +648,8 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 	}
 	s.Stores = w.storeRows(s.Stores, g, v)
 	w.fillRegionClass(rr, g)
-	w.marketRows(s, g, acc)
 	s.Jobs = appendJobs(s.Jobs, g, acc)
-	return nil
+	return w.marketRows(s, g, acc)
 }
 
 // snapAgents adds every agent of the view of region g to the region row, to the row of
@@ -754,8 +759,13 @@ func (b *beliefAcc) add(centre int64, bd beliefs.Bounds) {
 }
 
 // marketRows fills the market rows of region g from its markets and acc.
-func (w *World) marketRows(s *Snapshot, g RegionID, acc *snapAcc) {
+func (w *World) marketRows(s *Snapshot, g RegionID, acc *snapAcc) error {
 	nc := len(w.cfg.Commodities)
+	if w.fiscal != nil {
+		if err := w.fiscal.snapHeld(w, g, acc); err != nil { // the goods of the treasuries seated in g, beside the estate's
+			return err
+		}
+	}
 	for c := range nc {
 		i := w.markets.index(g, CommodityID(c))
 		row, b := &s.Markets[i], &acc.bel[c]
@@ -763,11 +773,13 @@ func (w *World) marketRows(s *Snapshot, g RegionID, acc *snapAcc) {
 		row.HeldByAgents, row.HeldByEstate = Quantity(acc.held[c]), Quantity(acc.estate[c])
 		row.Lots, row.Pending = acc.lots[c], Quantity(acc.pending[c])
 		row.EstateAtFloor = Quantity(acc.atFloor[c])
+		row.HeldByTreasury = Quantity(acc.treasury[c])
 		row.Beliefs, row.LowCentre, row.HighCentre = b.n, Price(b.low), Price(b.high)
 		row.AtFloor, row.AtCeiling = b.atFloor, b.atCeiling
 		mean, _ := b.sum.DivHalfEven(b.n)
 		row.MeanCentre = Price(mean)
 	}
+	return nil
 }
 
 // marketState is the state of market i: its report and its window.

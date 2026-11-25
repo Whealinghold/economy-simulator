@@ -357,6 +357,11 @@ var stepSites = []site{
 		}
 	})},
 	{"P3.4", (*World).p34Estates},
+	{"P3.4a", noError(func(w *World) {
+		if w.fiscal != nil {
+			w.p34aOrders()
+		}
+	})},
 	{"P3.5", func(w *World) error {
 		if w.external != nil {
 			return w.p35Orders()

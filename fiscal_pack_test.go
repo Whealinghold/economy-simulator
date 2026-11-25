@@ -10,7 +10,7 @@ import (
 // fiscalPackDoc is a fiscal overlay for the governed warm five, written as a file
 // layer: a head tax and a payout on the cooks of the seat region, a duty on the sales
 // of one commodity, and a purchase and a release of it. Every authority is the root,
-// which governs the seat region centre. The standing orders have no step yet.
+// which governs the seat region centre.
 const fiscalPackDoc = `
 [modules.fiscal.tax.poll]
 authority = "root"

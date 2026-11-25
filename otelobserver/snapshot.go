@@ -121,7 +121,7 @@ func (o *Observer) recordMarket(n snapNames, m economysim.MarketRow) {
 	o.gauge(iProductionPending, int64(m.Pending), kv...)
 	o.gauge(iEstateAtFloor, int64(m.EstateAtFloor), kv...)
 	o.gauge(iLedgerLots, m.Lots, kv...)
-	for i, held := range []int64{int64(m.HeldByAgents), int64(m.HeldByEstate)} {
+	for i, held := range []int64{int64(m.HeldByAgents), int64(m.HeldByEstate), int64(m.HeldByTreasury)} {
 		o.gauge(iMarketStock, held, append(kv[:2:2], attribute.String(keyHolder, closed[keyHolder][i]))...)
 	}
 }

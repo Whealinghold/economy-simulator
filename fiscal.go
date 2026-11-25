@@ -107,6 +107,8 @@ type fiscalFlowState struct {
 	// a toll's side, mode and amount.
 	duty fiscalDuty
 	toll fiscalToll
+	// order is a purchase's or a release's commodity, quantity, limit and bound.
+	order fiscalOrder
 }
 
 // fiscalAgg is the aggregate of one flow in one region in the tick: the counters of
@@ -133,6 +135,7 @@ type fiscalState struct {
 	pol     *polity
 	flows   []fiscalFlowState // canonical position order
 	tolls   [2]int            // the positions of the tolls: from, to
+	orders  [2]int            // the positions of the purchases then the releases: from, to
 	regions int
 	agg     []fiscalAgg // flow position * regions + region
 	ran     []int       // the positions that ran at P1.7b, in event order
@@ -197,12 +200,16 @@ func newFiscal(c *Config, p *polity) *fiscalState {
 		f.target = s.resolve(c, f.authority, o.Target)
 		f.resource = payoutResource(c, o)
 	}
+	s.orders[0] = len(s.flows)
 	for i, o := range m.Purchases {
-		s.add(c, fkPurchase, i, o.ID, o.Authority, o.Window)
+		f := s.add(c, fkPurchase, i, o.ID, o.Authority, o.Window)
+		f.order = newOrder(c, o.Commodity, o.Quantity, o.LimitBP, o.Hold)
 	}
 	for i, o := range m.Releases {
-		s.add(c, fkRelease, i, o.ID, o.Authority, o.Window)
+		f := s.add(c, fkRelease, i, o.ID, o.Authority, o.Window)
+		f.order = newOrder(c, o.Commodity, o.Quantity, o.LimitBP, o.Reserve)
 	}
+	s.orders[1] = len(s.flows)
 	s.numberReasons(money)
 	s.agg = make([]fiscalAgg, len(s.flows)*s.regions)
 	return s
