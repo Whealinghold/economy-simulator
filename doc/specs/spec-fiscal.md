@@ -1607,8 +1607,8 @@ scenarios of the class of S77 and S78 and outside the band rule of FR-STY-098 un
 say report-only:
 
 - **FIS-S1. Neutrality and the identities.** *Setup:* `five` with
-  `overlay/fiscal-governed.toml` and every flow at scale 0, against the same without the
-  module, seeds 1 to 10, 200 ticks. *Pass:* every event, snapshot field and golden line
+  `overlay/fiscal.toml` (the empty module on, scale 0 by construction; N-509), against the
+  same without the module, seeds 1 to 10, 200 ticks. *Pass:* every event, snapshot field and golden line
   identical except the configuration hash, the names table, `Snapshot.Modules`, the
   construction summary and the module's warnings; with the flows at scale 10 000 the
   audit passes, `M` equals `M_init` plus the MON flows, the sector identity holds with a
@@ -1629,8 +1629,8 @@ say report-only:
   *Measure:* the stock, the cash, the price and the units spoiled. *Pass:* the treasury
   never holds a negative balance, never holds more than `Hold`, the units bought, sold and
   spoiled equal the change of its stock; the price path is report-only (FIS-A4, A5).
-- **FIS-S5. A toll on a corridor.** *Setup:* the trade overlay of `three` with a toll on
-  the border of one jurisdiction, merchants with and without the toll in their margin.
+- **FIS-S5. A toll on a corridor.** *Setup:* the trade overlay of `three` with its own
+  polity tables and a toll on the border of one jurisdiction (N-509), merchants with and without the toll in their margin.
   *Measure:* the tolls paid, the shipments refused for `toll_unaffordable`, the trade
   volume. *Pass:* the toll paid equals `Amount * n` per crossing summed over the
   dispatches, exactly; the refused count is reported (FIS-A7).
@@ -1874,7 +1874,7 @@ architecture.md 2.6 and `AGENTS.md`.
   `[modules.fiscal.toll.<id>]`, `[modules.fiscal.payout.<id>]`,
   `[modules.fiscal.purchase.<id>]` and `[modules.fiscal.release.<id>]` (the form of
   `[modules.polity.jurisdiction.<id>]`) and the rules of 15.
-- `testdata/chains/overlay/fiscal.toml` and `fiscal-governed.toml` (a proposal for REF).
+- `testdata/chains/overlay/fiscal.toml` and `fiscal-governed.toml` (built by REF: `fiscal.toml` is the empty module, `fiscal-governed.toml` carries the flows, N-509).
 - Tests: table-driven unit tests in `internal/fiscal` with the cases of the models
   (the cut, the carry, the toll); an external `_test` of the neutrality of FR-FIS-001 over
   seeds; a selection test of the three target kinds (3.2, FR-FIS-009: role and region,
