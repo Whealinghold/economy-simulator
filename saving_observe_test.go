@@ -87,6 +87,21 @@ func querySums(t *testing.T, seed uint64, w *economysim.World, saverRole int) ma
 	return got
 }
 
+// checkRows fails the test for a snapshot row that differs from the sums of the queries.
+func checkRows(t *testing.T, seed uint64, rows []economysim.RoleRow, got map[[2]int]savingSum, saverRole int) {
+	t.Helper()
+	for _, r := range rows {
+		want := got[[2]int{int(r.Region), int(r.Role)}]
+		if r.SavingHouseholds != want.households || r.GoalMoney != want.goal {
+			t.Errorf("seed %d: row (%d,%d) saving %d goal %d, want the sum of the queries %d and %d",
+				seed, r.Region, r.Role, r.SavingHouseholds, r.GoalMoney, want.households, want.goal)
+		}
+		if int(r.Role) != saverRole && (r.BufferMoney != 0 || r.IdleMoney != 0) {
+			t.Errorf("seed %d: row (%d,%d) of a role with no block has buffer %d idle %d, want 0", seed, r.Region, r.Role, r.BufferMoney, r.IdleMoney)
+		}
+	}
+}
+
 // TestSaving_ReportsAgree verifies that over seeds 1 to 3 the three reports of the module
 // tell one story: every SavingPlanned names the role with a Saver block, keeps its counts
 // within its households and its bars exclusive, and at the boundary the snapshot rows equal
@@ -124,16 +139,7 @@ func TestSaving_ReportsAgree(t *testing.T) {
 			t.Fatalf("seed %d: Snapshot() error = %v, want nil", seed, err)
 		}
 		got := querySums(t, seed, w, saverRole)
-		for _, r := range snap.Roles {
-			want := got[[2]int{int(r.Region), int(r.Role)}]
-			if r.SavingHouseholds != want.households || r.GoalMoney != want.goal {
-				t.Errorf("seed %d: row (%d,%d) saving %d goal %d, want the sum of the queries %d and %d",
-					seed, r.Region, r.Role, r.SavingHouseholds, r.GoalMoney, want.households, want.goal)
-			}
-			if int(r.Role) != saverRole && (r.BufferMoney != 0 || r.IdleMoney != 0) {
-				t.Errorf("seed %d: row (%d,%d) of a role with no block has buffer %d idle %d, want 0", seed, r.Region, r.Role, r.BufferMoney, r.IdleMoney)
-			}
-		}
+		checkRows(t, seed, snap.Roles, got, saverRole)
 	}
 }
 
