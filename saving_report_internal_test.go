@@ -41,20 +41,28 @@ func TestEvent_SavingPlannedTriggers(t *testing.T) {
 	if got := evs[1]; got.Tick != 0 || got.Region != 1 || got.Unreachable != 5 || got.Households != 5 {
 		t.Errorf("second SavingPlanned = %+v, want tick 0, region 1, 5 households unreachable", got)
 	}
-	for i, e := range evs {
-		q := savingCount{
-			saving: e.Saving, buffered: e.Buffered, passed: e.Passed, building: e.Building, noReturn: e.NoReturn,
-			standing: e.Standing, unreachable: e.Unreachable, survival: e.Survival, builds: e.Builds, repairs: e.Repairs,
-		}
-		if q.quiet() {
-			t.Errorf("event %d %+v has every triggering count 0, want it not emitted", i, e)
-		}
-		if e.Role != 0 {
-			t.Errorf("event %d is for role %d, want only role 0 (the weaver has no block)", i, e.Role)
-		}
-		if i > 0 && (evs[i-1].Tick > e.Tick || evs[i-1].Tick == e.Tick && evs[i-1].Region >= e.Region) {
-			t.Errorf("events %d and %d out of order: %+v then %+v, want ascending (tick, region)", i-1, i, evs[i-1], e)
-		}
+	for i := range evs {
+		checkSavingEvent(t, evs, i)
+	}
+}
+
+// checkSavingEvent checks one event of evs against the trigger, role and order rules of
+// TestEvent_SavingPlannedTriggers.
+func checkSavingEvent(t *testing.T, evs []SavingPlanned, i int) {
+	t.Helper()
+	e := evs[i]
+	q := savingCount{
+		saving: e.Saving, buffered: e.Buffered, passed: e.Passed, building: e.Building, noReturn: e.NoReturn,
+		standing: e.Standing, unreachable: e.Unreachable, survival: e.Survival, builds: e.Builds, repairs: e.Repairs,
+	}
+	if q.quiet() {
+		t.Errorf("event %d %+v has every triggering count 0, want it not emitted", i, e)
+	}
+	if e.Role != 0 {
+		t.Errorf("event %d is for role %d, want only role 0 (the weaver has no block)", i, e.Role)
+	}
+	if i > 0 && (evs[i-1].Tick > e.Tick || evs[i-1].Tick == e.Tick && evs[i-1].Region >= e.Region) {
+		t.Errorf("events %d and %d out of order: %+v then %+v, want ascending (tick, region)", i-1, i, evs[i-1], e)
 	}
 }
 

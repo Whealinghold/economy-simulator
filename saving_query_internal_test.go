@@ -162,33 +162,46 @@ func TestSnapshot_SavingRows(t *testing.T) {
 	nr := len(w.cfg.Roles)
 	sawGoal := false
 	for g := range w.cfg.Regions {
+		want, saw := savingRowWant(t, w, RegionID(g))
+		sawGoal = sawGoal || saw
 		row := s.Roles[g*nr]
-		var want RoleRow
-		for _, id := range facAgents(w, RegionID(g), "miller") {
-			st, err := w.Saving(id)
-			if err != nil {
-				t.Fatalf("Saving(%d) error = %v, want nil", id, err)
-			}
-			if st.Goal > 0 {
-				want.SavingHouseholds += w.agents[id].weight
-				sawGoal = true
-			}
-			want.GoalMoney += st.Goal
-			want.BufferMoney += max(0, st.Floor-st.Reserve)
-			want.IdleMoney += st.Idle
-		}
-		got := RoleRow{SavingHouseholds: row.SavingHouseholds, GoalMoney: row.GoalMoney, BufferMoney: row.BufferMoney, IdleMoney: row.IdleMoney}
-		if got != (RoleRow{SavingHouseholds: want.SavingHouseholds, GoalMoney: want.GoalMoney, BufferMoney: want.BufferMoney, IdleMoney: want.IdleMoney}) {
+		if got := (RoleRow{SavingHouseholds: row.SavingHouseholds, GoalMoney: row.GoalMoney, BufferMoney: row.BufferMoney, IdleMoney: row.IdleMoney}); got != want {
 			t.Errorf("rows of miller in region %d = %+v, want %+v (the sum of the queries)", g, got, want)
 		}
-		wv := s.Roles[g*nr+1]
-		if wv.SavingHouseholds != 0 || wv.GoalMoney != 0 || wv.BufferMoney != 0 || wv.IdleMoney != 0 {
+		if wv := s.Roles[g*nr+1]; savingFieldsSet(wv) {
 			t.Errorf("row of the weaver in region %d = %+v, want the four saving fields 0 (no block)", g, wv)
 		}
 	}
 	if !sawGoal {
 		t.Errorf("no agent had a goal above 0 at tick 4: the test would pass with the rows 0")
 	}
+}
+
+// savingFieldsSet reports whether any of the four saving fields of a role row is non-zero.
+func savingFieldsSet(r RoleRow) bool {
+	return r.SavingHouseholds != 0 || r.GoalMoney != 0 || r.BufferMoney != 0 || r.IdleMoney != 0
+}
+
+// savingRowWant sums the query over the millers of region g into the four saving fields of
+// a role row, and reports whether any agent had a goal above 0.
+func savingRowWant(t *testing.T, w *World, g RegionID) (RoleRow, bool) {
+	t.Helper()
+	var want RoleRow
+	saw := false
+	for _, id := range facAgents(w, g, "miller") {
+		st, err := w.Saving(id)
+		if err != nil {
+			t.Fatalf("Saving(%d) error = %v, want nil", id, err)
+		}
+		if st.Goal > 0 {
+			want.SavingHouseholds += w.agents[id].weight
+			saw = true
+		}
+		want.GoalMoney += st.Goal
+		want.BufferMoney += max(0, st.Floor-st.Reserve)
+		want.IdleMoney += st.Idle
+	}
+	return want, saw
 }
 
 // TestSnapshot_ModuleOffRowsAreZero verifies that a world with the module off, or on with no
