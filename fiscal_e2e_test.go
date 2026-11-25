@@ -100,8 +100,8 @@ func flowFaults(evs, payouts []economysim.FiscalFlowApplied) []string {
 // root, in ascending tick order and at most once per tick, with Applied no more than
 // Due and Due less Applied no more than what the payers fell short; every payout event
 // is of the flow "alms" with Applied no more than Due; and the root's treasury ends at
-// exactly its start money plus the taxes applied less the payouts applied (the other
-// flows of the overlay are not built, so nothing else moves it). The audit, on every
+// exactly its start money plus the taxes and the duties applied less the payouts applied
+// (the standing orders of the overlay are not built, so nothing else moves it). The audit, on every
 // tick, is what proves money is conserved: a tax or a payout moves money between
 // sectors and mints none.
 //
@@ -132,7 +132,7 @@ func TestFiscal_PackTaxIsCollectedAndRemitted(t *testing.T) {
 		t.Fatalf("Snapshot() error = %v, want nil", err)
 	}
 	if got, want := snap.Jurisdictions[0].Money, start+taxed-paid; got != want {
-		t.Errorf("treasury after %d ticks (seed %d) = %d, want %d = start %d + taxed %d - paid %d", ticks, seed, got, want, start, taxed, paid)
+		t.Errorf("treasury after %d ticks (seed %d) = %d, want %d = start %d + taxed and dutied %d - paid %d", ticks, seed, got, want, start, taxed, paid)
 	}
 }
 

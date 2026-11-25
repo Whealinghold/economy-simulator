@@ -39,12 +39,13 @@ commodity = "good_a"
 amount = 1
 `
 
-// fiscalFlowSums splits the events of a run into the money of taxes and payouts that
-// moved and the payout events, so a test can rebuild the treasury from them.
+// fiscalFlowSums splits the events of a run into the money of taxes and duties that
+// moved (taxed) and of money payouts, and the payout events, so a test can rebuild the
+// treasury from them.
 func fiscalFlowSums(evs []economysim.FiscalFlowApplied) (taxed, paid economysim.Money, payouts []economysim.FiscalFlowApplied) {
 	for _, e := range evs {
 		switch e.Kind {
-		case economysim.KindTax:
+		case economysim.KindTax, economysim.KindDuty:
 			taxed += e.Applied
 		case economysim.KindPayout:
 			payouts = append(payouts, e)

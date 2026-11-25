@@ -280,8 +280,8 @@ func TestPositions_TheCheckCanFail(t *testing.T) {
 	}{
 		{"unedited data", func(b []position, n, c []string) ([]position, []string, []string) { return b, n, c }, ""},
 		{"a real position removed from both lists", func(b []position, n, c []string) ([]position, []string, []string) {
-			return b, slices.DeleteFunc(n, func(id string) bool { return id == "P4.1a" }), c
-		}, "P4.1a: a position of the spec that is neither built nor listed"},
+			return b, slices.DeleteFunc(n, func(id string) bool { return id == "P3.6b" }), c
+		}, "P3.6b: a position of the spec that is neither built nor listed"},
 		{"a built position also listed not built", func(b []position, n, c []string) ([]position, []string, []string) {
 			return b, append(n, "P0.2"), c
 		}, "P0.2: built and listed not built"},

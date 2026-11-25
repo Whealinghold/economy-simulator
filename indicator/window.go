@@ -68,6 +68,11 @@ type Window struct {
 	// empty with the risk module off.
 	StoreLosses  []LossTally
 	StoreStrikes []StrikeTally
+	// Labour is LabourRound summed by region and LabourRoles its worker rows by
+	// (region, worker role), in ascending key. They stay empty with the employment
+	// module's hire form off.
+	Labour      []LabourTally
+	LabourRoles []LabourRoleTally
 }
 
 // MarketTally is the sums of MarketCleared of one market over the window.

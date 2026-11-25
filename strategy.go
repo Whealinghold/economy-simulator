@@ -135,6 +135,13 @@ type TradePlan struct {
 	// of each is admitted, and both are empty for a strategy that does not use them.
 	Borrow []CreditRequest
 	Lend   []CreditOffer
+	// Cover, Store and Offer are the route requests, the store request and the offer of
+	// the cover round (spec-insurance.md 5.1), admitted at P3.3c after every agent's plan;
+	// at most MaxCoverRequests requests, lanes and the store request together, and one
+	// offer. All are empty for a strategy that does not use them.
+	Cover []LaneCover
+	Store []StoreCover
+	Offer []CoverOffer
 	// Cuts are the bids the default strategy sized down or dropped for room, one per
 	// commodity in commodity order, for the world to count and log (spec-storage.md
 	// 6.3.1); empty for any other strategy and with the storage module off.
@@ -597,6 +604,11 @@ type AgentView struct {
 	// agent whose role has a credit block and nil for every other
 	// (spec-credit.md 10.1). It is a scratch copy valid for the call only.
 	Credit *CreditView
+	// Insurance is the insurance group of the view passed to Trade, present only for an
+	// agent whose role has a cover block and nil for every other (spec-insurance.md 10.1).
+	// It is a scratch copy valid for the call only. The group is named for its module
+	// because Cover is the subsistence group's ticks of upkeep held in stock.
+	Insurance *CoverView
 	// Room is the room group of a limited agent: its room, load, pledge, free room
 	// and stores as they are when the view is built, the stores a scratch copy valid
 	// for the call (spec-storage.md 6.1.1). Limited is false with the storage module
@@ -683,6 +695,10 @@ type RouteRow struct {
 	// the risk module expects a strike to take, from the rows and the scales in force
 	// (spec-risk.md 8.1); 0 with the module off or for a route with no risk.
 	LossBP int64
+	// Toll is the money one carrying unit pays in tolls on the shortest path, at the
+	// scales and in the windows of the tick (the fiscal module, spec-fiscal.md 7.5);
+	// 0 with the module off or for a route no toll acts on.
+	Toll int64
 }
 
 // EndowmentView is one endowment of the agent's region as the agent sees it

@@ -46,10 +46,9 @@ PR description.
 | Area | Open notes |
 |------|-----------|
 | ALL | N-016, N-017, N-027, N-103, N-126, N-128, N-163, N-217, N-315, N-335, N-340, N-345, N-351, N-353 |
-| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424, N-474, N-490, N-512, N-521 |
+| AGT | N-043, N-067, N-087, N-101, N-111, N-137, N-139, N-142, N-144, N-153, N-156, N-164, N-188, N-196, N-214, N-228, N-236, N-237, N-244, N-245, N-247, N-358, N-381, N-382, N-424, N-474, N-490, N-512, N-521, N-478 |
 | BEL | N-042, N-043, N-230, N-245 |
-| CAL | N-030, N-527 |
-| CAP | N-140, N-155, N-156, N-170, N-171, N-172, N-173, N-174, N-175, N-191, N-194, N-196, N-200, N-205, N-358, N-381, N-382, N-383, N-384, N-385, N-386, N-388, N-438, N-475, N-492, N-520, N-521, N-522, N-523, N-524, N-525, N-526, N-527 |
+| CAL | N-030, N-479, N-527 |
 | CFG | N-476, N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-494, N-496, N-483, N-461, N-522 |
 | CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444, N-471, N-480, N-500, N-502 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364 |
@@ -57,20 +56,20 @@ PR description.
 | CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457, N-491, N-493, N-494, N-438, N-481, N-502 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398, N-472, N-484, N-503 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
-| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-445, N-500, N-501, N-502, N-503, N-510, N-511, N-512, N-513, N-514, N-521 |
+| EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-445, N-500, N-501, N-502, N-503, N-510, N-511, N-512, N-513, N-514, N-515, N-516, N-517, N-518, N-521 |
 | EST | N-082, N-096, N-119, N-167, N-254, N-256, N-309, N-310, N-345, N-346 |
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361, N-485 |
 | EXT | N-108, N-112, N-113, N-214 |
-| FIS | N-504, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-475, N-483 |
+| FIS | N-505, N-506, N-504, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-475, N-483 |
 | GDS | N-039 |
-| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473 |
+| IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473, N-515 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
-| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476, N-494, N-496 |
+| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476, N-494, N-496, N-477, N-478, N-479 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436, N-471 |
 | LND | N-504, N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475, N-484, N-513 |
-| MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370 |
+| MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370, N-478 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
 | OBS | N-543, N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-495, N-482, N-510, N-520 |
@@ -78,7 +77,7 @@ PR description.
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348, N-527 |
 | PRO | N-542, N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454, N-501 |
-| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-525, N-540 |
+| REF | N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-525, N-540, N-516, N-517 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
 | RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470, N-458, N-459, N-460, N-461 |
 | SAV | N-145, N-156, N-195, N-362, N-382, N-475, N-490, N-491, N-492, N-493, N-495, N-496, N-497 |
@@ -88,13 +87,13 @@ PR description.
 | SPN | N-463, N-330, N-043, N-089, N-096, N-118, N-122, N-138, N-148, N-153, N-172, N-192, N-193, N-265, N-267, N-268, N-352 |
 | STB | N-028, N-032, N-039, N-042, N-043, N-045, N-067, N-086, N-087, N-092, N-099, N-113, N-122, N-124, N-151, N-162, N-169, N-179, N-210, N-211, N-214, N-267, N-312, N-314, N-325, N-352 |
 | STO | N-155, N-160, N-166, N-181, N-186, N-191, N-194, N-205, N-244, N-327, N-357, N-375, N-388, N-513, N-524, N-526 |
-| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485, N-458 |
+| STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485, N-458, N-517, N-518 |
 | SUB | N-121, N-228, N-268, N-244, N-426 |
 | TEC | N-358, N-359, N-360, N-361, N-384 |
-| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434, N-459 |
-| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383, N-522, N-523 |
+| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434, N-459, N-505 |
+| VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383, N-522, N-523, N-516, N-505 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346, N-472, N-491, N-514 |
-| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438, N-475, N-480 |
+| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438, N-475, N-480, N-477 |
 
 ## Open notes
 
@@ -2493,7 +2492,7 @@ PR description.
 
 - **Areas:** OBS, FIS
 - **Raised:** 2026-11-18, plan 3-fis PR 2 observability review, plan Q3.
-- **Note:** `observability-and-logging.md` 5.3 and 5.3.1 already list `economysim.fiscal.collected`, `.paid`, `.in_kind`, `.unapplied` and `.order.cut` (attribute `economysim.clamp`: `cash`, `hold`, `stock`), fed by `FiscalFlowApplied` and `TreasuryOrdered`. Plan 3-fis Q3 defers them, as SKL Q7 and CRD Q3 did: PR 2 builds no event and no snapshot field, so nothing feeds them yet, and the core module records no metric (rule 5). The adapter PR after FIS PR 6 adds the five instruments, the cardinality test over the flow IDs, regions and authorities, the `economysim.clamp` series count for the reference chain (5.4.2), and takes `FiscalFlowApplied` and `TreasuryOrdered` out of `ignoredEvents`. The ten construction warnings of `fiscal_warnings.go` need no metric: they are fixed by the configuration and read through `Config.Warnings` (counterpart rule of 8.1). Candidate for the same adapter PR, found in the PR 3 observability review: one more instrument, `economysim.fiscal.limited` (Counter, `{household}`, attributes `economysim.reason` (the fiscal flow ID) and `economysim.fiscal_limit` with the closed set `short`, `headroom`, `cut`), fed by `FiscalFlowApplied` (`Short`, `Headroom`, `Cut`). Why: `economysim.fiscal.unapplied` says how much money did not move but not why. Payers too poor to pay (`short`) and a recipient or a treasury with no room (`headroom`: a balance at `MaxMoney` or, from PR 4, a household's full store, N-504) or a short treasury (`cut`, from PR 4: the pro rata cut of a payout) have different fixes, as for `economysim.money.flow.limited`. The adapter PR adds the row to 5.3, 5.3.1 and the closed set to 5.4.1 (`economysim.fiscal_limit`), and states the series count for the reference chain (5.4.2). Declined on purpose: a metric for `Parties` (the event carries it; no use apart from the share of the limited counts, so add it only if that share is wanted), `Exempt` (PR 5, duties), and attributes for class, authority or region (the flow ID fixes class and authority; region is not needed by any of the five). PR 4 review: the payout counts (`Cut`, `Headroom`) are already on `FiscalFlowApplied`, so no new event field and no new instrument beyond `fiscal.limited`; `economysim.fiscal.in_kind` is fed by `Commodity` and `Applied` of an in-kind payout. `TestFiscal_EventsRebuildTheCollection` proves `collected` and `unapplied` derivable from the events.
+- **Note:** `observability-and-logging.md` 5.3 and 5.3.1 already list `economysim.fiscal.collected`, `.paid`, `.in_kind`, `.unapplied` and `.order.cut` (attribute `economysim.clamp`: `cash`, `hold`, `stock`), fed by `FiscalFlowApplied` and `TreasuryOrdered`. Plan 3-fis Q3 defers them, as SKL Q7 and CRD Q3 did: PR 2 builds no event and no snapshot field, so nothing feeds them yet, and the core module records no metric (rule 5). The adapter PR after FIS PR 6 adds the five instruments, the cardinality test over the flow IDs, regions and authorities, the `economysim.clamp` series count for the reference chain (5.4.2), and takes `FiscalFlowApplied` and `TreasuryOrdered` out of `ignoredEvents`. The ten construction warnings of `fiscal_warnings.go` need no metric: they are fixed by the configuration and read through `Config.Warnings` (counterpart rule of 8.1). Candidate for the same adapter PR, found in the PR 3 observability review: one more instrument, `economysim.fiscal.limited` (Counter, `{household}`, attributes `economysim.reason` (the fiscal flow ID) and `economysim.fiscal_limit` with the closed set `short`, `headroom`, `cut`), fed by `FiscalFlowApplied` (`Short`, `Headroom`, `Cut`). Why: `economysim.fiscal.unapplied` says how much money did not move but not why. Payers too poor to pay (`short`) and a recipient or a treasury with no room (`headroom`: a balance at `MaxMoney` or, from PR 4, a household's full store, N-504) or a short treasury (`cut`, from PR 4: the pro rata cut of a payout) have different fixes, as for `economysim.money.flow.limited`. The adapter PR adds the row to 5.3, 5.3.1 and the closed set to 5.4.1 (`economysim.fiscal_limit`), and states the series count for the reference chain (5.4.2). Declined on purpose: a metric for `Parties` (the event carries it; no use apart from the share of the limited counts, so add it only if that share is wanted), `Exempt` (PR 5, duties), and attributes for class, authority or region (the flow ID fixes class and authority; region is not needed by any of the five). PR 4 review: the payout counts (`Cut`, `Headroom`) are already on `FiscalFlowApplied`, so no new event field and no new instrument beyond `fiscal.limited`; `economysim.fiscal.in_kind` is fed by `Commodity` and `Applied` of an in-kind payout. `TestFiscal_EventsRebuildTheCollection` proves `collected` and `unapplied` derivable from the events. Candidates added at PR 5 (2026-11-20, observability review), none owed by the core: (1) `economysim.fiscal.collected` already takes `Applied` of the kinds `duty` and `toll`, so a duty and a toll need no new instrument; the flow ID in `economysim.reason` tells them apart, and the cardinality test counts duties and tolls with the taxes. (2) `economysim.fiscal.exempt` (Counter, `{trade}`, `economysim.reason` the duty ID), fed by `FiscalFlowApplied.Exempt`: a duty that collects far less than its rate promises is, besides scale and window, one whose trades have an estate, a counterparty or a treasury on the payer side, and `collected` cannot say so; the row goes into 5.3 and 5.3.1 first. (3) Toll refusals need no new instrument: `economysim.transport.rejected` by `economysim.reason` already counts `toll_unaffordable`, and the adapter's closed set of 5.4.1 takes the new reason. (4) A toll's `Short`, `Cut` and `Headroom` are always 0, so `economysim.fiscal.limited` shows no toll series; the refusal is the signal. (5) Declined: a metric of the toll paid per shipment (`ShipmentDispatched.Toll` over `economysim.transport.shipments` gives the mean, and the amount per flow is `collected`) and any attribute for the payer (a payer ID is an event field only).
 
 ### N-470 The arrival's lost units are a per-tick list kept by RSK's file
 
@@ -2825,6 +2824,18 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-fis PR 4 observability review.
 - **Note:** `spec-fiscal.md` 8.2 and 8.4.3 named only the `MaxMoney` headroom as a cut at a recipient. The code (`fiscal_payout.go`, `room`) also caps an in-kind payout at the units the free store room of a household with a room limit can hold (mass and bulk, `spec-storage.md` 4.1.3), because the ledger would refuse the credit with `ErrNoRoom`. The unpaid remainder stays in the treasury and is counted in `FiscalFlowApplied.Headroom` (not `Cut`, which is the pro rata cut of a short treasury); 8.4.3 now says so. The owner accepted this on 2026-11-19. Still open: no rule makes the recipient or the pack see that a payout was refused for room, other than that count; if a pack wants the payout to wait, that is a new rule, not this note.
 
+### N-505 The viability lanes do not count a toll
+
+- **Areas:** FIS, VIA, TRN
+- **Raised:** 2026-11-20, plan 3-fis PR 5, `transport_lanes.go`, `strategy/merchant_ship.go`.
+- **Note:** A toll (`spec-fiscal.md` 7) is counted by the merchant in three places: the cost of carriage `C` of the fee-share test (`spec-merchants.md` 5.4, 5.5; `n * Toll`, every mode), the cash `other` the lot is sized with (6.2.1 item 2) and the haul ceiling (5.6). The lanes that `transport_lanes.go` hands to the viability solver (`Lane`: labour and `LossBP`) do not include it, so a pack with a toll sees the viability gate overrate a lane that crosses a border; the trip is then not made by the merchant's own test or is refused at dispatch (`toll_unaffordable`). Left open for VIA: add the toll of a carrying unit to a lane only if a pack shows the gap.
+
+### N-506 The Parties of a toll counts a shipper once for each flow for each shipment
+
+- **Areas:** FIS
+- **Raised:** 2026-11-20, plan 3-fis PR 5, `fiscal_toll.go`.
+- **Note:** `spec-fiscal.md` 16.1 defines `Parties` as the payers with a due, as the sum of weights. A toll has no per-tick payer list, only the shipments of P3.2(c) and P3.3, so `chargeToll` adds the shipper's weight once for each flow for each shipment: a household that sends two shipments across one border in a tick is counted twice in `Parties` of that toll. The count of distinct shippers would need a per-tick set. Left open for FIS: say so in 16.1 or count distinct shippers, whichever the first consumer of `Parties` needs.
+
 ### N-500 The checkpoint section of tag 24 saves the wages paid
 
 - **Areas:** EMP, CHK
@@ -2951,6 +2962,30 @@ PR description.
 - **Raised:** 2026-11-19, plan 3-emp PR 5.
 - **Note:** `spec-employment.md` 8.2.4 makes a tick in which the agent is the principal of a hired job in progress a working tick for the floor. The code marks it when a wage of the hire is released (P2.7 and P2.1), so the tick in which the last wage is paid counts and a tick between the formation at P2.5a and the start at P2.7 of a hire that starts nothing does not. The working household-ticks of the agent are its own executions only, as 8.2.4 says, so its observed wage is unchanged by hiring.
 
+### N-515 `Employment` has no role split in its window form
+
+- **Areas:** EMP, IND
+- **Raised:** 2026-11-20, plan 3-emp PR 6.
+- **Note:** `spec-indicators.md` 9.1 row 24 asks for the paid household-ticks over the running households "by region and role". `LabourRound.HouseholdTicks` is a figure of the region (the rows by worker role carry `Offered`, `Hired` and `NoVacancy` only), so the preset gives the window rate by region, over the running households of the hireable roles of the region, and the boundary rate by (region, role) from `RoleRow.Employed`. A role split of the window needs `HouseholdTicks` in `LabourRow`, an appended count (architecture.md 2.10.5); no consumer asks for it yet. The row of the spec was edited to say so.
+
+### N-516 A world with the hire form on and nothing offered is not the world with it off
+
+- **Areas:** EMP, REF, VIA
+- **Raised:** 2026-11-20, plan 3-emp PR 6.
+- **Note:** EMP-S5 and FR-EMP-061 say the stream of a module on equals the module off. It holds for the draws, not for the state: on one-demand with every role silent, `CostAnchor` of the first market at tick 1 is 1 068 with the form on and 1 382 off, because an employer role with a hire list and a Hireable role change the cost anchor (`spec-viability.md` 4.7). `TestScenarioS101_ModuleTakesNoWordWithOrWithoutOffers` therefore reads the PCG after P2.5a and P2.8b, with and without offers, and no test compares the two worlds whole. A reader who wants "the module on is inert with no offers" must say which of the two he means.
+
+### N-517 One-demand with the hire form forms hires until about tick 250, and the closures by reason are all 0
+
+- **Areas:** EMP, REF, STY
+- **Raised:** 2026-11-20, plan 3-emp PR 6.
+- **Note:** S97 to S100 on one-demand (seeds 1 to 10): the last hire forms between ticks 225 and 293 and then the pack collapses (N-352), so the figures are read over the first 250 ticks and no band is asserted; the closed form of 11.2 is for a one-good circuit, which the pack is not (FR-EMP-062 is proved by `internal/employment` `TestCircuit_ClosedForm_*`). The positions closed for `employer_funds` and `no_input` are 0 in every run, because the default posts only what the employer's cash, stock and tools cover (FR-EMP-015), so `Unemployment.ByReason` is empty on the pack and its order and sums are tested on hand-built windows only. A pack where the default closes positions would need employers with less cash than the bill.
+
+### N-518 The arc elasticity of S98 is a ramp-up, not a supply elasticity
+
+- **Areas:** EMP, STY
+- **Raised:** 2026-11-20, plan 3-emp PR 6.
+- **Note:** S98 records the arc elasticity of the hired households to the wage between ticks 10 to 60 and 60 to 110 (EMP-A1). On one-demand both rise together in the ramp of the warm start (the wage from about 1 340 to 1 750, the hired households from about 22 to 52 a tick), so the value is large and positive (about 27 600 basis points), and it is the same with the work floor at 4 000 and at 0. It says nothing of the backward bend of the supply of the target-income rule (L14, EMP-A1). Measuring it needs a wage moved by a call (a grant or a shock) with the households' reservation held, which no scenario of this PR does; the item stays open for STY.
+
 ### N-540 ORG, SKL, REF: a `train` right is not neutral at places 0, so the inert overlay carries none
 
 - **Areas:** ORG, SKL, REF
@@ -2981,6 +3016,24 @@ PR description.
 - **Raised:** 2026-11-20, plan 3-org PR C result (Phases 6 and 7), written in PR E.
 - **Note:** `AdmitClamp` returns `(code, price, changed)`: the side of the order says whether the change is a lowering or a raising. `spec-institutions.md` 5.2 and `spec-clearing.md` 3.2.1 may say it returns one flag. Check both and align them to the code.
 
+### N-477 INS, WLD: the store policies of a tick end at the next round's entry until PR D
+
+- **Areas:** INS, WLD
+- **Raised:** 2026-11-20, plan 3-ins PR C (Phases 4 and 5).
+- **Note:** the round of P3.3c forms store policies, and P8.1b (PR D) is what ends them in their tick. Until PR D, `insurance_round.go` drops the store policies of the previous tick at the entry of the next round, so none leaks. PR D deletes that reset in the change that adds P8.1b. A route policy stays open until PR D settles it at P1.3a.
+
+### N-478 INS, AGT, MER: `DefaultCover` is called after `TradeWith`, not inside it
+
+- **Areas:** INS, AGT, MER
+- **Raised:** 2026-11-20, plan 3-ins PR C (Phases 4 and 5).
+- **Note:** `DefaultStrategy.Trade` calls `DefaultCover` after `TradeWith`, and `Merchant.Trade` calls it after `send` on the trip path. A call inside `TradeWith` would see no shipment, because a trip's lanes are appended after it, and would double the requests when the merchant calls it again. `spec-insurance.md` 10.4 and `spec-merchants.md` 9.7 must say that a strategy that wraps `TradeWith` calls `DefaultCover` itself.
+
+### N-479 INS, CAL: a small sum at a small cover share never fills
+
+- **Areas:** INS, CAL
+- **Raised:** 2026-11-20, plan 3-ins PR C (Phases 4 and 5).
+- **Note:** a pair whose maximum payout `halfEven(CoverBP * S / 10 000)` is 0 is skipped (`spec-insurance.md` 7.3.2 step 1), so a sweep that lowers `CoverBP` or `MinSum` far enough sees requests that no offer can fill, counted as `no_offer`. A calibration of the insurance knobs must keep `MinSum` above `5 000 / CoverBP` (half to even rounds exactly one half down to 0).
+
 If you are an agent about to write or change a spec, you quote the tag below in
 your first message about that work, as required by
 [AGENTS.md](../AGENTS.md). Reaching it means you have read this file in full. Do
@@ -2991,4 +3044,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 3d28116584795a2432733630
+NOTES-TAG: d70a3214489e2e5296344109

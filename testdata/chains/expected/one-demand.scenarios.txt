@@ -23,6 +23,39 @@ measure staple price at tick 600, wants on: 1=55 2=54 3=51 | median=54 n=3
 check cooks' share of money in [0, 10 000]: 18/18 pass
 check price within belief bounds (FR-STB-008): 6/6 pass
 
+## S100 one-demand+hire step in the yield of the cooks' fuel, 200 ticks seeds 1-10
+measure fewest positions posted in a window of 10 ticks in the step: 1=42 2=51 3=52 4=44 5=45 6=49 7=43 8=52 9=48 10=56 | median=48 n=10
+measure mean households with no vacancy a tick, in the step: 1=51 2=55 3=60 4=55 5=69 6=61 7=67 8=61 9=66 10=53 | median=60 n=10
+measure mean households with no vacancy a tick, ticks 100 to 140: 1=76 2=84 3=93 4=80 5=79 6=87 7=76 8=88 9=84 10=75 | median=82 n=10
+measure mean households with no vacancy a tick, ticks 30 to 60: 1=59 2=68 3=66 4=69 5=66 6=68 7=70 8=69 9=69 10=68 | median=68 n=10
+measure mean positions posted a tick, in the step: 1=52 2=62 3=62 4=54 5=58 6=61 7=60 8=68 9=61 10=73 | median=61 n=10
+measure mean positions posted a tick, ticks 100 to 140: 1=76 2=77 3=71 4=77 5=84 6=76 7=93 8=80 9=78 10=113 | median=78 n=10
+measure mean positions posted a tick, ticks 30 to 60: 1=216 2=261 3=226 4=271 5=253 6=266 7=284 8=288 9=262 10=269 | median=264 n=10
+measure ticks to recover the positions posted after the step: 1=absent 2=absent 3=absent 4=absent 5=absent 6=absent 7=absent 8=absent 9=absent 10=absent
+check every hire formed has ended or is open: 10/10 pass
+check no hire is formed without a bill: 10/10 pass
+check no hire is open and no escrow is left: 10/10 pass
+check the escrow is the money of the open hires: 10/10 pass
+check the hires conform to the bill, the order and the escrow identity: 10/10 pass
+check the money moves only by the boundary flows: 10/10 pass
+
+## S101 one-demand+hire invariants over seeds with jobs of 3 ticks, 60 ticks seeds 1-10
+measure hires ended, cause completed: 1=481 2=487 3=483 4=498 5=498 6=492 7=514 8=504 9=495 10=501 | median=496 n=10
+measure hires ended, cause employer_left: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure hires ended, cause employer_role: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure hires ended, cause not_started: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure hires ended, cause worker_left: 1=6 2=4 3=1 4=4 5=3 6=7 7=4 8=0 9=7 10=2 | median=4 n=10
+measure hires ended, cause worker_role: 1=3 2=5 3=9 4=6 5=10 6=8 7=4 8=10 9=4 10=5 | median=6 n=10
+measure hires formed: 1=504 2=504 3=504 4=511 5=513 6=510 7=527 8=515 9=509 10=516 | median=510 n=10
+measure hires open at the end: 1=14 2=8 3=11 4=3 5=2 6=3 7=5 8=1 9=3 10=8 | median=4 n=10
+check a second run of the seed gives the same hires and the same final snapshot: 10/10 pass
+check every hire formed has ended or is open: 10/10 pass
+check hires are in progress at the end of the run: 10/10 pass
+check no hire is formed without a bill: 10/10 pass
+check the escrow is the money of the open hires: 10/10 pass
+check the hires conform to the bill, the order and the escrow identity: 10/10 pass
+check the money moves only by the boundary flows: 10/10 pass
+
 ## S23 one-demand elasticity x start seeds 1-10, 200 ticks
 measure gap bp between the two starts, e=10000: 1=1867 2=1717 3=5256 4=2244 5=1717 6=3328 7=2982 8=2560 9=1506 10=2470 | median=2357 n=10
 measure gap bp between the two starts, e=15000: 1=2485 2=2545 3=2093 4=2530 5=1717 6=1973 7=2425 8=1958 9=1867 10=2334 | median=2214 n=10
@@ -114,3 +147,91 @@ measure units planned at tick 0, money 2 x reserves: 1=76 2=76 3=76 4=76 5=76 6=
 check market series in tick order: 30/30 pass
 check no want funded at or below the reserve (FR-DEM-020): 20/20 pass
 check price within belief bounds (FR-STB-008): 30/30 pass
+
+## S97 one-demand+hire employers' wants off, 400 ticks seeds 1-10
+measure households at end: 1=130 2=92 3=76 4=91 5=81 6=123 7=93 8=139 9=74 10=51 | median=92 n=10
+measure households hired: 1=18739 2=16962 3=17912 4=17778 5=16257 6=20286 7=16639 8=16853 9=20441 10=18428 | median=17845 n=10
+measure households offered: 1=57812 2=48720 3=51422 4=52368 5=55428 6=56934 7=48927 8=60011 9=54147 10=53840 | median=53994 n=10
+measure households with no vacancy: 1=39073 2=31758 3=33510 4=34590 5=39171 6=36648 7=32288 8=43158 9=33706 10=35412 | median=35001 n=10
+measure mean households hired a tick, ticks 10 to 100: 1=34 2=37 3=35 4=31 5=41 6=35 7=41 8=36 9=36 10=37 | median=36 n=10
+measure positions closed for employer funds: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure positions closed for no input: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure positions posted: 1=41367 2=51964 3=47166 4=40832 5=40664 6=49252 7=54392 8=49207 9=44699 10=40124 | median=45932 n=10
+measure positions unfilled: 1=22628 2=35002 3=29254 4=23054 5=24407 6=28966 7=37753 8=32354 9=24258 10=21696 | median=26686 n=10
+measure tick of the last hire: 1=268 2=256 3=251 4=253 5=225 6=289 7=239 8=256 9=293 10=245 | median=254 n=10
+measure wages paid: 1=14042705 2=15662925 3=15025250 4=14117725 5=14725791 6=17782380 7=14430261 8=17729798 9=16640098 10=14023196 | median=14875520 n=10
+check a second run of the seed gives the same hires and the same final snapshot: 10/10 pass
+check every hire formed has ended or is open: 10/10 pass
+check no hire is formed without a bill: 10/10 pass
+check no hire is open and no escrow is left: 10/10 pass
+check the escrow is the money of the open hires: 10/10 pass
+check the hires conform to the bill, the order and the escrow identity: 10/10 pass
+check the money moves only by the boundary flows: 10/10 pass
+
+## S97 one-demand+hire employers' wants on, 400 ticks seeds 1-10
+measure households at end: 1=163 2=93 3=82 4=126 5=128 6=151 7=84 8=90 9=89 10=96 | median=94 n=10
+measure households hired: 1=15918 2=16955 3=15504 4=17824 5=18422 6=16736 7=17083 8=15039 9=16040 10=16002 | median=16388 n=10
+measure households offered: 1=58022 2=50724 3=49854 4=49570 5=54686 6=56099 7=52918 8=52396 9=47345 10=50963 | median=51680 n=10
+measure households with no vacancy: 1=42104 2=33769 3=34350 4=31746 5=36264 6=39363 7=35835 8=37357 9=31305 10=34961 | median=35398 n=10
+measure mean households hired a tick, ticks 10 to 100: 1=23 2=34 3=34 4=32 5=34 6=36 7=34 8=37 9=37 10=35 | median=34 n=10
+measure positions closed for employer funds: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure positions closed for no input: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure positions posted: 1=44605 2=51685 3=38714 4=45372 5=42905 6=50533 7=55560 8=50904 9=47897 10=53710 | median=49215 n=10
+measure positions unfilled: 1=28687 2=34730 3=23210 4=27548 5=24483 6=33797 7=38477 8=35865 9=31857 10=37708 | median=32827 n=10
+measure tick of the last hire: 1=273 2=267 3=229 4=270 5=259 6=256 7=261 8=236 9=253 10=243 | median=258 n=10
+measure wages paid: 1=15478831 2=16128261 3=13512342 4=15189205 5=15273872 6=16747864 7=15133510 8=15822917 9=16024409 10=14898806 | median=15376352 n=10
+check a second run of the seed gives the same hires and the same final snapshot: 10/10 pass
+check every hire formed has ended or is open: 10/10 pass
+check no hire is formed without a bill: 10/10 pass
+check no hire is open and no escrow is left: 10/10 pass
+check the escrow is the money of the open hires: 10/10 pass
+check the hires conform to the bill, the order and the escrow identity: 10/10 pass
+check the money moves only by the boundary flows: 10/10 pass
+
+## S98 one-demand+hire labour-bound, work floor 0, 400 ticks seeds 1-10
+measure arc elasticity of hired households to the wage, bp: 1=24707 2=36217 3=37512 4=33222 5=25360 6=29846 7=24169 8=18693 9=32946 10=23461 | median=27603 n=10
+measure households at end: 1=71 2=99 3=115 4=70 5=72 6=90 7=80 8=74 9=86 10=103 | median=83 n=10
+measure households hired: 1=17572 2=19904 3=20719 4=18895 5=21790 6=20393 7=20482 8=22687 9=21475 10=19732 | median=20438 n=10
+measure households offered: 1=52796 2=55830 3=63792 4=48218 5=51935 6=54047 7=57946 8=53583 9=52861 10=49240 | median=53222 n=10
+measure households with no vacancy: 1=35224 2=35926 3=43073 4=29323 5=30145 6=33654 7=37464 8=30896 9=31386 10=29508 | median=32520 n=10
+measure mean households hired a tick, ticks 10 to 60: 1=23 2=21 3=22 4=20 5=24 6=19 7=26 8=24 9=21 10=26 | median=22 n=10
+measure mean households hired a tick, ticks 60 to 110: 1=38 2=56 3=52 4=59 5=56 6=45 7=57 8=42 9=54 10=53 | median=54 n=10
+measure mean wage, ticks 10 to 60: 1=1434 2=1404 3=1403 4=1292 5=1319 6=1336 7=1272 8=1405 9=1330 10=1428 | median=1370 n=10
+measure mean wage, ticks 60 to 110: 1=1751 2=1807 3=1743 4=1743 5=1813 6=1757 7=1737 8=1885 9=1740 10=1915 | median=1754 n=10
+measure positions closed for employer funds: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure positions closed for no input: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure positions posted: 1=126389 2=185675 3=148937 4=204973 5=195752 6=146789 7=258252 8=152622 9=183580 10=228715 | median=184628 n=10
+measure positions unfilled: 1=108817 2=165771 3=128218 4=186078 5=173962 6=126396 7=237770 8=129935 9=162105 10=208983 | median=163938 n=10
+measure tick of the last hire: 1=209 2=223 3=216 4=219 5=235 6=246 7=235 8=242 9=242 10=234 | median=234 n=10
+measure wages paid: 1=22475861 2=25483909 3=25544460 4=24068604 5=26223572 6=24805086 7=27556709 8=26166121 9=25681716 10=25661724 | median=25603092 n=10
+check every hire formed has ended or is open: 10/10 pass
+check no hire is formed without a bill: 10/10 pass
+check no hire is open and no escrow is left: 10/10 pass
+check price within belief bounds (FR-STB-008): 10/10 pass
+check the escrow is the money of the open hires: 10/10 pass
+check the hires conform to the bill, the order and the escrow identity: 10/10 pass
+check the money moves only by the boundary flows: 10/10 pass
+
+## S98 one-demand+hire labour-bound, work floor 4000, 400 ticks seeds 1-10
+measure arc elasticity of hired households to the wage, bp: 1=25782 2=28362 3=37512 4=33952 5=26840 6=29664 7=24169 8=18529 9=32807 10=23853 | median=27601 n=10
+measure households at end: 1=86 2=56 3=64 4=72 5=73 6=99 7=86 8=83 9=84 10=93 | median=84 n=10
+measure households hired: 1=18568 2=18265 3=19632 4=18043 5=20269 6=20835 7=20999 8=23976 9=22325 10=20484 | median=20376 n=10
+measure households offered: 1=53970 2=46517 3=51333 4=55284 5=55662 6=53561 7=57452 8=55786 9=55273 10=54073 | median=54673 n=10
+measure households with no vacancy: 1=35402 2=28252 3=31701 4=37241 5=35393 6=32726 7=36453 8=31810 9=32948 10=33589 | median=33268 n=10
+measure mean households hired a tick, ticks 10 to 60: 1=23 2=21 3=22 4=20 5=24 6=19 7=26 8=24 9=21 10=26 | median=22 n=10
+measure mean households hired a tick, ticks 60 to 110: 1=39 2=53 3=52 4=57 5=56 6=45 7=57 8=42 9=55 10=51 | median=52 n=10
+measure mean wage, ticks 10 to 60: 1=1434 2=1348 3=1403 4=1292 5=1319 6=1336 7=1272 8=1405 9=1330 10=1428 | median=1342 n=10
+measure mean wage, ticks 60 to 110: 1=1753 2=1833 3=1743 4=1718 5=1781 6=1760 7=1737 8=1890 9=1750 10=1878 | median=1756 n=10
+measure positions closed for employer funds: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure positions closed for no input: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure positions posted: 1=124929 2=178601 3=145173 4=230818 5=190914 6=143401 7=251835 8=151710 9=184530 10=234421 | median=181566 n=10
+measure positions unfilled: 1=106361 2=160336 3=125541 4=212775 5=170645 6=122566 7=230836 8=127734 9=162205 10=213937 | median=161270 n=10
+measure tick of the last hire: 1=218 2=219 3=217 4=225 5=219 6=250 7=237 8=243 9=242 10=230 | median=228 n=10
+measure wages paid: 1=23372119 2=24276689 3=24487342 4=24214442 5=26313410 6=24892329 7=27676437 8=27273392 9=25738374 10=26135676 | median=25315352 n=10
+check every hire formed has ended or is open: 10/10 pass
+check no hire is formed without a bill: 10/10 pass
+check no hire is open and no escrow is left: 10/10 pass
+check price within belief bounds (FR-STB-008): 10/10 pass
+check the escrow is the money of the open hires: 10/10 pass
+check the hires conform to the bill, the order and the escrow identity: 10/10 pass
+check the money moves only by the boundary flows: 10/10 pass

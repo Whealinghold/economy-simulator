@@ -10,8 +10,7 @@ import (
 // fiscalPackDoc is a fiscal overlay for the governed warm five, written as a file
 // layer: a head tax and a payout on the cooks of the seat region, a duty on the sales
 // of one commodity, and a purchase and a release of it. Every authority is the root,
-// which governs the seat region centre. The module has no step yet (PR 2 is the
-// configuration surface), so the overlay changes the configuration and nothing else.
+// which governs the seat region centre. The standing orders have no step yet.
 const fiscalPackDoc = `
 [modules.fiscal.tax.poll]
 authority = "root"
@@ -61,10 +60,11 @@ func fiscalPackConfig(t *testing.T, off bool) economysim.Config {
 // TestFiscal_PackTaxFillsTheTreasury verifies, on files alone (testing.md 6.4), that the
 // warm five with the governed polity and the fiscal overlay builds and runs 30 audited
 // steps, that the head tax and the payout of the overlay move money through the root's
-// treasury and never past it (it ends between zero and what it holds with the module off
-// plus one tick's tax), and that the configuration hash tells the two apart. The payout
-// pays each cook what the tax took, so the treasury stays near its start money; the duty
-// and the standing orders of the overlay are not built yet and change nothing.
+// treasury and never below zero, that the sales duty of the overlay raises it above what
+// it holds with the module off (the payout pays each cook what the tax took, so the tax
+// and the payout net out and the duty is what is left), and that the configuration hash
+// tells the two apart. The standing orders of the overlay are not built yet and change
+// nothing.
 //
 // Requirement: FR-FIS-001, FR-FIS-002, FR-FIS-005, FR-FIS-021
 //
@@ -86,8 +86,8 @@ func TestFiscal_PackTaxFillsTheTreasury(t *testing.T) {
 	if len(ron.Final.Jurisdictions) == 0 || len(roff.Final.Jurisdictions) != len(ron.Final.Jurisdictions) {
 		t.Fatalf("treasury rows with the module on = %d, off = %d, want the same non-zero count", len(ron.Final.Jurisdictions), len(roff.Final.Jurisdictions))
 	}
-	if got, base := ron.Final.Jurisdictions[0].Money, roff.Final.Jurisdictions[0].Money; got < 0 || got > base+1_000 {
-		t.Errorf("treasury money after %d ticks (seed %d) with the module on = %d, off = %d, want between 0 and off + 1000: the payout returns what the tax took", ticks, seed, got, base)
+	if got, base := ron.Final.Jurisdictions[0].Money, roff.Final.Jurisdictions[0].Money; got <= base {
+		t.Errorf("treasury money after %d ticks (seed %d) with the module on = %d, off = %d, want above off: the duty is collected", ticks, seed, got, base)
 	}
 }
 

@@ -170,6 +170,9 @@ func (DefaultStrategy) Revise(o *OutcomeView, _ *rand.Rand) Belief {
 // overflows) and never a panic (D96).
 func (d DefaultStrategy) Trade(v *AgentView, rng *rand.Rand, p *TradePlan) {
 	d.TradeWith(v, rng, p, nil)
+	if v.Insurance != nil {
+		DefaultCover(v, p) // after the orders: the offer is sized from the bids the plan holds
+	}
 }
 
 // TradeWith is Trade with a planned trip in place of the planned recipe, the seam
