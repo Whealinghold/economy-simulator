@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 )
 
@@ -283,10 +284,14 @@ func (in *insurance) indexesOfLists() (liability, insured []int64, err error) {
 	for _, list := range [...][]coverPolicy{in.open, in.stores} {
 		for i := range list {
 			p := &list[i]
-			if int(p.underwriter) >= len(liability) {
+			if p.underwriter < 0 || int(p.underwriter) >= len(liability) {
 				return nil, nil, fmt.Errorf("policy %d: underwriter %d has no liability entry", p.id, p.underwriter)
 			}
-			liability[p.underwriter] += p.maxPayout
+			sum, ok := checked.Add(liability[p.underwriter], p.maxPayout)
+			if !ok {
+				return nil, nil, fmt.Errorf("policy %d: the open liability of underwriter %d overflows", p.id, p.underwriter)
+			}
+			liability[p.underwriter] = sum
 			if p.kind == CoverRoute && int(p.insured) < len(insured) {
 				insured[p.insured]++
 			}

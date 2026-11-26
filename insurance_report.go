@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/Whealinghold/economy-sim/internal/checked"
 	"github.com/Whealinghold/economy-sim/internal/codec"
 	"github.com/Whealinghold/economy-sim/internal/insure"
 	"github.com/Whealinghold/economy-sim/internal/logkeys"
@@ -242,22 +243,36 @@ func (w *World) loadInsurance(rc *restoreCtx, r *codec.Reader) error {
 	}
 	for i := 0; i < n && r.Err() == nil; i++ {
 		p := w.readPolicy(rc, r)
-		switch {
-		case r.Err() != nil:
-		case i > 0 && p.id <= in.open[i-1].id || p.id >= in.next:
-			r.Failf("policy %d is not above the one before it or not below the next ID %d", p.id, in.next)
-		case in.covered(p.shipment):
-			r.Failf("policy %d covers shipment %d, which another policy covers", p.id, p.shipment)
-		default:
-			if why := w.policyFault(&p); why != "" {
-				r.Failf("policy %d %s", p.id, why)
-				break
-			}
-			in.add(p)
+		if r.Err() == nil {
+			w.acceptPolicy(r, p, i > 0 && p.id <= in.open[i-1].id)
 		}
 	}
 	in.readTotals(r)
 	return nil
+}
+
+// acceptPolicy checks one policy read at position i and adds it, or fails the reader: it must
+// be above the one before it (notAbove) and below the next ID, cover a shipment no other
+// policy covers, pass policyFault and keep its underwriter's open liability within MaxMoney.
+func (w *World) acceptPolicy(r *codec.Reader, p coverPolicy, notAbove bool) {
+	in := w.insurance
+	if notAbove || p.id >= in.next {
+		r.Failf("policy %d is not above the one before it or not below the next ID %d", p.id, in.next)
+		return
+	}
+	if in.covered(p.shipment) {
+		r.Failf("policy %d covers shipment %d, which another policy covers", p.id, p.shipment)
+		return
+	}
+	if why := w.policyFault(&p); why != "" {
+		r.Failf("policy %d %s", p.id, why)
+		return
+	}
+	if sum, ok := checked.Add(in.liabilityOf(p.underwriter), p.maxPayout); !ok || sum > MaxMoney {
+		r.Failf("policy %d takes the open liability of underwriter %d above MaxMoney", p.id, p.underwriter)
+		return
+	}
+	in.add(p)
 }
 
 // readPolicy reads one policy record with the range of each field checked: the agent IDs and

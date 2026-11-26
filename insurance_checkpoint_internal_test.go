@@ -179,6 +179,14 @@ func loadInsBody(w *World, body []byte, maxPolicies int64) error {
 	return err
 }
 
+// hugeCount is a body of next ID 0 that claims 2^60 policies and holds none.
+func hugeCount() []byte {
+	cw := codec.NewWriter(nil)
+	cw.U(0)
+	cw.U(1 << 60)
+	return cw.Out()
+}
+
 // with returns r with the field set by f.
 func (r insRec) with(f func(*insRec)) insRec { f(&r); return r }
 
@@ -223,6 +231,10 @@ func TestCheckpoint_InsuranceRefusesCorrupt(t *testing.T) {
 		{"formed is not the next ID", insBody(2, good, [6]uint64{1, 1_600}), 50, false},
 		{"premiums below the open policies", insBody(2, []insRec{goodRec, second}, [6]uint64{2, 1_600}), 50, false},
 		{"a total above MaxMoney", insBody(2, good, [6]uint64{2, 3_200, MaxMoney + 1}), 50, false},
+		{"liability of one underwriter above MaxMoney", insBody(2, []insRec{
+			goodRec.with(func(r *insRec) { r.sum, r.maxPayout, r.coverBP = MaxMoney, MaxMoney, 10_000; r.premium = 0 }),
+			second.with(func(r *insRec) { r.sum, r.maxPayout, r.coverBP = MaxMoney, MaxMoney, 10_000; r.premium = 0 })}, [6]uint64{2}), 50, false},
+		{"a count of 2^60", hugeCount(), 50, false},
 		{"a body with a tail", append(insBody(0, nil, [6]uint64{}), 1), 50, false},
 		{"a body cut short", insBody(0, nil, [6]uint64{})[:4], 50, false},
 	} {
