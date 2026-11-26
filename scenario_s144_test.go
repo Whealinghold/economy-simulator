@@ -8,8 +8,8 @@ import (
 )
 
 // savingS144Variants are the legs of S144: the spread of the hurdle by agent, the commit band and the
-// repair gate of the cook, in basis points. The first leg is the overlay's own band, the last two
-// have the gate at 0, which never repairs (spec 5.8).
+// repair gate of the cook, in basis points. The overlay's own spread and band are the fifth leg, and
+// only the last has the gate at 0, which never repairs (spec 5.8).
 var savingS144Variants = []struct{ spread, band, repair int64 }{
 	{0, 0, 5_000}, {0, 2_000, 5_000}, {5_000, 2_000, 5_000}, {40_000, 0, 5_000}, {40_000, 2_000, 5_000}, {40_000, 2_000, 0},
 }
