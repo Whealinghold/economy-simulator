@@ -1,0 +1,40 @@
+# The insurance module on the routes of pack two (plan 3-ins phase 8, spec-insurance.md 4, 14, spec-reference-chain.md 4.5):
+# the carrier is an insured on the lanes it ships, the cook an underwriter. Layer it after the pack, overlay/trade-two.toml,
+# overlay/transport-two.toml, overlay/risk.toml (the lane rows it reads) and overlay/credit.toml (a payout the underwriter
+# cannot pay in full is a claim, so the module needs the credit module): base.toml, two.toml, overlay/trade-two.toml,
+# overlay/transport-two.toml, overlay/risk.toml, overlay/credit.toml, this file. A test double, not a design: every number
+# is a placeholder (N-015, N-027), chosen so that a run of 400 ticks with a shipper holds both a policy that pays and one
+# that does not.
+#
+# The module: a unit is valued at its published price up to twice its reference price (value_cap_bp 20 000), a payout
+# claim falls due one tick after it forms (payout_ticks), no policy is formed for a sum or a premium below 1.
+# The carrier asks for cover on a lane whose expected loss is at least 1 of 10 000, whatever the value of its goods against
+# its money (ruin_share_bp 0), takes any offer of at least half the maximum payout (min_cover_bp 5 000) and pays up to twice
+# the expected loss (max_loading_bp 20 000). It has no store, so store_share_bp is 0.
+# The cook offers all of its free capacity (share_bp 10 000), where an open liability may reach ten times its capital
+# (cap_bp 100 000, the bound), so that one offer covers a shipment whose sum is the carrier's whole account: a shipment
+# is small against the carrier's trip account, and a cook is poor. The loading is exactly the expected loss (loading_bp
+# 10 000), the cover 8 000 of the sum (cover_bp), and no store is insured here (store_rate_bp 0). A cook that cannot pay a
+# payout in full owes the rest as a claim, which is what the shortfall events of the golden show.
+
+[modules.insurance]
+value_cap_bp = 20000
+payout_ticks = 1
+min_sum = 1
+max_policies = 1000
+max_cover_requests = 4
+
+[role.carrier.cover.insure]
+min_loss_bp = 1
+ruin_share_bp = 0
+max_loading_bp = 20000
+min_cover_bp = 5000
+store_share_bp = 0
+max_store_rate_bp = 0
+
+[role.cook.cover.underwrite]
+loading_bp = 10000
+store_rate_bp = 0
+cover_bp = 8000
+cap_bp = 100000
+share_bp = 10000

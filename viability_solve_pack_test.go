@@ -353,7 +353,10 @@ func TestSolveSteadyState_OverlaysSolve(t *testing.T) {
 	// risk.toml and risk-store.toml name the routes of the transport layers and the barn of the
 	// storage layers, which `one` alone lacks (the risk goldens load and validate them over the
 	// layers they need).
-	notOnOne := []string{"overhang.toml", "resources-five.toml", "resources-five-binding.toml", "merchants.toml", "merchants-three.toml", "chain-payroll.toml", "polity.toml", "polity-governed.toml", "second-skill.toml", "tenure.toml", "risk.toml", "risk-store.toml", "institutions.toml", "institutions-inert.toml", "policy.toml", "policy-directed.toml", "fiscal.toml", "fiscal-governed.toml"}
+	// cover.toml and cover-store.toml need the risk and credit modules and the lanes or the barn of the
+	// layers under them, which `one` alone lacks (the insurance goldens load, validate and run them over
+	// the layers they need).
+	notOnOne := []string{"overhang.toml", "resources-five.toml", "resources-five-binding.toml", "merchants.toml", "merchants-three.toml", "chain-payroll.toml", "polity.toml", "polity-governed.toml", "second-skill.toml", "tenure.toml", "risk.toml", "risk-store.toml", "institutions.toml", "institutions-inert.toml", "policy.toml", "policy-directed.toml", "fiscal.toml", "fiscal-governed.toml", "cover.toml", "cover-store.toml"}
 	entries, err := os.ReadDir("testdata/chains/overlay")
 	if err != nil {
 		t.Fatalf("ReadDir(overlay) = %v", err)

@@ -242,6 +242,12 @@ func skippedOverPackOne(f string) bool {
 	if strings.HasPrefix(f, "overlay/risk") {
 		return true
 	}
+	// The cover overlays need the risk, credit and transport or storage layers they read, which pack one
+	// alone lacks; the insurance goldens and TestGolden_InsuranceProbeExercisesPayouts load and run them
+	// over the layers they need.
+	if strings.HasPrefix(f, "overlay/cover") {
+		return true
+	}
 	// The polity overlays name the five regions of the warm five, which pack one
 	// lacks; TestScenarioS112_Neutral loads and validates them over it.
 	if strings.HasPrefix(f, "overlay/polity") {
