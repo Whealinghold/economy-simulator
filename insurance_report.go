@@ -174,7 +174,9 @@ func (w *World) snapshotInsurance(s *Snapshot) {
 	if in == nil {
 		return
 	}
-	s.Policies = make([]CoverPolicyRow, len(in.open))
+	if len(in.open) > 0 { // nil, not empty, with no policy, so an idle world equals one with the module off
+		s.Policies = make([]CoverPolicyRow, len(in.open))
+	}
 	for i := range in.open {
 		p := &in.open[i]
 		s.Policies[i] = CoverPolicyRow{
