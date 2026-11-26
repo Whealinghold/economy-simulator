@@ -138,6 +138,9 @@ var skipFields = []string{
 	// legal price are allocated only when an observer is attached, cleared as P7.2b tells
 	// them, and not saved; order is the scratch of the events of one region.
 	"rightTable.refused", "legalTable.tally", "legalTable.rateTally", "legalTable.order",
+	// The saving module's counts of SavingPlanned are allocated only when an observer is attached
+	// and cleared at P8.6, and its log is the world's logger; neither is saved (spec 13).
+	"saving.counts", "saving.log",
 }
 
 // maxWalkDepth bounds the nesting of the walk; a deeper value is an error.

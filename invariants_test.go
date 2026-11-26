@@ -315,6 +315,10 @@ var invariantTable = []invariantCase{
 	// Plan 3-plc Phase 8: the five of the module-alone golden, where the actors move a flow, an edge
 	// group and a transit factor, so the audit runs across every application of a policy.
 	{"five+policy", fivePolicy, 2, 0, "", nil},
+	// Plan 3-sav Phase 7: pack one with the infrastructure and saving overlays, the pack of the
+	// module-alone golden, where households save, build and repair, so the audit runs across a
+	// project's purchases, its completion and the held inputs.
+	{"one+infrastructure+saving", packOneSaving, 2, 0, "", nil},
 	// Plan 3-fis Phase 10: the five of the module-alone golden, where taxes, duties, payouts and a
 	// remittance move money between households and three treasuries, so the audit (money conserved,
 	// each fiscal reason zero-sum, no negative balance) runs across every flow.
