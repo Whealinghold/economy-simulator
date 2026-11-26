@@ -137,8 +137,9 @@ func (w *World) removeAgent(a *agent, cause Cause) error {
 	if w.tenure != nil {
 		w.tenure.dropAgent(a) // step 2b: the titles go to the pool of each endowment's region, before the money moves
 	}
-	w.dropHires(a)  // step 2c, nil-safe: the hires of the agent end and the escrow returns to the employer's own account
-	w.dropClaims(a) // steps 2d and 2e, nil-safe: a debtor's creditors are paid from its whole balance, a creditor's claims pass to the estate
+	w.dropHires(a)    // step 2c, nil-safe: the hires of the agent end and the escrow returns to the employer's own account
+	w.dropClaims(a)   // steps 2d and 2e, nil-safe: a debtor's creditors are paid from its whole balance, a creditor's claims pass to the estate
+	w.dropPolicies(a) // step 2f, nil-safe: the open policies of the agent end, no money moves
 	// Step 2g, nil-safe: its facilities pass to the estate of their region, a store facility is ruined, before the money moves.
 	w.dropFacilities(a)
 	money, lots, err := w.estates.receive(w.ledger, a.account, region)

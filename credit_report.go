@@ -307,6 +307,7 @@ type endRec struct {
 // line "loan ended" and, with an observer, LoanEnded. The regions are those of the
 // two accounts at the event.
 func (w *World) reportLoanEnded(t int64, c *ledger.Claim, e endRec) {
+	w.coverClaimEnded(c, e.cause) // nil-safe: a payout claim repaid is counted for CoverSettled of the stage claim
 	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
 		w.log.LogAttrs(ctx, slog.LevelDebug, "loan ended", slog.Int64(logkeys.Claim, c.ID),
 			slog.Int64(logkeys.Agent, int64(w.accountView(c.Debtor).Owner)), slog.String(logkeys.Cause, string(e.cause)),

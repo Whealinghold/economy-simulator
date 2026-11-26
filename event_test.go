@@ -114,6 +114,8 @@ var declaredEvents = []economysim.Event{
 	economysim.PolicyDecided{},
 	economysim.CoverFormed{},
 	economysim.CoverRound{},
+	economysim.CoverEnded{},
+	economysim.CoverSettled{},
 	economysim.SavingPlanned{},
 }
 
@@ -130,9 +132,7 @@ var moduleGates = []string{
 // that event.go does not declare yet: the events of the modules, of the
 // regions, checkpoint and skill stages. The change that
 // declares one deletes its entry; the catalogue test fails on a stale entry.
-var notBuiltEvents = []string{
-	"CoverEnded", "CoverSettled",
-}
+var notBuiltEvents = []string{}
 
 // deferredCore names every event whose row of 4.1 has the gate core but that
 // event.go does not declare, with the stage and file that builds it. A core
@@ -411,7 +411,7 @@ func TestEvents_Shape(t *testing.T) {
 		"RoleChanged.From": role, "RoleChanged.To": role,
 		"WeightChanged.From": reflect.TypeFor[int64](), "WeightChanged.To": reflect.TypeFor[int64](),
 		"EndowmentAdjusted.Kind": reflect.TypeFor[economysim.AdjustKind](), "FacilityChanged.Kind": reflect.TypeFor[economysim.FacilityKind](),
-		"CoverFormed.Kind": reflect.TypeFor[economysim.CoverKind](),
+		"CoverFormed.Kind": reflect.TypeFor[economysim.CoverKind](), "CoverEnded.Kind": reflect.TypeFor[economysim.CoverKind](), "CoverEnded.Cause": reflect.TypeFor[economysim.CoverCause](),
 	}
 	for _, e := range declaredEvents {
 		typ := reflect.TypeOf(e)
