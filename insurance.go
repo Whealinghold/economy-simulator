@@ -292,7 +292,10 @@ func (in *insurance) indexesOfLists() (liability, insured []int64, err error) {
 				return nil, nil, fmt.Errorf("policy %d: the open liability of underwriter %d overflows", p.id, p.underwriter)
 			}
 			liability[p.underwriter] = sum
-			if p.kind == CoverRoute && int(p.insured) < len(insured) {
+			if p.kind == CoverRoute {
+				if p.insured < 0 || int(p.insured) >= len(insured) {
+					return nil, nil, fmt.Errorf("policy %d: insured %d has no count entry", p.id, p.insured)
+				}
 				insured[p.insured]++
 			}
 		}

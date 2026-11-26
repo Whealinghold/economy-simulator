@@ -317,6 +317,30 @@ func TestAudit_InsuranceIdentities(t *testing.T) {
 	}
 }
 
+// TestIndexesOfLists_RefusesAnInsuredWithoutACountEntry verifies that the recomputation of the
+// indexes reports a route policy whose insured is outside the insured counts, as it does for an
+// underwriter outside the liabilities, instead of leaving the policy out of both sides of the
+// audit's comparison.
+//
+// Fix: review of the INS PR E (stage 7 final). The insured count was skipped when the ID was
+// beyond the slice, so the audit compared two slices that both omitted the policy.
+func TestIndexesOfLists_RefusesAnInsuredWithoutACountEntry(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name    string
+		insured AgentID
+	}{
+		{"beyond the counts", AgentID(1 << 20)},
+		{"negative", -1},
+	} {
+		w, _ := insCkWorld(t)
+		w.insurance.open[0].insured = tt.insured
+		if _, _, err := w.insurance.indexesOfLists(); err == nil {
+			t.Errorf("%s: indexesOfLists error = nil, want an error for the insured %d", tt.name, tt.insured)
+		}
+	}
+}
+
 // TestSnapshot_PoliciesAndTotals verifies the rows of spec-insurance.md 15.4: Policies has a
 // row for each open route policy in ascending ID with the fields of the record and the region
 // of the insured, Insurance has the six totals and the shortfall read from the ledger's
