@@ -2,6 +2,7 @@ package economysim
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 
 	"github.com/Whealinghold/economy-sim/internal/ledger"
@@ -170,4 +171,125 @@ func (w *World) payoutOwed(account int) int64 {
 		}
 	}
 	return owed
+}
+
+// openAgentAccount reports whether the ID is a live agent whose account is an open Agent
+// account of the ledger.
+func (w *World) openAgentAccount(id AgentID) bool {
+	if !w.liveAgent(id) {
+		return false
+	}
+	v, err := w.ledger.Account(w.agents[id].account)
+	return err == nil && v.Kind == ledger.KindAgent && !v.Closed
+}
+
+// shipmentInFlight returns the shipment with the ID when it is in flight, by binary search of
+// the ships, which are in ascending ID order. It reports false with the transport module off.
+func (w *World) shipmentInFlight(id ShipmentID) (*shipment, bool) {
+	if w.transport == nil {
+		return nil, false
+	}
+	i, ok := slices.BinarySearchFunc(w.transport.ships, id, func(s shipment, id ShipmentID) int { return cmp.Compare(s.id, id) })
+	if !ok {
+		return nil, false
+	}
+	return &w.transport.ships[i], true
+}
+
+// checkOpenTotals checks the totals against the open route policies: the premiums paid are at
+// least the premiums of the open policies and the policies formed at least their count.
+func (in *insurance) checkOpenTotals() error {
+	var premiums int64
+	for i := range in.open {
+		premiums = addSat(premiums, in.open[i].premium)
+	}
+	if in.tot.premiums < premiums || in.tot.formed < int64(len(in.open)) {
+		return fmt.Errorf("%d premiums over %d policies formed, want at least the %d of the %d open policies",
+			in.tot.premiums, in.tot.formed, premiums, len(in.open))
+	}
+	return nil
+}
+
+// audit checks the identities of spec-insurance.md 9.4 (FR-INS-081): the due is the sum of
+// its parts over the run with the shortfall the ledger's Awarded, the policies formed are the
+// next ID, every open route policy has a live shipment and open distinct accounts, and the
+// indexes are the ones the lists give. The money identity is the ledger's (FR-LED-024).
+func (in *insurance) audit(w *World) error {
+	if err := in.auditTotals(w); err != nil {
+		return fmt.Errorf("insurance: %w", err)
+	}
+	if err := in.auditPolicies(w); err != nil {
+		return fmt.Errorf("insurance: %w", err)
+	}
+	if err := in.auditIndexes(); err != nil {
+		return fmt.Errorf("insurance: %w", err)
+	}
+	return nil
+}
+
+// auditTotals checks identity 1 and the counts of the totals. The identity is not checked
+// once a total has reached MaxMoney, where the sums saturate.
+func (in *insurance) auditTotals(w *World) error {
+	t := &in.tot
+	short := w.ledger.ClaimTotals().Awarded
+	if t.formed != in.next {
+		return fmt.Errorf("%d policies formed, want the next policy ID %d", t.formed, in.next)
+	}
+	if t.due < MaxMoney && t.due != t.paid+short+t.dropped+t.cut {
+		return fmt.Errorf("due %d is not paid %d + short %d + dropped %d + cut %d", t.due, t.paid, short, t.dropped, t.cut)
+	}
+	return in.checkOpenTotals()
+}
+
+// auditPolicies checks identity 4 for each open route policy: ascending IDs below the next,
+// and what policyFault reads.
+func (in *insurance) auditPolicies(w *World) error {
+	for i := range in.open {
+		p := &in.open[i]
+		if p.id >= in.next || (i > 0 && p.id <= in.open[i-1].id) {
+			return fmt.Errorf("policy %d is out of order or not below the next ID %d", p.id, in.next)
+		}
+		if why := w.policyFault(p); why != "" {
+			return fmt.Errorf("policy %d %s", p.id, why)
+		}
+	}
+	return nil
+}
+
+// auditIndexes checks that the by-shipment index, the open liability of each underwriter and
+// the count of each insured are what the lists give, store policies included.
+func (in *insurance) auditIndexes() error {
+	liability, insured, err := in.indexesOfLists()
+	if err != nil {
+		return err
+	}
+	if !slices.Equal(liability, in.liability) || !slices.Equal(insured, in.insured) || len(in.byShipment) != len(in.open) {
+		return fmt.Errorf("the indexes (%d liabilities, %d insured, %d by shipment) are not the lists' (%d open policies)",
+			len(in.liability), len(in.insured), len(in.byShipment), len(in.open))
+	}
+	for i := range in.open {
+		if in.byShipment[in.open[i].shipment] != in.open[i].id {
+			return fmt.Errorf("the by-shipment index does not name policy %d for shipment %d", in.open[i].id, in.open[i].shipment)
+		}
+	}
+	return nil
+}
+
+// indexesOfLists recomputes the open liability of each underwriter and the count of route
+// policies of each insured from the two lists, in slices of the length the indexes have.
+func (in *insurance) indexesOfLists() (liability, insured []int64, err error) {
+	liability, insured = make([]int64, len(in.liability)), make([]int64, len(in.insured))
+	for _, list := range [...][]coverPolicy{in.open, in.stores} {
+		for i := range list {
+			p := &list[i]
+			if int(p.underwriter) >= len(liability) {
+				return nil, nil, fmt.Errorf("policy %d: underwriter %d has no liability entry", p.id, p.underwriter)
+			}
+			liability[p.underwriter] += p.maxPayout
+			if p.kind == CoverRoute && int(p.insured) < len(insured) {
+				insured[p.insured]++
+			}
+		}
+	}
+	return liability, insured, nil
 }

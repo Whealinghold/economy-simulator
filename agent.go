@@ -768,6 +768,11 @@ type AgentState struct {
 	HasCredit bool
 	Credit    CreditState
 
+	// Insurance is the insurance group: the agent's open route policies and, for an
+	// underwriter, its open liability (spec-insurance.md 16.3.1); the zero value while the
+	// insurance module is off. It is not named Cover, which is the own-use field above.
+	Insurance CoverState
+
 	// Facilities are the facilities the agent owns in every region, in ascending ID,
 	// at most MaxFacilitiesPerAgent; empty while the infrastructure module is off
 	// (spec-infrastructure.md 11.4).
@@ -850,6 +855,7 @@ func (w *World) Agent(id AgentID) (AgentState, error) {
 	}
 	w.fillModuleGroups(&st, a)
 	w.fillCreditState(&st, a)
+	w.fillInsuranceState(&st, a)
 	w.fillFacilityState(&st, a)
 	w.fillMembership(&st, a)
 	w.fillHireState(&st, a)
