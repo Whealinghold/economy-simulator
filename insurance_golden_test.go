@@ -163,7 +163,6 @@ func TestGolden_InsuranceAloneStores(t *testing.T) {
 type insTally struct {
 	formed, routeFormed, storeFormed int64
 	ended, paid, shortfalls          int64 // policies ended, with a payout above 0, and with a shortfall
-	due                              int64
 }
 
 // add tallies the cover events of a run.
@@ -181,7 +180,6 @@ func (r *insTally) add(events []economysim.Event) {
 			r.ended++
 			if e.Paid > 0 {
 				r.paid++
-				r.due += int64(e.Due)
 			}
 			if e.Short > 0 {
 				r.shortfalls++

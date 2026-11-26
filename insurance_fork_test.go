@@ -30,7 +30,7 @@ func insForkProbe(t testing.TB, g insGolden, seed uint64, ticks int64) insForkTi
 		case economysim.CoverFormed:
 			first(&out.formed, e.Tick)
 		case economysim.CoverEnded:
-			if e.Due > 0 {
+			if e.Paid > 0 {
 				first(&out.payout, e.Tick)
 			}
 			if e.Short > 0 {
