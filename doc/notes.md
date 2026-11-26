@@ -1487,6 +1487,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-insurance.md` 7.1.2, INS-A6 (a case of L11 and L45).
 - **Note:** The cover round is after the credit round, so a household can pay a premium from this tick's loan.
 - **Update (2026-11-19, plan 3-ins Phase 1):** a premium paid from a loan formed at P3.3b is a test of scenario S161. Left open until PR F.
+- **Update (2026-11-26, plan 3-ins PR F):** S161 reports the loans formed but does not assert a premium paid from one; see N-554 item 5. Left open.
 
 ### N-213 A store has no expected-loss read
 
@@ -3068,4 +3069,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: f7aa847871b6e0c081888734
+NOTES-TAG: 218d1814a87ba5b97a2598c9

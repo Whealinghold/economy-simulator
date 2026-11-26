@@ -162,7 +162,7 @@ func TestGolden_InsuranceAloneStores(t *testing.T) {
 // insTally is what a run of events shows of the module.
 type insTally struct {
 	formed, routeFormed, storeFormed int64
-	ended, paid, shortfalls          int64 // policies ended, with a due above 0, and with a shortfall
+	ended, paid, shortfalls          int64 // policies ended, with a payout above 0, and with a shortfall
 	due                              int64
 }
 
@@ -179,7 +179,7 @@ func (r *insTally) add(events []economysim.Event) {
 			}
 		case economysim.CoverEnded:
 			r.ended++
-			if e.Due > 0 {
+			if e.Paid > 0 {
 				r.paid++
 				r.due += int64(e.Due)
 			}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -16,7 +17,7 @@ var packSecondCover = append(slices.Clone(packSecond), "second/cover.toml")
 // (NFR-INS-005): pack second, a setting that shares nothing with the reference chain, takes a
 // cellar, a risk row, the credit module and the two cover blocks from a document alone, loads,
 // validates, raises no insurance warning, runs 200 ticks for seeds 1 to 2 with the audit on,
-// forms store policies and pays at least one, and the premiums of the events are the totals of
+// forms store policies, and the premiums of the events are the totals of
 // the snapshot. The Go of the test names no commodity, role or region of the module.
 //
 // Requirement: NFR-INS-005, FR-INS-001, FR-INS-021, FR-INS-022
@@ -33,7 +34,7 @@ func TestConfigOnly_InsuranceNeedsOnlyConfiguration(t *testing.T) {
 		t.Fatalf("Modules.Insurance = %+v, want the module on with an insured role", cfg.Modules.Insurance)
 	}
 	for _, w := range cfg.Warnings() {
-		if len(w.Rule) >= 5 && (w.Rule[:5] == "cover" || w.Rule[:5] == "insur") {
+		if strings.HasPrefix(w.Rule, "cover") || strings.HasPrefix(w.Rule, "insur") {
 			t.Errorf("Warnings() has %s at %v, want no insurance warning on a consistent file", w.Rule, w.Path)
 		}
 	}

@@ -178,7 +178,9 @@ func withUnderwrite(cfg economysim.Config, fn func(u *economysim.UnderwriteTerms
 		if c := cfg.Roles[i].Cover; c != nil && c.Underwrite != nil {
 			u := *c.Underwrite
 			fn(&u)
-			cfg.Roles[i].Cover = &economysim.CoverTerms{Underwrite: &u}
+			cv := *c // keep the Insure block of a role that has both
+			cv.Underwrite = &u
+			cfg.Roles[i].Cover = &cv
 		}
 	}
 	return cfg

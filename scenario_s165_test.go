@@ -37,11 +37,13 @@ func TestScenarioINS6_CheckpointWithPoliciesAndClaimOpen(t *testing.T) {
 		t.Skip("end-to-end scenario, skipped with -short")
 	}
 	g := insGoldenTwo(t)
+	probed := 0
 	for _, seed := range seedList(scenarioSeedCount()) {
 		p := insForkProbe(t, g, seed, 40)
 		if p.shortfall < 0 {
 			continue // a seed with no shortfall has no payout claim to open
 		}
+		probed++
 		for _, cell := range []struct {
 			name   string
 			n      int
@@ -71,5 +73,8 @@ func TestScenarioINS6_CheckpointWithPoliciesAndClaimOpen(t *testing.T) {
 				})
 			})
 		}
+	}
+	if probed == 0 {
+		t.Fatalf("no seed formed a shortfall in 40 ticks, want at least one so the test does not pass for nothing")
 	}
 }
