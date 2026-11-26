@@ -356,6 +356,24 @@ func TestIndexesOfLists_RefusesALiabilityAboveMaxMoney(t *testing.T) {
 	}
 }
 
+// TestAuditIndexes_RefusesAMissingShipmentKeyOfPolicyZero verifies that the by-shipment check
+// tells an absent key from the zero value, so an open policy 0 whose key is missing, with
+// another key keeping the lengths equal, is reported.
+//
+// Fix: review of the INS PR E (stage 7 final). The map read gave 0 for an absent key, which
+// equals the ID of policy 0.
+func TestAuditIndexes_RefusesAMissingShipmentKeyOfPolicyZero(t *testing.T) {
+	t.Parallel()
+	w, _ := insCkWorld(t)
+	in := w.insurance
+	in.open[0].id = 0
+	delete(in.byShipment, in.open[0].shipment)
+	in.byShipment[in.open[0].shipment+1000] = 0
+	if err := in.auditIndexes(); err == nil {
+		t.Error("auditIndexes error = nil, want an error for the missing shipment key of policy 0")
+	}
+}
+
 // TestSnapshot_PoliciesAndTotals verifies the rows of spec-insurance.md 15.4: Policies has a
 // row for each open route policy in ascending ID with the fields of the record and the region
 // of the insured, Insurance has the six totals and the shortfall read from the ledger's

@@ -270,7 +270,7 @@ func (in *insurance) auditIndexes() error {
 			len(in.liability), len(in.insured), len(in.byShipment), len(in.open))
 	}
 	for i := range in.open {
-		if in.byShipment[in.open[i].shipment] != in.open[i].id {
+		if id, ok := in.byShipment[in.open[i].shipment]; !ok || id != in.open[i].id {
 			return fmt.Errorf("the by-shipment index does not name policy %d for shipment %d", in.open[i].id, in.open[i].shipment)
 		}
 	}
