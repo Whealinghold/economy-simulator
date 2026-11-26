@@ -1239,7 +1239,7 @@ in the snapshot because REG and TRN asked, and they are the same rows as in
 Each is bounded by what is in flight, and so by `MaxOpen`, `MaxClaims`, `MaxPolicies`,
 the shipments in flight, the hires and the agents (5.6). The row types of the insurance
 module are `CoverPolicyRow` (`Policies`) and `InsuranceTotals` (`Insurance`), and its
-group of `AgentState` is `Cover` (plan 3-ins E9). `Claims` of origin `payout`
+group of `AgentState` is `Insurance` (plan 3-ins E9, N-553). `Claims` of origin `payout`
 are the insurance claims; the credit instruments count `loan` only (6.2.1).
 
 #### 5.3.9 The outside

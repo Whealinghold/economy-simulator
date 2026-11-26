@@ -1863,10 +1863,11 @@
 //     policies (its lane is a region, not a transport lane); a request for one lane of a
 //     trip (LaneCover), beside a request for a store (StoreCover) and an offer to
 //     underwrite (CoverOffer).
-//   - CoverView, CoverPolicyRow, InsuranceTotals, Insurance: the view group of a strategy
+//   - CoverView, CoverPolicyRow, InsuranceTotals, CoverState, Insurance: the view group of a strategy
 //     (the field AgentView.Insurance, since AgentView.Cover is the subsistence ticks of
-//     upkeep), the snapshot rows of the open policies and of the totals, and the module's
-//     configuration.
+//     upkeep), the snapshot rows of the open policies and of the totals, the group
+//     AgentState.Insurance (CoverState: the open route policies of an agent and its open
+//     liability), and the module's configuration.
 //   - CoverKind, DefaultCover, DefaultOffer: the closed set of the two kinds of policy (route
 //     and store), and the default rules of the insured and of the underwriter, exported for
 //     a wrapper strategy.

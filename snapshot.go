@@ -105,6 +105,11 @@ type Snapshot struct {
 	// zero value with the module off.
 	Claims []ClaimRow
 	Credit CreditTotals
+	// Policies are the open route policies of the insurance module, by policy ID, and
+	// Insurance its cumulative totals (spec-insurance.md 15.4); a store policy is formed and
+	// ended inside one tick, so none is a row. Both are empty or zero with the module off.
+	Policies  []CoverPolicyRow
+	Insurance InsuranceTotals
 	// Tech has one row for each technology cell with experience or advance above 0,
 	// in ascending (Region, Field) order (spec-technology.md 11.4). Empty with the
 	// technology module off.
@@ -488,6 +493,7 @@ func (w *World) Snapshot() (Snapshot, error) {
 	w.snapshotContracts(&s)
 	w.snapshotTechnology(&s)
 	w.snapshotClaims(&s)
+	w.snapshotInsurance(&s)
 	w.snapshotFacilities(&s)
 	if err := w.snapshotTreasuries(&s); err != nil {
 		return Snapshot{}, fmt.Errorf("snapshot at tick %d: %w", w.Tick(), err)

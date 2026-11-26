@@ -47,6 +47,7 @@ func TestClaim_ListFullDropped(t *testing.T) {
 	c.Modules.Credit.MaxClaims = 1
 	w, rec := settleWorld(t, c, 8)
 	plantPayout(t, w, insFar, insHome2, 5, 100) // the one claim the list holds
+	w.insurance.tot.due += 5                    // the module's Awarded counts it, so its due does (9.4)
 	step(t, w, 2)
 	moneyOf(t, w, insBacker, 1_500)
 	step(t, w, 1)
@@ -54,8 +55,8 @@ func TestClaim_ListFullDropped(t *testing.T) {
 	if got, want := figures(e), [5]Money{1_600, 500, 0, 1_100, 0}; got != want || e.Claim != -1 {
 		t.Errorf("CoverEnded figures = %v, claim %d, want paid 500, dropped 1100, no claim", got, e.Claim)
 	}
-	if tot := w.insurance.tot; tot.dropped != 1_100 || tot.due != tot.paid+tot.dropped+tot.cut {
-		t.Errorf("totals = %+v, want dropped 1100 and due = paid + dropped + cut", tot)
+	if tot := w.insurance.tot; tot.dropped != 1_100 || tot.due-5 != tot.paid+tot.dropped+tot.cut {
+		t.Errorf("totals = %+v, want dropped 1100 and due = paid + dropped + cut (the planted claim of 5 aside)", tot)
 	}
 	auditNow(t, w)
 }

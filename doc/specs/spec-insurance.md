@@ -1307,7 +1307,7 @@ Deep copies, bounded by `MaxPolicies` (architecture.md 12.4,
 `spec-observability.md` 5.6), cost class F. `Policies` is a sixth in-flight set
 besides `Shipments`, `Away`, `Journeys`, `Contracts` and `Claims`. Names are OBS's; the
 row types are `CoverPolicyRow` (for `Policies`) and `InsuranceTotals` (for `Insurance`),
-and the group of `AgentState` is `Cover` (plan 3-ins E9):
+and the group of `AgentState` is `Insurance`, of type `CoverState`, because `AgentState.Cover` is the own-use field (plan 3-ins E9, N-553):
 
 | Slice or field | Row | Fields | Source |
 |----------------|-----|--------|--------|
@@ -1378,7 +1378,7 @@ stream (none) as an uninterrupted one (FR-INS-087).
 | the open count against `MaxPolicies` | the list |
 | the expected-loss table | RSK's, rebuilt from rows, scales and graph |
 
-16.3.1. **The `Cover` group of `AgentState`** (`spec-integration.md` 4.7.2, a read at a boundary,
+16.3.1. **The `Insurance` group of `AgentState`** (type `CoverState`; not `Cover`, the own-use field, N-553) (`spec-integration.md` 4.7.2, a read at a boundary,
 not the strategy's view of 10.1): present with `Modules.Insurance` on, and 0 for an agent with no
 open policy. Its fields are `Policies` (the number of the agent's open route policies, as insured
 or as underwriter) and `Open` (for an underwriter, the sum of `MaxPayout` of its open policies, its
@@ -1714,7 +1714,7 @@ No open note is tagged `INS`. The notes tagged `ALL` and the others read are:
 | `spec-observability.md` | 4.1, 5.6, 6.4.2, 7 | the four events in 4.1 (owner, position, class, gate); the sixth in-flight set `Policies`; `Insurance` totals; the metrics and the three attributes; the keys; the restore seeding of the liability; no `Warn` row |
 | `spec-checkpoint.md` | 4.2, 6.2, 9.3 | a module section (tag 29) after Risk and Credit; the claim's `Origin` and the total `Awarded` in the ledger section; the validation of 16.5; no format bump while nothing has shipped (9.3) |
 | `spec-config.md` | 3.7, 4.1, 7.3, 6 | the fields of 13; the bounds; `ErrCoverShape`; the rules and warnings of 14; the file layout `[modules.insurance]`, `[role.<id>.cover.underwrite]`, `[role.<id>.cover.insure]` |
-| `spec-integration.md` | 6.2, 11.2 | `AgentState` gains the group `Cover` (`Policies`, `Open`, 16.3.1; a read); `ErrCoverShape` is not a setter's error; no slot, no call |
+| `spec-integration.md` | 6.2, 11.2 | `AgentState` gains the group `Insurance` of type `CoverState` (`Policies`, `Open`, 16.3.1; a read); `ErrCoverShape` is not a setter's error; no slot, no call |
 | `spec-indicators.md` | 7.1, 9.1 | the account `Premium` and `Payout` and a preset: premiums, payouts, shortfalls and the loss ratio by region and kind, from the events; the loss ratio is exact from `CoverSettled` and the snapshot |
 | `spec-stability.md` | 4, 5, 8 | the entries, dampers and scenarios of 17, numbered after the ones already integrated and the provisional ones of the other later-stage specs |
 | `spec-stylised-facts.md` | 5.1, 5.6 | none required: a delivered price converges within freight and the expected loss, which cover does not change; a note that a pack with cover is a different pack |

@@ -65,14 +65,14 @@ PR description.
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473, N-515 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
-| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476, N-494, N-478, N-479, N-550, N-551, N-552 |
-| INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484, N-530 |
+| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476, N-494, N-478, N-479, N-550, N-551, N-552, N-553 |
+| INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484, N-530, N-553 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436, N-471 |
 | LND | N-504, N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475, N-484, N-513 |
 | MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370, N-478 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
-| OBS | N-543, N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-482, N-510, N-520 |
+| OBS | N-543, N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-482, N-510, N-520, N-553 |
 | ORG | N-541, N-542, N-543, N-544, N-540, N-400, N-403, N-404, N-405, N-140, N-152, N-155, N-160, N-161, N-172, N-173, N-205, N-244, N-397, N-398, N-399, N-433, N-454, N-455, N-456, N-457, N-463, N-464, N-465, N-492, N-483, N-484 |
 | PLC | N-131, N-140, N-160, N-177, N-190, N-194, N-214, N-392, N-433, N-480, N-481, N-482, N-483, N-484, N-485, N-530 |
 | POP | N-096, N-109, N-132, N-153, N-192, N-268, N-244, N-290, N-347, N-348, N-527 |
@@ -2556,6 +2556,12 @@ PR description.
 - **Raised:** 2026-11-25, plan 3-ins PR D (Phase 6).
 - **Note:** (1) The amendment adds to the newest record of a ring that holds one. An agent created at P7.1 of the tick with a ring carried from elsewhere (a migrant with a history) is amended in a record of an earlier tick: a ring does not say which tick its newest record is of, and a flow after P6.3 reaches only agents that existed at P6.3, which is almost always. Add a `pushed` tick to the ring if a case is found. (2) The count of households at the clamp of P6.3 (`oc.clamped`, the run of the Warn "welfare record clamped") is not recomputed after an amendment; the ring's own count of records at the bound is. (3) The removed debtor of a waterfall is amended too and then dropped.
 
+### N-553 INS, OBS, INT: the insurance group of `AgentState` is `Insurance`, not `Cover`
+
+- **Areas:** INS, OBS, INT
+- **Raised:** 2026-11-26, plan 3-ins PR E (Phase 7).
+- **Note:** the specs named the group `Cover`, but `AgentState.Cover` is the own-use ticks of upkeep in stock (`spec-subsistence.md` 14.4), as `AgentView.Cover` is in the view (PR C took `AgentView.Insurance`). The group is `AgentState.Insurance` of type `CoverState` (`Policies`, `Open`); `spec-insurance.md` 15.4, `spec-observability.md` 5.3 and `spec-integration.md` 4.7.2 say so. `Policies` counts the policies the agent underwrites by a scan of the open list (at most `MaxPolicies`), which `Agent` can afford because it already reads every agent for the cost anchors; add a by-underwriter count if a case shows the cost.
+
 ## Read receipt
 
 ### N-358 A gain is not a recipe
@@ -3062,4 +3068,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 7d7ecfee68418a0330a2d2f9
+NOTES-TAG: a746ee037dd333618f0759ad

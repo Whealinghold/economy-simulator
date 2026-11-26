@@ -963,7 +963,12 @@ func (w *World) auditLaterModules() error {
 		}
 	}
 	if w.risk != nil {
-		return w.risk.audit(w)
+		if err := w.risk.audit(w); err != nil {
+			return err
+		}
+	}
+	if w.insurance != nil {
+		return w.insurance.audit(w)
 	}
 	return nil
 }

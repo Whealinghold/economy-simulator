@@ -55,6 +55,7 @@ var checkpointSections = [...]section{
 	{tag: 26, name: "Credit", present: func(c *Config) bool { return c.Modules.Credit != nil }, save: (*World).saveCredit, load: (*World).loadCredit},
 	{tag: 27, name: "Facilities", present: func(c *Config) bool { return c.Modules.Infrastructure != nil }, save: (*World).saveFacilities, load: (*World).loadFacilities},
 	{tag: 28, name: "Risk", present: func(c *Config) bool { return c.Modules.Risk != nil }, save: (*World).saveRisk, load: (*World).loadRisk},
+	{tag: 29, name: "Insurance", present: func(c *Config) bool { return c.Modules.Insurance != nil }, save: (*World).saveInsurance, load: (*World).loadInsurance},
 	{tag: 30, name: "Fiscal", present: func(c *Config) bool { return c.Modules.Fiscal != nil }, save: (*World).saveFiscal, load: (*World).loadFiscal},
 	{tag: 31, name: "Institutions", present: func(c *Config) bool { return c.Modules.Institutions != nil }, save: (*World).saveInstitutions, load: (*World).loadInstitutions},
 	{tag: 32, name: "Policy", present: func(c *Config) bool { return c.Modules.Policy != nil }, save: (*World).savePolicy, load: (*World).loadPolicy},
@@ -80,9 +81,7 @@ type notBuiltSection struct {
 // notBuiltSections names the sections 23 to 32, which the modules that own them
 // append. The test fails on a listed tag that has a row in checkpointSections and
 // on a tag of the spec that is neither built nor listed.
-var notBuiltSections = [...]notBuiltSection{
-	{29, "Insurance", "Insurance"},
-}
+var notBuiltSections = [...]notBuiltSection{}
 
 // agentTail is a block that follows the agent list of tag 3 when its module is
 // on: the stores of the storage module and the membership of the institutions
