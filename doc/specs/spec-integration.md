@@ -591,7 +591,7 @@ deep-copied plain value, no pointer, no function, no map.
 | Wants | with the demand module on: the carry of each want of the agent's ladder (`spec-demand.md` 4.4, 12) | DEM 4.4, 12 |
 | Employment | with the employment module on: `Employer` and `HasEmployer` (the hire of the agent as a worker), `Hired` (the hired executions open, as an employer) | EMP 6 |
 | Credit | with the credit module on and a role with a block: `Debt`, `Owed`, `Overdue`, `NextDue`, `CreditRoom` (the exposure room of CRD 5.3.3, named so that it is not `Room`), `Lent`, `Receivable` | CRD 10.1 |
-| Cover | with the insurance module on: `Policies` (the number of the agent's open covers, as insured or as underwriter) and `Open` (for an underwriter, its open liability; 0 for an insured) | INS 16.3.1 |
+| Insurance | with the insurance module on, the field `Insurance` of type `CoverState` (not `Cover`, which is the own-use field): `Policies` (the number of the agent's open covers, as insured or as underwriter) and `Open` (for an underwriter, its open liability; 0 for an insured) | INS 16.3.1 |
 | Room | with the storage module on and a limited role: `Room`, `Load`, `Pledge`, `Free` (0 per dimension where negative after a cut) and `Stores` | STO 14.5 |
 | Facilities | with the infrastructure module on: the agent's facilities in all regions, in ascending ID, at most `MaxFacilitiesPerAgent` | CAP 11.4 |
 | Membership | with the institutions module on: the group `Membership{Member bool; Body BodyID}`, `Member` true only for a member at the boundary and `Body` the `BodyID` of its body; the zero value is no membership (a typed ID is never appended to a view that renders at its off value, architecture.md 2.10.5; `NoBody` is the spec's word for `Member` false) | ORG 4.4.1 |
