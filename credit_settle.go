@@ -100,6 +100,7 @@ func (w *World) p17aSettle() {
 		w.endClaims(t)
 	}
 	w.reportSettled(t)
+	w.reportCoverClaims() // nil-safe: CoverSettled of the stage claim, after CreditSettled
 }
 
 // gatherDebtors fills the debtors of the pass in ascending account ID, which is
@@ -211,6 +212,7 @@ func (w *World) payClaim(v *visit, share int64, debtor ledger.View) (cut int64) 
 // tallyPaid adds the payment of a claim of origin loan to the sums of the debtor's
 // region and of the creditor's (spec-credit.md 16.1).
 func (w *World) tallyPaid(v *visit, cut int64, debtor ledger.View) {
+	w.coverClaimPaid(&v.c, v.paidP, debtor) // nil-safe: the principal of a payout claim is N_t of both parties (hook H-12)
 	if v.c.Origin != ledger.OriginLoan {
 		return
 	}
@@ -353,6 +355,7 @@ func (w *World) waterfall(t int64, a *agent) {
 	for i := range p.visits {
 		v := &p.visits[i]
 		w.payClaim(v, shares[i], view) // the cut at a headroom is the claim's loss, written off below
+		w.coverClaimLate(v, view)      // nil-safe: after P6.3, the principal of a payout claim amends the record
 		w.endRemoved(t, v)
 	}
 }

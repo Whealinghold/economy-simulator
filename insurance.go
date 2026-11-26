@@ -1,6 +1,9 @@
 package economysim
 
 import (
+	"cmp"
+	"slices"
+
 	"github.com/Whealinghold/economy-sim/internal/ledger"
 )
 
@@ -37,7 +40,7 @@ type insurance struct {
 	// next is the ID of the next policy, issued in order of formation and never reused.
 	next int64
 	// open are the route policies in ascending ID, the ones in flight between two ticks;
-	// stores are the store policies of the tick, which no position ends yet.
+	// stores are the store policies of the tick, which P8.1b ends in the tick of formation.
 	open, stores []coverPolicy
 	// byShipment is the ID of the route policy of a shipment, read by lookup only.
 	byShipment map[ShipmentID]int64
@@ -45,10 +48,17 @@ type insurance struct {
 	// agent underwrites, and insured the number of open route policies it holds as the
 	// insured. Both are derived from the policy lists and grow with the agent IDs.
 	liability, insured []int64
-	// vs is the storage of the group of the view and round the requests, offers and counts
-	// of the cover round. Both are scratch, never saved.
+	// tot are the cumulative totals of the module (spec-insurance.md 9.3).
+	tot coverTotals
+	// arrived are the arrivals of the tick that have a route policy and amounts the units
+	// they lost, kept from P1.3 to P1.3a (hook H-11); both are emptied at P1.3a.
+	arrived []coverArrival
+	amounts []Amount
+	// vs is the storage of the group of the view, round the requests, offers and counts of
+	// the cover round and st the items of a settlement. All are scratch, never saved.
 	vs    coverScratch
 	round coverRound
+	st    coverSettle
 }
 
 // newInsurance builds the state of the module for a canonical configuration, or nil when
@@ -121,14 +131,30 @@ func bump(s []int64, id AgentID, d int64) []int64 {
 	return s
 }
 
-// dropStores ends the store policies of the tick without a payout: their liability leaves
-// the underwriters. It is the entry of the next round until the settlement at P8.1b ends
-// them in their own tick (plan 3-ins PR D).
-func (in *insurance) dropStores() {
-	for i := range in.stores {
-		in.liability[in.stores[i].underwriter] -= in.stores[i].maxPayout
+// route returns the open route policy with an ID, found by binary search.
+func (in *insurance) route(id int64) (*coverPolicy, bool) {
+	i, found := slices.BinarySearchFunc(in.open, id, func(p coverPolicy, id int64) int { return cmp.Compare(p.id, id) })
+	if !found {
+		return nil, false
 	}
-	in.stores = in.stores[:0]
+	return &in.open[i], true
+}
+
+// end removes a policy from its list and the indexes, whatever the cause: its liability
+// leaves the underwriter and a route policy leaves the shipment index and the insured's
+// count. The lists keep their ascending order.
+func (in *insurance) end(p *coverPolicy) {
+	in.liability[p.underwriter] -= p.maxPayout
+	list := &in.open
+	if p.kind == CoverStore {
+		list = &in.stores
+	} else {
+		in.insured[p.insured]--
+		delete(in.byShipment, p.shipment)
+	}
+	if i, found := slices.BinarySearchFunc(*list, p.id, func(q coverPolicy, id int64) int { return cmp.Compare(q.id, id) }); found {
+		*list = slices.Delete(*list, i, i+1)
+	}
 }
 
 // payoutOwed is the principal an agent owes as a debtor on claims of origin payout

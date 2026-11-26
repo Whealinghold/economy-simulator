@@ -86,3 +86,43 @@ func (w *World) insuranceSummary(attrs []slog.Attr) []slog.Attr {
 	u, i := w.coverAgents()
 	return append(attrs, slog.Int64(logkeys.Underwriters, u), slog.Int64(logkeys.Insured, i))
 }
+
+// reportCoverEnded reports a policy ended (spec-insurance.md 15.1, 15.2): the Debug line
+// "cover ended" and, with an observer, CoverEnded in ascending policy ID. quiet says the
+// event is not emitted: a store policy that ended with no loss is only counted (15.1.1).
+func (w *World) reportCoverEnded(it *coverItem, quiet bool) {
+	if ctx := context.Background(); w.log.Enabled(ctx, slog.LevelDebug) {
+		w.log.LogAttrs(ctx, slog.LevelDebug, "cover ended", slog.Int64(logkeys.CoverPolicy, it.p.id),
+			slog.Int64(logkeys.Agent, int64(it.p.insured)), slog.String(logkeys.Cause, string(it.cause)),
+			slog.Int64(logkeys.Payout, it.paid))
+	}
+	if quiet || !w.obs.supplied {
+		return
+	}
+	w.obs.deliver(CoverEnded{
+		Tick: w.Tick(), Policy: it.p.id, Kind: it.p.kind, Insured: it.p.insured, Underwriter: it.p.underwriter,
+		Region: it.region, UnderwriterRegion: it.underRegion, Cause: it.cause,
+		LossValue: Money(it.lossValue), Due: Money(it.due), Paid: Money(it.paid), Short: Money(it.short), Claim: ClaimID(it.claim),
+		Dropped: Money(it.dropped), Cut: Money(it.cut), Capped: it.capped,
+	})
+}
+
+// reportCoverSettled delivers CoverSettled of a position for each region, in ascending
+// RegionID, that has a count or a sum, after the CoverEnded events of the position
+// (spec-insurance.md 15.1).
+func (w *World) reportCoverSettled(stage CoverStage) {
+	if !w.obs.supplied {
+		return
+	}
+	t := w.Tick()
+	for g, r := range w.insurance.st.rows {
+		if r.quiet() {
+			continue
+		}
+		w.obs.deliver(CoverSettled{
+			Tick: t, Region: RegionID(g), Stage: stage, Ended: r.ended, Claimed: r.claimed,
+			LossValue: Money(r.lossValue), Due: Money(r.due), Paid: Money(r.paid), Short: Money(r.short),
+			Dropped: Money(r.dropped), Cut: Money(r.cut), Capped: r.capped, ValueCapped: r.valueCapped, Shielded: Money(r.shielded),
+		})
+	}
+}

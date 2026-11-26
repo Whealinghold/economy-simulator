@@ -163,6 +163,27 @@ func (r *Ring) Push(rec Record) (clamped bool) {
 	return clamped
 }
 
+// Amend adds delta, a signed amount, to the income and the unearned sum of the newest
+// record, which is the record of the tick the caller is in (spec-insurance.md 11.1.3):
+// the money of a flow that moved after the record was pushed. The sums are the old
+// record's less the new one's, the new fields are clamped as Push clamps and the count
+// of records at the bound follows. It writes no record and changes no window. It reports
+// whether a record was amended (a ring with no record is not) and whether it clamped.
+// It allocates nothing.
+func (r *Ring) Amend(delta int64) (amended, clamped bool) {
+	if r.n == 0 {
+		return false, false
+	}
+	i := (r.start + r.n - 1) % len(r.recs)
+	rec := r.recs[i]
+	r.apply(&rec, -1)
+	rec.Income, rec.Unearned = satAdd(rec.Income, delta), satAdd(rec.Unearned, delta)
+	clamped = rec.clampTo(r.clamp)
+	r.recs[i] = rec
+	r.apply(&rec, 1)
+	return true, clamped
+}
+
 // Resize changes the window to t and keeps the newest min(held, t) records
 // (D64). It allocates only when growing past the capacity it ever had. A t
 // below 1 or above maxWindow is refused with ErrRecords and the ring is left

@@ -3004,6 +3004,42 @@ const (
 	BarSurvival SavingBar = "survival"
 )
 
+// SavingPlanned is emitted once per region and role at P3.6b, in ascending RegionID then
+// role order, after RoomLimited, when the saving module is on and one of the triggering
+// counts is above 0; never otherwise (spec-saving-and-investment.md 12.1). It is an
+// aggregate bounded by regions times roles. The counts are households (the sum of weights)
+// of the agents of a role with a Saver block that were given a Trade view, computed by the
+// world from the pure rules whatever strategy runs, with tier 2 read as 0; a household is in
+// at most one of Survival, Building, Passed, Unreachable, NoReturn and Standing. Builds and
+// Repairs are the requests Work returned, one for each agent, not the starts.
+type SavingPlanned struct {
+	Tick   int64
+	Region RegionID
+	Role   RoleID
+	// Households, Goal, Buffer, Funded and Committed ride along and never trigger the
+	// event: the households given a Trade view, the sum of Goal and of the excess of the
+	// buffer over the reserve, and the households of Passed that are funded and committed.
+	Households int64
+	Goal       Money
+	Buffer     Money
+	Funded     int64
+	Committed  int64
+	// Saving is the households with a goal above 0 (the keep of a job in progress
+	// included) and Buffered those whose buffer is above the reserve.
+	Saving, Buffered int64
+	// Passed is the households with a project chosen and Building those with a project job
+	// in progress.
+	Passed, Building int64
+	// NoReturn, Standing, Unreachable and Survival are the households barred, by the bar
+	// of the same name (spec 5.5, 12.3).
+	NoReturn, Standing, Unreachable, Survival int64
+	// Builds and Repairs are the requests of a build recipe and of a repair recipe that
+	// Work returned at P2.5.
+	Builds, Repairs int64
+}
+
+func (SavingPlanned) isEvent() {}
+
 // The reasons of the insurance module (spec-insurance.md 5.2): the first failing check of
 // a request or an offer at the admission of the cover round, in the order of the table.
 // ReasonTooManyRequests, ReasonDuplicate, ReasonInArrears and ReasonExposure are the
@@ -3101,3 +3137,87 @@ type CoverRound struct {
 }
 
 func (CoverRound) isEvent() {}
+
+// CoverCause is why a cover policy ended, a closed set (spec-insurance.md 8.5).
+type CoverCause string
+
+const (
+	// CoverNoLoss is the end of a policy whose shipment arrived with nothing lost, or whose
+	// store was not struck.
+	CoverNoLoss CoverCause = "no_loss"
+	// CoverClaimed is the end of a policy for which a payout was due: paid, formed as a
+	// payout claim or dropped.
+	CoverClaimed CoverCause = "claimed"
+	// CoverInsuredRemoved and CoverUnderwriterRemoved are the ends by the removal of the
+	// insured and of the underwriter (step 2f of a removal).
+	CoverInsuredRemoved     CoverCause = "insured_removed"
+	CoverUnderwriterRemoved CoverCause = "underwriter_removed"
+)
+
+// CoverStage is the position or part of the module a CoverSettled event counts, a closed
+// set (spec-insurance.md 15.1).
+type CoverStage string
+
+const (
+	// CoverStageArrival is P1.3a, the settlement of the route policies of the arrivals.
+	CoverStageArrival CoverStage = "arrival"
+	// CoverStageStore is P8.1b, the settlement of the store policies of the tick.
+	CoverStageStore CoverStage = "store"
+	// CoverStageClaim is P1.7a, the payments of payout claims by the credit pass.
+	CoverStageClaim CoverStage = "claim"
+)
+
+// CoverEnded is emitted once per cover policy ended, in ascending policy ID, at P1.3a, at
+// P8.1b and at step 2f of a removal (spec-insurance.md 15.1.1): not for a store policy that
+// ended with no loss. Region is the insured's region and UnderwriterRegion the
+// underwriter's, both at the event. Short is the part of the due the underwriter could not
+// pay, formed as the payout claim Claim (-1 when none), Dropped the part of it that could
+// not be recorded, Cut the part cut at the insured's headroom and Capped says the payout
+// was cut at the maximum payout. The amounts of a policy ended by a removal are 0.
+type CoverEnded struct {
+	Tick   int64
+	Policy int64
+	Kind   CoverKind
+	// Insured and Underwriter are the two parties.
+	Insured, Underwriter AgentID
+	Region               RegionID
+	UnderwriterRegion    RegionID
+	Cause                CoverCause
+	// LossValue is the value of the units lost, Due what the policy owed, Paid what moved
+	// at once and Short the shortfall formed as the payout claim Claim (-1 when none).
+	LossValue, Due, Paid, Short Money
+	Claim                       ClaimID
+	// Dropped is the shortfall not recorded and Cut the part cut at a headroom, so that
+	// Due = Paid + Short + Dropped + Cut.
+	Dropped, Cut Money
+	Capped       bool
+}
+
+func (CoverEnded) isEvent() {}
+
+// CoverSettled is emitted once per region, position and tick in which a policy was
+// settled, and never when all its counts and sums are 0 (spec-insurance.md 15.1.1). It is
+// an aggregate bounded by the regions. At the stage claim only ClaimEnded, ClaimPaid and
+// ClaimReceived are set.
+type CoverSettled struct {
+	Tick   int64
+	Region RegionID
+	Stage  CoverStage
+	// Ended and Claimed are the policies ended at the position (a store policy that ended
+	// with no loss included) and those with a payout due.
+	Ended, Claimed int64
+	// LossValue, Due, Paid, Short, Dropped and Cut are the sums of the policies of the
+	// insured's region, and Capped the policies cut at the maximum payout.
+	LossValue, Due, Paid, Short, Dropped, Cut Money
+	Capped                                    int64
+	// ValueCapped is the units of loss valued at the cap and Shielded the money the shield
+	// kept out of the payouts of the underwriters of the region.
+	ValueCapped int64
+	Shielded    Money
+	// ClaimEnded is the payout claims ended repaid, ClaimPaid the principal paid by the
+	// debtors of the region and ClaimReceived the principal received by the insureds of it.
+	ClaimEnded               int64
+	ClaimPaid, ClaimReceived Money
+}
+
+func (CoverSettled) isEvent() {}

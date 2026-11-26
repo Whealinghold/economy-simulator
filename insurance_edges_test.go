@@ -259,8 +259,9 @@ func TestValidateInsurance_DependenciesAreOfTheRequestOnly(t *testing.T) {
 // and the blocks removed, and then emits the same events but for the two of the cover round
 // (CoverRound, CoverFormed) and ends in the same snapshot but for the name of the module in
 // the list of modules. The module has its round at P3.3c since plan 3-ins PR C, but this pack
-// has no shipment and no store, so the round forms no policy and moves no money: only its
-// own events differ.
+// has no shipment and no store offer (the insured role has no store share), so the round
+// forms no policy and moves no money: only its own events differ. With the store offers
+// the module is not neutral: TestInsurance_StoreOffersLeaveATrace pins that side.
 //
 // Requirement: FR-INS-001, FR-INS-005
 //
@@ -273,8 +274,8 @@ func TestInsurance_OnWorldBuildsAndRunsLikeOff(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test, skipped with -short")
 	}
-	on := insuranceConfig()
-	off := insuranceConfig()
+	on := idleInsuranceConfig()
+	off := idleInsuranceConfig()
 	off.Modules.Insurance = nil
 	for i := range off.Roles {
 		off.Roles[i].Cover = nil
@@ -303,6 +304,18 @@ func TestInsurance_OnWorldBuildsAndRunsLikeOff(t *testing.T) {
 			t.Errorf("seed %d: snapshots differ with the module on and off, want equal but for the module's name", seed)
 		}
 	}
+}
+
+// idleInsuranceConfig is insuranceConfig with nothing insurable: the insured role has no store
+// share and the pack has no shipment, so the module on has no policy to form.
+func idleInsuranceConfig() economysim.Config {
+	c := insuranceConfig()
+	for i := range c.Roles {
+		if in := c.Roles[i].Cover; in != nil && in.Insure != nil {
+			in.Insure.StoreShareBP = 0
+		}
+	}
+	return c
 }
 
 // TestInsurance_WorldRefusesBrokenBlockAtConstruction verifies that NewWorld refuses a

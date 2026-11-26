@@ -511,6 +511,10 @@ func creditOn(w *World) bool { return w.credit != nil }
 // insuranceOn is the gate of the insurance module's positions.
 func insuranceOn(w *World) bool { return w.insurance != nil }
 
+// savingOn is the guard of the P3.6b row of the saving module: an off world records no line,
+// so the off position hashes do not move.
+func savingOn(w *World) bool { return w.saving != nil }
+
 // fiscalOn is the guard of the rows of the fiscal module (P1.7b, plan 3-fis): an off
 // world records no line for them.
 func fiscalOn(w *World) bool { return w.fiscal != nil }
@@ -535,6 +539,7 @@ var replayRows = []replayRow{
 	{id: "P1.1", run: (*World).p11Moment},
 	{id: "P1.2", run: noErr((*World).p12Anchors)},
 	{id: "P1.3", run: noErr((*World).p13Arrivals), on: transportOn},
+	{id: "P1.3a", run: noErr((*World).p13aSettleRoutes), on: insuranceOn},
 	{id: "P1.4", run: (*World).p14Settle, on: contractsOn},
 	{id: "P1.5", run: noErr((*World).p15Arrivals), on: migrationOn},
 	{id: "P1.6", run: (*World).p16Relief, on: reliefOn},
@@ -567,6 +572,7 @@ var replayRows = []replayRow{
 	{id: "P3.5", run: (*World).p35Orders, on: externalOn},
 	{id: "P3.6", run: noErr((*World).p36Aggregates), on: wantsOrInformationOn},
 	{id: "P3.6a", run: noErr((*World).p36aRoomLimited), on: storageOn},
+	{id: "P3.6b", run: noErr((*World).p36bSaving), on: savingOn},
 	{id: "P3.6c", run: noErr((*World).p36cTolls), on: fiscalOn},
 	{id: "P4.1", run: (*World).p41Clear},
 	{id: "P4.1a", run: noErr((*World).p41aDuties), on: fiscalOn},
@@ -586,6 +592,7 @@ var replayRows = []replayRow{
 	{id: "P7.2b", run: noErr((*World).p72bInstitutions), on: institutionsOn},
 	{id: "P8.1", run: (*World).p81Age},
 	{id: "P8.1a", run: noErr((*World).p81aStores), on: riskOn},
+	{id: "P8.1b", run: noErr((*World).p81bSettleStores), on: insuranceOn},
 	{id: "P8.2", run: noErr((*World).p82Flows)},
 	{id: "P8.3", run: noErr((*World).p83Regen), on: resourcesOn},
 	{id: "P8.3a", run: noErr((*World).p83aRent), on: tenureOn},

@@ -6,8 +6,10 @@ BoundaryFlow
 ContractFormed
 ContractRound
 ContractSettled
+CoverEnded
 CoverFormed
 CoverRound
+CoverSettled
 CreditRateScaled
 CreditRound
 CreditSettled
@@ -60,6 +62,7 @@ RouteRiskScaled
 RumoursServed
 RunEnded
 RunStarted
+SavingPlanned
 SettlementClassChanged
 SettlementHeld
 ShipmentArrived

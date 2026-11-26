@@ -337,6 +337,15 @@ type RoleRow struct {
 	// LoadBulk their load, summed over the role's limited agents in the region. All 0
 	// while the storage module is off (spec-storage.md 14.5).
 	LimitedHouseholds, RoomMass, RoomBulk, LoadMass, LoadBulk int64
+	// SavingHouseholds is the households of the role's agents with a goal above 0 in the
+	// region, GoalMoney the sum of their Goal, BufferMoney the sum over the agents of the
+	// excess of the precaution buffer over the reserve and IdleMoney the sum of their idle
+	// money, max(0, Money - S*). They are functions of saved state, computed for the agents
+	// of a role with a Saver block by the rules of the saving module whatever strategy they
+	// run, with the tier 2 spend of a plan read as 0; all 0 for a role with no block
+	// (spec-saving-and-investment.md 8.4.2).
+	SavingHouseholds                  int64
+	GoalMoney, BufferMoney, IdleMoney Money
 }
 
 // MarketState is the report of one market and its price window: the type the
@@ -620,21 +629,11 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 	if w.skills != nil {
 		w.skillsRoleRows(s.Roles[int(g)*nr:int(g+1)*nr], g)
 	}
-	for i := range v.Agents {
-		ra := &v.Agents[i]
-		rr.Households = satAdd(rr.Households, ra.Weight)
-		rr.MoneyHouseholds = Money(satAdd(int64(rr.MoneyHouseholds), int64(ra.Money)))
-		addRoleAgent(&s.Roles[int(g)*nr+int(ra.Role)], ra)
-		if w.sto != nil {
-			w.addRoomRow(&s.Roles[int(g)*nr+int(ra.Role)], &w.agents[ra.Agent])
-		}
-		// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
-		// refusal of the world's own accounts, which a valid configuration cannot cause
-		// and no test can inject from the root (D190); the branch only wraps and returns
-		// it.
-		if err := w.snapAgent(g, &w.agents[ra.Agent], acc, makes); err != nil {
-			return err
-		}
+	if err := w.snapAgents(s, g, v, acc, makes); err != nil {
+		return err
+	}
+	if err := w.saving.fillRoleRows(s.Roles[int(g)*nr:int(g+1)*nr], v); err != nil {
+		return err
 	}
 	floor, _ := resolutionFloor(w.cfg.World)
 	for _, l := range w.estates.heldLots(w.ledger, g) {
@@ -651,6 +650,31 @@ func (w *World) snapRegion(s *Snapshot, g RegionID, acc *snapAcc, makes [][]bool
 	w.fillRegionClass(rr, g)
 	s.Jobs = appendJobs(s.Jobs, g, acc)
 	return w.marketRows(s, g, acc)
+}
+
+// snapAgents adds every agent of the view of region g to the region row, to the row of
+// its role and to the market accumulators (a pure move out of snapRegion, which was at the
+// Lizard complexity limit).
+func (w *World) snapAgents(s *Snapshot, g RegionID, v *RegionView, acc *snapAcc, makes [][]bool) error {
+	nr := len(w.cfg.Roles)
+	rr := &s.Regions[g]
+	for i := range v.Agents {
+		ra := &v.Agents[i]
+		rr.Households = satAdd(rr.Households, ra.Weight)
+		rr.MoneyHouseholds = Money(satAdd(int64(rr.MoneyHouseholds), int64(ra.Money)))
+		addRoleAgent(&s.Roles[int(g)*nr+int(ra.Role)], ra)
+		if w.sto != nil {
+			w.addRoomRow(&s.Roles[int(g)*nr+int(ra.Role)], &w.agents[ra.Agent])
+		}
+		// Excluded from coverage (testing.md 9.5): the error is a ledger or overflow
+		// refusal of the world's own accounts, which a valid configuration cannot cause
+		// and no test can inject from the root (D190); the branch only wraps and returns
+		// it.
+		if err := w.snapAgent(g, &w.agents[ra.Agent], acc, makes); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // roleRow sets the signals of role r of the view of region g: the welfare

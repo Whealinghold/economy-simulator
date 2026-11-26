@@ -517,6 +517,7 @@ func (w *World) endStep(err error) error {
 			w.sto.clearTick()
 		}
 		w.infra.clearTick()
+		w.saving.clearTick()
 	}
 	w.stepping = false
 	return err
