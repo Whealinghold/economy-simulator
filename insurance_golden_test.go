@@ -232,7 +232,7 @@ func TestGolden_InsuranceProbeExercisesPayouts(t *testing.T) {
 				t.Errorf("route pack, seed %d: %d route policies formed and %d paid in %d ticks, want both above 0", seed, tl.routeFormed, tl.paid, goldenTicks)
 			}
 			tl = insTally{}
-			res = runPack(t, store.cfg, runSpec{Seed: seed, Ticks: goldenTicks, Drive: driveStep, Observe: true})
+			res = runPack(t, store.cfg, runSpec{Seed: seed, Ticks: goldenTicks, Drive: driveStep, Observe: true, Extra: store.opts})
 			tl.add(res.Events)
 			if tl.storeFormed == 0 || tl.paid == 0 {
 				t.Errorf("store pack, seed %d: %d store policies formed and %d paid in %d ticks, want both above 0", seed, tl.storeFormed, tl.paid, goldenTicks)

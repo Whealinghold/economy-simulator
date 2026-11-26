@@ -1488,7 +1488,7 @@ PR description.
 - **Note:** The cover round is after the credit round, so a household can pay a premium from this tick's loan.
 - **Update (2026-11-19, plan 3-ins Phase 1):** a premium paid from a loan formed at P3.3b is a test of scenario S161. Left open until PR F.
 - **Update (2026-11-26, plan 3-ins PR F):** S161 reports the loans formed but does not assert a premium paid from one; see N-554 item 5. Left open.
-- **Update (2026-11-26, plan 3-ins PR F testing stage):** `TestCoverRound_PremiumPaidFromALoanOfTheSameTick` asserts it at integration level (the loan is formed at P3.3b, the premium is paid from it at P3.3c, the insured holds the principal less the premium). S161 still only reports it. Applied; closed in the roadmap close with N-176.
+- **Update (2026-11-26, plan 3-ins PR F testing stage):** `TestCoverRound_PremiumPaidFromALoanOfTheSameTick` asserts it at integration level (the loan is formed at P3.3b, the premium is paid from it at P3.3c, the insured holds the principal less the premium). S161 still only reports it. Applied; closes with the roadmap close.
 
 ### N-213 A store has no expected-loss read
 
