@@ -42,6 +42,11 @@ func TestScenarioS145_AnOutlayAboveTheSurplus(t *testing.T) {
 			rep.num(seed, name+": saving household-ticks", st.Saving)
 			rep.num(seed, name+": unreachable household-ticks", st.Unreachable)
 			rep.num(seed, name+": no return household-ticks", st.NoReturn)
+			// Not in the report: the leg with the overlay's cost is the control; a module that planned and
+			// asked for nothing would pass the check below with 0 against 0.
+			if q == savingS145Inputs[0] && (st.Builds == 0 || st.Built == 0) {
+				t.Fatalf("seed %d, %s: %d build requests and %d built, want both above 0 for the cheap leg", seed, name, st.Builds, st.Built)
+			}
 			checkExact(t, rep, "S145", "one", seed, name+": no facility is built without a build request", st.Built <= st.Builds, "%d built against %d requested", st.Built, st.Builds)
 		}
 	})

@@ -69,5 +69,11 @@ func TestScenarioS142_InertEqualsOff(t *testing.T) {
 		}
 		checkExact(t, rep, "S142", "one", seed, "no SavingPlanned with no block", planned == 0, "%d SavingPlanned events, want 0", planned)
 		rep.num(seed, "events", int64(len(recOn.events)))
+		// Not in the report: the equalities above hold for a module that does nothing at all. The control is
+		// the same pack with the blocks of the overlay, which must plan, save and build (savingRun fails a
+		// run that planned or saved nothing), so a module that has gone inert fails here and not only in S143.
+		if st := savingRun(t, savingPack(t, nil), seed, ticks); st.Builds == 0 {
+			t.Fatalf("seed %d: the control with blocks made %d build requests in %d ticks, want above 0", seed, st.Builds, ticks)
+		}
 	})
 }

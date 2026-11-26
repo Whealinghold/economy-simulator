@@ -54,6 +54,11 @@ func TestScenarioS146_SurplusWithNoOutlet(t *testing.T) {
 			name := leg.name
 			rep.num(seed, name+": idle money, sampled", st.IdleSamples)
 			rep.num(seed, name+": built", st.Built)
+			// Not in the report: the cooks build in every leg, so a leg with no facility built means the
+			// module asked for none and the idle money above measured nothing.
+			if st.Builds == 0 || st.Built == 0 {
+				t.Fatalf("seed %d, %s: %d build requests and %d built, want both above 0", seed, name, st.Builds, st.Built)
+			}
 			checkExact(t, rep, "S146", "one", seed, name+": the idle money is not negative", st.IdleNegative == 0, "%d rows with negative idle money", st.IdleNegative)
 		}
 	})
