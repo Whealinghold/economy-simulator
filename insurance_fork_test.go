@@ -14,7 +14,7 @@ type insForkTicks struct {
 }
 
 // insForkProbe returns the first tick of each cover event of a bare run of g: a policy formed, a
-// policy ended with a due above 0, one ended with a shortfall, a payout claim paid at P1.7a, and a
+// policy ended with a payout above 0, one ended with a shortfall, a payout claim paid at P1.7a, and a
 // policy ended by the removal of its insured.
 func insForkProbe(t testing.TB, g insGolden, seed uint64, ticks int64) insForkTicks {
 	t.Helper()

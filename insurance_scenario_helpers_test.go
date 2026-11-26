@@ -23,8 +23,7 @@ type insTrack struct {
 
 	premiums, due, paid, short, dropped, cut int64 // sums over the policies formed and ended
 	claimPaid, claimEnded                    int64 // payout claims paid at P1.7a and ended repaid
-	offersRefused, exposure, noOffer         int64 // what the rounds refused
-	unfilled, funds, valueCapped             int64
+	exposure, noOffer                        int64 // what the rounds refused
 	roundCapped, sum                         int64 // units valued at the cap and the sum insured, from the rounds
 	removed, landed, lostUnits               int64 // agents removed, units delivered and lost by arrivals
 	bad                                      string
@@ -49,7 +48,6 @@ func (r *insTrack) add(events []economysim.Event) {
 			r.addEnded(e)
 		case economysim.CoverSettled:
 			r.claimPaid, r.claimEnded = r.claimPaid+int64(e.ClaimPaid), r.claimEnded+e.ClaimEnded
-			r.valueCapped += e.ValueCapped
 		case economysim.CoverRound:
 			r.addRound(e)
 		case economysim.AgentBankrupted:
@@ -71,8 +69,7 @@ func (r *insTrack) addEnded(e economysim.CoverEnded) {
 
 // addRound tallies what a round refused and the sums it covered.
 func (r *insTrack) addRound(e economysim.CoverRound) {
-	r.offersRefused, r.exposure, r.noOffer = r.offersRefused+e.OffersRefused, r.exposure+e.Exposure, r.noOffer+e.NoOffer
-	r.unfilled, r.funds = r.unfilled+int64(e.Unfilled), r.funds+e.Funds
+	r.exposure, r.noOffer = r.exposure+e.Exposure, r.noOffer+e.NoOffer
 	r.roundCapped, r.sum = r.roundCapped+e.ValueCapped, r.sum+int64(e.Sum)
 }
 
