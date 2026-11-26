@@ -234,6 +234,19 @@ measure households at end scale 10: 1=160 | median=160 n=1
 measure households at end scale 4: 1=413 | median=413 n=1
 measure largest absolute gap bp: 1=15955 | median=15955 n=1
 
+## S135 one+fiscal buffer store under a held shortfall, 200 ticks seeds 1-10
+measure highest stock: 1=293 2=255 3=296 4=298 5=295 6=298 7=297 8=295 9=320 10=298 | median=296 n=10
+measure treasury money end: 1=38432 2=33460 3=18703 4=39949 5=42114 6=22387 7=36984 8=31422 9=15047 10=41977 | median=35222 n=10
+measure units bought: 1=297 2=295 3=556 4=298 5=295 6=558 7=317 8=455 9=616 10=298 | median=308 n=10
+measure units paid in kind: 1=50 2=50 3=50 4=50 5=50 6=50 7=50 8=50 9=50 10=50 | median=50 n=10
+measure units sold: 1=227 2=205 3=226 4=248 5=245 6=248 7=227 8=265 9=226 10=248 | median=236 n=10
+measure units spoiled: 1=20 2=40 3=20 4=0 5=0 6=0 7=20 8=20 9=20 10=0 | median=20 n=10
+check money = start - bought + sold: 10/10 pass
+check never traded with itself: 10/10 pass
+check stock + spoiled = bought - sold - paid in kind, spoiled >= 0: 10/10 pass
+check stock never above the hold: 10/10 pass
+check treasury money never negative: 10/10 pass
+
 ## S149 one+population+resources+technology learning, 365 ticks seeds 1-10
 measure TechnologyAdvanced events: 1=26 2=27 3=24 4=28 5=26 6=21 7=26 8=30 9=25 10=23 | median=26 n=10
 measure experience of the first cell at end: 1=126 2=123 3=129 4=135 5=120 6=107 7=120 8=117 9=132 10=116 | median=122 n=10

@@ -1,6 +1,45 @@
 # Recorded outcomes of the Stage 1 scenarios (plan 1-12 D181), written with -update.
 # Read by the reviewer of STY 8.4; no test compares it.
 
+## S133 five+fiscal poll tax with and without an exemption, 200 ticks seeds 1-10
+measure paid plain: 1=283392 2=285064 3=275208 4=279008 5=282816 6=281488 7=277624 8=271880 9=278968 10=271256 | median=278988 n=10
+measure payers short exempt: 1=32716 2=34605 3=34270 4=34291 5=35887 6=35329 7=35905 8=34552 9=34477 10=34480 | median=34516 n=10
+measure payers short plain: 1=6 2=2 3=3 4=2 5=1 6=4 7=3 8=2 9=2 10=0 | median=2 n=10
+measure recipients cut plain: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure taxed exempt: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure taxed plain: 1=283361 2=285057 3=275196 4=278997 5=282813 6=281464 7=277608 8=271872 9=278955 10=271256 | median=278976 n=10
+measure treasury end exempt: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure treasury end plain: 1=49969 2=49993 3=49988 4=49989 5=49997 6=49976 7=49984 8=49992 9=49987 10=50000 | median=49988 n=10
+measure unfed share centre exempt bp: 1=9888 2=9985 3=9971 4=9938 5=9973 6=9930 7=9924 8=9986 9=9959 10=9918 | median=9948 n=10
+measure unfed share centre plain bp: 1=9916 2=9986 3=9986 4=9887 5=9930 6=9945 7=9986 8=9957 9=9970 10=9942 | median=9951 n=10
+check exempt: treasury = start + taxed - paid: 10/10 pass
+check exemption above every balance collects nothing: 10/10 pass
+check plain: treasury = start + taxed - paid: 10/10 pass
+check the plain tax collects: 10/10 pass
+
+## S134 five+fiscal sales duty and the cash channel, 200 ticks seeds 1-10
+measure payback 0 money per household: 1=19846 2=15147 3=17675 4=19186 5=16725 6=16507 7=18363 8=13099 9=22772 10=17582 | median=17628 n=10
+measure payback 0 revenue per tick: 1=98668 2=98694 3=96717 4=101291 5=96751 6=97978 7=98567 8=98616 9=98830 10=101108 | median=98642 n=10
+measure payback 0 treasury end: 1=19783671 2=19788886 3=19393404 4=20308215 5=19400283 6=19645621 7=19763413 8=19773339 9=19816136 10=20271696 | median=19778505 n=10
+measure payback 1 money per household: 1=19597 2=15159 3=10841 4=15056 5=19255 6=16760 7=16717 8=21064 9=25093 10=12164 | median=16738 n=10
+measure payback 1 revenue per tick: 1=98851 2=100002 3=95517 4=100183 5=96589 6=99330 7=102264 8=103452 9=99110 10=94791 | median=99220 n=10
+measure payback 1 treasury end: 1=19786729 2=20015403 3=19118715 4=20051580 5=19333638 6=19882708 7=20468193 8=20706655 9=19837957 10=18975003 | median=19860332 n=10
+measure payback 4 money per household: 1=9694 2=22890 3=17474 4=21529 5=14213 6=17095 7=16169 8=12961 9=16064 10=17191 | median=16632 n=10
+measure payback 4 revenue per tick: 1=95884 2=100482 3=99464 4=102399 5=96401 6=99627 7=96722 8=100224 9=98765 10=96780 | median=99114 n=10
+measure payback 4 treasury end: 1=19092482 2=20003291 3=19805374 4=20398950 5=19190323 6=19834384 7=19259193 8=19957484 9=19669387 10=19270575 | median=19737380 n=10
+check payback 0: collected within the due: 10/10 pass
+check payback 0: dues equal the rebuild from the trades: 10/10 pass
+check payback 0: the duty collects: 10/10 pass
+check payback 0: treasury = start + duty - payout: 10/10 pass
+check payback 1: collected within the due: 10/10 pass
+check payback 1: dues equal the rebuild from the trades: 10/10 pass
+check payback 1: the duty collects: 10/10 pass
+check payback 1: treasury = start + duty - payout: 10/10 pass
+check payback 4: collected within the due: 10/10 pass
+check payback 4: dues equal the rebuild from the trades: 10/10 pass
+check payback 4: the duty collects: 10/10 pass
+check payback 4: treasury = start + duty - payout: 10/10 pass
+
 ## S155 five+policy schedule, 260 ticks seeds 1-10
 measure events of the module: 1=68 2=69 3=69 4=68 5=69 6=68 7=69 8=68 9=69 10=69 | median=69 n=10
 check council_a is called at every multiple of 10 up to 250: 10/10 pass

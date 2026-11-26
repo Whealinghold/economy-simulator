@@ -61,7 +61,7 @@ PR description.
 | EVD | N-018, N-133 |
 | EXP | N-015, N-124, N-127, N-129, N-134, N-162, N-179, N-203, N-206, N-207, N-211, N-220, N-328, N-331, N-334, N-350, N-361, N-485 |
 | EXT | N-108, N-112, N-113, N-214 |
-| FIS | N-507, N-508, N-505, N-506, N-504, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-475, N-483 |
+| FIS | N-509, N-507, N-508, N-505, N-506, N-504, N-131, N-140, N-159, N-160, N-161, N-163, N-172, N-173, N-174, N-187, N-188, N-190, N-204, N-389, N-391, N-392, N-433, N-434, N-435, N-436, N-437, N-475, N-483 |
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473, N-515 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
@@ -2841,6 +2841,12 @@ PR description.
 - **Raised:** 2026-11-20, plan 3-sav PR 2, `saving_validate.go`, `spec-saving-and-investment.md` 11.2.
 - **Note:** `project_below_hurdle`, `spread_below_margin` and `saving_target_exceeds_money` are pure functions of the configuration, so they value the best build project of a role at the reference prices of the regions it has a group in, for a household of weight 1 that holds no facility, with the yield of a recipe as written (no yield profile, season, technology, draw rent or belief) and the precaution at 0 (the drawdown is state). The last sums, over the groups, the households times the reserve plus the outlay of the role's best build project, against the households times `StartMoney` of every group. A repair is not valued (it needs a facility held). The spec words are loose on both points; settle them in 11.2 when STY runs the first pack. Left open.
 
+### N-509 FIS, REF: `fiscal.toml` is the empty module and `fiscal-governed.toml` carries the flows
+
+- **Areas:** FIS, REF, STB
+- **Raised:** 2026-11-25, plan 3-fis PR 7 review.
+- **Note:** `spec-reference-chain.md` 4.5 and `spec-fiscal.md` 19 described `overlay/fiscal.toml` as a head tax, a duty, a payout and a toll. A flow needs a governed authority (FR-FIS-007) and `overlay/polity.toml` is ungoverned, so the built split is: `fiscal.toml` is the present module with no flow (S132 compares it with the module removed), `fiscal-governed.toml` adds the governance of two groups and one flow of every kind but toll (S133, S134, the golden), and the toll is built by S136 on `three` with its own polity tables. The specs now say so. Still open: S136 uses its own three-region shipper, and no spoilage event exists, so S135 derives the units spoiled as a residual of the stock.
+
 ### N-504 An in-kind payout to a store-limited household stops at its free store room
 
 - **Areas:** FIS, LND
@@ -3079,4 +3085,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: bdc4cec6ef2d4d3cf0da54fb
+NOTES-TAG: ada850ec01379090e0201c66
