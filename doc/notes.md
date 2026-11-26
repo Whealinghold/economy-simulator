@@ -1488,6 +1488,7 @@ PR description.
 - **Note:** The cover round is after the credit round, so a household can pay a premium from this tick's loan.
 - **Update (2026-11-19, plan 3-ins Phase 1):** a premium paid from a loan formed at P3.3b is a test of scenario S161. Left open until PR F.
 - **Update (2026-11-26, plan 3-ins PR F):** S161 reports the loans formed but does not assert a premium paid from one; see N-554 item 5. Left open.
+- **Update (2026-11-26, plan 3-ins PR F testing stage):** `TestCoverRound_PremiumPaidFromALoanOfTheSameTick` asserts it at integration level (the loan is formed at P3.3b, the premium is paid from it at P3.3c, the insured holds the principal less the premium). S161 still only reports it. Applied; closed in the roadmap close with N-176.
 
 ### N-213 A store has no expected-loss read
 
@@ -2561,7 +2562,7 @@ PR description.
 
 - **Areas:** INS, STY, MER
 - **Raised:** 2026-11-26, plan 3-ins PR F (Phase 8).
-- **Note:** (1) No underwriter is removed on the golden packs (seeds 1 to 4, 400 ticks), so `TestFork_Insurance` cuts at an insured's removal and step 2f for an underwriter is covered only by `insurance_removal_internal_test.go`; a pack that removes one would close it. (2) The route pack ships at tick 1 only (the carriers do not stay provisioned, N-352): 24 route policies a seed, and S163 at cap 5000 forms none (exposure refusals), so the cap sweep shows the refusal, not a smaller cover. (3) S164's value cap binds even without the spike (units valued at the cap, 4 to 6 million at cap 20000), so the spike times cap reading is flat at that pack. (4) S162 stands a scripted shipper in for a merchant, since no merchants pack carries the transport, risk, credit and cover layers; INS-A1 and INS-A5 are read on the shipper. (5) N-212's premium from a loan formed at P3.3b is not a case of S161 as built; the plan's text said it would be. (6) The deliberate-break pass of `testing.md` 9.3 and the gates are the author's, at the close of the stage.
+- **Note:** (1) No underwriter is removed on the golden packs (seeds 1 to 4, 400 ticks), so `TestFork_Insurance` cuts at an insured's removal and step 2f for an underwriter is covered only by `insurance_removal_internal_test.go`; a pack that removes one would close it. *Testing stage:* `TestFork_InsuranceUnderwriterRemoval` removes an underwriter before the save and after the restore and checks restore equality, so the fork cell is covered at integration level (items 1 and 5 closed there; the golden packs still remove none). (2) The route pack ships at tick 1 only (the carriers do not stay provisioned, N-352): 24 route policies a seed, and S163 at cap 5000 forms none (exposure refusals), so the cap sweep shows the refusal, not a smaller cover. (3) S164's value cap binds even without the spike (units valued at the cap, 4 to 6 million at cap 20000), so the spike times cap reading is flat at that pack. (4) S162 stands a scripted shipper in for a merchant, since no merchants pack carries the transport, risk, credit and cover layers; INS-A1 and INS-A5 are read on the shipper. (5) N-212's premium from a loan formed at P3.3b is not a case of S161 as built; the plan's text said it would be. (6) The deliberate-break pass of `testing.md` 9.3 and the gates are the author's, at the close of the stage.
 
 ## Read receipt
 
@@ -3069,4 +3070,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 218d1814a87ba5b97a2598c9
+NOTES-TAG: 2d1ad7f7e4e72a3c5f4e89c8
