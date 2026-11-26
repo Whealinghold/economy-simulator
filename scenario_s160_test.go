@@ -29,6 +29,10 @@ func TestScenarioINS1_NeutralityAndAccounting(t *testing.T) {
 			tr := newInsTrack(t, g.cfg, seed, g.opts)
 			msg = tr.run(t, goldenTicks, nil)
 			checkExact(t, rep, "S160", g.name, seed, "the totals equal the events and every due adds up, every tick", msg == "", "%s", msg)
+			// Not a report check (the recorded files would change): a run that formed or paid nothing proves nothing above.
+			if tr.tl.formed == 0 || tr.paid == 0 {
+				t.Errorf("S160 pack %s seed %d: %d policies formed and %d paid in %d ticks, want both above 0 (the scenario would pass for nothing)", g.name, seed, tr.tl.formed, tr.paid, goldenTicks)
+			}
 			rep.num(seed, "policies formed", tr.tl.formed)
 			rep.num(seed, "premiums", tr.premiums)
 			rep.num(seed, "due", tr.due)

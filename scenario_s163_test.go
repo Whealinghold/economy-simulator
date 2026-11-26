@@ -31,6 +31,9 @@ func TestScenarioINS4_CommonRowAndCapacity(t *testing.T) {
 			tr := newInsTrack(t, cfg, seed, g.opts)
 			msg := tr.run(t, goldenTicks, nil)
 			checkExact(t, rep, "S163", g.name, seed, "the books add up every tick", msg == "", "%s", msg)
+			if tr.exposure == 0 {
+				t.Errorf("S163 seed %d cap %d: no offer was refused for exposure in %d ticks, want the cap to bind (the scenario would pass for nothing)", seed, capBP, goldenTicks)
+			}
 			_, lost := payoutClaims(tr.rec.events)
 			rep.num(seed, "policies formed", tr.tl.formed)
 			rep.num(seed, "agents removed", tr.removed)

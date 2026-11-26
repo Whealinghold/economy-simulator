@@ -33,6 +33,12 @@ func TestScenarioINS5_PriceSpikeAndValueCap(t *testing.T) {
 			names := mustSnapshot(t, tr.w).Names
 			msg := tr.run(t, 80, func(w *economysim.World) { applyScript(t, w, names, script) })
 			checkExact(t, rep, "S164", g.name, seed, "the books add up every tick", msg == "", "%s", msg)
+			if tr.sum == 0 || tr.premiums == 0 {
+				t.Errorf("S164 seed %d cap %d: sum insured %d, premiums %d, want both above 0", seed, capBP, tr.sum, tr.premiums)
+			}
+			if capBP == 20_000 && tr.roundCapped == 0 {
+				t.Errorf("S164 seed %d cap %d: no unit was valued at the cap although the spike lifts the price, want the cap to bind", seed, capBP)
+			}
 			rep.num(seed, "sum insured", tr.sum)
 			rep.num(seed, "premiums", tr.premiums)
 			rep.num(seed, "units valued at the cap", tr.roundCapped)

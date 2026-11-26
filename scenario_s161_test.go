@@ -1,6 +1,7 @@
 package economysim_test
 
 import (
+	"sync/atomic"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
@@ -36,6 +37,7 @@ func TestScenarioINS2_ShortfallClaim(t *testing.T) {
 		t.Skip("end-to-end scenario, skipped with -short")
 	}
 	g := insGoldenTwo(t)
+	var shortSeeds, claimSeeds atomic.Int64
 	techScenario(t, "two", "S161 two a payout the underwriter cannot pay in full is a claim, 400 ticks", func(t *testing.T, rep *scenReport, seed uint64) {
 		tr := newInsTrack(t, g.cfg, seed, g.opts)
 		msg := tr.run(t, goldenTicks, nil)
@@ -48,6 +50,12 @@ func TestScenarioINS2_ShortfallClaim(t *testing.T) {
 				loans++
 			}
 		}
+		if tr.short > 0 {
+			shortSeeds.Add(1)
+		}
+		if tr.claimPaid > 0 {
+			claimSeeds.Add(1)
+		}
 		rep.num(seed, "shortfall formed", tr.short)
 		rep.num(seed, "claims principal paid at P1.7a", tr.claimPaid)
 		rep.num(seed, "claims ended repaid", tr.claimEnded)
@@ -55,4 +63,8 @@ func TestScenarioINS2_ShortfallClaim(t *testing.T) {
 		rep.num(seed, "principal written off", lost)
 		rep.num(seed, "loans formed", loans)
 	})
+	// The bound above holds for 0 = 0 on a seed with no shortfall: some seed must reach a shortfall and a claim paid.
+	if shortSeeds.Load() == 0 || claimSeeds.Load() == 0 {
+		t.Errorf("S161: %d seeds formed a shortfall and %d paid a claim at P1.7a, want each above 0 (the scenario would pass for nothing)", shortSeeds.Load(), claimSeeds.Load())
+	}
 }
