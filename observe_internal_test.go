@@ -256,6 +256,11 @@ var stepSites = []site{
 			w.p13Arrivals()
 		}
 	})},
+	{"P1.3a", noError(func(w *World) {
+		if w.insurance != nil {
+			w.p13aSettleRoutes()
+		}
+	})},
 	{"P1.4", func(w *World) error {
 		if w.mer != nil && w.mer.on {
 			return w.p14Settle()
@@ -435,6 +440,11 @@ var stepSites = []site{
 	{"P8.1a", noError(func(w *World) {
 		if w.risk != nil {
 			w.p81aStores()
+		}
+	})},
+	{"P8.1b", noError(func(w *World) {
+		if w.insurance != nil {
+			w.p81bSettleStores()
 		}
 	})},
 	{"P8.2", noError((*World).p82Flows)},

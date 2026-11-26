@@ -116,12 +116,10 @@ func (rd *coverRound) reset() {
 // p33cCoverRound is P3.3c (spec-insurance.md 7): the admission of the requests and offers
 // of the plans in agent order, the lanes in ascending region with the order and the
 // matching of each, the formation of each fill, then CoverRound per region. It runs after
-// the credit round and every plan and takes no word. The store policies of the last tick
-// end first: no position ends them in their own tick yet (plan 3-ins PR D, P8.1b).
+// the credit round and every plan and takes no word. A store policy of the tick is ended
+// by P8.1b of the same tick.
 func (w *World) p33cCoverRound() {
-	in := w.insurance
-	rd := &in.round
-	in.dropStores()
+	rd := &w.insurance.round
 	if len(rd.reqs)+len(rd.offs) > 0 {
 		w.admitCoverRequests()
 		w.admitCoverOffers()
@@ -578,7 +576,7 @@ func (w *World) formCover(f insure.Fill) insure.Outcome {
 		p.kind = CoverStore
 	}
 	in.next++
-	in.add(p)
+	w.openPolicy(p)
 	cd.state = candidateCovered
 	c.formed++
 	c.sum, c.premium = addSat(c.sum, cd.sum), addSat(c.premium, premium)

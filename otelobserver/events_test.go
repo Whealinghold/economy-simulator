@@ -99,6 +99,8 @@ var allEvents = []economysim.Event{
 	economysim.PolicyDecided{},
 	economysim.CoverFormed{},
 	economysim.CoverRound{},
+	economysim.CoverEnded{},
+	economysim.CoverSettled{},
 	economysim.SavingPlanned{},
 }
 

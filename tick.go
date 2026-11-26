@@ -33,6 +33,7 @@ var positionList = [...]position{
 	{"P1.1", "CAL", line},
 	{"P1.2", "PRO", line},
 	{"P1.3", "TRN", line},
+	{"P1.3a", "INS", line},
 	{"P1.4", "MER", line},
 	{"P1.5", "MIG", line},
 	{"P1.6", "EST", line},
@@ -85,6 +86,7 @@ var positionList = [...]position{
 	{"P7.2b", "ORG", line},
 	{"P8.1", "LED", line},
 	{"P8.1a", "RSK", line},
+	{"P8.1b", "INS", line},
 	{"P8.2", "LED", line},
 	{"P8.3", "RES", line},
 	{"P8.3a", "LND", line},
@@ -99,10 +101,7 @@ var positionList = [...]position{
 // yet, in the order of the table. The position test fails on a listed position
 // that has a call and on a position of the table that is neither here nor in
 // positionList.
-var notBuiltPositions = [...]string{
-	"P1.3a",
-	"P8.1b",
-}
+var notBuiltPositions = [...]string{}
 
 // positions is the straight line of a step: one call for each position of
 // positionList whose where is line, in the order of the table of spec-world.md
@@ -126,6 +125,9 @@ func (w *World) positions() error {
 	w.p12Anchors()
 	if w.transport != nil {
 		w.p13Arrivals()
+	}
+	if w.insurance != nil {
+		w.p13aSettleRoutes()
 	}
 	if w.mer != nil && w.mer.on {
 		if err := w.p14Settle(); err != nil {
@@ -348,6 +350,9 @@ func (w *World) positionsEnd() error {
 	}
 	if w.risk != nil {
 		w.p81aStores()
+	}
+	if w.insurance != nil {
+		w.p81bSettleStores()
 	}
 	w.p82Flows()
 	w.p83Regen()

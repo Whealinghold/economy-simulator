@@ -65,7 +65,7 @@ PR description.
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473, N-515 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
-| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476, N-494, N-477, N-478, N-479 |
+| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476, N-494, N-478, N-479, N-550, N-551, N-552 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484, N-530 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436, N-471 |
 | LND | N-504, N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475, N-484, N-513 |
@@ -93,7 +93,7 @@ PR description.
 | TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434, N-459, N-505 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383, N-522, N-523, N-516, N-505 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346, N-472, N-514 |
-| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438, N-475, N-480, N-477 |
+| WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438, N-475, N-480 |
 
 ## Open notes
 
@@ -1472,7 +1472,8 @@ PR description.
 - **Raised:** 2026-10-13, `spec-insurance.md` 9.2.
 - **Note:** The credit list holds claims of two origins, `loan` and `payout`. The credit instruments and `Warn`s, `ForgiveClaims` and `CreditSettled` count loans only; the payments of a payout claim are INS's, in `CoverSettled` (`Stage` `claim`, fields `ClaimEnded`, `ClaimPaid`, `ClaimReceived`); the welfare record counts the principal of a payout claim as income and cost, and the identity of CRD 3.6 reads `Lent + Awarded`. INS counts its own outstanding payout claims in `economysim.insurance.claims`.
 - **Update (2026-10-13, Phase 1 of the ledger row):** applied for LED: the ledger's section 10 and FR-LED-063 carry the origin, `Awarded` and `Obligate` (`spec-ledger.md` 10, FR-LED-064); the first build keeps both origins in one list and checks the principal identity with `Awarded`. LED removed from the areas.
-- **Update (2026-11-19, plan 3-ins Phase 1):** the INS half is built by plan 3-ins (the stage-`claim` counts of `CoverSettled`, the welfare principal of a payout claim, N-472). Left open until PR D.
+- **Update (2026-11-19, plan 3-ins Phase 1):** the INS half is built by plan 3-ins (the stage-`claim` counts of `CoverSettled`, the welfare principal of a payout claim, N-472).
+- **Update (2026-11-25, plan 3-ins PR D):** the INS half is in the code (`coverClaimPaid`, `coverClaimEnded`, `reportCoverClaims`); left open for the instruments of `otelobserver` (plan 3-ins Q7).
 
 ### N-210 The premium is not in the merchant's margin
 
@@ -2486,6 +2487,7 @@ PR description.
 - **Areas:** INS, RSK
 - **Raised:** 2026-11-19, plan 3-ins D6, H-11, `spec-risk.md` 10.2.1.
 - **Note:** `risk_loss.go` overwrote the lost units of the last arrival; P1.3a runs after all of P1.3 and needs the figures of each arrived shipment that has a policy. INS adds a per-tick list `risk.arrived` (shipment, lines lost, account lost), cleared at the entry of P1.3, kept whether or not an observer was supplied and only while insurance is on. A shipment whose arrival is held (RSK's order guard) has no row and its policy stays open. A `Guard:` test (`TestRisk_ArrivedListKeptWithoutObserver`) pins the observer-free case.
+- **Update (2026-11-25, plan 3-ins PR D):** built as one nil-safe call at the end of `arrivalLoss` into `insurance.noteArrival`; the list (`insurance.arrived`, with the lost units of the lines then of the account in `insurance.amounts` and the origin region of the shipment, which the unit values need) lives in the insurance state, not in `risk`, so a world with insurance off holds nothing more. A row is kept only for a shipment that has a route policy and is emptied at the end of P1.3a. The guard tests are `TestNoteArrival_KeepsOnlyInsuredShipments` and `TestRoute_ArrivalListKeptWithoutObserver`. `TestRoute_HeldArrivalSettlesLater` (a held arrival settles at the arrival that completes) covers the held case, and `TestInsurance_WorkIsCounted` covers the settlement work counter.
 
 ### N-471 `premium` and `payout` are pinned rows 30 and 31, and a built-in reason takes a code below 42
 
@@ -2498,6 +2500,7 @@ PR description.
 - **Areas:** WEL, CRD, INS
 - **Raised:** 2026-11-19, plan 3-ins D10, Q2, H-12, H-13, `spec-insurance.md` 11.1.3.
 - **Note:** The premium, the payout and the principal paid on a claim of origin `payout` are each one signed `addUnearned` call (CRD 11.1 says the principal of a loan is neither income nor cost; a payout claim's principal is both parties' `N_t`). A flow that moves after P6.3 (the payout of a store policy at P8.1b, the principal a removal's waterfall pays at P7.1) is added to the record already pushed in the tick by `Ring.Amend` (replaces the running sums and re-applies the clamp, no new record, no window change); an agent with no record of the tick is not amended. The fallback if review refuses a change to `internal/welfare` is a one-tick lag.
+- **Update (2026-11-25, plan 3-ins PR D):** built. The premium is added at P3.3c (`openPolicy`), the payout at P1.3a, the principal of a payout claim at P1.7a (`coverClaimPaid` in `tallyPaid`) and the payout of P8.1b and the waterfall's principal (`coverClaimLate`) by `Ring.Amend`. Left open: see N-552 for what the amendment does not do.
 
 ### N-473 No indicator preset exists for premiums, payouts, shortfalls and the loss ratio
 
@@ -2534,6 +2537,24 @@ PR description.
 - **Areas:** CODE, REF
 - **Raised:** 2026-11-25, plan 3-sav PR 5.
 - **Note:** `writeScenarioBlock` (`scenario_helpers_test.go`) rewrites the whole file and collapses a run of blank lines between blocks to one, so `-update` on a new block deletes 19 blank lines of `one.scenarios.txt` and a "no deleted line" check fails. PR 5 inserted its blocks by hand after the recorder had written them. A later change should make the writer keep the file as it is except for its own block. Left open.
+
+### N-550 INS, OBS: `CoverSettled.Shielded` is by the underwriter's region
+
+- **Areas:** INS, OBS
+- **Raised:** 2026-11-25, plan 3-ins PR D (Phase 6).
+- **Note:** every other figure of `CoverSettled` is by the insured's region, but the shield is the underwriter's: the money it kept out of a payout. `spec-insurance.md` 15.1 did not say which region carries it; the code reports it by the underwriter's region (the lane of the round makes the two equal at formation, but an arrival or a relocation can part them). Revisit when the `economysim.insurance.shielded` instrument, if one is asked for, is added.
+
+### N-551 INS, CRD, OBS: what `CoverSettled` of the stage `claim` counts
+
+- **Areas:** INS, CRD, OBS
+- **Raised:** 2026-11-25, plan 3-ins PR D (Phase 6).
+- **Note:** `ClaimEnded` counts payout claims that ended repaid at P1.7a by the debtor's region; a claim ended by a write-off, or by the waterfall of a removal, is told only by `LoanEnded` (`WrittenOff`, `DebtorRemoved`). `ClaimReceived` counts only an agent creditor: the principal an estate receives on a passed claim is in no `CoverSettled` field. A rebuild of the money of the household sector (FR-INS-079) reads `LoanEnded` for the removal's payments, as `spec-insurance.md` 15.1.2 says.
+
+### N-552 INS, WEL: what `Ring.Amend` does not do
+
+- **Areas:** INS, WEL
+- **Raised:** 2026-11-25, plan 3-ins PR D (Phase 6).
+- **Note:** (1) The amendment adds to the newest record of a ring that holds one. An agent created at P7.1 of the tick with a ring carried from elsewhere (a migrant with a history) is amended in a record of an earlier tick: a ring does not say which tick its newest record is of, and a flow after P6.3 reaches only agents that existed at P6.3, which is almost always. Add a `pushed` tick to the ring if a case is found. (2) The count of households at the clamp of P6.3 (`oc.clamped`, the run of the Warn "welfare record clamped") is not recomputed after an amendment; the ring's own count of records at the bound is. (3) The removed debtor of a waterfall is amended too and then dropped.
 
 ## Read receipt
 
@@ -3013,12 +3034,6 @@ PR description.
 - **Raised:** 2026-11-20, plan 3-org PR C result (Phases 6 and 7), written in PR E.
 - **Note:** `AdmitClamp` returns `(code, price, changed)`: the side of the order says whether the change is a lowering or a raising. `spec-institutions.md` 5.2 and `spec-clearing.md` 3.2.1 may say it returns one flag. Check both and align them to the code.
 
-### N-477 INS, WLD: the store policies of a tick end at the next round's entry until PR D
-
-- **Areas:** INS, WLD
-- **Raised:** 2026-11-20, plan 3-ins PR C (Phases 4 and 5).
-- **Note:** the round of P3.3c forms store policies, and P8.1b (PR D) is what ends them in their tick. Until PR D, `insurance_round.go` drops the store policies of the previous tick at the entry of the next round, so none leaks. PR D deletes that reset in the change that adds P8.1b. A route policy stays open until PR D settles it at P1.3a.
-
 ### N-478 INS, AGT, MER: `DefaultCover` is called after `TradeWith`, not inside it
 
 - **Areas:** INS, AGT, MER
@@ -3041,4 +3056,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: ae74d3a7f38a6226ce10ac76
+NOTES-TAG: 60fd082919f8dd2a933aadc8
