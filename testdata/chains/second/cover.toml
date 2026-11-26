@@ -1,0 +1,54 @@
+# The insurance module on the second setting (the crater colony, spec-insurance.md 4, 20.3, plan 3-ins phase 8,
+# FR-INS-005, NFR-INS-005): a cellar for the algae tenders, one risk row on it, the credit module, an insured block on the
+# tenders and an underwriter block on the drillers, written from a file alone on a pack that shares no commodity, recipe,
+# role or region with pack one. Layer it after the pack: second/second.toml, second/warm-second.toml, this file. It
+# carries its own storage, risk and credit tables, so it needs no other overlay. Every number is a labelled placeholder
+# (N-015, N-027): the tenders hold their stock in the cellar, so a strike takes goods the policy values, and the drillers
+# offer all their free capacity.
+
+[modules.storage.base]
+mass = 200
+bulk = 200
+
+[modules.storage.role.algae_tender]
+stores = [ "cellar" ]
+
+[modules.storage.role.algae_tender.base]
+mass = 30
+bulk = 30
+
+[modules.storage.class.cellar]
+mass = 1000
+bulk = 1000
+
+[modules.risk.store.crater_rim.cellar]
+strike_bp = 2500
+severity_bp = 3000
+
+[modules.credit]
+min_principal = 1
+shield_ticks = 2
+write_off_ticks = 7
+max_claims = 1000
+
+[modules.insurance]
+value_cap_bp = 20000
+payout_ticks = 1
+min_sum = 1
+max_policies = 1000
+max_cover_requests = 4
+
+[role.algae_tender.cover.insure]
+min_loss_bp = 0
+ruin_share_bp = 0
+max_loading_bp = 20000
+min_cover_bp = 5000
+store_share_bp = 10000
+max_store_rate_bp = 500
+
+[role.driller.cover.underwrite]
+loading_bp = 10000
+store_rate_bp = 10
+cover_bp = 8000
+cap_bp = 100000
+share_bp = 10000
