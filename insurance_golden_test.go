@@ -84,7 +84,7 @@ func (g insGolden) check(t *testing.T) {
 	if want, err := os.ReadFile(moduleGoldenPath("insurance", g.name+".txt")); err == nil && !bytes.Equal(want, got) && !*updateFlag {
 		t.Errorf("%s.txt differs from the golden: %s (testing.md 7.1.2)", g.name, g.positionsNote(t))
 	}
-	checkModuleGolden(t, "insurance", g.name+".txt", got)
+	g.checkRecorded(t, g.name+".txt", got)
 
 	ev := runPack(t, g.cfg, runSpec{Seed: goldenSeed, Ticks: goldenTicks, Drive: driveRun(goldenTicks), Observe: true, Extra: g.opts})
 	step := runPack(t, g.cfg, runSpec{Seed: goldenSeed, Ticks: goldenTicks, Drive: driveStep, Extra: g.opts})
@@ -97,13 +97,30 @@ func (g insGolden) check(t *testing.T) {
 			t.Errorf("%s: the events hold no %s, want the module's run in the golden", g.name, w)
 		}
 	}
-	checkModuleGolden(t, "insurance", "events-"+g.name+".txt", events)
+	g.checkRecorded(t, "events-"+g.name+".txt", events)
 
 	lines := positionLines(t, g.cfg, goldenSeed, posTicks, g.opts...)
 	if want := posTicks * g.posN; len(lines) != want {
 		t.Errorf("%s: recorded %d position lines, want %d (%d positions per tick)", g.name, len(lines), want, g.posN)
 	}
-	checkModuleGolden(t, "insurance", g.name+".positions.txt", []byte(strings.Join(lines, "\n")+"\n"))
+	g.checkRecorded(t, g.name+".positions.txt", []byte(strings.Join(lines, "\n")+"\n"))
+}
+
+// checkRecorded is checkModuleGolden for a file of the set that also fails when what the run
+// rendered is empty, or when the recorded file is missing or empty and the run is not recording: a
+// golden that holds nothing compares equal to a run that renders nothing, and the set is recorded
+// once, never created by a test run that finds it absent.
+func (g insGolden) checkRecorded(t testing.TB, name string, got []byte) {
+	t.Helper()
+	if len(bytes.TrimSpace(got)) == 0 {
+		t.Errorf("%s: the run rendered nothing for %s, want the module's run in the golden", g.name, name)
+	}
+	if !*updateFlag {
+		if fi, err := os.Stat(moduleGoldenPath("insurance", name)); err != nil || fi.Size() == 0 {
+			t.Errorf("%s: golden %s is missing or empty (err %v), want the recorded file (testing.md 7.2)", g.name, name, err)
+		}
+	}
+	checkModuleGolden(t, "insurance", name, got)
 }
 
 // positionsNote replays the scripted run against the recorded positions file of the set, so a

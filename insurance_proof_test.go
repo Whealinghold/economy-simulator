@@ -2,12 +2,15 @@ package economysim_test
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
 
 	economysim "github.com/Whealinghold/economy-sim"
+	"github.com/Whealinghold/economy-sim/config"
 )
 
 // packSecondCover is pack second with the setting-free cover overlay of testdata/chains/second.
@@ -117,4 +120,56 @@ func TestDeterminism_Insurance(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestConfig_InsuranceOverlaysRefuseBadRows verifies that the cover overlays go through the loader and
+// the validator of production, which refuse a bad row: each of the three overlays loads and validates
+// over its layers, and the same layers with one row appended that is out of range, names a key the
+// block does not have, or names a role the pack lacks fail in config.Parse or Validate.
+//
+// Requirement: FR-INS-001, FR-INS-021, FR-INS-022, FR-CFG-001
+//
+// Guard: an overlay that a loader read without checking (an unknown key skipped, a bound not
+// tested) would leave a golden that runs on numbers nobody validated.
+func TestConfig_InsuranceOverlaysRefuseBadRows(t *testing.T) {
+	t.Parallel()
+	sets := []struct {
+		name   string
+		layers []string
+	}{{"two", packTwoCover}, {"one-store", packOneCoverStore}, {"second", packSecondCover}}
+	for _, s := range sets {
+		t.Run(s.name, func(t *testing.T) {
+			t.Parallel()
+			_ = loadValidPack(t, s.layers...) // the overlay itself is accepted
+			bad := map[string]string{
+				"unknown key in the module block": "[modules.insurance]\nno_such_key = 1\n",
+				"value cap above its bound":       "[modules.insurance]\nvalue_cap_bp = 9223372036854775807\n",
+				"negative minimum sum":            "[modules.insurance]\nmin_sum = -1\n",
+				"block on a role the pack lacks":  "[role.no_such_role.cover.underwrite]\ncap_bp = 1\n",
+			}
+			for name, doc := range bad {
+				err := loadRefused(s.layers, doc)
+				if err == nil {
+					t.Errorf("%s: an overlay with %q loaded and validated, want a refusal", s.name, name)
+				}
+			}
+		})
+	}
+}
+
+// loadRefused layers the files and then doc, and returns the error of the parse or of the validation.
+func loadRefused(layers []string, doc string) error {
+	docs := make([][]byte, 0, len(layers)+1)
+	for _, l := range layers {
+		b, err := os.ReadFile(filepath.Join(chainsDir, l))
+		if err != nil {
+			return fmt.Errorf("read %s: %w", l, err)
+		}
+		docs = append(docs, b)
+	}
+	cfg, err := config.Parse(append(docs, []byte(doc))...)
+	if err != nil {
+		return err
+	}
+	return cfg.Validate()
 }
