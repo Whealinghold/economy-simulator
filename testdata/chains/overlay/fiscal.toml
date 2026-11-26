@@ -1,0 +1,9 @@
+# The fiscal module on the warm five, switched on with no flow (spec-fiscal.md 19, spec-reference-chain.md 4.5,
+# plan 3-fis Phase 10). Layer it after the pack and overlay/polity-governed.toml: base.toml,
+# lines.toml, five.toml, warm-five.toml, overlay/polity-governed.toml, this file. The module needs a governed
+# jurisdiction (FR-FIS-007), so the ungoverned polity of overlay/polity.toml cannot carry it; this layer is the module's own
+# neutral form, the present and empty module that every later layer fills (overlay/fiscal-governed.toml adds the
+# flows). With it the world differs from the world without the module by the configuration hash, the construction
+# line and the module list only (FR-FIS-001). A test double, not a design.
+
+[modules.fiscal]

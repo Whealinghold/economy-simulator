@@ -44,12 +44,16 @@ func TestViews_CarryNoOtherPolicyNoOfferNoLoading(t *testing.T) {
 // Requirement: FR-INS-060
 func TestViews_CoverGroupOnlyForARoleWithABlock(t *testing.T) {
 	t.Parallel()
-	// The two subtests share w, whose view context a view refreshes: they run in turn.
-	w, _ := newInsWorld(t, insConfig(defaultInsure(), defaultUnderwrite()), nil)
+	// Each parallel subtest builds its own world: a view call rewrites the world's view context
+	// and scratch (refreshViewCtx), so a shared world raced under -race.
 	t.Run("an insured has the Insure block only", func(t *testing.T) {
+		t.Parallel()
+		w, _ := newInsWorld(t, insConfig(defaultInsure(), defaultUnderwrite()), nil)
 		checkInsuredView(t, w, viewOf(t, w, insHome))
 	})
 	t.Run("an underwriter has the Underwrite block and a capacity", func(t *testing.T) {
+		t.Parallel()
+		w, _ := newInsWorld(t, insConfig(defaultInsure(), defaultUnderwrite()), nil)
 		uw := viewOf(t, w, insBacker)
 		if uw.Insurance == nil || uw.Insurance.Underwrite == nil || uw.Insurance.Insure != nil {
 			t.Fatalf("underwriter's group = %+v, want an Underwrite block only", uw.Insurance)

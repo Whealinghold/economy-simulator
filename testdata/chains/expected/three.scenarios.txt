@@ -1,6 +1,21 @@
 # Recorded outcomes of the Stage 1 scenarios (plan 1-12 D181), written with -update.
 # Read by the reviewer of STY 8.4; no test compares it.
 
+## S136 three+fiscal tolls, a tax and a remittance, 150 ticks seeds 1-10
+measure dispatches: 1=12 2=12 3=12 4=12 5=12 6=12 7=12 8=12 9=12 10=12 | median=12 n=10
+measure head tax collected: 1=39349 2=40270 3=39177 4=39727 5=39994 6=39183 7=39557 8=39670 9=40420 10=39619 | median=39644 n=10
+measure refused for toll_unaffordable: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure remitted: 1=43266 2=44120 3=43072 4=43598 5=43856 6=43074 7=43502 8=43564 9=44258 10=43567 | median=43566 n=10
+measure tolls paid: 1=30 2=30 3=30 4=30 5=30 6=30 7=30 8=30 9=30 10=30 | median=30 n=10
+check a dispatch leaves the inland: 10/10 pass
+check a restored world ends where the uninterrupted one does: 10/10 pass
+check coast = start + gate + tax - remittance: 10/10 pass
+check crown = start + remittance: 10/10 pass
+check every dispatch pays the toll of FIS 7.2: 10/10 pass
+check inland = start + ferry: 10/10 pass
+check shipments were dispatched: 10/10 pass
+check toll events add up to the dispatches' tolls: 10/10 pass
+
 ## S150 three+trade+technology contact, 365 ticks seeds 1-10
 measure TechnologyAdvanced events: 1=145 2=148 3=144 4=146 5=162 6=145 7=146 8=148 9=144 10=146 | median=146 n=10
 measure experience of the first cell at end: 1=93 2=116 3=108 4=107 5=118 6=109 7=102 8=102 9=104 10=98 | median=106 n=10

@@ -1,0 +1,46 @@
+# The saving module on the second setting (the crater colony, spec-saving-and-investment.md 16.4, plan 3-sav Phase 7,
+# FR-SAV-041): a site class, the recipes that build and mend one, and a `Saver` block on the role that uses it, written
+# from a file alone on a pack that shares no commodity, recipe or role with pack one. Layer it after the pack:
+# second/second.toml, second/warm-second.toml, this file. It carries its own infrastructure tables, so it needs no other
+# overlay. Every number is a labelled placeholder (N-015, N-027): the kiln is held by 100 of the 385 drillers from the
+# start, the other 285 save for one.
+
+[modules.saving]
+safety_ticks = 2
+hurdle_spread_bp = 40000
+commit_band_bp = 2000
+
+[modules.infrastructure.class.kiln]
+kind = "site"
+durability = 600
+decay = 1
+wear_per_use = 3
+capacity = 2
+
+[[modules.infrastructure.initial]]
+region = "crater_rim"
+class = "kiln"
+role = "driller"
+count = 100
+
+[recipe.melt]
+needs = [ "kiln" ]
+
+[recipe.build_kiln]
+duration = 2
+inputs = [ { commodity = "ice", quantity = 2 } ]
+[recipe.build_kiln.builds]
+class = "kiln"
+
+[recipe.repair_kiln]
+inputs = [ { commodity = "ice", quantity = 1 } ]
+[recipe.repair_kiln.repairs]
+class = "kiln"
+units = 200
+
+[role.driller]
+recipes = [ "cut_ice", "melt", "build_kiln", "repair_kiln" ]
+[role.driller.saver]
+hurdle_bp = 15000
+payback_ticks = 180
+repair_below_bp = 5000
