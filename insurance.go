@@ -215,13 +215,14 @@ func (in *insurance) checkOpenTotals() error {
 // next ID, every open route policy has a live shipment and open distinct accounts, and the
 // indexes are the ones the lists give. The money identity is the ledger's (FR-LED-024).
 func (in *insurance) audit(w *World) error {
-	if err := in.auditTotals(w); err != nil {
-		return fmt.Errorf("insurance: %w", err)
+	err := in.auditTotals(w)
+	if err == nil {
+		err = in.auditPolicies(w)
 	}
-	if err := in.auditPolicies(w); err != nil {
-		return fmt.Errorf("insurance: %w", err)
+	if err == nil {
+		err = in.auditIndexes()
 	}
-	if err := in.auditIndexes(); err != nil {
+	if err != nil {
 		return fmt.Errorf("insurance: %w", err)
 	}
 	return nil
