@@ -415,6 +415,28 @@ measure staple price at a bound, share bp of last year: 1=0 2=0 3=0 4=0 5=0 6=0 
 check market series in tick order: 10/10 pass
 check price within belief bounds (FR-STB-008): 10/10 pass
 
+## S160 one-store neutrality with no block, accounting with blocks, 400 ticks seeds 1-10
+measure due: 1=3544 2=4410 3=2674 4=9441 5=7771 6=790 7=6505 8=2040 9=6117 10=10137 | median=5264 n=10
+measure paid: 1=3544 2=4410 3=2674 4=9441 5=7771 6=790 7=6505 8=2040 9=6117 10=10137 | median=5264 n=10
+measure policies formed: 1=33605 2=34950 3=33976 4=34163 5=34018 6=31820 7=32833 8=34434 9=31534 10=33243 | median=33790 n=10
+measure premiums: 1=1225213 2=1226353 3=1222575 4=1240566 5=1240426 6=1155843 7=1179148 8=1255860 9=1162231 10=1202269 | median=1223894 n=10
+check the module on with no block equals the module off: 10/10 pass
+check the totals equal the events and every due adds up, every tick: 10/10 pass
+
+## S164 one-store a price spike, value cap 100000, 80 ticks seeds 1-10
+measure due: 1=6635 2=16236 3=0 4=0 5=0 6=19938 7=7784 8=29767 9=8344 10=7942 | median=7863 n=10
+measure premiums: 1=974261 2=1109622 3=701774 4=662943 5=779463 6=1052187 7=953103 8=1147849 9=1179453 10=1139941 | median=1013224 n=10
+measure sum insured: 1=974394622 2=1109168522 3=701506856 4=662837252 5=779490131 6=1052173245 7=952700336 8=1147449093 9=1179458912 10=1140248519 | median=1013283934 n=10
+measure units valued at the cap: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check the books add up every tick: 10/10 pass
+
+## S164 one-store a price spike, value cap 20000, 80 ticks seeds 1-10
+measure due: 1=13901 2=23590 3=0 4=0 5=0 6=13884 7=19803 8=46175 9=9715 10=8234 | median=11800 n=10
+measure premiums: 1=958176 2=1112296 3=712338 4=703739 5=786575 6=1041358 7=963827 8=1134431 9=1124962 10=1107415 | median=1002592 n=10
+measure sum insured: 1=958032088 2=1112300972 3=712293975 4=703827538 5=786639213 6=1041361477 7=963565313 8=1134474543 9=1124980970 10=1107613767 | median=1002463395 n=10
+measure units valued at the cap: 1=4446763 2=4434965 3=6350046 4=6217117 5=6314438 6=4961212 7=4491965 8=4988543 9=4722605 10=4083590 | median=4841908 n=10
+check the books add up every tick: 10/10 pass
+
 
 
 
