@@ -341,6 +341,21 @@ func TestIndexesOfLists_RefusesAnInsuredWithoutACountEntry(t *testing.T) {
 	}
 }
 
+// TestIndexesOfLists_RefusesALiabilityAboveMaxMoney verifies that the recomputation of the
+// indexes refuses an underwriter whose open liability is above MaxMoney, though it fits int64,
+// as the tag 29 load does (commit 1dc84d0).
+//
+// Fix: review of the INS PR E (stage 7 final). The audit only refused an int64 overflow, so an
+// in-memory state that a restore would refuse passed the audit.
+func TestIndexesOfLists_RefusesALiabilityAboveMaxMoney(t *testing.T) {
+	t.Parallel()
+	w, _ := insCkWorld(t)
+	w.insurance.open[0].maxPayout = int64(MaxMoney) + 1
+	if _, _, err := w.insurance.indexesOfLists(); err == nil {
+		t.Errorf("indexesOfLists error = nil, want an error for a liability of MaxMoney + 1")
+	}
+}
+
 // TestSnapshot_PoliciesAndTotals verifies the rows of spec-insurance.md 15.4: Policies has a
 // row for each open route policy in ascending ID with the fields of the record and the region
 // of the insured, Insurance has the six totals and the shortfall read from the ledger's

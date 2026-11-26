@@ -288,8 +288,8 @@ func (in *insurance) indexesOfLists() (liability, insured []int64, err error) {
 				return nil, nil, fmt.Errorf("policy %d: underwriter %d has no liability entry", p.id, p.underwriter)
 			}
 			sum, ok := checked.Add(liability[p.underwriter], p.maxPayout)
-			if !ok {
-				return nil, nil, fmt.Errorf("policy %d: the open liability of underwriter %d overflows", p.id, p.underwriter)
+			if !ok || sum > MaxMoney {
+				return nil, nil, fmt.Errorf("policy %d: the open liability of underwriter %d is above MaxMoney", p.id, p.underwriter)
 			}
 			liability[p.underwriter] = sum
 			if p.kind == CoverRoute {
