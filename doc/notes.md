@@ -65,11 +65,11 @@ PR description.
 | GDS | N-039 |
 | IND | N-130, N-159, N-178, N-201, N-206, N-208, N-327, N-328, N-350, N-359, N-376, N-380, N-473, N-515 |
 | INF | N-110, N-112, N-156, N-170, N-214, N-363 |
-| INS | N-176, N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476, N-494, N-478, N-479, N-550, N-551, N-552, N-553 |
+| INS | N-179, N-213, N-227, N-470, N-471, N-472, N-473, N-474, N-475, N-476, N-494, N-478, N-479, N-550, N-551, N-552, N-553, N-554 |
 | INT | N-090, N-129, N-130, N-131, N-136, N-143, N-161, N-164, N-177, N-194, N-204, N-205, N-290, N-354, N-484, N-530, N-553 |
 | LED | N-021, N-125, N-130, N-159, N-225, N-226, N-290, N-319, N-320, N-323, N-370, N-429, N-391, N-435, N-436, N-471 |
 | LND | N-504, N-140, N-156, N-160, N-166, N-187, N-190, N-191, N-205, N-357, N-366, N-384, N-424, N-425, N-426, N-427, N-438, N-475, N-484, N-513 |
-| MER | N-333, N-332, N-120, N-122, N-136, N-173, N-176, N-180, N-189, N-190, N-210, N-214, N-370, N-478 |
+| MER | N-333, N-332, N-120, N-122, N-136, N-173, N-180, N-189, N-190, N-210, N-214, N-370, N-478 |
 | MIG | N-121, N-122, N-136, N-143, N-150, N-170, N-171, N-181, N-214, N-268, N-244, N-322, N-329, N-330, N-363, N-426 |
 | MON | N-096, N-107, N-122, N-163, N-181, N-183, N-204, N-314, N-389 |
 | OBS | N-543, N-465, N-405, N-125, N-127, N-130, N-159, N-288, N-294, N-300, N-309, N-310, N-324, N-349, N-372, N-432, N-385, N-386, N-427, N-377, N-437, N-445, N-455, N-456, N-482, N-510, N-520, N-553 |
@@ -79,7 +79,7 @@ PR description.
 | PRO | N-542, N-430, N-030, N-039, N-043, N-090, N-118, N-130, N-137, N-142, N-191, N-200, N-237, N-243, N-358, N-454, N-501 |
 | REF | N-508, N-027, N-030, N-089, N-092, N-114, N-123, N-135, N-145, N-146, N-168, N-294, N-295, N-306, N-312, N-314, N-318, N-321, N-325, N-336, N-337, N-338, N-341, N-342, N-344, N-352, N-356, N-399, N-425, N-426, N-460, N-525, N-540, N-516, N-517, N-499 |
 | REG | N-150, N-175, N-204, N-320, N-321, N-322, N-323, N-324 |
-| RSK | N-140, N-155, N-161, N-176, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470, N-458, N-459, N-460, N-461 |
+| RSK | N-140, N-155, N-161, N-205, N-211, N-213, N-327, N-373, N-374, N-375, N-376, N-385, N-377, N-378, N-379, N-380, N-470, N-458, N-459, N-460, N-461 |
 | SAV | N-145, N-156, N-195, N-362, N-475, N-492, N-493, N-497, N-498 |
 | SCL | N-030, N-198, N-222, N-300, N-493 |
 | SET | N-404, N-140, N-192, N-268, N-348, N-365 |
@@ -90,7 +90,7 @@ PR description.
 | STY | N-015, N-027, N-030, N-085, N-086, N-092, N-113, N-123, N-132, N-133, N-135, N-145, N-151, N-162, N-168, N-177, N-178, N-199, N-201, N-203, N-206, N-207, N-325, N-338, N-339, N-340, N-344, N-352, N-356, N-359, N-361, N-399, N-485, N-458, N-517, N-518, N-498 |
 | SUB | N-121, N-228, N-268, N-244, N-426 |
 | TEC | N-358, N-359, N-360, N-361, N-384 |
-| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-176, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434, N-459, N-505 |
+| TRN | N-333, N-120, N-130, N-136, N-137, N-142, N-143, N-155, N-170, N-174, N-175, N-180, N-184, N-189, N-194, N-204, N-226, N-321, N-322, N-374, N-434, N-459, N-505 |
 | VIA | N-015, N-061, N-071, N-080, N-085, N-093, N-109, N-114, N-123, N-134, N-146, N-158, N-165, N-180, N-276, N-277, N-306, N-311, N-325, N-356, N-364, N-369, N-383, N-522, N-523, N-516, N-505 |
 | WEL | N-016, N-028, N-099, N-118, N-119, N-130, N-147, N-148, N-171, N-183, N-214, N-346, N-472, N-514 |
 | WLD | N-332, N-330, N-124, N-125, N-144, N-204, N-214, N-216, N-226, N-230, N-276, N-288, N-265, N-309, N-310, N-322, N-337, N-360, N-372, N-384, N-373, N-390, N-438, N-475, N-480 |
@@ -1272,14 +1272,6 @@ PR description.
 - **Raised:** 2026-10-13, `spec-infrastructure.md` 5.2.5 and open question 12.
 - **Note:** Transport keys its factor by the pair and takes REG's shortest distance; CAP's layer is that of the pair's own direct edge and only where it is the shortest path, so a road never speeds a multi-hop shipment. A path rule (composition over REG's `Path`) wants a run with a road network.
 
-### N-176 A shipment's fate is fixed at dispatch and is the world's fact; insurance never reads it
-
-- **Areas:** INS, MER, TRN, RSK
-- **Raised:** 2026-10-13, `spec-risk.md` 4, 10.2.2 and `spec-insurance.md` 6.1.2.
-- **Note:** `LossBP` is in the record and in `ShipmentDispatched` for an observer, and no view carries it. Insurance reads `RouteLoss` and the arrival's lost units and never `LossBP`, a draw or a scale; it would insure only what is lost. FR-INS-025 is the test: two worlds that differ only in a lane's strikes form the same policies.
-- **Update (2026-11-18, plan 3-rsk Phase 1):** read: FR-INS-025 is INS's test. RSK supplies `RouteLoss`, the events and the scratch of the lost units, and no view carries `LossBP` (FR-RSK-011). Left open for INS.
-- **Update (2026-11-19, plan 3-ins Phase 1):** read: FR-INS-025 is built in INS PR C (`TestInsurance_ReadsNoLossBP`, `TestInsurance_SameWorldsOppositeStrikes`); the note is applied and removed at PR F, when the scenario S160 has run. Left open.
-
 ### N-177 No endogenous risk in version 1
 
 - **Areas:** PLC, INT, STY
@@ -1298,6 +1290,7 @@ PR description.
 - **Raised:** 2026-10-13, `spec-risk.md` 3.3, 10.2.3, RSK-A3.
 - **Note:** A sweep through a scale of 0 is a different stream from there (the row takes no word at 0); a sweep above 0 stays aligned (`spec-risk.md` 11.4).
 - **Update (2026-11-19, plan 3-ins Phase 1):** read: the sweep is the readers' (STB, EXP), not INS's. Left open.
+- **Update (2026-11-26, plan 3-ins PR F):** read: the route and store packs of `golden/insurance` and `TestDeterminism_Insurance` run one common row per pack, not a sweep of its scale; the sweep stays the readers'. Left open.
 
 ### N-180 The expected loss is in the shipper's margin and in the lanes
 
@@ -1494,6 +1487,8 @@ PR description.
 - **Raised:** 2026-10-13, `spec-insurance.md` 7.1.2, INS-A6 (a case of L11 and L45).
 - **Note:** The cover round is after the credit round, so a household can pay a premium from this tick's loan.
 - **Update (2026-11-19, plan 3-ins Phase 1):** a premium paid from a loan formed at P3.3b is a test of scenario S161. Left open until PR F.
+- **Update (2026-11-26, plan 3-ins PR F):** S161 reports the loans formed but does not assert a premium paid from one; see N-554 item 5. Left open.
+- **Update (2026-11-26, plan 3-ins PR F testing stage):** `TestCoverRound_PremiumPaidFromALoanOfTheSameTick` asserts it at integration level (the loan is formed at P3.3b, the premium is paid from it at P3.3c, the insured holds the principal less the premium). S161 still only reports it. Applied; closes with the roadmap close.
 
 ### N-213 A store has no expected-loss read
 
@@ -1502,6 +1497,7 @@ PR description.
 - **Note:** A store premium is the underwriter's posted rate, a pack's data; a read like `RouteLoss` for a store is the ask.
 - **Update (2026-11-18, plan 3-rsk Phase 1):** read: a store expected-loss read is INS's ask and is not built here (plan 3-rsk, leaves out). Left open for INS.
 - **Update (2026-11-19, plan 3-ins Phase 1):** read: a store expected-loss read is an ask of RSK and is not built in version 1 (plan 3-ins, leaves out). Left open.
+- **Update (2026-11-26, plan 3-ins PR F):** the store pack (`overlay/cover-store.toml`, scenario S164) prices from the underwriter's posted rate only, as designed; S164 reports that the value cap binds without a strike spike, which a store read of an expected loss could replace. Left open.
 
 ### N-214 Keyed random streams (ADR 0008): the edits owed
 
@@ -2562,6 +2558,12 @@ PR description.
 - **Raised:** 2026-11-26, plan 3-ins PR E (Phase 7).
 - **Note:** the specs named the group `Cover`, but `AgentState.Cover` is the own-use ticks of upkeep in stock (`spec-subsistence.md` 14.4), as `AgentView.Cover` is in the view (PR C took `AgentView.Insurance`). The group is `AgentState.Insurance` of type `CoverState` (`Policies`, `Open`); `spec-insurance.md` 15.4, `spec-observability.md` 5.3 and `spec-integration.md` 4.7.2 say so. `Policies` counts the policies the agent underwrites by a scan of the open list (at most `MaxPolicies`), which `Agent` can afford because it already reads every agent for the cost anchors; add a by-underwriter count if a case shows the cost.
 
+### N-554 INS: what the PR F scenarios and golden did not reach
+
+- **Areas:** INS, STY, MER
+- **Raised:** 2026-11-26, plan 3-ins PR F (Phase 8).
+- **Note:** (1) No underwriter is removed on the golden packs (seeds 1 to 4, 400 ticks), so `TestFork_Insurance` cuts at an insured's removal and step 2f for an underwriter is covered only by `insurance_removal_internal_test.go`; a pack that removes one would close it. *Testing stage:* `TestFork_InsuranceUnderwriterRemoval` removes an underwriter before the save and after the restore and checks restore equality, so the fork cell is covered at integration level (items 1 and 5 closed there; the golden packs still remove none). (2) The route pack ships at tick 1 only (the carriers do not stay provisioned, N-352): 24 route policies a seed, and S163 at cap 5000 forms none (exposure refusals), so the cap sweep shows the refusal, not a smaller cover. (3) S164's value cap binds even without the spike (units valued at the cap, 4 to 6 million at cap 20000), so the spike times cap reading is flat at that pack. (4) S162 stands a scripted shipper in for a merchant, since no merchants pack carries the transport, risk, credit and cover layers; INS-A1 and INS-A5 are read on the shipper. (5) N-212's premium from a loan formed at P3.3b is not a case of S161 as built; the plan's text said it would be. (6) The deliberate-break pass of `testing.md` 9.3 and the gates are the author's, at the close of the stage.
+
 ## Read receipt
 
 ### N-358 A gain is not a recipe
@@ -3068,4 +3070,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: a746ee037dd333618f0759ad
+NOTES-TAG: 2d1ad7f7e4e72a3c5f4e89c8

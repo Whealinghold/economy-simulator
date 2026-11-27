@@ -42,6 +42,63 @@ check a unit is lost only by a dispatch that was struck: 10/10 pass
 check the surge strikes at least one dispatch: 10/10 pass
 check the calls, the slots and the books hold: 10/10 pass
 
+## S160 two neutrality with no block, accounting with blocks, 400 ticks seeds 1-10
+measure due: 1=72000 2=12098 3=72018 4=47972 5=12006 6=252283 7=48175 8=192014 9=60047 10=60125 | median=60086 n=10
+measure paid: 1=57503 2=12098 3=57890 4=47972 5=12006 6=133774 7=48175 8=99501 9=57510 10=57980 | median=57506 n=10
+measure policies formed: 1=24 2=24 3=24 4=24 5=24 6=24 7=24 8=24 9=24 10=24 | median=24 n=10
+measure premiums: 1=91765 2=91759 3=91704 4=91716 5=91716 6=91797 7=91832 8=91829 9=91792 10=91755 | median=91762 n=10
+check the module on with no block equals the module off: 10/10 pass
+check the totals equal the events and every due adds up, every tick: 10/10 pass
+
+## S161 two a payout the underwriter cannot pay in full is a claim, 400 ticks seeds 1-10
+measure claims ended repaid: 1=0 2=0 3=0 4=0 5=0 6=3 7=0 8=3 9=3 10=0 | median=0 n=10
+measure claims principal paid at P1.7a: 1=58 2=0 3=0 4=0 5=0 6=13288 7=0 8=2890 9=2537 10=0 | median=0 n=10
+measure loans formed: 1=3532 2=2883 3=2451 4=2779 5=3009 6=2801 7=2751 8=2742 9=3105 10=2982 | median=2842 n=10
+measure payout claims ended: 1=4 2=0 3=4 4=0 5=0 6=21 7=0 8=15 9=3 10=3 | median=3 n=10
+measure principal written off: 1=14439 2=0 3=14128 4=0 5=0 6=105221 7=0 8=89623 9=0 10=2145 | median=1072 n=10
+measure shortfall formed: 1=14497 2=0 3=14128 4=0 5=0 6=118509 7=0 8=92513 9=2537 10=2145 | median=2341 n=10
+check claims paid never exceed the shortfall formed: 10/10 pass
+check the books of the module add up every tick: 10/10 pass
+
+## S162 two a lane with and without cover over several underwriters, 400 ticks seeds 1-10
+measure with cover: agents removed: 1=1140 2=1130 3=1143 4=1137 5=1136 6=1139 7=1144 8=1134 9=1133 10=1149 | median=1138 n=10
+measure with cover: payouts paid at once: 1=57503 2=12098 3=57890 4=47972 5=12006 6=133774 7=48175 8=99501 9=57510 10=57980 | median=57506 n=10
+measure with cover: premiums paid: 1=91765 2=91759 3=91704 4=91716 5=91716 6=91797 7=91832 8=91829 9=91792 10=91755 | median=91762 n=10
+measure with cover: units landed: 1=18 2=23 3=18 4=20 5=23 6=3 7=20 8=8 9=19 10=19 | median=19 n=10
+measure with cover: units lost: 1=6 2=1 3=6 4=4 5=1 6=21 7=4 8=16 9=5 10=5 | median=5 n=10
+measure without cover: agents removed: 1=1133 2=1128 3=1145 4=1134 5=1139 6=1136 7=1145 8=1143 9=1136 10=1142 | median=1138 n=10
+measure without cover: units landed: 1=18 2=23 3=18 4=20 5=23 6=3 7=20 8=8 9=19 10=19 | median=19 n=10
+measure without cover: units lost: 1=6 2=1 3=6 4=4 5=1 6=21 7=4 8=16 9=5 10=5 | median=5 n=10
+check a world without a block forms no policy: 10/10 pass
+check the books of the world with cover add up every tick: 10/10 pass
+
+## S163 two a common row, underwriters' cap 10000, 400 ticks seeds 1-10
+measure agents removed: 1=1133 2=1128 3=1145 4=1134 5=1139 6=1136 7=1145 8=1143 9=1136 10=1142 | median=1138 n=10
+measure offers refused for exposure: 1=592 2=555 3=358 4=448 5=471 6=408 7=424 8=371 9=538 10=483 | median=460 n=10
+measure policies formed: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure principal written off: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure requests no offer covered: 1=24 2=24 3=24 4=24 5=24 6=24 7=24 8=24 9=24 10=24 | median=24 n=10
+measure shortfall formed: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check the books add up every tick: 10/10 pass
+
+## S163 two a common row, underwriters' cap 30000, 400 ticks seeds 1-10
+measure agents removed: 1=1140 2=1127 3=1140 4=1137 5=1136 6=1120 7=1144 8=1135 9=1131 10=1148 | median=1136 n=10
+measure offers refused for exposure: 1=599 2=505 3=357 4=416 5=451 6=394 7=408 8=374 9=550 10=466 | median=434 n=10
+measure policies formed: 1=24 2=24 3=24 4=24 5=24 6=24 7=24 8=24 9=24 10=24 | median=24 n=10
+measure principal written off: 1=0 2=0 3=7699 4=0 5=0 6=33272 7=0 8=39886 9=0 10=7520 | median=0 n=10
+measure requests no offer covered: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure shortfall formed: 1=374 2=382 3=7699 4=0 5=0 6=67039 7=1199 8=52414 9=374 10=7520 | median=790 n=10
+check the books add up every tick: 10/10 pass
+
+## S163 two a common row, underwriters' cap 5000, 400 ticks seeds 1-10
+measure agents removed: 1=1133 2=1128 3=1145 4=1134 5=1139 6=1136 7=1145 8=1143 9=1136 10=1142 | median=1138 n=10
+measure offers refused for exposure: 1=592 2=554 3=358 4=448 5=471 6=408 7=424 8=371 9=538 10=483 | median=460 n=10
+measure policies formed: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure principal written off: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+measure requests no offer covered: 1=24 2=24 3=24 4=24 5=24 6=24 7=24 8=24 9=24 10=24 | median=24 n=10
+measure shortfall formed: 1=0 2=0 3=0 4=0 5=0 6=0 7=0 8=0 9=0 10=0 | median=0 n=10
+check the books add up every tick: 10/10 pass
+
 ## S30 price-gap shipping with a transit delay (TRN-A1, A2)
 measure s30.k1.blind.arrived: 1=12 2=12 3=18 4=22 5=10 6=10 7=16 8=17 9=10 10=20 | median=14 n=10
 measure s30.k1.blind.delivered: 1=12 2=12 3=15 4=22 5=8 6=10 7=16 8=17 9=10 10=20 | median=14 n=10

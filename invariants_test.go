@@ -323,6 +323,12 @@ var invariantTable = []invariantCase{
 	// remittance move money between households and three treasuries, so the audit (money conserved,
 	// each fiscal reason zero-sum, no negative balance) runs across every flow.
 	{"five+fiscal", fiveFiscal, 2, 0, "", nil},
+	// Plan 3-ins Phase 8: pack one with the storage, risk-store, credit and cover-store overlays, the store
+	// pack of the module-alone golden, where store policies form and settle every tick, so the audit
+	// (money conserved, premium and payout zero-sum between two agents, a payout claim a claim) runs across
+	// every premium, payout and shortfall. The route pack needs the scripted shipper, so its invariants are
+	// TestInvariants_InsurancePacks.
+	{"one+storage+risk+credit+cover", packOneCoverStore, 2, 0, "", nil},
 }
 
 // runInvariants runs one (pack, seed) case and fails with the seed, tick and
