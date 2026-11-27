@@ -343,25 +343,31 @@ with the slice (`vision.md` section 4).
 
 | Create | Specs | Needs |
 |--------|-------|-------|
-| `skills.go`, `skills_queue.go`, `skills_report.go`, `internal/skill` (core data: no `Modules` pointer, no hash id; tag 10; plan 3-skl, status: PR A in development) | SKL | PRO, WEL |
-| `settlements.go`, `settlements_validate.go`, `settlements_report.go`, `internal/settlement` (plan 3-set, status: PR A and PR B merged, PR C in development) | SET | REG, SCL |
-| `storage.go`, `internal/room` (and the `Losses` preset of `indicator/`, FR-IND-059, with RSK) | STO | LED, GDS, PRO, TRN, AGT, CLR, MON, REG, EST, INT, CHK |
-| `employment.go`, `internal/employment` (the hire form, sections 3 to 17, extending the payroll form of the Stage 2 table; and the presets `Unemployment`, `WageBill`, `Employment` of `indicator/`, FR-IND-056 to 058; plan 3-emp, status: plan written; PR 1 in development) | EMP | AGT, WEL, PRO, LED, REG, EST, SKL, SUB, DEM, INT, CHK, OBS |
-| `tenure.go`, `internal/tenure` (plan 3-lnd, status: plan written; PR 1 in development) | LND | RES, EST, MON, PRO, AGT, WEL, DEM, SUB, LED, REG, INT, CHK |
-| `polity.go`, `internal/polity` | POL | REG, LED, EST |
-| `credit.go`, `internal/credit` | CRD | LED, MON, EST, WEL |
-| `risk.go`, `internal/risk` (and the `Losses` preset of `indicator/`, FR-IND-059, built here; plan 3-rsk, status: plan written; PR A in development) | RSK | TRN, STO |
-| `infrastructure.go`, `internal/facility` | CAP | PRO, RES, TRN, STO, SET |
-| `insurance.go`, `internal/insure` (plan 3-ins, status: PRs A to E merged; PR F, the overlays, goldens, scenarios, fork and the gate, in development; five continuation files `insurance_validate.go`, `insurance_round.go`, `insurance_settle.go`, `insurance_strategy.go`, `insurance_report.go`) | INS | CRD, RSK |
-| `fiscal.go`, `internal/fiscal` (plan 3-fis, status: plan written; PR 1 in development) | FIS | POL, MON, CLR, TRN, EXT, LED, WEL, CAL, CHK, OBS, INT, MER, STO, EST |
-| `institutions.go`, `internal/institution` (plan 3-org, status: plan written; PR A merged; PR B in development; six continuation files `institutions_validate.go`, `institutions_warn.go`, `institutions_round.go`, `institutions_rights.go`, `institutions_legal.go`, `institutions_report.go`) | ORG | POL, SKL, SET |
-| `policy.go`, `internal/policy` (`Policy`, `WithPolicy`, `DirectPolicy`; plan 3-plc, status: plan written; PR A in development; seven continuation files `policy_validate.go`, `policy_reach.go`, `policy_warn.go`, `policy_view.go`, `policy_apply.go`, `policy_builtin.go`, `policy_state.go`) | PLC | POL, FIS, INT |
-| `saving.go`, `internal/saving` (plan 3-sav, status: plan written; PRs 1 to 4 merged, PR 5 (overlay, golden, scenarios S142 to S147, fork) in development; four continuation files `saving_validate.go`, `saving_view.go`, `saving_strategy.go`, `saving_report.go`) | SAV | CAP, WEL |
-| `technology.go`, `internal/technology` | TEC | PRO, REG, CAL (plan 3-tec; PRs A and B merged, PR C developed on `s3-tec-c`: tag 33, golden, S149 to S154; gates pending) |
+| `skills.go`, `skills_queue.go`, `skills_report.go`, `internal/skill` (core data: no `Modules` pointer, no hash id; tag 10; plan 3-skl, merged: PRs A, B and B2, #62, #66, #73) | SKL | PRO, WEL |
+| `settlements.go`, `settlements_validate.go`, `settlements_report.go`, `internal/settlement` (plan 3-set, merged: PRs A to C; tag 23, hash id 11) | SET | REG, SCL |
+| `storage.go`, `internal/room` (plan 3-sto, merged: PRs 1 to 5; no checkpoint tag of its own, hash id 12; and the `Losses` preset of `indicator/`, FR-IND-059, with RSK) | STO | LED, GDS, PRO, TRN, AGT, CLR, MON, REG, EST, INT, CHK |
+| `employment.go`, `internal/employment` (the hire form, sections 3 to 17, extending the payroll form of the Stage 2 table; and the presets `Unemployment`, `WageBill`, `Employment` of `indicator/`, FR-IND-056 to 058; plan 3-emp, merged: PRs 1 to 6; tag 24, hash id 13) | EMP | AGT, WEL, PRO, LED, REG, EST, SKL, SUB, DEM, INT, CHK, OBS |
+| `tenure.go`, `internal/tenure` (plan 3-lnd, merged: PRs 1 to 5; tag 25, hash id 14) | LND | RES, EST, MON, PRO, AGT, WEL, DEM, SUB, LED, REG, INT, CHK |
+| `polity.go`, `internal/polity` (plan 3-pol, merged: PRs A and B; no checkpoint tag of its own, hash id 19) | POL | REG, LED, EST |
+| `credit.go`, `internal/credit` (plan 3-crd, merged: PRs 1 to 5; tag 26, hash id 15) | CRD | LED, MON, EST, WEL |
+| `risk.go`, `internal/risk` (and the `Losses` preset of `indicator/`, FR-IND-059, built here; plan 3-rsk, merged: PRs A to D; tag 28, hash id 16) | RSK | TRN, STO |
+| `infrastructure.go`, `internal/facility` (plan 3-cap, merged: PRs 1 to 5; tag 27, hash id 17) | CAP | PRO, RES, TRN, STO, SET |
+| `insurance.go`, `internal/insure` (plan 3-ins, merged: PRs A to F; tag 29, hash id 18; five continuation files `insurance_validate.go`, `insurance_round.go`, `insurance_settle.go`, `insurance_strategy.go`, `insurance_report.go`) | INS | CRD, RSK |
+| `fiscal.go`, `internal/fiscal` (plan 3-fis, merged: PRs 1 to 7; tag 30, hash id 20) | FIS | POL, MON, CLR, TRN, EXT, LED, WEL, CAL, CHK, OBS, INT, MER, STO, EST |
+| `institutions.go`, `internal/institution` (plan 3-org, merged: PRs A to E; tag 31, hash id 21; six continuation files `institutions_validate.go`, `institutions_warn.go`, `institutions_round.go`, `institutions_rights.go`, `institutions_legal.go`, `institutions_report.go`) | ORG | POL, SKL, SET |
+| `policy.go`, `internal/policy` (`Policy`, `WithPolicy`, `DirectPolicy`; plan 3-plc, merged: PRs A to D; tag 32, hash id 22; seven continuation files `policy_validate.go`, `policy_reach.go`, `policy_warn.go`, `policy_view.go`, `policy_apply.go`, `policy_builtin.go`, `policy_state.go`) | PLC | POL, FIS, INT |
+| `saving.go`, `internal/saving` (plan 3-sav, merged: PRs 1 to 5; no checkpoint tag of its own, hash id 23; four continuation files `saving_validate.go`, `saving_view.go`, `saving_strategy.go`, `saving_report.go`) | SAV | CAP, WEL |
+| `technology.go`, `internal/technology` (plan 3-tec, merged: PRs A to C; tag 33, hash id 24) | TEC | PRO, REG, CAL |
 
 Each ships as a stage 2 module does. The checkpoint tag of each is appended
 (`spec-checkpoint.md` 4.2); `testdata/golden/all/` moves once per module, with
 the explanation testing.md 7.2 requires.
+
+The Stage 3 modules are not yet layered into the all-on pack: `allLayers` in
+`all_pack_test.go` holds only the version 1 layers (and `allPackNotYetOn` lists
+the built modules still without one). Appending the Stage 3 layers moves
+`testdata/golden/all/` and the all-modules checkpoint fixture once, which is a
+deliberate re-record that needs the owner's approval (testing.md 7.2).
 
 Inherited from Stage 2, as input to Stage 3 planning and no commitment: the
 reference chain keeps the limitation above. Still open (N-352): the unfed share of
