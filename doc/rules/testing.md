@@ -378,7 +378,13 @@ the root package's `_test` files, not an exported API (architecture.md 10.2).
 It is computed by the test file replaying the step through the unexported
 position methods in the order of the position table, so the hash adds no hook
 to production code, and a guard test compares the replay's final state hash and
-golden bytes with a plain `Run`. **[project]**
+golden bytes with a plain `Run`. The hash is a same-run position hash, not an
+invariant across `Checkpoint` and `RestoreWorld`: its walk reaches scratch that a
+restore leaves empty and the construction bucket that a checkpoint of a stepped
+world does not save (`spec-checkpoint.md` 4.4). After a step the differing roots
+are `ledger.bucket`, `prod.inputs`, `prod.spent`, `prod.newRes` and `pr.asks`,
+while the checkpoint bytes agree; a restore check compares checkpoint bytes,
+events and snapshots, not this hash. **[project]**
 
 7.2. Golden files are updated only by an explicit flag (`-update`) and
 **MUST NOT** be regenerated to make a failing test pass without understanding
@@ -598,4 +604,4 @@ When you edit this file, replace the tag with a fresh random value in the same
 change (for example `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale
 tag in an agent's first message means it read an older version.
 
-RULE-TAG: 66af7645b01fef4e2796c367
+RULE-TAG: 1b634034ac207eab8f24f50a
