@@ -50,10 +50,10 @@ PR description.
 | BEL | N-042, N-043, N-230, N-245 |
 | CAL | N-030, N-479, N-527 |
 | CFG | N-476, N-400, N-016, N-061, N-075, N-093, N-123, N-132, N-165, N-182, N-218, N-276, N-324, N-329, N-331, N-345, N-349, N-371, N-428, N-431, N-433, N-494, N-483, N-461, N-522 |
-| CHK | N-402, N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444, N-471, N-480, N-500, N-502 |
+| CHK | N-429, N-125, N-128, N-129, N-204, N-214, N-215, N-225, N-237, N-254, N-256, N-288, N-294, N-265, N-244, N-247, N-309, N-316, N-318, N-319, N-360, N-370, N-368, N-435, N-444, N-471, N-480, N-500, N-502 |
 | CLB | N-015, N-124, N-134, N-135, N-158, N-162, N-169, N-199, N-207, N-208, N-214, N-220, N-318, N-328, N-331, N-334, N-339, N-364, N-498 |
 | CLR | N-541, N-544, N-113, N-137, N-241, N-457 |
-| CODE | N-402, N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457, N-493, N-494, N-438, N-481, N-502, N-499 |
+| CODE | N-403, N-357, N-333, N-019, N-089, N-127, N-198, N-214, N-215, N-216, N-217, N-218, N-222, N-224, N-228, N-243, N-276, N-277, N-294, N-295, N-300, N-244, N-245, N-247, N-254, N-290, N-309, N-310, N-311, N-312, N-315, N-316, N-320, N-325, N-328, N-335, N-336, N-337, N-341, N-342, N-347, N-351, N-353, N-354, N-384, N-430, N-390, N-427, N-457, N-493, N-494, N-438, N-481, N-502, N-499 |
 | CRD | N-107, N-152, N-156, N-164, N-165, N-166, N-167, N-168, N-169, N-187, N-195, N-205, N-209, N-212, N-227, N-319, N-362, N-367, N-368, N-398, N-472, N-484, N-503 |
 | DEM | N-080, N-089, N-145, N-226, N-228, N-277, N-314, N-325, N-352, N-425 |
 | EMP | N-144, N-147, N-187, N-190, N-191, N-194, N-327, N-352, N-355, N-356, N-369, N-370, N-371, N-372, N-397, N-381, N-428, N-429, N-430, N-431, N-432, N-424, N-425, N-442, N-443, N-445, N-500, N-501, N-502, N-503, N-510, N-511, N-512, N-513, N-514, N-515, N-516, N-517, N-518, N-521 |
@@ -2397,12 +2397,6 @@ PR description.
 - **Raised:** 2026-11-18, plan 3-org PR A review, `spec-institutions.md` 10.1.
 - **Note:** `Institutions.canonical` hashes `Roles`, `Regions` and `Jurisdictions` of a body in the order given, so two configurations that list the same set in another order, or twice, hash differently and resolve the same tables. The spec is silent on a repeated entry. The CFG owner decides between rejecting a duplicate (a sentinel and a row of 10.1), sorting the lists in `canonical`, or leaving it. Nothing in ORG depends on the answer.
 
-### N-402 CHK: `hashWorld` of a restored world differs from the uninterrupted one
-
-- **Areas:** CHK, CODE
-- **Raised:** 2026-11-18, plan 3-org PR B; reproduced on `origin/phase-3` at `e4459da`, with no ORG code.
-- **Note:** in an internal test, `w := newMill(t, millConfig(2, 10))`, three steps, `Checkpoint`, `RestoreWorld` with the same configuration: `hashWorld(w) != hashWorld(restored)` at the restore and after three more steps on both, with every module off. The fork tests compare events, snapshots, checkpoint bytes and logs, and those agree, so the difference is in state the walk of `hashWorld` reaches that the checkpoint does not save (a cache, a scratch slice, a nil or empty slice, a pointer value), not in the model. Not ORG's. The CHK owner finds which field, and either saves it, leaves it out of the walk with a reason, or documents that the hash is not a restore invariant.
-
 ### N-403 ORG: mutation testing is owed
 
 - **Areas:** ORG, CODE
@@ -3070,4 +3064,4 @@ fresh random value in the same change (for example
 `od -An -N12 -tx1 /dev/urandom | tr -d ' \n'`). A stale tag in an agent's
 message means it read an older version, and may have missed a note.
 
-NOTES-TAG: 2d1ad7f7e4e72a3c5f4e89c8
+NOTES-TAG: c05889bb84ac69a5897882c9
